@@ -96,6 +96,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 });
 
             if (uploadError) {
+                console.error('❌ ImageUpload: Storage upload error:', uploadError);
                 const errorMessage = uploadError.message?.toLowerCase() || '';
                 const statusCode = (uploadError as any)?.statusCode || (uploadError as any)?.status;
 
@@ -114,6 +115,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(fileName);
+
+            console.log('✅ ImageUpload: Upload successful!', {
+                storagePath: data?.path,
+                publicUrl,
+                fileName
+            });
 
             setSuccess(true);
             setTimeout(() => {

@@ -183,6 +183,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             }
 
             // Normal flow: save to Supabase
+            console.log('📸 ProfileEdit: Saving profile with image_url:', formData.image_url);
             const updatedProfile = await profileService.updateProfile(currentUser.id, formData);
 
             if (updatedProfile) {
@@ -765,6 +766,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     userId={currentUser.id}
                     supabase={supabase}
                     onImageUploaded={(url) => {
+                        console.log('📸 ProfileEdit: Image uploaded, URL:', url);
                         handleInputChange('image_url', url);
                         setShowImageUpload(false);
                     }}
