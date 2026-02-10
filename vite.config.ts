@@ -23,25 +23,26 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon-192x192.png', 'icon-512x512.png', 'apple-touch-icon.png'],
+        includeAssets: ['default-avatar.svg', 'prosperus-icon-admin.png'],
         manifest: {
           name: 'Prosperus Club',
           short_name: 'Prosperus',
           description: 'Plataforma exclusiva para membros do Prosperus Club',
           start_url: '/app/',
+          scope: '/app/',
           display: 'standalone',
           background_color: '#0f172a',
           theme_color: '#0f172a',
           orientation: 'portrait',
           icons: [
             {
-              src: '/app/icon-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any maskable'
+              src: '/app/default-avatar.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
+              purpose: 'any'
             },
             {
-              src: '/app/icon-512x512.png',
+              src: '/app/prosperus-icon-admin.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'

@@ -1,0 +1,87 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name prosperusclub.com.br www.prosperusclub.com.br;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name prosperusclub.com.br www.prosperusclub.com.br;
+
+    ssl_certificate /etc/letsencrypt/live/prosperusclub.com.br/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/prosperusclub.com.br/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 50M;
+
+    location = / {
+        return 301 https://salesprime.com.br/prosperus-club;
+    }
+
+    # Health check
+    location = /health {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    # Auth routes
+    location /auth/ {
+        proxy_pass http://127.0.0.1:3005/auth/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # API routes
+    location /api/ {
+        proxy_pass http://127.0.0.1:3005;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Redirect without trailing slash to with trailing slash
+    location = /prosperus-mentor-diagnosis {
+        return 301 /prosperus-mentor-diagnosis/;
+    }
+
+    # Frontend React app - SPA
+    location /prosperus-mentor-diagnosis/ {
+        alias /var/www/prosperus-mentor-diagnosis/dist/;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Root location
+    location / {
+        root /var/www/prosperus-mentor-diagnosis/dist;
+        try_files $uri $uri/ =404;
+    }
+
+    # Prosperus Club PWA
+    location /app/ {
+        alias /var/www/prosperus-club-app/dist/;
+        try_files $uri $uri/ /app/index.html;
+
+        # Cache headers para assets com hash no nome
+        if ($uri ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$) {
+            add_header Cache-Control "public, max-age=2592000, immutable";
+        }
+    }
+
+    # Redirect /app to /app/
+    location = /app {
+        return 301 /app/;
+    }
+}
