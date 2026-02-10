@@ -765,10 +765,25 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     currentImageUrl={formData.image_url}
                     userId={currentUser.id}
                     supabase={supabase}
-                    onImageUploaded={(url) => {
+                    onImageUploaded={async (url) => {
                         console.log('📸 ProfileEdit: Image uploaded, URL:', url);
                         handleInputChange('image_url', url);
                         setShowImageUpload(false);
+
+                        // Auto-save image_url directly to the database
+                        try {
+                            console.log('📸 ProfileEdit: Auto-saving image_url to database...');
+                            await profileService.updateProfile(currentUser.id, { image_url: url } as any);
+                            console.log('✅ ProfileEdit: image_url saved successfully');
+
+                            // Refresh global profile context so the new photo shows everywhere
+                            await refreshProfile();
+                            setSuccess(true);
+                            setTimeout(() => setSuccess(false), 3000);
+                        } catch (err) {
+                            console.error('❌ ProfileEdit: Error auto-saving image_url:', err);
+                            setError('Foto enviada mas não foi possível salvar. Clique em "Salvar Perfil".');
+                        }
                     }}
                     onCancel={() => setShowImageUpload(false)}
                 />
