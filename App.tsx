@@ -352,7 +352,7 @@ const App = () => {
 
             // Create a timeout promise
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Profile fetch timeout')), 8000);
+                setTimeout(() => reject(new Error('Profile fetch timeout')), 15000);
             });
 
             // Race between fetch and timeout

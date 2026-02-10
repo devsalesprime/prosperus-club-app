@@ -65,11 +65,11 @@ class ProfileService {
 
             const startTime = Date.now();
 
-            // Create timeout promise (5 seconds)
+            // Create timeout promise (15 seconds - increased for VPS latency)
             const timeoutPromise = new Promise<never>((_, reject) => {
                 setTimeout(() => {
-                    reject(new Error('Profile fetch timeout after 5 seconds'));
-                }, 5000);
+                    reject(new Error('Profile fetch timeout after 15 seconds'));
+                }, 15000);
             });
 
             // Create query promise
