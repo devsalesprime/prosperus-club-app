@@ -10,13 +10,13 @@
     "orientation": "portrait-primary",
     "icons": [
         {
-            "src": "/app/default-avatar.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any"
+            "src": "/app/default-avatar.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
         },
         {
-            "src": "/app/prosperus-icon-admin.png",
+            "src": "/app/default-avatar.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any maskable"

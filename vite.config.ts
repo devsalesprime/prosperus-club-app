@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['default-avatar.svg', 'prosperus-icon-admin.png'],
+        includeAssets: ['default-avatar.png', 'default-avatar.svg'],
         manifest: {
           name: 'Prosperus Club',
           short_name: 'Prosperus',
@@ -36,13 +36,13 @@ export default defineConfig(({ mode }) => {
           orientation: 'portrait',
           icons: [
             {
-              src: '/app/default-avatar.svg',
-              sizes: 'any',
-              type: 'image/svg+xml',
-              purpose: 'any'
+              src: '/app/default-avatar.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any maskable'
             },
             {
-              src: '/app/prosperus-icon-admin.png',
+              src: '/app/default-avatar.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'

@@ -88,6 +88,7 @@ import { useAuth } from './contexts/AuthContext';
 import { ROIDashboardWidget, MyDealsScreen, ReferralsScreen, RankingsScreen } from './components/business';
 import { BenefitStatsCard } from './components/BenefitStatsCard';
 import { OfflineBanner } from './components/OfflineBanner';
+import { InstallPrompt } from './components/InstallPrompt';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -945,6 +946,7 @@ const App = () => {
         <div className="bg-prosperus-navy min-h-screen text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden">
             {/* Offline Status Banner */}
             <OfflineBanner />
+            <InstallPrompt />
             {/* Sidebar (Desktop) */}
             <div className="hidden md:flex w-64 flex-col border-r border-prosperus-navy-light bg-prosperus-navy">
                 <div className="p-6 border-b border-prosperus-navy-light">
