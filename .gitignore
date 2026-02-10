@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+backup/node_modules/
+
+# Build output
+dist/
+
+# Coverage reports
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# OS files
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Old / backup files
+backup/
+App.tsx-old
+
+# Temp / utility scripts
+fix_admin.js
+fix_adminapp.py
+setup-auth.bat
+test-gallery.html
+
+# Documentation (internal dev docs - not needed for deploy)
+docs/
+PRD - App para sócios Prosperus.pdf
+PRD_Complementar_Prosperus_v2.1.docx
+PROSPERUS_MASTER_PROMPT.md
+PROSPERUS_PROMPT_LIBRARY.md
+PROSPERUS_QUICK_REFERENCE.md
+
+# Test artifacts
+coverage/
+
+# Misc
+metadata.json
+*.zip

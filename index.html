@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Plataforma exclusiva para membros do Prosperus Club" />
+
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Prosperus" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#0f172a" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <title>Prosperus Club</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            prosperus: {
+              navy: '#031A2B',           // Fundo Principal (Deep Blue)
+              'navy-light': '#123F5B',   // Cards, Headers, Inputs
+              gold: '#FFDA71',           // Ação Primária, Ícones
+              'gold-light': '#FFE39B',   // Hover, Highlights
+              'gold-dark': '#CA9A43',    // Bordas, Texto Dourado Escuro
+              white: '#FCF7F0',          // Texto Principal (Off-white)
+              grey: '#EDF4F7',           // Texto Secundário, Bordas sutis
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/react-big-calendar@1.8.5/lib/css/react-big-calendar.css" rel="stylesheet">
+  <style>
+    /* ===== PROSPERUS BRAND DESIGN SYSTEM ===== */
+    :root {
+      /* Prosperus Brand Colors */
+      --prosperus-navy: #031A2B;
+      --prosperus-navy-light: #123F5B;
+      --prosperus-gold: #FFDA71;
+      --prosperus-gold-light: #FFE39B;
+      --prosperus-gold-dark: #CA9A43;
+      --prosperus-white: #FCF7F0;
+      --prosperus-grey: #EDF4F7;
+
+      /* Safe area insets for notch/island support */
+      --safe-area-inset-top: env(safe-area-inset-top);
+      --safe-area-inset-right: env(safe-area-inset-right);
+      --safe-area-inset-bottom: env(safe-area-inset-bottom);
+      --safe-area-inset-left: env(safe-area-inset-left);
+    }
+
+    * {
+      /* Disable tap highlight on mobile for native feel */
+      -webkit-tap-highlight-color: transparent;
+      /* Prevent text selection for app-like experience */
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    /* Allow text selection in specific areas */
+    input,
+    textarea,
+    [contenteditable] {
+      -webkit-touch-callout: default;
+      user-select: text;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--prosperus-navy);
+      color: var(--prosperus-white);
+      /* Font smoothing for crisp text on dark backgrounds */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* Prevent overscroll bounce on iOS */
+      overscroll-behavior: none;
+      /* Safe area padding */
+      padding-top: var(--safe-area-inset-top);
+      padding-bottom: var(--safe-area-inset-bottom);
+      padding-left: var(--safe-area-inset-left);
+      padding-right: var(--safe-area-inset-right);
+    }
+
+    /* ===== CUSTOM SCROLLBAR (Navy/Gold Theme) ===== */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--prosperus-navy);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--prosperus-gold-dark);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--prosperus-gold);
+    }
+
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--prosperus-gold-dark) var(--prosperus-navy);
+    }
+
+    /* Custom scrollbar for horizontal lists (hidden) */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Calendar Overrides for Dark Mode */
+    .rbc-calendar {
+      color: #cbd5e1;
+    }
+
+    .rbc-off-range-bg {
+      background-color: #1e293b !important;
+    }
+
+    .rbc-today {
+      background-color: #334155 !important;
+    }
+
+    .rbc-header {
+      border-bottom: 1px solid #334155 !important;
+      padding: 8px !important;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .rbc-month-view,
+    .rbc-time-view,
+    .rbc-agenda-view {
+      border: 1px solid #334155 !important;
+      background-color: #0f172a;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .rbc-day-bg+.rbc-day-bg {
+      border-left: 1px solid #334155 !important;
+    }
+
+    .rbc-month-row+.rbc-month-row {
+      border-top: 1px solid #334155 !important;
+    }
+
+    /* ESTILIZAÇÃO DA DATA */
+    .rbc-date-cell {
+      padding: 8px !important;
+      font-size: 0.875rem;
+      font-weight: 700;
+      z-index: 20;
+      /* Fica acima do evento visualmente */
+      position: relative;
+      pointer-events: none;
+      /* O PULO DO GATO: O clique passa pela data e pega o evento embaixo */
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      /* Sombra forte para leitura sobre cores sólidas */
+    }
+
+    .rbc-off-range {
+      color: #475569 !important;
+    }
+
+    .rbc-toolbar button {
+      color: #cbd5e1 !important;
+      border-color: #475569 !important;
+    }
+
+    .rbc-toolbar button:hover {
+      background-color: #334155 !important;
+    }
+
+    .rbc-toolbar button.rbc-active {
+      background-color: #ca8a04 !important;
+      border-color: #ca8a04 !important;
+      color: white !important;
+    }
+
+    /* --- CORREÇÃO DE CLIQUE E UX NO MÊS (FULL CELL CLICK) --- */
+
+    .rbc-month-row {
+      overflow: visible !important;
+      /* Permite camadas absolutas */
+    }
+
+    .rbc-row-content {
+      height: 100%;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Linha de Datas (Fica no topo visualmente) */
+    .rbc-row-content .rbc-row:first-child {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      pointer-events: none;
+      /* Permite clique no evento abaixo */
+    }
+
+    /* Linha de Eventos (Ocupa o fundo e recebe o clique) */
+    .rbc-row-content .rbc-row:nth-child(2) {
+      position: absolute !important;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      z-index: 10;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .rbc-row-segment {
+      height: 100%;
+      padding: 0 !important;
+      /* Remove padding para ocupar tudo */
+    }
+
+    /* O Evento ocupando toda a célula */
+    .rbc-event {
+      border-radius: 0 !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      height: 100% !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      /* Sem padding */
+      display: block !important;
+      border: 0 !important;
+      transition: filter 0.2s;
+      outline: none !important;
+      /* Remove borda azul padrão de foco */
+    }
+
+    .rbc-event:hover {
+      filter: brightness(1.1);
+      /* Feedback visual sutil no hover */
+    }
+
+    /* Oculta o texto/conteúdo do evento para mostrar apenas a cor */
+    .rbc-event-content {
+      display: none !important;
+    }
+
+    /* ESTADO SELECIONADO/CLICADO */
+    .rbc-event.rbc-selected,
+    .rbc-event:focus,
+    .rbc-event:active {
+      /* IMPORTANTE: Não sobrescrever background-color aqui para manter a cor inline */
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+      /* Borda interna sutil para indicar seleção */
+      outline: none !important;
+      filter: brightness(1.05);
+    }
+
+    /* --- ESTILIZAÇÃO DA TABELA DE AGENDA (.rbc-agenda-table) --- */
+
+    .rbc-agenda-view table.rbc-agenda-table {
+      border: none !important;
+      border-collapse: collapse !important;
+    }
+
+    .rbc-agenda-view thead>tr>th {
+      border-bottom: 1px solid #334155 !important;
+      color: #94a3b8 !important;
+      font-weight: 600;
+      padding: 12px !important;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .rbc-agenda-view tbody>tr {
+      border-bottom: 1px solid #1e293b !important;
+      transition: background-color 0.2s;
+    }
+
+    .rbc-agenda-view tbody>tr:hover {
+      background-color: #1e293b !important;
+      cursor: pointer;
+    }
+
+    .rbc-agenda-date-cell {
+      color: #cbd5e1 !important;
+      font-weight: 600;
+      padding: 12px !important;
+    }
+
+    .rbc-agenda-time-cell {
+      color: #94a3b8 !important;
+      font-size: 0.875rem;
+      padding: 12px !important;
+      white-space: nowrap;
+    }
+
+    .rbc-agenda-event-cell {
+      color: #f8fafc !important;
+      padding: 12px !important;
+      font-weight: 500;
+    }
+
+    /* Ensure primary navigation & form buttons meet minimum touch target size */
+    /* Scoped to nav-level and standalone buttons only */
+    .mobile-nav-item,
+    nav button,
+    form button,
+    form input[type="button"],
+    form input[type="submit"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Exception class for small/inline buttons (icons, toggles, inline actions, tabs, filters) */
+    .btn-sm,
+    .btn-icon,
+    [class*="rounded-full"][class*="p-1"],
+    [class*="rounded-full"][class*="p-2"] {
+      min-height: unset !important;
+      min-width: unset !important;
+    }
+
+    /* Mobile Header with Safe Area Top */
+    .mobile-header {
+      padding-top: calc(1rem + var(--safe-area-inset-top));
+    }
+
+    /* Bottom Navigation with Safe Area Bottom */
+    .safe-area-bottom {
+      padding-bottom: calc(1rem + var(--safe-area-inset-bottom)) !important;
+      height: calc(64px + var(--safe-area-inset-bottom));
+    }
+
+    /* Ensure content doesn't hide behind bottom nav */
+    .pb-24 {
+      padding-bottom: calc(6rem + var(--safe-area-inset-bottom)) !important;
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 768px) {
+
+      /* Increase touch targets on mobile */
+      .mobile-nav-item {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0.75rem;
+      }
+
+      /* Optimize scrolling on mobile */
+      .overflow-y-auto {
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Prevent zoom on input focus (iOS) */
+      input,
+      textarea,
+      select {
+        font-size: 16px !important;
+      }
+
+      /* Calendar Toolbar - Mobile Responsive */
+      .rbc-toolbar {
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        justify-content: center !important;
+      }
+
+      .rbc-toolbar-label {
+        width: 100% !important;
+        text-align: center !important;
+        order: -1 !important;
+      }
+    }
+
+    /* iOS-specific fixes */
+    @supports (-webkit-touch-callout: none) {
+
+      /* iOS Safari specific styles */
+      body {
+        /* Prevent rubber band scrolling */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      #root {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>
