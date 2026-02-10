@@ -79,6 +79,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         return (
             <button
                 ref={ref}
+                type="button"
                 className={combinedStyles}
                 disabled={isDisabled}
                 aria-disabled={isDisabled}
