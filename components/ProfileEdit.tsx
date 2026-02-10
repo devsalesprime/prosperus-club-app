@@ -278,16 +278,27 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     {/* Profile Image */}
                     <div>
                         <label className="block text-sm font-bold text-white mb-2">
-                            Foto de Perfil (URL)
+                            Foto de Perfil
                         </label>
                         {/* Layout responsivo: empilha no mobile, inline no desktop */}
                         <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                            <AvatarEditable
-                                src={formData.image_url}
-                                alt="Preview"
-                                size="xl"
-                                className="shrink-0"
-                            />
+                            {/* Clickable avatar with camera overlay */}
+                            <button
+                                type="button"
+                                onClick={() => setShowImageUpload(true)}
+                                className="relative shrink-0 group"
+                                title="Trocar foto de perfil"
+                            >
+                                <AvatarEditable
+                                    src={formData.image_url}
+                                    alt="Preview"
+                                    size="xl"
+                                />
+                                {/* Camera overlay */}
+                                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
+                                    <Upload size={24} className="text-white" />
+                                </div>
+                            </button>
                             <div className="flex flex-col sm:flex-row gap-3 w-full">
                                 <input
                                     type="url"
@@ -308,7 +319,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             </div>
                         </div>
                         <p className="text-xs text-slate-500 mt-2 text-center sm:text-left">
-                            Cole uma URL ou faça upload de uma imagem
+                            Toque na foto ou clique em Upload para alterar
                         </p>
                     </div>
 
