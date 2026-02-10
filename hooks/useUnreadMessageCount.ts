@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { unreadMessageService } from '../services/unreadMessageService';
+import { badgeService } from '../services/badgeService';
 
 export const useUnreadMessageCount = (userId: string | null) => {
     const [unreadCount, setUnreadCount] = useState(0);
@@ -48,6 +49,8 @@ export const useUnreadMessageCount = (userId: string | null) => {
 
                         if (data) {
                             setUnreadCount(prev => prev + 1);
+                            // Update PWA badge
+                            badgeService.increment();
                         }
                     }
                 }
@@ -94,6 +97,8 @@ export const useUnreadMessageCount = (userId: string | null) => {
         if (!userId) return;
         const count = await unreadMessageService.getTotalUnreadCount(userId);
         setUnreadCount(count);
+        // Full badge refresh with combined count
+        badgeService.updateBadge(userId);
     };
 
     return { unreadCount, loading, refreshCount };

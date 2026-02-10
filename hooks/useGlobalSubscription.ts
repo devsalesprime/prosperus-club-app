@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { badgeService } from '../services/badgeService';
 
 /**
  * Interface para notificações de usuário
@@ -20,22 +21,7 @@ export interface UserNotification {
 
 /**
  * Hook para escutar novas notificações do usuário logado via Supabase Realtime
- * 
- * @param onNewNotification - Callback chamado quando nova notificação é recebida
- * 
- * @example
- * ```tsx
- * const [unreadCount, setUnreadCount] = useState(0);
- * 
- * useGlobalSubscription((notification) => {
- *   setUnreadCount(prev => prev + 1);
- *   showToast({
- *     title: 'Nova Notificação',
- *     message: notification.notification?.title || '',
- *     type: 'info'
- *   });
- * });
- * ```
+ * Also updates the PWA badge count on the app icon
  */
 export const useGlobalSubscription = (
     onNewNotification: (notification: UserNotification) => void
@@ -46,6 +32,9 @@ export const useGlobalSubscription = (
         if (!session?.user?.id) return;
 
         console.log('🔔 Subscribing to notifications for user:', session.user.id);
+
+        // Update badge on mount
+        badgeService.updateBadge(session.user.id);
 
         const channel = supabase
             .channel(`notifications:${session.user.id}`)
@@ -60,6 +49,8 @@ export const useGlobalSubscription = (
                 (payload) => {
                     console.log('🔔 New notification received:', payload.new);
                     onNewNotification(payload.new as UserNotification);
+                    // Increment badge on new notification
+                    badgeService.increment();
                 }
             )
             .subscribe();
