@@ -180,7 +180,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                 {/* Banner Hero */}
                 <div className="relative h-32 w-full -mt-4 -mx-4 mb-0" style={{ width: 'calc(100% + 2rem)' }}>
                     <img
-                        src={(profile as any).banner_url || '/fundo-prosperus-app.webp'}
+                        src={(profile as any).banner_url || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
                         alt=""
                         className="w-full h-full object-cover"
                     />

@@ -357,7 +357,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                             {/* Banner Header */}
                             <div className="relative h-24 w-full">
                                 <img
-                                    src={(member as any).banner_url || '/fundo-prosperus-app.webp'}
+                                    src={(member as any).banner_url || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
                                     alt=""
                                     className="w-full h-full object-cover"
                                 />

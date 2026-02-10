@@ -166,7 +166,7 @@ const MemberSuggestionSlide: React.FC<MemberSuggestionSlideProps> = ({
         <>
             {/* Background Image */}
             <img
-                src="/fundo-prosperus-app.webp"
+                src={`${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
                 alt=""
                 className="absolute inset-0 w-full h-full object-cover"
             />
