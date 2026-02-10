@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
+    base: '/app/',
     server: {
       port: 3000,
       host: '0.0.0.0',
@@ -27,20 +28,20 @@ export default defineConfig(({ mode }) => {
           name: 'Prosperus Club',
           short_name: 'Prosperus',
           description: 'Plataforma exclusiva para membros do Prosperus Club',
-          start_url: '/',
+          start_url: '/app/',
           display: 'standalone',
           background_color: '#0f172a',
           theme_color: '#0f172a',
           orientation: 'portrait',
           icons: [
             {
-              src: '/icon-192x192.png',
+              src: '/app/icon-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any maskable'
             },
             {
-              src: '/icon-512x512.png',
+              src: '/app/icon-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'
