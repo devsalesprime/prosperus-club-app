@@ -28,6 +28,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true);
     const mountedRef = useRef(true);
     const profileCacheRef = useRef<ProfileData | null>(null);
+    const sessionUserIdRef = useRef<string | null>(null);
 
     // Fetch user profile from profiles table
     const fetchProfile = async (userId: string, isInitialLoad = false) => {
@@ -128,6 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             console.log('📡 AuthContext: Initial session check:', session ? 'Found' : 'None');
             setSession(session);
+            sessionUserIdRef.current = session?.user?.id || null;
 
             if (session?.user?.id) {
                 fetchProfile(session.user.id, true)
@@ -155,16 +157,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Listen for auth changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (event, session) => {
+        } = supabase.auth.onAuthStateChange(async (event, newSession) => {
             if (!mountedRef.current) return;
 
             console.log('🔔 AuthContext: Auth state changed:', event);
-            setSession(session);
+
+            // TOKEN_REFRESHED: only update session silently, don't trigger re-renders
+            // if the user hasn't changed. This prevents unmounting modals (e.g., ImageUpload)
+            // when the app regains focus from native file picker on mobile.
+            if (event === 'TOKEN_REFRESHED') {
+                const currentUserId = sessionUserIdRef.current;
+                const newUserId = newSession?.user?.id || null;
+                if (currentUserId === newUserId) {
+                    console.log('🔄 AuthContext: TOKEN_REFRESHED - skipping state update (same user)');
+                    return;
+                }
+            }
+
+            setSession(newSession);
+            sessionUserIdRef.current = newSession?.user?.id || null;
 
             // Only re-fetch profile on actual sign-in events, not token refreshes
-            if (event === 'SIGNED_IN' && session?.user?.id) {
+            if (event === 'SIGNED_IN' && newSession?.user?.id) {
                 try {
-                    await fetchProfile(session.user.id);
+                    await fetchProfile(newSession.user.id);
                 } catch (error) {
                     console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
                 }
@@ -172,8 +188,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setUserProfile(null);
                 profileCacheRef.current = null;
             }
-            // TOKEN_REFRESHED: do NOT re-fetch profile, just update session
-            // This prevents unnecessary loading states on mobile
         });
 
         return () => {
