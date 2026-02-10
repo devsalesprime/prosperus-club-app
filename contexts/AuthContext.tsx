@@ -2,7 +2,7 @@
 // Centralized authentication and user profile management
 // Single source of truth for user data from Supabase profiles table
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { ProfileData, profileService } from '../services/profileService';
@@ -26,19 +26,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const mountedRef = useRef(true);
+    const profileCacheRef = useRef<ProfileData | null>(null);
 
     // Fetch user profile from profiles table
-    const fetchProfile = async (userId: string) => {
+    const fetchProfile = async (userId: string, isInitialLoad = false) => {
         try {
             console.log('🔄 AuthContext: Fetching profile for user:', userId);
             const profile = await profileService.getProfile(userId);
 
+            if (!mountedRef.current) return;
+
             if (profile) {
                 console.log('✅ AuthContext: Profile loaded:', profile.name);
                 setUserProfile(profile);
+                profileCacheRef.current = profile;
             } else {
                 console.warn('⚠️ AuthContext: No profile found for user:', userId);
-                setUserProfile(null);
+                // Don't clear profile if we already have one cached (prevents flash)
+                if (!profileCacheRef.current) {
+                    setUserProfile(null);
+                }
             }
         } catch (error: any) {
             console.error('❌ AuthContext: Error fetching profile:', {
@@ -48,32 +56,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 userId
             });
 
-            // Determine error type for better logging
-            if (error?.message?.includes('timeout')) {
-                console.error('🕐 AuthContext: Profile fetch TIMEOUT - Query took > 5 seconds');
-            } else if (error?.code === 'PGRST116') {
-                console.error('🔍 AuthContext: Profile NOT FOUND in database');
-            } else if (error?.code?.startsWith('PGRST')) {
-                console.error('🔒 AuthContext: Possible RLS policy issue');
-            } else {
-                console.error('🌐 AuthContext: Network or connection error');
+            if (!mountedRef.current) return;
+
+            // If we already have a cached profile, keep using it
+            if (profileCacheRef.current) {
+                console.log('♻️ AuthContext: Using cached profile after fetch error');
+                setUserProfile(profileCacheRef.current);
+                return;
             }
 
-            // Create fallback profile from session data to allow user access
-            if (session?.user) {
-                console.warn('⚠️ AuthContext: Creating fallback profile from session data');
-                const fallbackProfile: ProfileData = {
-                    id: session.user.id,
-                    email: session.user.email || '',
-                    name: session.user.user_metadata?.full_name || session.user.email || 'Usuário',
-                    role: 'MEMBER',
-                    image_url: session.user.user_metadata?.avatar_url || '/default-avatar.svg',
-                    has_completed_onboarding: false
-                };
-                setUserProfile(fallbackProfile);
-                console.log('✅ AuthContext: Fallback profile created:', fallbackProfile.name);
-            } else {
-                setUserProfile(null);
+            // Only create fallback on initial load when we have no profile at all
+            if (isInitialLoad) {
+                const currentSession = session;
+                if (currentSession?.user) {
+                    console.warn('⚠️ AuthContext: Creating fallback profile from session data');
+                    const fallbackProfile: ProfileData = {
+                        id: currentSession.user.id,
+                        email: currentSession.user.email || '',
+                        name: currentSession.user.user_metadata?.full_name || currentSession.user.email || 'Usuário',
+                        role: 'MEMBER',
+                        image_url: currentSession.user.user_metadata?.avatar_url || '/default-avatar.svg',
+                        has_completed_onboarding: false
+                    };
+                    setUserProfile(fallbackProfile);
+                    profileCacheRef.current = fallbackProfile;
+                    console.log('✅ AuthContext: Fallback profile created:', fallbackProfile.name);
+                } else {
+                    setUserProfile(null);
+                }
             }
         }
     };
@@ -93,6 +103,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await supabase.auth.signOut();
             setSession(null);
             setUserProfile(null);
+            profileCacheRef.current = null;
         } catch (error) {
             console.error('❌ AuthContext: Error during logout:', error);
         }
@@ -101,30 +112,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Initialize auth state and listen for changes
     useEffect(() => {
         console.log('🔌 AuthContext: Initializing...');
-        let mounted = true;
+        mountedRef.current = true;
 
-        // Safety timeout to prevent infinite loading (10 seconds)
+        // Safety timeout to prevent infinite loading (20 seconds)
         const safetyTimeout = setTimeout(() => {
-            if (mounted && isLoading) {
+            if (mountedRef.current && isLoading) {
                 console.warn('⚠️ AuthContext: Loading timeout - forcing isLoading to false');
                 setIsLoading(false);
             }
-        }, 10000);
+        }, 20000);
 
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!mounted) return;
+            if (!mountedRef.current) return;
 
             console.log('📡 AuthContext: Initial session check:', session ? 'Found' : 'None');
             setSession(session);
 
             if (session?.user?.id) {
-                fetchProfile(session.user.id)
+                fetchProfile(session.user.id, true)
                     .catch((error) => {
                         console.error('❌ AuthContext: Error in fetchProfile:', error);
                     })
                     .finally(() => {
-                        if (mounted) {
+                        if (mountedRef.current) {
                             setIsLoading(false);
                             clearTimeout(safetyTimeout);
                         }
@@ -135,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
         }).catch((error) => {
             console.error('❌ AuthContext: Error getting session:', error);
-            if (mounted) {
+            if (mountedRef.current) {
                 setIsLoading(false);
                 clearTimeout(safetyTimeout);
             }
@@ -145,30 +156,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (!mounted) return;
+            if (!mountedRef.current) return;
 
             console.log('🔔 AuthContext: Auth state changed:', event);
             setSession(session);
 
-            try {
-                if (session?.user?.id) {
-                    // User logged in or session refreshed
+            // Only re-fetch profile on actual sign-in events, not token refreshes
+            if (event === 'SIGNED_IN' && session?.user?.id) {
+                try {
                     await fetchProfile(session.user.id);
-                } else {
-                    // User logged out
-                    setUserProfile(null);
+                } catch (error) {
+                    console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
                 }
-            } catch (error) {
-                console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
-            } finally {
-                // Always set loading to false, regardless of success or failure
-                setIsLoading(false);
+            } else if (event === 'SIGNED_OUT') {
+                setUserProfile(null);
+                profileCacheRef.current = null;
             }
+            // TOKEN_REFRESHED: do NOT re-fetch profile, just update session
+            // This prevents unnecessary loading states on mobile
         });
 
         return () => {
             console.log('🧹 AuthContext: Cleaning up subscription');
-            mounted = false;
+            mountedRef.current = false;
             clearTimeout(safetyTimeout);
             subscription.unsubscribe();
         };
