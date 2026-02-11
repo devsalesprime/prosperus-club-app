@@ -5,6 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, DollarSign, Calendar, FileText, User, Loader2, Trash2 } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface RegisterDealModalProps {
     isOpen: boolean;
@@ -24,6 +25,9 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     onClose,
     onSuccess
 }) => {
+    // iOS-proof scroll lock
+    useScrollLock({ enabled: isOpen, modalId: 'register-deal' });
+
     const [members, setMembers] = useState<MemberOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -329,6 +333,8 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         max-width: 480px;
                         max-height: 90vh;
                         overflow-y: auto;
+                        overscroll-behavior: contain;
+                        -webkit-overflow-scrolling: touch;
                     }
 
                     .modal-header {

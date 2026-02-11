@@ -1,8 +1,10 @@
 // ModalWrapper.tsx
 // Componente container reutilizável para modais
 // Padroniza backdrop, posicionamento, animação e scroll
+// iOS-proof: uses useScrollLock for position:fixed body lock
 
 import React, { useEffect } from 'react';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface ModalWrapperProps {
     isOpen: boolean;
@@ -10,6 +12,7 @@ interface ModalWrapperProps {
     children: React.ReactNode;
     maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
     className?: string;
+    modalId?: string;
 }
 
 const maxWidthClasses = {
@@ -26,20 +29,11 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
     onClose,
     children,
     maxWidth = 'lg',
-    className = ''
+    className = '',
+    modalId = 'modal-wrapper'
 }) => {
-    // Bloquear scroll do body quando modal está aberto
-    useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [isOpen]);
+    // iOS-proof scroll lock (position: fixed + scroll position save/restore)
+    useScrollLock({ enabled: isOpen, modalId });
 
     // Fechar com ESC
     useEffect(() => {
@@ -110,6 +104,10 @@ export const ModalBody: React.FC<ModalBodyProps> = ({
                 ${noPadding ? '' : 'p-6'}
                 ${className}
             `}
+            style={{
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+            }}
         >
             {children}
         </div>

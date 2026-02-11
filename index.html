@@ -111,6 +111,37 @@
       }
     }
 
+    /* ===== iOS SCROLL LOCK (applied by useScrollLock hook) ===== */
+    /* position:fixed is the ONLY way to block body scroll on iOS Safari */
+    body.scroll-locked {
+      position: fixed !important;
+      overflow: hidden !important;
+      width: 100% !important;
+      touch-action: none !important;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* Re-enable touch/selection for inputs inside modals when locked */
+    body.scroll-locked input,
+    body.scroll-locked textarea,
+    body.scroll-locked select,
+    body.scroll-locked [contenteditable] {
+      touch-action: auto !important;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* Prevent iOS auto-zoom on input focus (requires 16px minimum) */
+    @supports (-webkit-touch-callout: none) {
+
+      body.scroll-locked input,
+      body.scroll-locked textarea,
+      body.scroll-locked select {
+        font-size: 16px !important;
+      }
+    }
+
     * {
       /* Disable tap highlight on mobile for native feel */
       -webkit-tap-highlight-color: transparent;

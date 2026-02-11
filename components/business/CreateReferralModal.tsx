@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, FileText, Loader2, Send } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface CreateReferralModalProps {
     isOpen: boolean;
@@ -24,6 +25,9 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
     onClose,
     onSuccess
 }) => {
+    // iOS-proof scroll lock
+    useScrollLock({ enabled: isOpen, modalId: 'create-referral' });
+
     const [members, setMembers] = useState<MemberOption[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -269,6 +273,8 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         max-width: 520px;
                         max-height: 90vh;
                         overflow-y: auto;
+                        overscroll-behavior: contain;
+                        -webkit-overflow-scrolling: touch;
                     }
 
                     .modal-header {
