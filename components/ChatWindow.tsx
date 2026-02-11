@@ -416,10 +416,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                                     <div className={`max-w-[75%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                                         <div
                                             className={`px-3 py-2 relative ${isFailed
-                                                    ? 'bg-red-900/40 border border-red-500/30'
-                                                    : isOwn
-                                                        ? ''
-                                                        : ''
+                                                ? 'bg-red-900/40 border border-red-500/30'
+                                                : isOwn
+                                                    ? ''
+                                                    : ''
                                                 } ${isOptimistic ? 'opacity-60' : ''}`}
                                             style={{
                                                 ...(isFailed ? {} : isOwn
@@ -493,11 +493,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     </>
                 )}
 
-                {/* Scroll to Bottom FAB */}
+                {/* Scroll to Bottom FAB — absolute inside messages container */}
                 {showScrollFab && (
                     <button
                         onClick={scrollToBottom}
-                        className="fixed bottom-24 right-6 z-30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90"
+                        className="absolute bottom-4 right-4 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90"
                         style={{
                             background: 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95))',
                             backdropFilter: 'blur(12px)',
@@ -555,7 +555,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     <button
                         type="submit"
                         disabled={!newMessage.trim() || sending}
-                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0"
+                        className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0 overflow-hidden"
                         style={{
                             background: newMessage.trim()
                                 ? 'linear-gradient(135deg, #b45309, #d97706)'
@@ -566,9 +566,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         }}
                     >
                         {sending ? (
-                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                            <Loader2 size={18} className="text-white animate-spin" />
                         ) : (
-                            <Send size={16} className="text-white ml-0.5" />
+                            <Send size={18} className="text-white" style={{ marginLeft: '2px', marginTop: '-1px' }} />
                         )}
                     </button>
                 </form>

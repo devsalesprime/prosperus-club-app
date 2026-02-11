@@ -1818,7 +1818,7 @@ const App = () => {
                     })}
                 </div>
 
-                <SupportWidget />
+                {view !== ViewState.MESSAGES && <SupportWidget />}
             </div>
 
             {/* Role Selector Modal - Shows when admin/team logs in */}
