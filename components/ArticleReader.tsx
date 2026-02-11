@@ -70,8 +70,8 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({ article, onBack })
                 {/* Back Button (Floating) */}
                 <button
                     onClick={onBack}
-                    className="absolute top-4 left-4 z-20 p-3 bg-slate-900/80 backdrop-blur-sm 
-                             rounded-full text-white hover:bg-slate-800 transition"
+                    className="fixed top-4 left-4 z-30 p-3 bg-slate-900/80 backdrop-blur-sm 
+                             rounded-full text-white hover:bg-slate-800 transition shadow-lg"
                 >
                     <ArrowLeft size={20} />
                 </button>
@@ -79,8 +79,8 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({ article, onBack })
                 {/* Share Button (Floating) */}
                 <button
                     onClick={handleShare}
-                    className="absolute top-4 right-4 z-20 p-3 bg-slate-900/80 backdrop-blur-sm 
-                             rounded-full text-white hover:bg-slate-800 transition"
+                    className="fixed top-4 right-4 z-30 p-3 bg-slate-900/80 backdrop-blur-sm 
+                             rounded-full text-white hover:bg-slate-800 transition shadow-lg"
                 >
                     <Share2 size={20} />
                 </button>

@@ -54,7 +54,7 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
                     {/* Back Button (Top Left) */}
                     <button
                         onClick={onBack}
-                        className="absolute top-4 left-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700"
+                        className="fixed top-4 left-4 z-30 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700 shadow-lg"
                     >
                         <ArrowLeft size={20} />
                         <span className="font-medium">Voltar</span>
@@ -77,7 +77,7 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
                     </div>
                 </div>
             ) : (
-                <div className="bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4">
+                <div className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4">
                     <button
                         onClick={onBack}
                         className="flex items-center gap-2 text-slate-400 hover:text-white transition"
@@ -268,8 +268,8 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
                             onClick={(e) => handleToggleFavorite(e, album.id)}
                             disabled={togglingFav === album.id}
                             className={`absolute top-3 right-3 z-30 p-2 rounded-full transition-all shadow-lg backdrop-blur-sm ${favoritedIds.has(album.id)
-                                    ? 'bg-red-500/90 text-white hover:bg-red-600'
-                                    : 'bg-slate-900/70 text-slate-300 hover:bg-slate-900/90 hover:text-red-400'
+                                ? 'bg-red-500/90 text-white hover:bg-red-600'
+                                : 'bg-slate-900/70 text-slate-300 hover:bg-slate-900/90 hover:text-red-400'
                                 }`}
                             title={favoritedIds.has(album.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                         >
