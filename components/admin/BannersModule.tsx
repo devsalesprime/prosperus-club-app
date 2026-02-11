@@ -57,7 +57,7 @@ const Modal = ({ title, onClose, children }: { title: string; onClose: () => voi
             className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
                 <h3 className="text-lg font-bold text-white">{title}</h3>
                 <button onClick={onClose} className="text-slate-400 hover:text-white transition">
                     <X size={20} />
@@ -319,8 +319,8 @@ export const BannersModule: React.FC = () => {
                                                     <button
                                                         onClick={() => handleToggleActive(banner.id)}
                                                         className={`p-2 rounded-lg transition ${banner.is_active
-                                                                ? 'text-green-500 hover:bg-green-500/10'
-                                                                : 'text-slate-500 hover:bg-slate-700'
+                                                            ? 'text-green-500 hover:bg-green-500/10'
+                                                            : 'text-slate-500 hover:bg-slate-700'
                                                             }`}
                                                         title={banner.is_active ? 'Desativar' : 'Ativar'}
                                                     >
