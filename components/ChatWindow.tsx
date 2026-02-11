@@ -293,7 +293,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
     return (
         <div
-            className="chat-window-root flex flex-col fixed inset-0 z-50 md:relative md:z-40 md:inset-auto"
+            className="chat-window-root flex flex-col fixed inset-0 z-[60] md:relative md:z-40 md:inset-auto"
             style={{
                 background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)',
             }}
