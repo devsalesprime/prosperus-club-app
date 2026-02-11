@@ -337,6 +337,10 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         align-items: center;
                         padding: 20px;
                         border-bottom: 1px solid #1e293b;
+                        position: sticky;
+                        top: 0;
+                        background: #0f172a;
+                        z-index: 10;
                     }
 
                     .modal-header h2 {

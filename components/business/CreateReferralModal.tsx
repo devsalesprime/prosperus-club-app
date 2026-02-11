@@ -277,6 +277,10 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         align-items: center;
                         padding: 20px;
                         border-bottom: 1px solid #eee;
+                        position: sticky;
+                        top: 0;
+                        background: white;
+                        z-index: 10;
                     }
 
                     .modal-header h2 {
