@@ -591,13 +591,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     from { opacity: 0; transform: translateY(8px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                .chat-window-root {
-                    height: 100dvh;
-                    height: 100vh; /* fallback for older browsers */
-                }
                 @media (min-width: 768px) {
                     .chat-window-root {
                         height: 100% !important;
+                        position: relative !important;
                     }
                 }
             `}</style>
