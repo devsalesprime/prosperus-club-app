@@ -244,9 +244,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         }
     };
 
-    // Handle Enter key (send) vs Shift+Enter (new line)
+    // Handle Enter key: on desktop, Enter sends (Shift+Enter = newline)
+    // On mobile, Enter always inserts newline (user taps the send button)
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile && e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage(e as any);
         }
@@ -290,7 +292,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
+        <div className="flex flex-col h-full relative z-40" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
             {/* Header */}
             <div
                 className="px-4 py-3 flex items-center gap-3 border-b border-slate-800/50 shrink-0"
@@ -555,8 +557,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     <button
                         type="submit"
                         disabled={!newMessage.trim() || sending}
-                        className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0 overflow-hidden"
+                        className="rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0"
                         style={{
+                            width: '44px',
+                            height: '44px',
+                            minWidth: '44px',
+                            minHeight: '44px',
                             background: newMessage.trim()
                                 ? 'linear-gradient(135deg, #b45309, #d97706)'
                                 : 'rgba(51,65,85,0.5)',
@@ -566,9 +572,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         }}
                     >
                         {sending ? (
-                            <Loader2 size={18} className="text-white animate-spin" />
+                            <Loader2 size={20} className="text-white animate-spin" />
                         ) : (
-                            <Send size={18} className="text-white" style={{ marginLeft: '2px', marginTop: '-1px' }} />
+                            <Send size={20} className="text-white" />
                         )}
                     </button>
                 </form>
