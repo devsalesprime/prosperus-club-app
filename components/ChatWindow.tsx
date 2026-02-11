@@ -292,7 +292,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full relative z-40" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
+        <div
+            className="chat-window-root flex flex-col fixed inset-0 z-50 md:relative md:z-40 md:inset-auto"
+            style={{
+                background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)',
+            }}
+        >
             {/* Header */}
             <div
                 className="px-4 py-3 flex items-center gap-3 border-b border-slate-800/50 shrink-0"
@@ -580,11 +585,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </form>
             </div>
 
-            {/* CSS Animation */}
+            {/* CSS Animation + Layout */}
             <style>{`
                 @keyframes slideInUp {
                     from { opacity: 0; transform: translateY(8px); }
                     to { opacity: 1; transform: translateY(0); }
+                }
+                .chat-window-root {
+                    height: 100dvh;
+                    height: 100vh; /* fallback for older browsers */
+                }
+                @media (min-width: 768px) {
+                    .chat-window-root {
+                        height: 100% !important;
+                    }
                 }
             `}</style>
         </div>
