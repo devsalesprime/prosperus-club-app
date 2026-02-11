@@ -310,9 +310,9 @@ const GlobalSearchBar = ({
     };
 
     return (
-        <div ref={containerRef} className="relative z-50">
+        <div ref={containerRef} className="relative">
             {/* Search Input */}
-            <div className="relative">
+            <div className="relative z-50">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 <input
                     ref={inputRef}
