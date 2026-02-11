@@ -24,8 +24,7 @@ const STATIC_ASSETS = [
     '/app/index.html',
     '/app/manifest.json',
     '/app/default-avatar.svg',
-    '/app/pwa-192x192.png',
-    '/app/pwa-512x512.png'
+    '/app/default-avatar.png'
 ];
 
 // Domínios que NUNCA devem ser cacheados (analytics, auth)
@@ -250,8 +249,8 @@ self.addEventListener('push', (event) => {
     let data = {
         title: 'Prosperus Club',
         body: 'Você tem uma nova notificação!',
-        icon: '/app/pwa-192x192.png',
-        badge: '/app/pwa-192x192.png',
+        icon: '/app/default-avatar.png',
+        badge: '/app/default-avatar.png',
         url: '/app/'
     };
     

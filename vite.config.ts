@@ -45,35 +45,152 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        // Desabilita geração automática de SW — usamos nosso próprio sw.js
-        // VitePWA fica responsável apenas pelo manifest.json
+        // VitePWA generates manifest.json — we use our own custom sw.js
         registerType: 'autoUpdate',
         selfDestroying: false,
-        includeAssets: ['default-avatar.png', 'default-avatar.svg'],
+        includeAssets: [
+          'default-avatar.png',
+          'default-avatar.svg',
+          'fundo-prosperus-app.webp'
+        ],
         manifest: {
+          // =============================================
+          // IDENTIDADE DO APP
+          // =============================================
           name: 'Prosperus Club',
           short_name: 'Prosperus',
-          description: 'Plataforma exclusiva para membros do Prosperus Club',
+          description: 'Plataforma exclusiva para membros do Prosperus Club — networking, negócios, eventos e ferramentas de crescimento.',
+          id: '/app/',
           start_url: '/app/',
           scope: '/app/',
+
+          // =============================================
+          // LOCALIZAÇÃO
+          // =============================================
+          lang: 'pt-BR',
+          dir: 'ltr',
+
+          // =============================================
+          // APARÊNCIA
+          // =============================================
           display: 'standalone',
+          display_override: [
+            'standalone',
+            'minimal-ui'
+          ] as any,
           background_color: '#0f172a',
           theme_color: '#0f172a',
           orientation: 'portrait',
+
+          // =============================================
+          // CATEGORIAS & CLASSIFICAÇÃO
+          // =============================================
+          categories: ['business', 'social', 'productivity'] as any,
+          iarc_rating_id: '' as any, // Obter em https://www.globalratings.com/
+
+          // =============================================
+          // ÍCONES (separar any e maskable por spec)
+          // =============================================
           icons: [
             {
               src: '/app/default-avatar.png',
               sizes: '192x192',
               type: 'image/png',
-              purpose: 'any maskable'
+              purpose: 'any'
+            },
+            {
+              src: '/app/default-avatar.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'maskable'
             },
             {
               src: '/app/default-avatar.png',
               sizes: '512x512',
               type: 'image/png',
-              purpose: 'any maskable'
+              purpose: 'any'
+            },
+            {
+              src: '/app/default-avatar.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
-          ]
+          ],
+
+          // =============================================
+          // SCREENSHOTS (para prompt de instalação)
+          // =============================================
+          screenshots: [
+            {
+              src: '/app/fundo-prosperus-app.webp',
+              sizes: '1080x1920',
+              type: 'image/webp',
+              form_factor: 'narrow',
+              label: 'Prosperus Club — Dashboard'
+            }
+          ] as any,
+
+          // =============================================
+          // ATALHOS RÁPIDOS (long-press no ícone)
+          // =============================================
+          shortcuts: [
+            {
+              name: 'Dashboard',
+              short_name: 'Início',
+              description: 'Ir para o Dashboard',
+              url: '/app/?view=dashboard',
+              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+            },
+            {
+              name: 'Chat',
+              short_name: 'Chat',
+              description: 'Abrir conversas',
+              url: '/app/?view=chat',
+              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+            },
+            {
+              name: 'Academia',
+              short_name: 'Academia',
+              description: 'Acessar vídeos e conteúdos',
+              url: '/app/?view=academy',
+              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+            },
+            {
+              name: 'Agenda',
+              short_name: 'Agenda',
+              description: 'Ver eventos e reuniões',
+              url: '/app/?view=events',
+              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+            }
+          ] as any,
+
+          // =============================================
+          // COMPORTAMENTO DE INICIALIZAÇÃO
+          // =============================================
+          launch_handler: {
+            client_mode: ['focus-existing', 'auto']
+          } as any,
+
+          // =============================================
+          // COMPARTILHAMENTO (OS Share Sheet)
+          // =============================================
+          share_target: {
+            action: '/app/?share=true',
+            method: 'GET',
+            params: {
+              title: 'title',
+              text: 'text',
+              url: 'url'
+            }
+          } as any,
+
+          // =============================================
+          // EDGE SIDE PANEL
+          // =============================================
+          edge_side_panel: {
+            preferred_width: 400
+          } as any
         },
         devOptions: {
           enabled: false
