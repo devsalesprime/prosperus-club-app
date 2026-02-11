@@ -297,6 +297,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             className="chat-window-root flex flex-col fixed inset-0 z-[60] md:relative md:z-40 md:inset-auto"
             style={{
                 background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)',
+                paddingTop: 'env(safe-area-inset-top, 0)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0)',
             }}
         >
             {/* Header */}
