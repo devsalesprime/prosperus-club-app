@@ -92,25 +92,97 @@ export default defineConfig(({ mode }) => {
           // =============================================
           icons: [
             {
-              src: '/app/default-avatar.png',
+              src: '/app/icons/icon-72x72.png',
+              sizes: '72x72',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-72x72.png',
+              sizes: '72x72',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-96x96.png',
+              sizes: '96x96',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-96x96.png',
+              sizes: '96x96',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-128x128.png',
+              sizes: '128x128',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-128x128.png',
+              sizes: '128x128',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-144x144.png',
+              sizes: '144x144',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-144x144.png',
+              sizes: '144x144',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-152x152.png',
+              sizes: '152x152',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-152x152.png',
+              sizes: '152x152',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: '/app/default-avatar.png',
+              src: '/app/icons/icon-192x192.png',
               sizes: '192x192',
               type: 'image/png',
               purpose: 'maskable'
             },
             {
-              src: '/app/default-avatar.png',
+              src: '/app/icons/icon-384x384.png',
+              sizes: '384x384',
+              type: 'image/png',
+              purpose: 'any'
+            },
+            {
+              src: '/app/icons/icon-384x384.png',
+              sizes: '384x384',
+              type: 'image/png',
+              purpose: 'maskable'
+            },
+            {
+              src: '/app/icons/icon-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any'
             },
             {
-              src: '/app/default-avatar.png',
+              src: '/app/icons/icon-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'maskable'
@@ -139,28 +211,28 @@ export default defineConfig(({ mode }) => {
               short_name: 'Início',
               description: 'Ir para o Dashboard',
               url: '/app/?view=dashboard',
-              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+              icons: [{ src: '/app/icons/icon-192x192.png', sizes: '192x192' }]
             },
             {
               name: 'Chat',
               short_name: 'Chat',
               description: 'Abrir conversas',
               url: '/app/?view=chat',
-              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+              icons: [{ src: '/app/icons/icon-192x192.png', sizes: '192x192' }]
             },
             {
               name: 'Academia',
               short_name: 'Academia',
               description: 'Acessar vídeos e conteúdos',
               url: '/app/?view=academy',
-              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+              icons: [{ src: '/app/icons/icon-192x192.png', sizes: '192x192' }]
             },
             {
               name: 'Agenda',
               short_name: 'Agenda',
               description: 'Ver eventos e reuniões',
               url: '/app/?view=events',
-              icons: [{ src: '/app/default-avatar.png', sizes: '192x192' }]
+              icons: [{ src: '/app/icons/icon-192x192.png', sizes: '192x192' }]
             }
           ] as any,
 
