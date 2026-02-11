@@ -1060,7 +1060,7 @@ const App = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-screen overflow-hidden overflow-x-hidden bg-prosperus-navy relative">
+            <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden overflow-x-hidden bg-prosperus-navy">
                 {/* Mobile Header */}
                 <div className="md:hidden flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light z-50 mobile-header">
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
