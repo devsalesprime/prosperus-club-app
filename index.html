@@ -165,12 +165,7 @@
       padding-right: var(--safe-area-inset-right);
     }
 
-    /* Prevent body scroll — app is a fullscreen flex container */
-    html,
-    body {
-      overflow: hidden;
-      height: 100%;
-    }
+    /* NOTE: Do NOT add overflow:hidden to html/body — it blocks scroll inside inner containers on Android */
 
     /* ===== CUSTOM SCROLLBAR (Navy/Gold Theme) ===== */
     ::-webkit-scrollbar {
