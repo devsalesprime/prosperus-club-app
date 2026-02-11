@@ -174,8 +174,11 @@ const MemberSuggestionSlide: React.FC<MemberSuggestionSlideProps> = ({
             {/* Dark Overlay for text legibility */}
             <div className="absolute inset-0 bg-black/50" />
 
-            {/* Content */}
-            <div className="absolute inset-0 p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 md:gap-6">
+            {/* Content - entire area clickable */}
+            <div
+                className="absolute inset-0 p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 md:gap-6 cursor-pointer"
+                onClick={onViewProfile}
+            >
                 {/* Left Section: Avatar + Info */}
                 <div className="flex flex-col md:flex-row items-center gap-4 flex-1">
                     {/* Large Avatar */}
