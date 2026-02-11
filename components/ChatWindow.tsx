@@ -3,6 +3,7 @@
 // Features: gradient bubbles, date separators, auto-resize input, scroll FAB, animations
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck } from 'lucide-react';
 import { conversationService, Message } from '../services/conversationService';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -291,7 +292,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         return result;
     }, [messages]);
 
-    return (
+    return createPortal(
         <div
             className="chat-window-root flex flex-col fixed inset-0 z-[60] md:relative md:z-40 md:inset-auto"
             style={{
@@ -598,6 +599,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     }
                 }
             `}</style>
-        </div>
+        </div>,
+        document.body
     );
 };
