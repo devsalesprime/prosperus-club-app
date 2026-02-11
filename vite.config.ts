@@ -86,6 +86,8 @@ export default defineConfig(({ mode }) => {
           // CATEGORIAS & CLASSIFICAÇÃO
           // =============================================
           categories: ['business', 'social', 'productivity'] as any,
+          prefer_related_applications: false,
+          related_applications: [] as any,
 
           // =============================================
           // ÍCONES (separar any e maskable por spec)
