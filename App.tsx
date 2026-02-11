@@ -1062,7 +1062,7 @@ const App = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden overflow-x-hidden bg-prosperus-navy">
                 {/* Mobile Header */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light z-50 mobile-header">
+                <div className="md:hidden flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light mobile-header">
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
                         <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />
                     </button>
@@ -1801,7 +1801,7 @@ const App = () => {
                 </div>
 
                 {/* Mobile Bottom Nav */}
-                <div className="md:hidden bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center p-2 pb-4 safe-area-bottom fixed bottom-0 w-full z-50">
+                <div className="md:hidden bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center p-2 pb-4 safe-area-bottom fixed bottom-0 w-full z-40">
                     {navItems.slice(0, 5).map(item => {
                         // Use item.view if available (for hierarchical items), otherwise use item.id
                         const targetView = ('view' in item && item.view) ? item.view : item.id;
