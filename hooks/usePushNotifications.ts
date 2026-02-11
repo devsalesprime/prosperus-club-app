@@ -83,15 +83,16 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
     }, []);
 
     // ========================================
-    // Registrar Service Worker
+    // Registrar Service Worker + Auto-Update
     // ========================================
     useEffect(() => {
         const registerServiceWorker = async () => {
             if (!isSupported) return;
+            if (!('serviceWorker' in navigator)) return;
 
             try {
                 const registration = await navigator.serviceWorker.register('/sw.js', {
-                    scope: '/'
+                    scope: '/app/'
                 });
 
                 console.log('[Push] Service Worker registered:', registration.scope);
@@ -102,6 +103,32 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
                 if (existingSubscription) {
                     console.log('[Push] Existing subscription found');
                 }
+
+                // ========================================
+                // AUTO-UPDATE: verifica a cada 60s
+                // ========================================
+                const updateInterval = setInterval(() => {
+                    registration.update().catch(() => {
+                        // Network error — silently ignore
+                    });
+                }, 60_000);
+
+                // Detecta quando uma nova versão do SW é encontrada
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (!newWorker) return;
+
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // Nova versão pronta — envia SKIP_WAITING para ativar imediatamente
+                            console.log('[SW Update] New version found, activating...');
+                            newWorker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                });
+
+                // Cleanup interval on unmount
+                return () => clearInterval(updateInterval);
             } catch (err) {
                 console.error('[Push] Service Worker registration failed:', err);
                 setError('Falha ao registrar Service Worker');
@@ -109,6 +136,23 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
         };
 
         registerServiceWorker();
+
+        // ========================================
+        // AUTO-RELOAD: quando novo SW assume controle
+        // ========================================
+        let refreshing = false;
+        const onControllerChange = () => {
+            if (refreshing) return;
+            refreshing = true;
+            console.log('[SW Update] New version active — reloading...');
+            window.location.reload();
+        };
+
+        navigator.serviceWorker?.addEventListener('controllerchange', onControllerChange);
+
+        return () => {
+            navigator.serviceWorker?.removeEventListener('controllerchange', onControllerChange);
+        };
     }, [isSupported]);
 
     // ========================================

@@ -1,25 +1,31 @@
 // ============================================
 // PROSPERUS CLUB - SERVICE WORKER
 // ============================================
-// Versão: 1.0.0
-// Estratégias:
-// - Stale-While-Revalidate para assets estáticos
-// - Network First para API calls
-// - Push Notifications com deep linking
+// Cache Strategy:
+// - Build-timestamp versioning (auto-invalidates on each deploy)
+// - Stale-While-Revalidate for static assets
+// - Network First for API calls
+// - Push Notifications with deep linking
+//
+// Z-INDEX DE CACHE:
+// CACHE_VERSION  → muda a cada build, limpa caches antigos automaticamente
+// skipWaiting()  → ativa novo SW imediatamente
+// clients.claim() → assume controle sem reload
 
-const CACHE_NAME = 'prosperus-v2';
-const STATIC_CACHE_NAME = 'prosperus-static-v2';
-const DYNAMIC_CACHE_NAME = 'prosperus-dynamic-v2';
-const API_CACHE_NAME = 'prosperus-api-v1';
+// ⚡ VERSÃO AUTOMÁTICA - Atualizada a cada build pelo Vite plugin
+const CACHE_VERSION = '__BUILD_TIMESTAMP__';
+const STATIC_CACHE_NAME = `prosperus-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `prosperus-dynamic-${CACHE_VERSION}`;
+const API_CACHE_NAME = `prosperus-api-${CACHE_VERSION}`;
 
 // Assets essenciais para cache inicial (App Shell)
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/default-avatar.svg',
-    '/pwa-192x192.png',
-    '/pwa-512x512.png'
+    '/app/',
+    '/app/index.html',
+    '/app/manifest.json',
+    '/app/default-avatar.svg',
+    '/app/pwa-192x192.png',
+    '/app/pwa-512x512.png'
 ];
 
 // Domínios que NUNCA devem ser cacheados (analytics, auth)
@@ -42,7 +48,7 @@ const MAX_API_CACHE_ENTRIES = 100;
 // INSTALL EVENT - Cache App Shell
 // ============================================
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing Service Worker v1...');
+    console.log(`[SW] Installing v${CACHE_VERSION}...`);
     
     event.waitUntil(
         caches.open(STATIC_CACHE_NAME)
@@ -61,10 +67,13 @@ self.addEventListener('install', (event) => {
 });
 
 // ============================================
-// ACTIVATE EVENT - Limpa caches antigos
+// ACTIVATE EVENT - Limpa TODOS os caches antigos
 // ============================================
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating Service Worker...');
+    console.log(`[SW] Activating v${CACHE_VERSION}...`);
+    
+    // Lista de caches ATUAIS que devem ser preservados
+    const currentCaches = [STATIC_CACHE_NAME, DYNAMIC_CACHE_NAME, API_CACHE_NAME];
     
     event.waitUntil(
         caches.keys()
@@ -72,10 +81,8 @@ self.addEventListener('activate', (event) => {
                 return Promise.all(
                     cacheNames
                         .filter((name) => {
-                            // Remove caches antigos (versões anteriores)
-                            return name.startsWith('prosperus-') && 
-                                   name !== STATIC_CACHE_NAME && 
-                                   name !== DYNAMIC_CACHE_NAME;
+                            // Remove QUALQUER cache que não esteja na lista atual
+                            return name.startsWith('prosperus-') && !currentCaches.includes(name);
                         })
                         .map((name) => {
                             console.log('[SW] Deleting old cache:', name);
@@ -84,6 +91,7 @@ self.addEventListener('activate', (event) => {
                 );
             })
             .then(() => {
+                console.log(`[SW] v${CACHE_VERSION} now active - old caches cleaned`);
                 // Assume controle de todas as páginas imediatamente
                 return self.clients.claim();
             })
@@ -117,7 +125,13 @@ self.addEventListener('fetch', (event) => {
         return; // Auth and realtime requests are never cached
     }
     
-    // Static assets and navigation: Stale-While-Revalidate
+    // Navigation requests (HTML): Network-First to always get latest
+    if (request.mode === 'navigate') {
+        event.respondWith(networkFirst(request));
+        return;
+    }
+    
+    // Static assets (JS, CSS, images): Stale-While-Revalidate
     event.respondWith(staleWhileRevalidate(request));
 });
 
@@ -139,11 +153,11 @@ function isApiRequest(url) {
 }
 
 /**
- * Network-First Strategy (for API requests)
+ * Network-First Strategy (for API and navigation requests)
  * Tries network, falls back to cache if offline
  */
 async function networkFirst(request) {
-    const cache = await caches.open(API_CACHE_NAME);
+    const cache = await caches.open(request.mode === 'navigate' ? DYNAMIC_CACHE_NAME : API_CACHE_NAME);
     
     try {
         const networkResponse = await fetch(request);
@@ -153,8 +167,10 @@ async function networkFirst(request) {
             const responseClone = networkResponse.clone();
             cache.put(request, responseClone);
             
-            // Trim cache to prevent storage bloat
-            trimCache(API_CACHE_NAME, MAX_API_CACHE_ENTRIES);
+            // Trim API cache to prevent storage bloat
+            if (request.mode !== 'navigate') {
+                trimCache(API_CACHE_NAME, MAX_API_CACHE_ENTRIES);
+            }
         }
         
         return networkResponse;
@@ -163,8 +179,14 @@ async function networkFirst(request) {
         const cachedResponse = await cache.match(request);
         
         if (cachedResponse) {
-            console.log('[SW] Serving API from cache (offline):', request.url);
+            console.log('[SW] Serving from cache (offline):', request.url);
             return cachedResponse;
+        }
+        
+        // For navigation, return cached index.html (SPA fallback)
+        if (request.mode === 'navigate') {
+            const fallback = await caches.match('/app/index.html');
+            if (fallback) return fallback;
         }
         
         // No cache available — return offline JSON response
@@ -228,9 +250,9 @@ self.addEventListener('push', (event) => {
     let data = {
         title: 'Prosperus Club',
         body: 'Você tem uma nova notificação!',
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
-        url: '/'
+        icon: '/app/pwa-192x192.png',
+        badge: '/app/pwa-192x192.png',
+        url: '/app/'
     };
     
     // Tenta extrair dados do payload
@@ -267,7 +289,7 @@ self.addEventListener('push', (event) => {
             {
                 action: 'open',
                 title: 'Abrir',
-                icon: '/pwa-192x192.png'
+                icon: '/app/pwa-192x192.png'
             },
             {
                 action: 'close',
@@ -296,7 +318,7 @@ self.addEventListener('notificationclick', (event) => {
     }
     
     // URL de destino (do payload ou raiz)
-    const targetUrl = event.notification.data?.url || '/';
+    const targetUrl = event.notification.data?.url || '/app/';
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -340,6 +362,11 @@ self.addEventListener('message', (event) => {
             names.forEach((name) => caches.delete(name));
         });
     }
+    
+    // Respond with current version
+    if (event.data && event.data.type === 'GET_VERSION') {
+        event.ports?.[0]?.postMessage({ version: CACHE_VERSION });
+    }
 });
 
-console.log('[SW] Service Worker loaded successfully!');
+console.log(`[SW] Service Worker v${CACHE_VERSION} loaded!`);

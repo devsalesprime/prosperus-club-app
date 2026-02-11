@@ -1,8 +1,31 @@
 /// <reference types="vitest" />
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import fs from 'fs';
+import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * Vite plugin that stamps __BUILD_TIMESTAMP__ into sw.js during build.
+ * This ensures each deploy gets a unique cache version, forcing old
+ * caches to be cleaned automatically.
+ */
+function swVersionStamp(): Plugin {
+  return {
+    name: 'sw-version-stamp',
+    writeBundle(options) {
+      const outDir = options.dir || 'dist';
+      const swPath = path.resolve(outDir, 'sw.js');
+      if (fs.existsSync(swPath)) {
+        const timestamp = Date.now().toString(36); // compact: e.g. 'lz1abc'
+        let content = fs.readFileSync(swPath, 'utf-8');
+        content = content.replace(/__BUILD_TIMESTAMP__/g, timestamp);
+        fs.writeFileSync(swPath, content, 'utf-8');
+        console.log(`[sw-version-stamp] Stamped sw.js with version: ${timestamp}`);
+      }
+    }
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -22,7 +45,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
+        // Desabilita geração automática de SW — usamos nosso próprio sw.js
+        // VitePWA fica responsável apenas pelo manifest.json
         registerType: 'autoUpdate',
+        selfDestroying: false,
         includeAssets: ['default-avatar.png', 'default-avatar.svg'],
         manifest: {
           name: 'Prosperus Club',
@@ -49,37 +75,12 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
-                },
-                cacheableResponse: {
-                  statuses: [0, 200]
-                }
-              }
-            },
-            {
-              urlPattern: /^https:\/\/cdn\.tailwindcss\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'tailwind-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
-                }
-              }
-            }
-          ]
+        devOptions: {
+          enabled: false
         }
-      })
+      }),
+      // Stamps build timestamp into sw.js for automatic cache versioning
+      swVersionStamp()
     ],
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
