@@ -91,9 +91,14 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
             if (!('serviceWorker' in navigator)) return;
 
             try {
-                const registration = await navigator.serviceWorker.register('/sw.js', {
-                    scope: '/app/'
-                });
+                // SW is globally registered by index.html — just get the existing registration
+                let registration = await navigator.serviceWorker.getRegistration('/app/');
+                if (!registration) {
+                    // Fallback: register if not yet registered
+                    registration = await navigator.serviceWorker.register('/app/sw.js', {
+                        scope: '/app/'
+                    });
+                }
 
                 console.log('[Push] Service Worker registered:', registration.scope);
                 setIsRegistered(true);

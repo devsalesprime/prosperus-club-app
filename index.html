@@ -475,6 +475,30 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
+
+  <!-- Global Service Worker Registration (runs on every page load) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' })
+          .then(function (registration) {
+            console.log('[App] SW registered, scope:', registration.scope);
+            // Check for updates every 60 seconds
+            setInterval(function () {
+              registration.update();
+            }, 60000);
+          })
+          .catch(function (error) {
+            console.error('[App] SW registration failed:', error);
+          });
+      });
+      // Auto-reload when new SW takes over
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        console.log('[App] New SW active, reloading...');
+        window.location.reload();
+      });
+    }
+  </script>
 </body>
 
 </html>
