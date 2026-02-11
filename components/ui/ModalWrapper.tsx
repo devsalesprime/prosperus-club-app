@@ -62,7 +62,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200"
             onClick={(e) => {
                 // Fechar ao clicar no backdrop
                 if (e.target === e.currentTarget) {

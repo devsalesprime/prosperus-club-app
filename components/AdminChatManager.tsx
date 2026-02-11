@@ -419,7 +419,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
 
             {/* Block User Confirmation Modal */}
             {showBlockModal && selectedUserToBlock && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-prosperus-navy border border-prosperus-navy-light rounded-xl p-6 max-w-md w-full">
                         <div className="flex items-center gap-3 mb-4">
                             <div className={`p-3 rounded-full ${selectedUserToBlock.isBlocked ? 'bg-green-500/20' : 'bg-orange-500/20'}`}>
@@ -506,7 +506,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
 
             {/* New Conversation Modal */}
             {showNewConversationModal && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-prosperus-navy border border-prosperus-navy-light rounded-xl p-6 max-w-lg w-full max-h-[80vh] flex flex-col">
                         <div className="flex items-center justify-between mb-4">
                             <h4 className="text-lg font-bold text-white flex items-center gap-2">

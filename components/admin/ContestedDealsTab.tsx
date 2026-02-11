@@ -161,7 +161,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
 
             {/* Audit Modal */}
             {selectedDeal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                         {/* Header */}
                         <div className="p-6 border-b border-slate-800">

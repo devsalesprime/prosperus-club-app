@@ -136,7 +136,7 @@ export const ImageCrop: React.FC<ImageCropProps> = ({ imageUrl, onCropComplete, 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className="bg-slate-900 rounded-xl border border-slate-700 w-full max-w-md">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-800 flex items-center justify-between">

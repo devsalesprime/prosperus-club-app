@@ -151,7 +151,7 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
     };
 
     return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+        <div className="fixed inset-0 bg-black z-[70] flex flex-col">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
                 <div className="flex items-center justify-between">

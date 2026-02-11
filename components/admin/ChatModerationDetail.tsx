@@ -462,7 +462,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
 
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="p-3 bg-red-900/30 rounded-full">
@@ -510,7 +510,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
 
             {/* Block User Confirmation Modal */}
             {showBlockModal && selectedUserToBlock && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full">
                         <div className="flex items-center gap-3 mb-4">
                             <div className={`p-3 rounded-full ${selectedUserToBlock.isBlocked ? 'bg-green-900/30' : 'bg-orange-900/30'}`}>

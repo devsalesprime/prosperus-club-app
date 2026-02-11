@@ -721,7 +721,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
             {/* EVENT DETAILS MODAL - Quick View */}
             {selectedEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
                     <div className="bg-slate-900 border border-slate-700 w-[95%] md:w-full md:max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh]">
                         <div className="h-32 bg-gradient-to-r from-yellow-600 to-yellow-800 relative rounded-t-2xl overflow-hidden shrink-0">
                             {selectedEvent.bannerUrl && (

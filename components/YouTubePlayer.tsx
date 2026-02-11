@@ -192,7 +192,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
 
     if (!videoId) {
         return (
-            <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black z-[70] flex items-center justify-center">
                 <div className="text-white text-center">
                     <p className="text-xl mb-4">URL de vídeo inválida</p>
                     <button
@@ -207,7 +207,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
     }
 
     return (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+        <div className="fixed inset-0 bg-black z-[70] flex flex-col">
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
                 <div className="flex items-center justify-between">

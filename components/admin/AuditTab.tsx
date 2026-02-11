@@ -275,7 +275,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
 
             {/* Bulk Audit Modal */}
             {showBulkModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg">
                         <div className="p-6 border-b border-slate-800">
                             <h2 className="text-xl font-bold text-white">Auditoria em Lote</h2>
