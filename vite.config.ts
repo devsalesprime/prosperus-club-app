@@ -86,7 +86,6 @@ export default defineConfig(({ mode }) => {
           // CATEGORIAS & CLASSIFICAÇÃO
           // =============================================
           categories: ['business', 'social', 'productivity'] as any,
-          iarc_rating_id: '' as any, // Obter em https://www.globalratings.com/
 
           // =============================================
           // ÍCONES (separar any e maskable por spec)
