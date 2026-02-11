@@ -129,7 +129,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
                     relative w-full ${maxWidthClasses[maxWidth]}
                     bg-slate-950 border border-slate-800 
                     rounded-2xl shadow-2xl
-                    max-h-[90vh] overflow-hidden
+                    max-h-[90dvh] overflow-hidden
                     flex flex-col
                     animate-in zoom-in-95 duration-200
                     ${className}

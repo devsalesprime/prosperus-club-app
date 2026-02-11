@@ -351,10 +351,11 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         border-radius: 12px;
                         width: 100%;
                         max-width: 480px;
-                        max-height: 90vh;
+                        max-height: 90dvh;
                         overflow-y: auto;
                         overscroll-behavior: contain;
                         -webkit-overflow-scrolling: touch;
+                        padding-bottom: env(safe-area-inset-bottom, 0);
                     }
 
                     .modal-header {
