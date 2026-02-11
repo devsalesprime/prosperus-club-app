@@ -147,7 +147,7 @@ export const InstallPrompt: React.FC = () => {
                 <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-4 border border-yellow-600/30 shadow-2xl shadow-yellow-900/20">
                     <div className="flex items-center gap-3">
                         <img
-                            src="/app/default-avatar.png"
+                            src="/app/icons/icon-192x192.png"
                             alt="Prosperus Club"
                             className="w-12 h-12 rounded-xl shadow-lg"
                         />
