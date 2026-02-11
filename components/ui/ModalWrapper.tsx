@@ -4,6 +4,7 @@
 // iOS-proof: useScrollLock + touchmove prevention
 
 import React, { useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface ModalWrapperProps {
@@ -109,7 +110,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <div
             ref={overlayRef}
             className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -137,7 +138,8 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
             >
                 {children}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

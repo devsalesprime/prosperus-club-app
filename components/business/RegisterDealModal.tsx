@@ -2,6 +2,7 @@
 // Modal para registrar novo negócio - Prosperus Club App v2.5
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, DollarSign, Calendar, FileText, User, Loader2, Trash2 } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
@@ -186,7 +187,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
 
     if (!isOpen) return null;
 
-    return (
+    return createPortal(
         <div ref={overlayRef} className="modal-overlay" onClick={onClose}>
             <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
@@ -615,7 +616,8 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                     }
                 `}</style>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
