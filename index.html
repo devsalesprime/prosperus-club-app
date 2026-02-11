@@ -95,6 +95,22 @@
       --safe-area-inset-left: env(safe-area-inset-left);
     }
 
+    /* ===== GLOBAL MODAL SAFE AREA FIX (iOS Standalone) ===== */
+    /* All fixed fullscreen overlays must respect the status bar safe area */
+    /* This covers ALL modals using fixed inset-0 (Tailwind) or modal-overlay (custom CSS) */
+    @supports (padding-top: env(safe-area-inset-top)) {
+
+      /* Tailwind-based modals: fixed inset-0 */
+      .fixed.inset-0 {
+        padding-top: env(safe-area-inset-top) !important;
+      }
+
+      /* Custom CSS modals (e.g. RegisterDealModal) */
+      .modal-overlay {
+        padding-top: env(safe-area-inset-top) !important;
+      }
+    }
+
     * {
       /* Disable tap highlight on mobile for native feel */
       -webkit-tap-highlight-color: transparent;
