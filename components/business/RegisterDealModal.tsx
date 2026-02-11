@@ -1,7 +1,7 @@
 // components/business/RegisterDealModal.tsx
 // Modal para registrar novo negócio - Prosperus Club App v2.5
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { X, DollarSign, Calendar, FileText, User, Loader2, Trash2 } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
@@ -25,8 +25,28 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     onClose,
     onSuccess
 }) => {
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
     // iOS-proof scroll lock
     useScrollLock({ enabled: isOpen, modalId: 'register-deal' });
+
+    // iOS touchmove prevention — block scroll on overlay, allow inside .modal-content
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        const content = contentRef.current;
+        if (!content || !content.contains(target)) {
+            e.preventDefault();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+        overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+        return () => overlay.removeEventListener('touchmove', handleTouchMove);
+    }, [isOpen, handleTouchMove]);
 
     const [members, setMembers] = useState<MemberOption[]>([]);
     const [loading, setLoading] = useState(false);
@@ -167,8 +187,8 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div ref={overlayRef} className="modal-overlay" onClick={onClose}>
+            <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Registrar Negócio</h2>
                     <button className="close-btn" onClick={onClose}>

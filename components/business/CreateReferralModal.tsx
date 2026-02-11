@@ -1,7 +1,7 @@
 // components/business/CreateReferralModal.tsx
 // Modal para criar nova indicação - Prosperus Club App v2.5
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, User, Mail, Phone, FileText, Loader2, Send } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
@@ -25,8 +25,28 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
     onClose,
     onSuccess
 }) => {
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
     // iOS-proof scroll lock
     useScrollLock({ enabled: isOpen, modalId: 'create-referral' });
+
+    // iOS touchmove prevention
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        const content = contentRef.current;
+        if (!content || !content.contains(target)) {
+            e.preventDefault();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+        overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+        return () => overlay.removeEventListener('touchmove', handleTouchMove);
+    }, [isOpen, handleTouchMove]);
 
     const [members, setMembers] = useState<MemberOption[]>([]);
     const [loading, setLoading] = useState(false);
@@ -116,8 +136,8 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div ref={overlayRef} className="modal-overlay" onClick={onClose}>
+            <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Nova Indicação</h2>
                     <button className="close-btn" onClick={onClose}>

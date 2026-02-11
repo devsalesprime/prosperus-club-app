@@ -1,9 +1,9 @@
 // ModalWrapper.tsx
 // Componente container reutilizável para modais
 // Padroniza backdrop, posicionamento, animação e scroll
-// iOS-proof: uses useScrollLock for position:fixed body lock
+// iOS-proof: useScrollLock + touchmove prevention
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
 interface ModalWrapperProps {
@@ -32,7 +32,10 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
     className = '',
     modalId = 'modal-wrapper'
 }) => {
-    // iOS-proof scroll lock (position: fixed + scroll position save/restore)
+    const overlayRef = useRef<HTMLDivElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // iOS-proof scroll lock
     useScrollLock({ enabled: isOpen, modalId });
 
     // Fechar com ESC
@@ -52,13 +55,65 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
         };
     }, [isOpen, onClose]);
 
+    // iOS touchmove prevention: blocks scroll propagation through overlay
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        const content = contentRef.current;
+
+        if (!content) return;
+
+        // Touch is INSIDE the modal content
+        if (content.contains(target)) {
+            // Find the nearest scrollable parent inside the modal
+            let scrollable: HTMLElement | null = target;
+            while (scrollable && scrollable !== content) {
+                if (scrollable.scrollHeight > scrollable.clientHeight) break;
+                scrollable = scrollable.parentElement;
+            }
+
+            // If there's a scrollable area, prevent bounce at edges
+            if (scrollable && scrollable.scrollHeight > scrollable.clientHeight) {
+                const { scrollTop, scrollHeight, clientHeight } = scrollable;
+                const atTop = scrollTop <= 0;
+                const atBottom = scrollTop + clientHeight >= scrollHeight;
+                const touch = e.touches[0];
+                const lastY = (scrollable as any).__lastTouchY || touch.clientY;
+                const goingUp = touch.clientY > lastY;
+                const goingDown = touch.clientY < lastY;
+                (scrollable as any).__lastTouchY = touch.clientY;
+
+                if ((atTop && goingUp) || (atBottom && goingDown)) {
+                    e.preventDefault();
+                }
+            } else {
+                // No scrollable area — block touch entirely
+                e.preventDefault();
+            }
+        } else {
+            // Touch is OUTSIDE the modal content (on overlay) — block
+            e.preventDefault();
+        }
+    }, []);
+
+    // Attach touchmove listener with { passive: false } (required for preventDefault)
+    useEffect(() => {
+        if (!isOpen) return;
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+
+        overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+        return () => {
+            overlay.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, [isOpen, handleTouchMove]);
+
     if (!isOpen) return null;
 
     return (
         <div
+            ref={overlayRef}
             className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200"
             onClick={(e) => {
-                // Fechar ao clicar no backdrop
                 if (e.target === e.currentTarget) {
                     onClose();
                 }
@@ -69,6 +124,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
 
             {/* Modal Container */}
             <div
+                ref={contentRef}
                 className={`
                     relative w-full ${maxWidthClasses[maxWidth]}
                     bg-slate-950 border border-slate-800 
