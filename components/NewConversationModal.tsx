@@ -1,8 +1,8 @@
 // NewConversationModal.tsx
-// Modal for starting a new conversation with a member
+// Premium modal for starting a new conversation with a member
 
 import React, { useState, useEffect } from 'react';
-import { X, Search, Loader2, MessageCircle } from 'lucide-react';
+import { X, Search, Loader2, MessageCircle, ArrowRight } from 'lucide-react';
 import { Member } from '../types';
 import { conversationService } from '../services/conversationService';
 
@@ -23,6 +23,7 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [searchFocused, setSearchFocused] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -34,15 +35,12 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
     const loadMembers = async () => {
         try {
             setLoading(true);
-
-            // Import supabase
             const { supabase } = await import('../lib/supabase');
 
-            // Fetch real members from Supabase profiles table
             const { data: profiles, error } = await supabase
                 .from('profiles')
                 .select('id, name, email, company, job_title, image_url, role, tags')
-                .neq('id', currentUserId) // Exclude current user
+                .neq('id', currentUserId)
                 .order('name', { ascending: true });
 
             if (error) {
@@ -50,14 +48,13 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
                 return;
             }
 
-            // Map profiles to Member format
             const mappedMembers = (profiles || []).map(p => ({
                 id: p.id,
                 name: p.name || p.email || 'Sócio',
                 email: p.email,
                 company: p.company,
                 jobTitle: p.job_title,
-                image: p.image_url || '/default-avatar.svg',
+                image: p.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                 role: p.role,
                 tags: p.tags || [],
                 description: '',
@@ -102,99 +99,181 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-            <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
+        <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                onClick={!creating ? onClose : undefined}
+            />
+
+            {/* Modal */}
+            <div
+                className="relative w-full sm:max-w-lg flex flex-col sm:rounded-2xl rounded-t-2xl overflow-hidden"
+                style={{
+                    maxHeight: '85vh',
+                    background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+                    border: '1px solid rgba(51,65,85,0.5)',
+                    boxShadow: '0 -8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(51,65,85,0.3)',
+                    animation: 'slideUp 0.3s ease-out',
+                }}
+            >
+                {/* Drag handle for mobile */}
+                <div className="flex justify-center pt-2 sm:hidden">
+                    <div className="w-10 h-1 rounded-full bg-slate-700" />
+                </div>
+
                 {/* Header */}
-                <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <MessageCircle className="text-yellow-500" size={24} />
+                <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2.5">
+                        <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(217,119,6,0.1))' }}
+                        >
+                            <MessageCircle className="text-yellow-500" size={16} />
+                        </div>
                         Nova Conversa
                     </h2>
                     <button
                         onClick={onClose}
                         disabled={creating}
-                        className="btn-sm p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 text-slate-500 hover:text-white hover:bg-white/5 disabled:opacity-30 active:scale-90"
                     >
-                        <X size={20} />
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* Search Bar */}
-                <div className="p-4 border-b border-slate-800">
+                <div className="px-5 pb-3">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Search
+                            className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${searchFocused ? 'text-yellow-500' : 'text-slate-500'
+                                }`}
+                            size={16}
+                        />
                         <input
                             type="text"
                             placeholder="Buscar membros..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
                             disabled={creating}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-yellow-600 transition disabled:opacity-50"
+                            className="w-full rounded-xl py-2.5 pl-9 pr-4 text-white text-sm placeholder-slate-500 transition-all duration-200 focus:outline-none disabled:opacity-50"
+                            style={{
+                                background: 'rgba(15,23,42,0.6)',
+                                border: searchFocused
+                                    ? '1px solid rgba(217,119,6,0.4)'
+                                    : '1px solid rgba(51,65,85,0.4)',
+                                boxShadow: searchFocused
+                                    ? '0 0 0 3px rgba(217,119,6,0.08)'
+                                    : 'none',
+                            }}
                             autoFocus
                         />
                     </div>
                 </div>
 
                 {/* Members List */}
-                <div className="flex-1 overflow-y-auto p-4">
+                <div className="flex-1 overflow-y-auto px-3 pb-3">
                     {loading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-full border-2 border-yellow-500/20"></div>
+                                <div className="absolute inset-0 w-10 h-10 rounded-full border-2 border-transparent border-t-yellow-500 animate-spin"></div>
+                            </div>
+                            <p className="text-slate-500 text-sm">Carregando membros...</p>
                         </div>
                     ) : filteredMembers.length === 0 ? (
                         <div className="text-center py-12">
-                            <Search className="w-12 h-12 text-slate-700 mx-auto mb-3" />
-                            <p className="text-slate-400">
+                            <div
+                                className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center"
+                                style={{
+                                    background: 'rgba(30,41,59,0.5)',
+                                    border: '1px solid rgba(51,65,85,0.3)',
+                                }}
+                            >
+                                <Search className="w-7 h-7 text-slate-600" />
+                            </div>
+                            <p className="text-slate-500 text-sm">
                                 {searchQuery
                                     ? 'Nenhum membro encontrado'
                                     : 'Nenhum membro disponível'}
                             </p>
                         </div>
                     ) : (
-                        <div className="grid gap-2">
-                            {filteredMembers.map((member) => (
+                        <div className="space-y-1">
+                            {filteredMembers.map((member, index) => (
                                 <button
                                     key={member.id}
                                     onClick={() => handleSelectMember(member.id)}
                                     disabled={creating}
-                                    className="w-full p-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-yellow-600 rounded-lg transition text-left flex items-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full px-3 py-3 rounded-xl transition-all duration-200 text-left flex items-center gap-3 group disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                                    style={{
+                                        background: 'transparent',
+                                        animation: `fadeInUp 0.3s ease-out ${index * 0.03}s both`,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        (e.currentTarget as HTMLElement).style.background = 'rgba(30,41,59,0.5)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        (e.currentTarget as HTMLElement).style.background = 'transparent';
+                                    }}
                                 >
-                                    {/* Avatar */}
-                                    <img
-                                        src={member.image || '/default-avatar.svg'}
-                                        alt={member.name}
-                                        className="w-12 h-12 rounded-full object-cover border-2 border-slate-600 group-hover:border-yellow-600 transition"
-                                    />
+                                    {/* Avatar with gradient ring */}
+                                    <div
+                                        className="w-11 h-11 rounded-full p-[2px] shrink-0 transition-all duration-200"
+                                        style={{
+                                            background: 'rgba(51,65,85,0.5)',
+                                        }}
+                                    >
+                                        <img
+                                            src={member.image || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                            alt={member.name}
+                                            className="w-full h-full rounded-full object-cover border-2 border-slate-800"
+                                        />
+                                    </div>
 
                                     {/* Info */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-white truncate group-hover:text-yellow-500 transition">
+                                        <h3 className="font-semibold text-sm text-slate-200 truncate group-hover:text-white transition-colors duration-200">
                                             {member.name}
                                         </h3>
                                         {member.jobTitle && (
-                                            <p className="text-sm text-slate-400 truncate">
+                                            <p className="text-[11px] text-slate-500 truncate">
                                                 {member.jobTitle}
-                                                {member.company && ` @ ${member.company}`}
+                                                {member.company && ` · ${member.company}`}
                                             </p>
                                         )}
                                         {member.tags && member.tags.length > 0 && (
                                             <div className="flex gap-1 mt-1 flex-wrap">
-                                                {member.tags.slice(0, 3).map((tag, idx) => (
+                                                {member.tags.slice(0, 2).map((tag, idx) => (
                                                     <span
                                                         key={idx}
-                                                        className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded"
+                                                        className="text-[10px] px-1.5 py-0.5 rounded-md text-slate-400"
+                                                        style={{
+                                                            background: 'rgba(51,65,85,0.4)',
+                                                            border: '1px solid rgba(51,65,85,0.3)',
+                                                        }}
                                                     >
                                                         {tag}
                                                     </span>
                                                 ))}
+                                                {member.tags.length > 2 && (
+                                                    <span className="text-[10px] text-slate-600">
+                                                        +{member.tags.length - 2}
+                                                    </span>
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Arrow */}
-                                    <MessageCircle
-                                        className="text-slate-600 group-hover:text-yellow-500 transition shrink-0"
-                                        size={20}
+                                    <ArrowRight
+                                        className="text-slate-700 group-hover:text-yellow-500 transition-all duration-200 shrink-0 group-hover:translate-x-0.5"
+                                        size={16}
                                     />
                                 </button>
                             ))}
@@ -203,23 +282,48 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-                    <p className="text-xs text-slate-500 text-center">
-                        {filteredMembers.length} {filteredMembers.length === 1 ? 'membro' : 'membros'} disponível
-                        {filteredMembers.length !== 1 ? 'is' : ''}
+                <div className="px-5 py-3 border-t border-slate-800/50">
+                    <p className="text-[11px] text-slate-600 text-center">
+                        {filteredMembers.length} {filteredMembers.length === 1 ? 'membro disponível' : 'membros disponíveis'}
                     </p>
                 </div>
+
+                {/* Creating Overlay */}
+                {creating && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center rounded-2xl z-10">
+                        <div
+                            className="flex flex-col items-center gap-3 p-6 rounded-2xl"
+                            style={{
+                                background: 'rgba(30,41,59,0.9)',
+                                border: '1px solid rgba(51,65,85,0.5)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            }}
+                        >
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-full border-2 border-yellow-500/20"></div>
+                                <div className="absolute inset-0 w-10 h-10 rounded-full border-2 border-transparent border-t-yellow-500 animate-spin"></div>
+                            </div>
+                            <p className="text-white text-sm font-medium">Criando conversa...</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Loading Overlay */}
-            {creating && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-2xl">
-                    <div className="bg-slate-900 p-6 rounded-xl border border-slate-700 flex flex-col items-center gap-3">
-                        <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
-                        <p className="text-white font-medium">Criando conversa...</p>
-                    </div>
-                </div>
-            )}
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 };

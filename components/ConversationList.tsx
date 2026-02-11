@@ -1,11 +1,11 @@
 // ConversationList.tsx
-// Component for displaying list of user conversations
+// Premium conversation list with glassmorphism, animations, and modern UX
 // With Supabase Realtime for live updates
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageCircle, Search, Plus, Loader2 } from 'lucide-react';
+import { MessageCircle, Search, Plus, Loader2, Users } from 'lucide-react';
 import { conversationService, ConversationWithDetails } from '../services/conversationService';
-import { formatDistanceToNow } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface ConversationListProps {
@@ -14,6 +14,17 @@ interface ConversationListProps {
     onSelectConversation: (conversationId: string) => void;
     onNewConversation: () => void;
 }
+
+const formatTimestamp = (timestamp: string) => {
+    try {
+        const date = new Date(timestamp);
+        if (isToday(date)) return format(date, 'HH:mm');
+        if (isYesterday(date)) return 'Ontem';
+        return format(date, 'dd/MM/yy');
+    } catch {
+        return '';
+    }
+};
 
 export const ConversationList: React.FC<ConversationListProps> = ({
     currentUserId,
@@ -25,6 +36,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
     const isSubscribedRef = useRef(false);
 
     // Load conversations and setup realtime subscription
@@ -36,31 +48,23 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 setLoading(true);
                 setError(null);
 
-                // 1. Load existing conversations
                 const data = await conversationService.getUserConversations(currentUserId);
                 setConversations(data);
 
-                // 2. Subscribe to new messages (Realtime)
                 subscription = conversationService.subscribeToUserMessages(
                     currentUserId,
                     async (payload) => {
-                        console.log('📬 ConversationList: New message received:', payload);
-
                         const { conversation_id, sender_id, content, created_at } = payload;
 
-                        // Update conversations state
                         setConversations(prevConversations => {
-                            // Check if conversation exists in list
                             const existingIndex = prevConversations.findIndex(
                                 c => c.id === conversation_id
                             );
 
                             if (existingIndex !== -1) {
-                                // Cenário A: Conversation exists - update and move to top
                                 const updatedConversations = [...prevConversations];
                                 const conversation = { ...updatedConversations[existingIndex] };
 
-                                // Update last message
                                 conversation.lastMessage = {
                                     id: `temp-${Date.now()}`,
                                     conversation_id,
@@ -70,30 +74,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                                     is_read: false
                                 };
 
-                                // Update timestamp
                                 conversation.updated_at = created_at;
 
-                                // Increment unread count if not from current user 
-                                // and conversation is not currently selected
                                 if (sender_id !== currentUserId && selectedConversationId !== conversation_id) {
                                     conversation.unreadCount = (conversation.unreadCount || 0) + 1;
                                 }
 
-                                // Remove from current position
                                 updatedConversations.splice(existingIndex, 1);
-
-                                // Add to top
                                 return [conversation, ...updatedConversations];
                             } else {
-                                // Cenário B: New conversation - fetch details and add to top
-                                console.log('🆕 ConversationList: New conversation detected, fetching details...');
-
-                                // Fetch in background (don't block)
                                 conversationService.getConversationById(conversation_id, currentUserId)
                                     .then(newConversation => {
                                         if (newConversation) {
                                             setConversations(prev => {
-                                                // Check again if it was added in the meantime
                                                 const alreadyExists = prev.some(c => c.id === conversation_id);
                                                 if (alreadyExists) return prev;
                                                 return [newConversation, ...prev];
@@ -120,17 +113,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
         initialize();
 
-        // Cleanup on unmount
         return () => {
             if (subscription) {
-                console.log('🧹 ConversationList: Cleaning up subscription');
                 subscription.unsubscribe();
                 isSubscribedRef.current = false;
             }
         };
     }, [currentUserId]);
 
-    // Update unread count when selected conversation changes (mark as read)
+    // Mark selected as read
     useEffect(() => {
         if (selectedConversationId) {
             setConversations(prev => prev.map(conv => {
@@ -142,7 +133,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         }
     }, [selectedConversationId]);
 
-    // Reload conversations (for manual refresh)
     const loadConversations = useCallback(async () => {
         try {
             setLoading(true);
@@ -163,23 +153,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         return otherName.includes(searchQuery.toLowerCase());
     });
 
-    const formatTimestamp = (timestamp: string) => {
-        try {
-            return formatDistanceToNow(new Date(timestamp), {
-                addSuffix: true,
-                locale: ptBR
-            });
-        } catch {
-            return '';
-        }
-    };
-
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full bg-slate-950">
-                <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-yellow-500 animate-spin mx-auto mb-2" />
-                    <p className="text-slate-400 text-sm">Carregando conversas...</p>
+            <div className="flex items-center justify-center h-full" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
+                <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-full border-2 border-yellow-500/20"></div>
+                        <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-transparent border-t-yellow-500 animate-spin"></div>
+                    </div>
+                    <p className="text-slate-500 text-sm">Carregando conversas...</p>
                 </div>
             </div>
         );
@@ -187,13 +169,22 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
     if (error) {
         return (
-            <div className="flex items-center justify-center h-full bg-slate-950">
+            <div className="flex items-center justify-center h-full" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
                 <div className="text-center p-6">
-                    <MessageCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-                    <p className="text-red-400 mb-4">{error}</p>
+                    <div
+                        className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                        style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+                    >
+                        <MessageCircle className="w-8 h-8 text-red-400" />
+                    </div>
+                    <p className="text-red-400 mb-4 text-sm">{error}</p>
                     <button
                         onClick={loadConversations}
-                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition"
+                        className="px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200 active:scale-95"
+                        style={{
+                            background: 'linear-gradient(135deg, #b45309, #d97706)',
+                            boxShadow: '0 2px 12px rgba(217,119,6,0.3)',
+                        }}
                     >
                         Tentar Novamente
                     </button>
@@ -203,32 +194,62 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     }
 
     return (
-        <div className="flex flex-col h-full bg-slate-950">
+        <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)' }}>
             {/* Header */}
-            <div className="p-4 border-b border-slate-800">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <MessageCircle size={24} className="text-yellow-500" />
+            <div
+                className="p-4 border-b border-slate-800/50 shrink-0"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%)',
+                    backdropFilter: 'blur(12px)',
+                }}
+            >
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                        <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(217,119,6,0.1))' }}
+                        >
+                            <MessageCircle size={16} className="text-yellow-500" />
+                        </div>
                         Mensagens
                     </h2>
                     <button
                         onClick={onNewConversation}
-                        className="btn-sm p-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition"
-                        title="Nova conversa"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95"
+                        style={{
+                            background: 'linear-gradient(135deg, #b45309, #d97706)',
+                            boxShadow: '0 2px 8px rgba(217,119,6,0.25)',
+                        }}
                     >
-                        <Plus size={20} />
+                        <Plus size={14} className="text-white" />
+                        <span className="text-white text-xs">Nova</span>
                     </button>
                 </div>
 
                 {/* Search Bar */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Search
+                        className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors duration-200 ${searchFocused ? 'text-yellow-500' : 'text-slate-500'
+                            }`}
+                        size={16}
+                    />
                     <input
                         type="text"
                         placeholder="Buscar conversas..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setSearchFocused(false)}
+                        className="w-full rounded-xl py-2.5 pl-9 pr-4 text-white text-sm placeholder-slate-500 transition-all duration-200 focus:outline-none"
+                        style={{
+                            background: 'rgba(30,41,59,0.6)',
+                            border: searchFocused
+                                ? '1px solid rgba(217,119,6,0.4)'
+                                : '1px solid rgba(51,65,85,0.4)',
+                            boxShadow: searchFocused
+                                ? '0 0 0 3px rgba(217,119,6,0.08)'
+                                : 'none',
+                        }}
                     />
                 </div>
             </div>
@@ -237,28 +258,44 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             <div className="flex-1 overflow-y-auto">
                 {filteredConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                        <MessageCircle className="w-16 h-16 text-slate-700 mb-4" />
-                        <h3 className="text-lg font-bold text-white mb-2">
+                        <div
+                            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(250,204,21,0.08), rgba(217,119,6,0.04))',
+                                border: '1px solid rgba(250,204,21,0.1)',
+                            }}
+                        >
+                            {searchQuery ? (
+                                <Search className="w-8 h-8 text-slate-600" />
+                            ) : (
+                                <Users className="w-8 h-8 text-yellow-500/50" />
+                            )}
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-1.5">
                             {searchQuery ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa ainda'}
                         </h3>
-                        <p className="text-slate-400 text-sm mb-4">
+                        <p className="text-slate-500 text-sm mb-4 max-w-[220px]">
                             {searchQuery
                                 ? 'Tente buscar por outro nome'
-                                : 'Inicie uma nova conversa com um membro'}
+                                : 'Inicie uma conversa com um membro do clube'}
                         </p>
                         {!searchQuery && (
                             <button
                                 onClick={onNewConversation}
-                                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition flex items-center gap-2"
+                                className="px-5 py-2.5 text-sm font-medium text-white rounded-xl transition-all duration-200 active:scale-95 flex items-center gap-2"
+                                style={{
+                                    background: 'linear-gradient(135deg, #b45309, #d97706)',
+                                    boxShadow: '0 2px 12px rgba(217,119,6,0.3)',
+                                }}
                             >
-                                <Plus size={18} />
+                                <Plus size={16} />
                                 Nova Conversa
                             </button>
                         )}
                     </div>
                 ) : (
-                    <div className="divide-y divide-slate-800">
-                        {filteredConversations.map((conversation) => {
+                    <div className="py-1">
+                        {filteredConversations.map((conversation, index) => {
                             const otherUser = conversation.otherParticipant;
                             const lastMsg = conversation.lastMessage;
                             const unread = conversation.unreadCount || 0;
@@ -268,23 +305,52 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                                 <button
                                     key={conversation.id}
                                     onClick={() => onSelectConversation(conversation.id)}
-                                    className={`w-full p-4 transition text-left flex items-start gap-3 group ${isSelected
-                                        ? 'bg-yellow-600/10 border-l-2 border-yellow-600'
-                                        : 'hover:bg-slate-900'
-                                        }`}
+                                    className="w-full px-3 py-3 transition-all duration-200 text-left flex items-center gap-3 group relative"
+                                    style={{
+                                        background: isSelected
+                                            ? 'linear-gradient(90deg, rgba(217,119,6,0.12), rgba(217,119,6,0.04))'
+                                            : 'transparent',
+                                        animation: `fadeInUp 0.3s ease-out ${index * 0.03}s both`,
+                                    }}
                                 >
+                                    {/* Selection indicator */}
+                                    {isSelected && (
+                                        <div
+                                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full"
+                                            style={{ background: 'linear-gradient(180deg, #d97706, #f59e0b)' }}
+                                        />
+                                    )}
+
                                     {/* Avatar */}
                                     <div className="relative shrink-0">
-                                        <img
-                                            src={otherUser?.image_url || '/default-avatar.svg'}
-                                            alt={otherUser?.name || 'Usuário'}
-                                            className={`w-12 h-12 rounded-full object-cover border-2 transition ${isSelected
-                                                ? 'border-yellow-600'
-                                                : 'border-slate-700 group-hover:border-yellow-600'
+                                        <div
+                                            className={`w-12 h-12 rounded-full p-[2px] transition-all duration-200 ${isSelected ? '' : 'group-hover:shadow-lg'
                                                 }`}
-                                        />
+                                            style={{
+                                                background: isSelected
+                                                    ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                                                    : unread > 0
+                                                        ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                                                        : 'rgba(51,65,85,0.5)',
+                                            }}
+                                        >
+                                            <img
+                                                src={otherUser?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                alt={otherUser?.name || 'Usuário'}
+                                                className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                                            />
+                                        </div>
+
+                                        {/* Unread badge */}
                                         {unread > 0 && (
-                                            <div className="absolute -top-1 -right-1 bg-yellow-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                                            <div
+                                                className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+                                                    boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
+                                                    animation: 'pulseScale 2s ease-in-out infinite',
+                                                }}
+                                            >
                                                 {unread > 9 ? '9+' : unread}
                                             </div>
                                         )}
@@ -292,15 +358,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
                                     {/* Content */}
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between gap-2 mb-1">
-                                            <h3 className={`font-bold truncate transition ${isSelected
-                                                ? 'text-yellow-500'
-                                                : 'text-white group-hover:text-yellow-500'
+                                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                                            <h3 className={`font-semibold text-sm truncate transition-colors duration-200 ${isSelected
+                                                    ? 'text-yellow-500'
+                                                    : unread > 0
+                                                        ? 'text-white'
+                                                        : 'text-slate-200 group-hover:text-white'
                                                 }`}>
                                                 {otherUser?.name || 'Usuário Desconhecido'}
                                             </h3>
                                             {lastMsg && (
-                                                <span className={`text-xs shrink-0 ${unread > 0 ? 'text-yellow-500 font-bold' : 'text-slate-500'
+                                                <span className={`text-[10px] shrink-0 ${unread > 0 ? 'text-yellow-500 font-semibold' : 'text-slate-600'
                                                     }`}>
                                                     {formatTimestamp(lastMsg.created_at)}
                                                 </span>
@@ -308,19 +376,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                                         </div>
 
                                         {otherUser?.job_title && (
-                                            <p className="text-xs text-slate-500 mb-1 truncate">
+                                            <p className="text-[11px] text-slate-600 mb-0.5 truncate">
                                                 {otherUser.job_title}
-                                                {otherUser.company && ` @ ${otherUser.company}`}
+                                                {otherUser.company && ` · ${otherUser.company}`}
                                             </p>
                                         )}
 
                                         {lastMsg && (
-                                            <p
-                                                className={`text-sm truncate ${unread > 0 ? 'text-white font-medium' : 'text-slate-400'
-                                                    }`}
-                                            >
+                                            <p className={`text-xs truncate ${unread > 0 ? 'text-slate-300 font-medium' : 'text-slate-500'
+                                                }`}>
                                                 {lastMsg.sender_id === currentUserId && (
-                                                    <span className="text-slate-500">Você: </span>
+                                                    <span className="text-slate-600">Você: </span>
                                                 )}
                                                 {lastMsg.content}
                                             </p>
@@ -332,6 +398,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes pulseScale {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                }
+            `}</style>
         </div>
     );
 };
