@@ -112,14 +112,16 @@
     }
 
     /* ===== iOS SCROLL LOCK (applied by useScrollLock hook) ===== */
-    /* position:fixed is the ONLY way to block body scroll on iOS Safari */
+    /* overflow:hidden on BOTH html+body blocks scroll on iOS Safari */
+    /* NO position:fixed — that causes layout shifts in standalone PWA */
+    html.scroll-locked,
     body.scroll-locked {
-      position: fixed !important;
       overflow: hidden !important;
-      width: 100% !important;
+      overscroll-behavior: none !important;
+    }
+
+    body.scroll-locked {
       touch-action: none !important;
-      -webkit-user-select: none;
-      user-select: none;
     }
 
     /* Re-enable touch/selection for inputs inside modals when locked */
