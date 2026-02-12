@@ -1437,6 +1437,7 @@ const App = () => {
                         <EventDetailsModal
                             event={selectedEvent}
                             onClose={() => setSelectedEvent(null)}
+                            userId={userProfile?.id}
                         />
                     )}
 

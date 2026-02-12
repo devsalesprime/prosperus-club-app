@@ -17,7 +17,14 @@ import {
     Clock,
     X,
     Search,
-    User
+    User,
+    Users,
+    UserCheck,
+    UserX,
+    Download,
+    ChevronDown,
+    Check,
+    Loader2
 } from 'lucide-react';
 import { ClubEvent, EventCategory, EventMaterial, EventSession } from '../../types';
 import { dataService } from '../../services/mockData';
@@ -250,6 +257,85 @@ export const EventsModule: React.FC = () => {
         });
     };
 
+    // --- RSVP MANAGEMENT STATE ---
+    const [expandedRsvpEventId, setExpandedRsvpEventId] = useState<string | null>(null);
+    const [rsvpList, setRsvpList] = useState<any[]>([]);
+    const [rsvpLoading, setRsvpLoading] = useState(false);
+    const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED'>('ALL');
+
+    // Fetch RSVPs for expanded event
+    const fetchRsvps = async (eventId: string) => {
+        setRsvpLoading(true);
+        try {
+            const { supabase } = await import('../../lib/supabase');
+            const { data, error } = await supabase
+                .from('event_rsvps')
+                .select('id, status, created_at, user_id, profiles:user_id(id, name, company, job_title, image_url, email)')
+                .eq('event_id', eventId)
+                .order('created_at', { ascending: true });
+            if (error) throw error;
+            setRsvpList(data || []);
+        } catch (err) {
+            console.error('Error fetching RSVPs:', err);
+            setRsvpList([]);
+        } finally {
+            setRsvpLoading(false);
+        }
+    };
+
+    const toggleRsvpPanel = (eventId: string) => {
+        if (expandedRsvpEventId === eventId) {
+            setExpandedRsvpEventId(null);
+            setRsvpList([]);
+        } else {
+            setExpandedRsvpEventId(eventId);
+            setRsvpFilter('ALL');
+            fetchRsvps(eventId);
+        }
+    };
+
+    const updateRsvpStatus = async (rsvpId: string, newStatus: 'CONFIRMED' | 'REJECTED') => {
+        try {
+            const { supabase } = await import('../../lib/supabase');
+            const { error } = await supabase
+                .from('event_rsvps')
+                .update({ status: newStatus })
+                .eq('id', rsvpId);
+            if (error) throw error;
+            setRsvpList(prev => prev.map(r => r.id === rsvpId ? { ...r, status: newStatus } : r));
+        } catch (err) {
+            console.error('Error updating RSVP:', err);
+        }
+    };
+
+    const exportRsvpCsv = () => {
+        const confirmed = rsvpList.filter(r => r.status === 'CONFIRMED');
+        const csvLines = ['Nome,Email,Empresa,Cargo'];
+        confirmed.forEach(r => {
+            const p = r.profiles;
+            csvLines.push(`"${p?.name || ''}","${p?.email || ''}","${p?.company || ''}","${p?.job_title || ''}"`);
+        });
+        const blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `presenca_evento_${expandedRsvpEventId}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const filteredRsvps = rsvpList.filter(r => {
+        if (rsvpFilter === 'PENDING') return r.status === 'PENDING';
+        if (rsvpFilter === 'CONFIRMED') return r.status === 'CONFIRMED';
+        return true;
+    });
+
+    const rsvpCounts = {
+        total: rsvpList.length,
+        confirmed: rsvpList.filter(r => r.status === 'CONFIRMED').length,
+        pending: rsvpList.filter(r => r.status === 'PENDING').length,
+    };
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
@@ -284,31 +370,162 @@ export const EventsModule: React.FC = () => {
                                 </tr>
                             ) : (
                                 events.map((event) => (
-                                    <tr key={event.id} className="hover:bg-slate-800/30 transition-colors">
-                                        <td className="px-4 py-3 text-sm font-medium text-white">{event.title}</td>
-                                        <td className="px-4 py-3 text-sm text-slate-300">{formatDate(event.date)}</td>
-                                        <td className="px-4 py-3 text-sm text-slate-300">
-                                            <span className={`px-2 py-0.5 text-xs font-bold ${event.type === 'MEMBER' ? 'bg-blue-500/10 text-blue-400' :
+                                    <React.Fragment key={event.id}>
+                                        <tr className="hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-white">{event.title}</td>
+                                            <td className="px-4 py-3 text-sm text-slate-300">{formatDate(event.date)}</td>
+                                            <td className="px-4 py-3 text-sm text-slate-300">
+                                                <span className={`px-2 py-0.5 text-xs font-bold ${event.type === 'MEMBER' ? 'bg-blue-500/10 text-blue-400' :
                                                     event.type === 'PRIVATE' ? 'bg-orange-500/10 text-orange-400' :
                                                         'bg-purple-500/10 text-purple-400'
-                                                }`}>
-                                                {event.type === 'MEMBER' ? 'Sócios' : event.type === 'PRIVATE' ? `🔒 ${event.targetMemberName || 'Privado'}` : 'Time'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <CategoryBadge category={event.category} />
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => openModal(event)} className="p-2 text-slate-400 hover:text-yellow-500 hover:bg-slate-800 transition" title="Editar">
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button onClick={() => dataService.deleteClubEvent(event.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-800 transition" title="Excluir">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                                    }`}>
+                                                    {event.type === 'MEMBER' ? 'Sócios' : event.type === 'PRIVATE' ? `🔒 ${event.targetMemberName || 'Privado'}` : 'Time'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <CategoryBadge category={event.category} />
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => toggleRsvpPanel(event.id)}
+                                                        className={`p-2 transition rounded ${expandedRsvpEventId === event.id ? 'text-yellow-500 bg-yellow-500/10' : 'text-slate-400 hover:text-yellow-500 hover:bg-slate-800'}`}
+                                                        title="Lista de Presença"
+                                                        style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                    >
+                                                        <Users size={16} />
+                                                    </button>
+                                                    <button onClick={() => openModal(event)} className="p-2 text-slate-400 hover:text-yellow-500 hover:bg-slate-800 transition" title="Editar" style={{ minHeight: 'auto', minWidth: 'auto' }}>
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button onClick={() => dataService.deleteClubEvent(event.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-800 transition" title="Excluir" style={{ minHeight: 'auto', minWidth: 'auto' }}>
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {/* RSVP Expandable Panel */}
+                                        {expandedRsvpEventId === event.id && (
+                                            <tr>
+                                                <td colSpan={5} className="p-0">
+                                                    <div className="bg-slate-800/40 border-t border-b border-slate-700 p-4 space-y-4">
+                                                        {/* Header: Counters + Export */}
+                                                        <div className="flex items-center justify-between flex-wrap gap-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                                                    <Users size={16} className="text-yellow-500" />
+                                                                    Lista de Presença
+                                                                </h4>
+                                                                <span className="px-2 py-0.5 bg-slate-700 text-xs text-slate-300 rounded-full">{rsvpCounts.total} total</span>
+                                                                <span className="px-2 py-0.5 bg-emerald-500/10 text-xs text-emerald-400 rounded-full">{rsvpCounts.confirmed} confirmados</span>
+                                                                <span className="px-2 py-0.5 bg-amber-500/10 text-xs text-amber-400 rounded-full">{rsvpCounts.pending} pendentes</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {/* Filters */}
+                                                                {(['ALL', 'PENDING', 'CONFIRMED'] as const).map(f => (
+                                                                    <button
+                                                                        key={f}
+                                                                        onClick={() => setRsvpFilter(f)}
+                                                                        className={`px-3 py-1 text-xs font-semibold rounded transition ${rsvpFilter === f
+                                                                            ? 'bg-yellow-600 text-white'
+                                                                            : 'bg-slate-700 text-slate-400 hover:text-white'
+                                                                            }`}
+                                                                        style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                                    >
+                                                                        {f === 'ALL' ? 'Todos' : f === 'PENDING' ? 'Pendentes' : 'Confirmados'}
+                                                                    </button>
+                                                                ))}
+                                                                {/* CSV Export */}
+                                                                {rsvpCounts.confirmed > 0 && (
+                                                                    <button
+                                                                        onClick={exportRsvpCsv}
+                                                                        className="flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white rounded transition"
+                                                                        style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                                    >
+                                                                        <Download size={12} /> CSV
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* RSVP List */}
+                                                        {rsvpLoading ? (
+                                                            <div className="flex items-center justify-center py-6">
+                                                                <Loader2 size={20} className="animate-spin text-yellow-500" />
+                                                            </div>
+                                                        ) : filteredRsvps.length === 0 ? (
+                                                            <div className="text-center py-6 text-slate-500 text-sm">
+                                                                {rsvpList.length === 0 ? 'Nenhuma solicitação de presença ainda.' : 'Nenhum resultado para este filtro.'}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-2 max-h-72 overflow-y-auto">
+                                                                {filteredRsvps.map(rsvp => {
+                                                                    const profile = rsvp.profiles;
+                                                                    return (
+                                                                        <div key={rsvp.id} className="flex items-center gap-3 bg-slate-900/60 rounded-lg p-3 border border-slate-700/50">
+                                                                            {/* Avatar */}
+                                                                            <div className="w-9 h-9 rounded-full bg-slate-700 overflow-hidden shrink-0">
+                                                                                {profile?.image_url ? (
+                                                                                    <img src={profile.image_url} alt={profile.name} className="w-full h-full object-cover" />
+                                                                                ) : (
+                                                                                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                                                        <User size={16} />
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                            {/* Info */}
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-sm font-medium text-white truncate">{profile?.name || 'Sem nome'}</p>
+                                                                                <p className="text-xs text-slate-400 truncate">
+                                                                                    {profile?.job_title && profile?.company
+                                                                                        ? `${profile.job_title} · ${profile.company}`
+                                                                                        : profile?.company || profile?.job_title || ''}
+                                                                                </p>
+                                                                            </div>
+                                                                            {/* Date */}
+                                                                            <span className="text-xs text-slate-500 shrink-0">
+                                                                                {new Date(rsvp.created_at).toLocaleDateString('pt-BR')}
+                                                                            </span>
+                                                                            {/* Status Badge / Actions */}
+                                                                            {rsvp.status === 'PENDING' ? (
+                                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                                    <button
+                                                                                        onClick={() => updateRsvpStatus(rsvp.id, 'CONFIRMED')}
+                                                                                        className="p-1.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition"
+                                                                                        title="Aprovar"
+                                                                                        style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                                                    >
+                                                                                        <UserCheck size={14} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => updateRsvpStatus(rsvp.id, 'REJECTED')}
+                                                                                        className="p-1.5 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
+                                                                                        title="Recusar"
+                                                                                        style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                                                    >
+                                                                                        <UserX size={14} />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className={`px-2 py-0.5 text-xs font-bold rounded shrink-0 ${rsvp.status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-400' :
+                                                                                    rsvp.status === 'REJECTED' ? 'bg-red-500/10 text-red-400' :
+                                                                                        'bg-slate-600/10 text-slate-400'
+                                                                                    }`}>
+                                                                                    {rsvp.status === 'CONFIRMED' ? '✅ Confirmado' :
+                                                                                        rsvp.status === 'REJECTED' ? '❌ Recusado' :
+                                                                                            rsvp.status}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
                                 ))
                             )}
                         </tbody>

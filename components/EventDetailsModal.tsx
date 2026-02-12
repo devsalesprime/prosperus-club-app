@@ -7,7 +7,7 @@
 // - Premium micro-interactions
 // - Portal rendering for proper z-index
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
     X,
@@ -21,15 +21,24 @@ import {
     CalendarDays,
     ChevronRight,
     Video,
-    Check
+    Check,
+    UserCheck,
+    Loader2,
+    XCircle,
+    Clock3,
+    Users
 } from 'lucide-react';
 import { ClubEvent, EventSession } from '../types';
+import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+type RsvpStatus = 'NONE' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'WAITLIST' | 'CANCELLED';
 
 interface EventDetailsModalProps {
     event: ClubEvent;
     onClose: () => void;
+    userId?: string; // From useAuth, enables RSVP
 }
 
 // ── Helper: Generate .ics calendar link ──
@@ -69,9 +78,95 @@ const getMaterialIconAndColor = (type: string) => {
     }
 };
 
-export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose }) => {
+export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose, userId }) => {
     const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
     const [addedSessions, setAddedSessions] = useState<Set<number>>(new Set());
+
+    // ── RSVP State ──
+    const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>('NONE');
+    const [rsvpLoading, setRsvpLoading] = useState(false);
+    const [rsvpToast, setRsvpToast] = useState<string | null>(null);
+    const [confirmedCount, setConfirmedCount] = useState(0);
+
+    // ── Fetch RSVP status on mount ──
+    useEffect(() => {
+        if (!userId) return;
+        const fetchRsvp = async () => {
+            try {
+                // Get user's RSVP
+                const { data } = await supabase
+                    .from('event_rsvps')
+                    .select('status')
+                    .eq('event_id', event.id)
+                    .eq('user_id', userId)
+                    .maybeSingle();
+                setRsvpStatus(data?.status || 'NONE');
+
+                // Get confirmed count
+                const { count } = await supabase
+                    .from('event_rsvps')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('event_id', event.id)
+                    .eq('status', 'CONFIRMED');
+                setConfirmedCount(count || 0);
+            } catch (err) {
+                console.error('Error fetching RSVP:', err);
+            }
+        };
+        fetchRsvp();
+    }, [userId, event.id]);
+
+    // ── Toast auto-dismiss ──
+    useEffect(() => {
+        if (!rsvpToast) return;
+        const timer = setTimeout(() => setRsvpToast(null), 3500);
+        return () => clearTimeout(timer);
+    }, [rsvpToast]);
+
+    // ── Request RSVP ──
+    const handleRequestRsvp = useCallback(async () => {
+        if (!userId || rsvpLoading) return;
+        setRsvpLoading(true);
+        // Optimistic
+        setRsvpStatus('PENDING');
+        try {
+            const { error } = await supabase
+                .from('event_rsvps')
+                .insert({ event_id: event.id, user_id: userId, status: 'PENDING' });
+            if (error) throw error;
+            setRsvpToast('Sua solicitação foi enviada para análise! ⏳');
+        } catch (err: any) {
+            console.error('RSVP request failed:', err);
+            setRsvpStatus('NONE');
+            setRsvpToast('Erro ao solicitar presença. Tente novamente.');
+        } finally {
+            setRsvpLoading(false);
+        }
+    }, [userId, event.id, rsvpLoading]);
+
+    // ── Cancel RSVP ──
+    const handleCancelRsvp = useCallback(async () => {
+        if (!userId || rsvpLoading) return;
+        setRsvpLoading(true);
+        const prevStatus = rsvpStatus;
+        setRsvpStatus('NONE');
+        try {
+            const { error } = await supabase
+                .from('event_rsvps')
+                .delete()
+                .eq('event_id', event.id)
+                .eq('user_id', userId);
+            if (error) throw error;
+            setConfirmedCount(prev => Math.max(0, prev - (prevStatus === 'CONFIRMED' ? 1 : 0)));
+            setRsvpToast('Presença cancelada.');
+        } catch (err: any) {
+            console.error('Cancel RSVP failed:', err);
+            setRsvpStatus(prevStatus);
+            setRsvpToast('Erro ao cancelar. Tente novamente.');
+        } finally {
+            setRsvpLoading(false);
+        }
+    }, [userId, event.id, rsvpLoading, rsvpStatus]);
 
     const isMultiDay = (event.sessions?.length || 0) > 1;
     const sessions = event.sessions || [];
@@ -327,6 +422,89 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                         </div>
                     </div>
                 </div>
+
+                {/* ═══ RSVP STICKY FOOTER ═══ */}
+                {userId && (
+                    <div className="shrink-0 border-t border-slate-700 bg-slate-900/95 backdrop-blur-sm px-6 py-4 rounded-b-2xl">
+                        <div className="flex items-center justify-between gap-4">
+                            {/* Confirmed counter */}
+                            {confirmedCount > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                    <Users size={14} className="text-emerald-400" />
+                                    <span>{confirmedCount} confirmado{confirmedCount !== 1 ? 's' : ''}</span>
+                                </div>
+                            )}
+                            {confirmedCount === 0 && <div />}
+
+                            {/* RSVP Button */}
+                            {rsvpStatus === 'NONE' && (
+                                <button
+                                    onClick={handleRequestRsvp}
+                                    disabled={rsvpLoading}
+                                    className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-yellow-900/20 text-sm disabled:opacity-50"
+                                >
+                                    {rsvpLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCheck size={16} />}
+                                    Confirmar Presença
+                                </button>
+                            )}
+
+                            {rsvpStatus === 'PENDING' && (
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
+                                        <Clock3 size={16} />
+                                        Aguardando Aprovação
+                                    </div>
+                                    <button
+                                        onClick={handleCancelRsvp}
+                                        disabled={rsvpLoading}
+                                        className="text-xs text-slate-500 hover:text-red-400 transition underline"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
+
+                            {rsvpStatus === 'CONFIRMED' && (
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
+                                        <Check size={16} />
+                                        Presença Confirmada
+                                    </div>
+                                    <button
+                                        onClick={handleCancelRsvp}
+                                        disabled={rsvpLoading}
+                                        className="text-xs text-slate-500 hover:text-red-400 transition underline"
+                                    >
+                                        Cancelar
+                                    </button>
+                                </div>
+                            )}
+
+                            {rsvpStatus === 'REJECTED' && (
+                                <div className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
+                                    <XCircle size={16} />
+                                    Não Aprovado
+                                </div>
+                            )}
+
+                            {rsvpStatus === 'WAITLIST' && (
+                                <div className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
+                                    <Clock3 size={16} />
+                                    Lista de Espera
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Toast */}
+                        {rsvpToast && (
+                            <div className="mt-3 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 text-center"
+                                style={{ animation: 'slideUp 200ms ease-out' }}
+                            >
+                                {rsvpToast}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* CSS Animations */}
