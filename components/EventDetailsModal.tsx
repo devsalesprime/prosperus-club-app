@@ -425,23 +425,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
                 {/* ═══ RSVP STICKY FOOTER ═══ */}
                 {userId && (
-                    <div className="shrink-0 border-t border-slate-700 bg-slate-900/95 backdrop-blur-sm px-6 py-4 rounded-b-2xl">
-                        <div className="flex items-center justify-between gap-4">
-                            {/* Confirmed counter */}
-                            {confirmedCount > 0 && (
-                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                                    <Users size={14} className="text-emerald-400" />
-                                    <span>{confirmedCount} confirmado{confirmedCount !== 1 ? 's' : ''}</span>
-                                </div>
-                            )}
-                            {confirmedCount === 0 && <div />}
+                    <div className="shrink-0 border-t border-slate-700 bg-slate-900/95 backdrop-blur-sm px-4 py-3 rounded-b-2xl">
+                        <div className="flex flex-col items-center gap-2">
 
-                            {/* RSVP Button */}
+                            {/* RSVP Button — Full width on mobile */}
                             {rsvpStatus === 'NONE' && (
                                 <button
                                     onClick={handleRequestRsvp}
                                     disabled={rsvpLoading}
-                                    className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-yellow-900/20 text-sm disabled:opacity-50"
+                                    className="w-full flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-yellow-900/20 text-sm disabled:opacity-50"
                                 >
                                     {rsvpLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCheck size={16} />}
                                     Confirmar Presença
@@ -449,55 +441,63 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                             )}
 
                             {rsvpStatus === 'PENDING' && (
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
-                                        <Clock3 size={16} />
-                                        Aguardando Aprovação
+                                <div className="w-full flex flex-col items-center gap-2">
+                                    <div className="w-full flex items-center justify-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                        <Clock3 size={16} className="shrink-0" />
+                                        <span>Aguardando Aprovação</span>
                                     </div>
                                     <button
                                         onClick={handleCancelRsvp}
                                         disabled={rsvpLoading}
-                                        className="text-xs text-slate-500 hover:text-red-400 transition underline"
+                                        className="text-xs text-slate-500 hover:text-red-400 transition underline py-1"
                                     >
-                                        Cancelar
+                                        Cancelar solicitação
                                     </button>
                                 </div>
                             )}
 
                             {rsvpStatus === 'CONFIRMED' && (
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
-                                        <Check size={16} />
-                                        Presença Confirmada
+                                <div className="w-full flex flex-col items-center gap-2">
+                                    <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                        <Check size={16} className="shrink-0" />
+                                        <span>Presença Confirmada</span>
                                     </div>
                                     <button
                                         onClick={handleCancelRsvp}
                                         disabled={rsvpLoading}
-                                        className="text-xs text-slate-500 hover:text-red-400 transition underline"
+                                        className="text-xs text-slate-500 hover:text-red-400 transition underline py-1"
                                     >
-                                        Cancelar
+                                        Cancelar presença
                                     </button>
                                 </div>
                             )}
 
                             {rsvpStatus === 'REJECTED' && (
-                                <div className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
-                                    <XCircle size={16} />
-                                    Não Aprovado
+                                <div className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                    <XCircle size={16} className="shrink-0" />
+                                    <span>Não Aprovado</span>
                                 </div>
                             )}
 
                             {rsvpStatus === 'WAITLIST' && (
-                                <div className="flex items-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold py-3 px-5 rounded-xl text-sm">
-                                    <Clock3 size={16} />
-                                    Lista de Espera
+                                <div className="w-full flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                    <Clock3 size={16} className="shrink-0" />
+                                    <span>Lista de Espera</span>
+                                </div>
+                            )}
+
+                            {/* Confirmed counter — below button */}
+                            {confirmedCount > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                    <Users size={12} className="text-emerald-500" />
+                                    <span>{confirmedCount} confirmado{confirmedCount !== 1 ? 's' : ''}</span>
                                 </div>
                             )}
                         </div>
 
                         {/* Toast */}
                         {rsvpToast && (
-                            <div className="mt-3 px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 text-center"
+                            <div className="mt-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 text-center"
                                 style={{ animation: 'slideUp 200ms ease-out' }}
                             >
                                 {rsvpToast}
