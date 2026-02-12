@@ -149,7 +149,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
             {/* Dropdown */}
             {isOpen && (
-                <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-14 sm:top-auto sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-2rem)] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-14 sm:top-auto sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-2rem)] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Header */}
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-2">
