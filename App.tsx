@@ -1210,7 +1210,7 @@ const App = () => {
                                     {/* Mobile View Content */}
                                     {mobileView === 'LIST' ? (
                                         <MobileAgendaView
-                                            events={dataService.getClubEvents()}
+                                            events={dataService.getClubEventsForUser(userProfile?.id || '')}
                                             onSelectEvent={(event) => setSelectedEvent(event)}
                                         />
                                     ) : (
@@ -1223,7 +1223,7 @@ const App = () => {
                                             <Calendar
                                                 localizer={localizer}
                                                 culture="pt-BR"
-                                                events={dataService.getClubEvents()}
+                                                events={dataService.getClubEventsForUser(userProfile?.id || '')}
                                                 startAccessor={(event: Event) => {
                                                     const date = new Date(event.date);
                                                     return isNaN(date.getTime()) ? new Date() : date;
@@ -1302,7 +1302,7 @@ const App = () => {
                                 <Calendar
                                     localizer={localizer}
                                     culture="pt-BR"
-                                    events={dataService.getClubEvents()}
+                                    events={dataService.getClubEventsForUser(userProfile?.id || '')}
                                     startAccessor={(event: Event) => {
                                         // Ensure proper Date object with local time
                                         const date = new Date(event.date);

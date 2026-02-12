@@ -542,11 +542,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
     // Get next event
     useEffect(() => {
-        const events = dataService.getClubEvents()
+        const events = dataService.getClubEventsForUser(currentUser?.id || '')
             .filter(e => new Date(e.date) > new Date())
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         setNextEvent(events[0] || null);
-    }, []);
+    }, [currentUser]);
 
 
     // Quick access items - Deep links de valor (ordem definida pelo cliente)

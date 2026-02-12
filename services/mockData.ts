@@ -514,6 +514,11 @@ class DataService {
 
   // --- EVENTS ---
   getClubEvents() { return this.events; }
+  getClubEventsForUser(userId: string) {
+    return this.events.filter(e =>
+      e.type !== 'PRIVATE' || e.targetMemberId === userId
+    );
+  }
   addClubEvent(event: Omit<ClubEvent, 'id'>) {
     const newEvent = { ...event, id: Math.random().toString(36).substr(2, 9) };
     this.events.push(newEvent);

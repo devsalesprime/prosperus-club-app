@@ -15,7 +15,9 @@ import {
     Upload,
     CalendarDays,
     Clock,
-    X
+    X,
+    Search,
+    User
 } from 'lucide-react';
 import { ClubEvent, EventCategory, EventMaterial, EventSession } from '../../types';
 import { dataService } from '../../services/mockData';
@@ -26,7 +28,7 @@ const eventSchema = z.object({
     id: z.string().optional(),
     title: z.string().min(3, 'Título deve ter no mínimo 3 caracteres'),
     description: z.string().min(5, 'Descrição deve ter no mínimo 5 caracteres'),
-    type: z.enum(['MEMBER', 'TEAM']),
+    type: z.enum(['MEMBER', 'TEAM', 'PRIVATE']),
     category: z.enum(['PRESENTIAL', 'ONLINE']),
     date: z.string().min(1, 'Data de início é obrigatória'),
     endDate: z.string().min(1, 'Data de término é obrigatória'),
@@ -74,6 +76,13 @@ export const EventsModule: React.FC = () => {
     const [hasMultipleSessions, setHasMultipleSessions] = useState(false);
     const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
+    // Private event targeting
+    const [targetMemberId, setTargetMemberId] = useState<string | null>(null);
+    const [targetMemberName, setTargetMemberName] = useState<string>('');
+    const [memberSearch, setMemberSearch] = useState('');
+    const [memberResults, setMemberResults] = useState<{ id: string; name: string; image_url: string | null }[]>([]);
+    const [loadingMembers, setLoadingMembers] = useState(false);
+
     const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
         resolver: zodResolver(eventSchema),
         defaultValues: {
@@ -86,6 +95,27 @@ export const EventsModule: React.FC = () => {
 
     const category = watch('category');
     const startDate = watch('date');
+    const eventType = watch('type');
+
+    // Search members when type is PRIVATE
+    const searchMembers = async (query: string) => {
+        if (query.length < 2) { setMemberResults([]); return; }
+        try {
+            setLoadingMembers(true);
+            const { supabase } = await import('../../lib/supabase');
+            const { data } = await supabase
+                .from('profiles')
+                .select('id, name, image_url')
+                .ilike('name', `%${query}%`)
+                .order('name')
+                .limit(8);
+            setMemberResults(data || []);
+        } catch (err) {
+            console.error('Error searching members:', err);
+        } finally {
+            setLoadingMembers(false);
+        }
+    };
 
     useEffect(() => {
         setEvents(dataService.getClubEvents());
@@ -98,6 +128,9 @@ export const EventsModule: React.FC = () => {
             setMaterials(event.materials || []);
             setSessions(event.sessions || []);
             setHasMultipleSessions((event.sessions?.length || 0) > 0);
+            setTargetMemberId(event.targetMemberId || null);
+            setTargetMemberName(event.targetMemberName || '');
+            setMemberSearch(event.targetMemberName || '');
             const formattedEvent = {
                 ...event,
                 date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
@@ -111,6 +144,10 @@ export const EventsModule: React.FC = () => {
             setMaterials([]);
             setSessions([]);
             setHasMultipleSessions(false);
+            setTargetMemberId(null);
+            setTargetMemberName('');
+            setMemberSearch('');
+            setMemberResults([]);
             reset({
                 type: 'MEMBER',
                 category: 'PRESENTIAL',
@@ -126,6 +163,8 @@ export const EventsModule: React.FC = () => {
             ...data,
             materials,
             sessions: hasMultipleSessions ? sessions : undefined,
+            targetMemberId: data.type === 'PRIVATE' ? targetMemberId : undefined,
+            targetMemberName: data.type === 'PRIVATE' ? targetMemberName : undefined,
             id: editingId || undefined
         };
 
@@ -249,8 +288,11 @@ export const EventsModule: React.FC = () => {
                                         <td className="px-4 py-3 text-sm font-medium text-white">{event.title}</td>
                                         <td className="px-4 py-3 text-sm text-slate-300">{formatDate(event.date)}</td>
                                         <td className="px-4 py-3 text-sm text-slate-300">
-                                            <span className={`px-2 py-0.5 text-xs font-bold ${event.type === 'MEMBER' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'}`}>
-                                                {event.type === 'MEMBER' ? 'Sócios' : 'Time'}
+                                            <span className={`px-2 py-0.5 text-xs font-bold ${event.type === 'MEMBER' ? 'bg-blue-500/10 text-blue-400' :
+                                                    event.type === 'PRIVATE' ? 'bg-orange-500/10 text-orange-400' :
+                                                        'bg-purple-500/10 text-purple-400'
+                                                }`}>
+                                                {event.type === 'MEMBER' ? 'Sócios' : event.type === 'PRIVATE' ? `🔒 ${event.targetMemberName || 'Privado'}` : 'Time'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -292,8 +334,73 @@ export const EventsModule: React.FC = () => {
                                 <select {...register("type")} className="w-full bg-slate-950 border border-slate-800 p-3 text-slate-200 outline-none focus:border-yellow-600 transition">
                                     <option value="MEMBER">Sócios (MEMBER)</option>
                                     <option value="TEAM">Time (TEAM)</option>
+                                    <option value="PRIVATE">🔒 Sócio Específico</option>
                                 </select>
                             </div>
+
+                            {/* Member Search - Only when PRIVATE */}
+                            {eventType === 'PRIVATE' && (
+                                <div className="sm:col-span-2 space-y-1.5">
+                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                        <User size={12} className="text-orange-400" />
+                                        Sócio Destinatário
+                                    </label>
+                                    {targetMemberId ? (
+                                        <div className="flex items-center gap-3 bg-slate-950 border border-orange-500/30 rounded p-3">
+                                            <User size={16} className="text-orange-400" />
+                                            <span className="text-sm text-white font-medium flex-1">{targetMemberName}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setTargetMemberId(null); setTargetMemberName(''); setMemberSearch(''); }}
+                                                className="text-slate-400 hover:text-red-400 transition"
+                                                style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded focus-within:border-yellow-600 transition">
+                                                <Search size={14} className="text-slate-500 ml-3" />
+                                                <input
+                                                    type="text"
+                                                    value={memberSearch}
+                                                    onChange={(e) => { setMemberSearch(e.target.value); searchMembers(e.target.value); }}
+                                                    placeholder="Buscar sócio pelo nome..."
+                                                    className="w-full bg-transparent p-3 text-sm text-slate-200 outline-none"
+                                                />
+                                                {loadingMembers && <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mr-3" />}
+                                            </div>
+                                            {memberResults.length > 0 && (
+                                                <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl max-h-48 overflow-y-auto">
+                                                    {memberResults.map((m) => (
+                                                        <button
+                                                            key={m.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setTargetMemberId(m.id);
+                                                                setTargetMemberName(m.name);
+                                                                setMemberSearch(m.name);
+                                                                setMemberResults([]);
+                                                            }}
+                                                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition text-left"
+                                                            style={{ minHeight: 'auto', minWidth: 'auto' }}
+                                                        >
+                                                            <img
+                                                                src={m.image_url || '/default-avatar.svg'}
+                                                                alt={m.name}
+                                                                className="w-8 h-8 rounded-full object-cover border border-slate-700"
+                                                            />
+                                                            <span className="text-sm text-white">{m.name}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-slate-500">Este evento só aparecerá na agenda deste sócio.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-1.5">

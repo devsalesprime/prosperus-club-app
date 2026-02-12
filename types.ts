@@ -119,8 +119,12 @@ export interface ClubEvent {
   description: string;
   date: string; // ISO string start
   endDate?: string; // ISO string end
-  type: 'MEMBER' | 'TEAM'; // Agenda Type
+  type: 'MEMBER' | 'TEAM' | 'PRIVATE'; // Agenda Type
   category: EventCategory; // Visualization Category
+
+  // Private Event Targeting (only when type === 'PRIVATE')
+  targetMemberId?: string; // UUID of the specific member
+  targetMemberName?: string; // Display name (denormalized for admin list)
 
   // Multi-date Sessions (optional)
   sessions?: EventSession[]; // For multi-day events with distinct schedules
