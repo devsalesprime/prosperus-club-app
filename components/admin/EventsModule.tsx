@@ -351,6 +351,7 @@ export const EventsModule: React.FC = () => {
                                         if (!hasMultipleSessions && sessions.length === 0) addSession();
                                     }}
                                     className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${hasMultipleSessions ? 'bg-yellow-600' : 'bg-slate-700'}`}
+                                    style={{ minHeight: 'auto', minWidth: 'auto' }}
                                 >
                                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${hasMultipleSessions ? 'translate-x-5' : ''}`} />
                                 </button>
