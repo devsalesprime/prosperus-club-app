@@ -39,6 +39,8 @@ import { CarouselItem, Banner } from '../services/bannerService';
 import { Avatar } from './ui/Avatar';
 import { ROIDashboardWidget } from './business/ROIDashboardWidget';
 import { TopRankingPreview } from './business/TopRankingPreview';
+import { EventCard } from './EventCard';
+import { EventDetailsModal } from './EventDetailsModal';
 
 interface DashboardHomeProps {
     currentUser: Member | null;
@@ -85,145 +87,19 @@ const QuickAccessCard = ({
     </button>
 );
 
-// Next Event Widget Component - Sharp Luxury Design with Dual Actions
-const NextEventWidget = ({
-    event,
-    onViewDetails,
-    onViewAgenda
-}: {
-    event: ClubEvent | null;
-    onViewDetails: () => void;
-    onViewAgenda: () => void;
-}) => {
+// Next Event Empty State — shown when no upcoming events
+const NextEventEmptyState = () => {
     // Empty State - Elegant fallback
-    if (!event) {
-        return (
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 overflow-hidden flex flex-col items-center justify-center p-12 hover:border-slate-600 transition-all">
-                <Calendar size={48} className="text-slate-600 mb-4" />
-                <h3 className="text-xl font-bold text-slate-400 mb-2">Sem eventos agendados</h3>
-                <p className="text-sm text-slate-500">Novos eventos serão exibidos aqui</p>
-            </div>
-        );
-    }
-
-    const eventDate = new Date(event.date);
-    const now = new Date();
-    const timeDiff = eventDate.getTime() - now.getTime();
-    const days = Math.floor(timeDiff / (1000 * 3600 * 24));
-    const hours = Math.floor((timeDiff % (1000 * 3600 * 24)) / (1000 * 3600));
-
-    // Check if event is today
-    const isToday = eventDate.toDateString() === now.toDateString();
-
-    // Category styling - Exact colors
-    const categoryConfig = {
-        ONLINE: {
-            bg: 'bg-[#10b981]/10',
-            text: 'text-[#10b981]',
-            border: 'border-[#10b981]/30',
-            icon: <VideoIcon size={12} className="text-[#10b981]" />,
-            label: 'Online'
-        },
-        PRESENTIAL: {
-            bg: 'bg-[#9333ea]/10',
-            text: 'text-[#9333ea]',
-            border: 'border-[#9333ea]/30',
-            icon: <MapPin size={12} className="text-[#9333ea]" />,
-            label: 'Presencial'
-        },
-        RECORDED: {
-            bg: 'bg-orange-500/10',
-            text: 'text-orange-500',
-            border: 'border-orange-500/30',
-            icon: <PlayCircle size={12} className="text-orange-500" />,
-            label: 'Gravado'
-        }
-    };
-
-    const config = categoryConfig[event.category as keyof typeof categoryConfig] || categoryConfig.ONLINE;
-
     return (
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 overflow-hidden flex flex-col md:flex-row hover:border-yellow-600/50 transition-all group shadow-xl hover:shadow-2xl hover:shadow-yellow-600/10">
-            {/* Date Block - Sharp Luxury Golden - Clickable for Quick View */}
-            <div
-                className="md:w-32 bg-gradient-to-br from-[#FFDA71] to-[#D4AF37] p-6 flex flex-col items-center justify-center text-center shrink-0 relative overflow-hidden cursor-pointer"
-                onClick={onViewDetails}
-                title="Clique para ver detalhes"
-            >
-                {/* Decorative corner accent */}
-                <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 transform rotate-45 translate-x-8 -translate-y-8"></div>
-
-                <span className="text-5xl font-black text-slate-900 leading-none mb-1 relative z-10">
-                    {eventDate.getDate().toString().padStart(2, '0')}
-                </span>
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-widest mb-2 relative z-10">
-                    {eventDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase()}
-                </span>
-                <div className="flex items-center gap-1 text-slate-700 relative z-10">
-                    <Clock size={12} />
-                    <span className="text-xs font-bold">
-                        {eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                </div>
-            </div>
-
-            {/* Content - Clickable for Quick View */}
-            <div
-                className="p-5 flex-1 flex flex-col justify-center min-w-0 bg-slate-900/50 cursor-pointer"
-                onClick={onViewDetails}
-                title="Clique para ver detalhes"
-            >
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    {/* Category Badge - Exact colors */}
-                    <span className={`px-2.5 py-1 ${config.bg} ${config.text} border ${config.border} text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5`}>
-                        {config.icon}
-                        {config.label}
-                    </span>
-
-                    {/* Countdown - Enhanced */}
-                    {timeDiff > 0 && (
-                        <span className={`px-2.5 py-1 ${isToday ? 'bg-yellow-500 text-slate-900 animate-pulse' : 'bg-yellow-500/10 text-[#FFDA71]'} border border-yellow-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5`}>
-                            <Sparkles size={12} className={isToday ? 'text-slate-900' : 'text-[#FFDA71]'} />
-                            {isToday ? 'É HOJE!' : `Faltam ${days > 0 ? `${days}d ` : ''}${hours}h`}
-                        </span>
-                    )}
-                </div>
-
-                <h3 className="text-xl font-black text-white mb-2 line-clamp-2 group-hover:text-[#FFDA71] transition-colors leading-tight">
-                    {event.title}
-                </h3>
-
-                <div className="flex items-center text-slate-400 text-sm">
-                    {event.category === 'PRESENTIAL' ? (
-                        <MapPin size={14} className="mr-1.5 shrink-0 text-[#9333ea]" />
-                    ) : event.category === 'ONLINE' ? (
-                        <VideoIcon size={14} className="mr-1.5 shrink-0 text-[#10b981]" />
-                    ) : (
-                        <PlayCircle size={14} className="mr-1.5 shrink-0 text-orange-500" />
-                    )}
-                    <span className="truncate font-medium">
-                        {event.location || event.link || 'Link disponível após inscrição'}
-                    </span>
-                </div>
-            </div>
-
-            {/* CTA Button - Navigate to Full Agenda */}
-            <button
-                onClick={(e) => {
-                    e.stopPropagation(); // Prevent triggering parent click
-                    onViewAgenda();
-                }}
-                className="p-5 flex items-center justify-center border-t md:border-t-0 md:border-l border-slate-700/50 bg-slate-800/50 md:w-32 hover:bg-yellow-600/10 transition-all"
-                title="Ver calendário completo"
-            >
-                <div className="flex flex-col md:flex-col items-center gap-2 text-[#FFDA71] hover:text-yellow-400 transition-colors">
-                    <span className="text-xs font-bold uppercase tracking-wider text-center">Ver Agenda</span>
-                    <Calendar size={24} className="group-hover:scale-110 transition-transform" />
-                </div>
-            </button>
+        <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 overflow-hidden flex flex-col items-center justify-center p-12 hover:border-slate-600 transition-all">
+            <Calendar size={48} className="text-slate-600 mb-4" />
+            <h3 className="text-xl font-bold text-slate-400 mb-2">Sem eventos agendados</h3>
+            <p className="text-sm text-slate-500">Novos eventos serão exibidos aqui</p>
         </div>
     );
 };
+
+
 
 // Global Search Bar Component with Dropdown
 const GlobalSearchBar = ({
@@ -677,16 +553,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             />
 
             {/* 6. Próximo Evento */}
-            {nextEvent && (
-                <div>
-                    <SectionTitle>🎯 Próximo Encontro</SectionTitle>
-                    <NextEventWidget
+            <div>
+                <SectionTitle>🎯 Próximo Encontro</SectionTitle>
+                {nextEvent ? (
+                    <EventCard
                         event={nextEvent}
-                        onViewDetails={() => setSelectedEvent(nextEvent)}
+                        variant="HERO"
+                        onClick={() => setSelectedEvent(nextEvent)}
                         onViewAgenda={() => setView(ViewState.AGENDA)}
                     />
-                </div>
-            )}
+                ) : (
+                    <NextEventEmptyState />
+                )}
+            </div>
 
             {/* 7. Acesso Rápido */}
             <div>
@@ -719,138 +598,13 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 />
             )}
 
-            {/* EVENT DETAILS MODAL - Quick View */}
+            {/* EVENT DETAILS MODAL - Full Featured with RSVP */}
             {selectedEvent && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-                    <div className="bg-slate-900 border border-slate-700 w-[95%] md:w-full md:max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[85vh]">
-                        <div className="h-32 bg-gradient-to-r from-yellow-600 to-yellow-800 relative rounded-t-2xl overflow-hidden shrink-0">
-                            {selectedEvent.bannerUrl && (
-                                <img src={selectedEvent.bannerUrl} alt={selectedEvent.title} className="w-full h-full object-cover opacity-50" />
-                            )}
-                            <button
-                                onClick={() => setSelectedEvent(null)}
-                                className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition z-10"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-4 md:p-6 overflow-y-auto flex-1">
-                            <div className="flex items-center gap-3 mb-4">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${selectedEvent.category === 'ONLINE'
-                                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                    : 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
-                                    }`}>
-                                    {selectedEvent.category === 'PRESENTIAL' ? 'Presencial' : 'Online'}
-                                </span>
-                                <span className="text-slate-400 text-sm flex items-center gap-1">
-                                    <Clock size={14} />
-                                    {new Date(selectedEvent.date).toLocaleDateString('pt-BR')} às {new Date(selectedEvent.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-
-                            <h2 className="text-2xl font-bold text-white mb-4">{selectedEvent.title}</h2>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="md:col-span-2 space-y-6">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Descrição</h3>
-                                        <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedEvent.description}</p>
-                                    </div>
-
-                                    {selectedEvent.category === 'PRESENTIAL' && selectedEvent.location && (
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                                <MapPin size={14} />
-                                                Localização
-                                            </h3>
-                                            <p className="text-slate-300 mb-2">{selectedEvent.location}</p>
-                                            {selectedEvent.mapLink && (
-                                                <a
-                                                    href={selectedEvent.mapLink}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-2 text-yellow-500 hover:text-yellow-400 text-sm font-medium transition"
-                                                >
-                                                    <MapPin size={14} />
-                                                    Ver no Mapa
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {selectedEvent.category === 'ONLINE' && selectedEvent.link && (
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                                <VideoIcon size={14} />
-                                                Link da Reunião
-                                            </h3>
-                                            <a
-                                                href={selectedEvent.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-yellow-500 hover:text-yellow-400 text-sm break-all transition"
-                                            >
-                                                {selectedEvent.link}
-                                            </a>
-                                            {selectedEvent.meetingPassword && (
-                                                <div className="mt-2">
-                                                    <span className="text-slate-400 text-sm">Senha: </span>
-                                                    <span className="text-white font-mono">{selectedEvent.meetingPassword}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-                                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Detalhes</h3>
-                                        <div className="space-y-2 text-sm">
-                                            <div>
-                                                <span className="text-slate-500">Início:</span>
-                                                <p className="text-white font-medium">
-                                                    {new Date(selectedEvent.date).toLocaleDateString('pt-BR', {
-                                                        day: '2-digit',
-                                                        month: 'long',
-                                                        year: 'numeric'
-                                                    })}
-                                                </p>
-                                                <p className="text-white font-medium">
-                                                    {new Date(selectedEvent.date).toLocaleTimeString('pt-BR', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </p>
-                                            </div>
-                                            {selectedEvent.endDate && (
-                                                <div>
-                                                    <span className="text-slate-500">Término:</span>
-                                                    <p className="text-white font-medium">
-                                                        {new Date(selectedEvent.endDate).toLocaleTimeString('pt-BR', {
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => {
-                                            setSelectedEvent(null);
-                                            setView(ViewState.AGENDA);
-                                        }}
-                                        className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                                    >
-                                        <Calendar size={18} />
-                                        Ver Calendário Completo
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <EventDetailsModal
+                    event={selectedEvent}
+                    onClose={() => setSelectedEvent(null)}
+                    userId={currentUser?.id}
+                />
             )}
         </div>
     );

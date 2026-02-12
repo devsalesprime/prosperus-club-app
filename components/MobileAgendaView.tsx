@@ -5,8 +5,9 @@
 import React, { useMemo } from 'react';
 import { format, isAfter, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MapPin, Video, Calendar, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { ClubEvent } from '../types';
+import { EventCard } from './EventCard';
 
 interface MobileAgendaViewProps {
     events: ClubEvent[];
@@ -98,67 +99,14 @@ export const MobileAgendaView: React.FC<MobileAgendaViewProps> = ({ events, onSe
 
                         {/* Event Cards */}
                         <div className="event-cards px-4 py-2">
-                            {group.events.map((event, eventIndex) => {
-                                const eventTime = format(new Date(event.date), 'HH:mm');
-                                const isOnline = event.category === 'ONLINE';
-                                const borderColor = isOnline ? 'border-green-500' : 'border-purple-600';
-                                const bgColor = isOnline ? 'bg-green-500/10' : 'bg-purple-600/10';
-
-                                return (
-                                    <div
-                                        key={event.id}
-                                        onClick={() => onSelectEvent(event)}
-                                        className={`event-card mb-3 bg-slate-900 border-l-4 ${borderColor} rounded-r-lg overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:shadow-yellow-500/10 hover:border-yellow-500`}
-                                    >
-                                        <div className="flex">
-                                            {/* Time Column */}
-                                            <div className="time-column flex-shrink-0 w-20 flex flex-col items-center justify-center bg-slate-800 p-3">
-                                                <Clock size={16} className="text-slate-400 mb-1" />
-                                                <div className="text-sm font-bold text-white">
-                                                    {eventTime}
-                                                </div>
-                                            </div>
-
-                                            {/* Event Content */}
-                                            <div className={`event-content flex-1 p-4 ${bgColor}`}>
-                                                <h3 className="text-base font-bold text-white mb-2 line-clamp-2">
-                                                    {event.title}
-                                                </h3>
-
-                                                {/* Location/Link */}
-                                                {event.location && (
-                                                    <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
-                                                        <MapPin size={14} />
-                                                        <span className="line-clamp-1">{event.location}</span>
-                                                    </div>
-                                                )}
-
-                                                {event.link && !event.location && (
-                                                    <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
-                                                        <Video size={14} />
-                                                        <span>Evento Online</span>
-                                                    </div>
-                                                )}
-
-                                                {/* Category Badge */}
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${isOnline
-                                                        ? 'bg-green-500/20 text-green-400'
-                                                        : 'bg-purple-600/20 text-purple-400'
-                                                        }`}>
-                                                        {isOnline ? '🟢 Online' : '🟣 Presencial'}
-                                                    </span>
-                                                    {(event.sessions?.length || 0) > 1 && (
-                                                        <span className="inline-block px-2 py-1 text-xs font-bold rounded bg-orange-500/20 text-orange-400">
-                                                            📅 {event.sessions!.length} dias
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {group.events.map((event) => (
+                                <EventCard
+                                    key={event.id}
+                                    event={event}
+                                    variant="LIST"
+                                    onClick={() => onSelectEvent(event)}
+                                />
+                            ))}
                         </div>
                     </div>
                 ))}
