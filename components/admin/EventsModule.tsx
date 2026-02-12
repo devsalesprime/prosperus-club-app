@@ -12,9 +12,12 @@ import {
     Edit,
     Trash2,
     FileText,
-    Upload
+    Upload,
+    CalendarDays,
+    Clock,
+    X
 } from 'lucide-react';
-import { ClubEvent, EventCategory, EventMaterial } from '../../types';
+import { ClubEvent, EventCategory, EventMaterial, EventSession } from '../../types';
 import { dataService } from '../../services/mockData';
 import { AdminPageHeader, AdminModal, AdminFormInput } from './shared';
 
@@ -67,6 +70,8 @@ export const EventsModule: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [materials, setMaterials] = useState<EventMaterial[]>([]);
+    const [sessions, setSessions] = useState<EventSession[]>([]);
+    const [hasMultipleSessions, setHasMultipleSessions] = useState(false);
     const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
     const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm({
@@ -91,6 +96,8 @@ export const EventsModule: React.FC = () => {
         if (event) {
             setEditingId(event.id);
             setMaterials(event.materials || []);
+            setSessions(event.sessions || []);
+            setHasMultipleSessions((event.sessions?.length || 0) > 0);
             const formattedEvent = {
                 ...event,
                 date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
@@ -102,6 +109,8 @@ export const EventsModule: React.FC = () => {
         } else {
             setEditingId(null);
             setMaterials([]);
+            setSessions([]);
+            setHasMultipleSessions(false);
             reset({
                 type: 'MEMBER',
                 category: 'PRESENTIAL',
@@ -113,13 +122,43 @@ export const EventsModule: React.FC = () => {
     };
 
     const onSubmit = (data: any) => {
-        const eventData = { ...data, materials, id: editingId || undefined };
+        const eventData = {
+            ...data,
+            materials,
+            sessions: hasMultipleSessions ? sessions : undefined,
+            id: editingId || undefined
+        };
+
+        // Auto-calculate date/endDate from sessions for calendar compatibility
+        if (hasMultipleSessions && sessions.length > 0) {
+            const sortedSessions = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
+            const first = sortedSessions[0];
+            const last = sortedSessions[sortedSessions.length - 1];
+            eventData.date = new Date(`${first.date}T${first.startTime}:00`).toISOString();
+            eventData.endDate = new Date(`${last.date}T${last.endTime}:00`).toISOString();
+        }
+
         if (editingId) {
             dataService.updateClubEvent(eventData);
         } else {
             dataService.addClubEvent(eventData);
         }
         setIsModalOpen(false);
+    };
+
+    const addSession = () => {
+        const today = new Date().toISOString().slice(0, 10);
+        setSessions([...sessions, { date: today, startTime: '09:00', endTime: '18:00' }]);
+    };
+
+    const updateSession = (index: number, field: keyof EventSession, value: string) => {
+        const updated = [...sessions];
+        updated[index] = { ...updated[index], [field]: value };
+        setSessions(updated);
+    };
+
+    const removeSession = (index: number) => {
+        setSessions(sessions.filter((_, i) => i !== index));
     };
 
     const handleFileUpload = async (index: number, file: File) => {
@@ -297,6 +336,82 @@ export const EventsModule: React.FC = () => {
                         </div>
 
                         <AdminFormInput label="Descrição *" textarea {...register("description")} onChange={(e: any) => setValue('description', e)} value={watch('description')} error={errors.description?.message} />
+
+                        {/* SESSIONS SECTION */}
+                        <div className="bg-slate-800/30 p-4 border border-slate-700 rounded-lg space-y-3">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                    <CalendarDays size={14} className="text-yellow-500" />
+                                    Múltiplos Horários
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setHasMultipleSessions(!hasMultipleSessions);
+                                        if (!hasMultipleSessions && sessions.length === 0) addSession();
+                                    }}
+                                    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${hasMultipleSessions ? 'bg-yellow-600' : 'bg-slate-700'}`}
+                                >
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${hasMultipleSessions ? 'translate-x-5' : ''}`} />
+                                </button>
+                            </div>
+
+                            {hasMultipleSessions && (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-slate-500">Defina os dias e horários de cada sessão do evento.</p>
+                                    {sessions.map((session, index) => (
+                                        <div key={index} className="bg-slate-900 p-3 rounded border border-slate-700">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                                    <Clock size={12} /> Sessão {index + 1}
+                                                </span>
+                                                {sessions.length > 1 && (
+                                                    <button type="button" onClick={() => removeSession(index)} className="text-red-400 hover:text-red-300 p-1" title="Remover sessão">
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] text-slate-500 uppercase">Data</label>
+                                                    <input
+                                                        type="date"
+                                                        value={session.date}
+                                                        onChange={(e) => updateSession(index, 'date', e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] text-slate-500 uppercase">Início</label>
+                                                    <input
+                                                        type="time"
+                                                        value={session.startTime}
+                                                        onChange={(e) => updateSession(index, 'startTime', e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] text-slate-500 uppercase">Término</label>
+                                                    <input
+                                                        type="time"
+                                                        value={session.endTime}
+                                                        onChange={(e) => updateSession(index, 'endTime', e.target.value)}
+                                                        className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={addSession}
+                                        className="flex items-center gap-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded border border-slate-700 transition w-full justify-center"
+                                    >
+                                        <Plus size={14} /> Adicionar Sessão
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         {/* MATERIALS SECTION */}
                         <div className="bg-slate-800/30 p-4 border border-slate-700 rounded-lg space-y-3">

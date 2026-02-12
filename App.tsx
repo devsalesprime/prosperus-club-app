@@ -84,6 +84,7 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { DashboardHome } from './components/DashboardHome';
 import { MemberBook } from './components/MemberBook';
 import { MobileAgendaView } from './components/MobileAgendaView';
+import { EventDetailsModal } from './components/EventDetailsModal';
 import { useAuth } from './contexts/AuthContext';
 import { ROIDashboardWidget, MyDealsScreen, ReferralsScreen, RankingsScreen } from './components/business';
 import { BenefitStatsCard } from './components/BenefitStatsCard';
@@ -1433,125 +1434,10 @@ const App = () => {
 
                     {/* EVENT DETAILS MODAL */}
                     {selectedEvent && (
-                        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 p-4">
-                            <div className="bg-slate-900 border border-slate-700 w-[90%] md:w-full md:max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90vh]">
-                                <div className="h-32 bg-gradient-to-r from-yellow-600 to-yellow-800 relative rounded-t-2xl overflow-hidden shrink-0">
-                                    {selectedEvent.bannerUrl && (
-                                        <img src={selectedEvent.bannerUrl} alt={selectedEvent.title} className="w-full h-full object-cover opacity-50" />
-                                    )}
-                                    <button
-                                        onClick={() => setSelectedEvent(null)}
-                                        className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-                                <div className="p-6 overflow-y-auto">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${selectedEvent.category === 'ONLINE'
-                                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                            : 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
-                                            }`}>
-                                            {selectedEvent.category === 'PRESENTIAL' ? 'Presencial' : 'Online'}
-                                        </span>
-                                        <span className="text-slate-400 text-sm flex items-center gap-1">
-                                            <Clock size={14} />
-                                            {new Date(selectedEvent.date).toLocaleDateString('pt-BR')} às {new Date(selectedEvent.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
-                                    </div>
-
-                                    <h2 className="text-2xl font-bold text-white mb-4">{selectedEvent.title}</h2>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="md:col-span-2 space-y-6">
-                                            <div>
-                                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Sobre o Evento</h3>
-                                                <p className="text-slate-300 leading-relaxed text-sm">
-                                                    {selectedEvent.description || 'Nenhuma descrição disponível para este evento.'}
-                                                </p>
-                                            </div>
-
-                                            {/* ATA / MINUTES SECTION */}
-                                            {selectedEvent.materials && selectedEvent.materials.length > 0 && (
-                                                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                                                    <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                                        <FileText size={16} className="text-yellow-500" />
-                                                        Ata e Materiais
-                                                    </h3>
-                                                    <div className="space-y-2">
-                                                        {selectedEvent.materials.map((material, index) => {
-                                                            // Icon and color based on material type
-                                                            const getIconAndColor = (type: string) => {
-                                                                switch (type) {
-                                                                    case 'PDF':
-                                                                        return { icon: FileText, color: 'red' };
-                                                                    case 'VIDEO':
-                                                                        return { icon: PlayCircle, color: 'purple' };
-                                                                    case 'DOC':
-                                                                        return { icon: BookOpen, color: 'blue' };
-                                                                    case 'LINK':
-                                                                    default:
-                                                                        return { icon: ExternalLink, color: 'green' };
-                                                                }
-                                                            };
-
-                                                            const { icon: Icon, color } = getIconAndColor(material.type);
-                                                            const bgColor = `bg-${color}-500/10`;
-                                                            const textColor = `text-${color}-400`;
-                                                            const hoverColor = `group-hover:text-${color}-300`;
-
-                                                            return (
-                                                                <a
-                                                                    key={index}
-                                                                    href={material.url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 group"
-                                                                >
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className={`p-2 ${bgColor} rounded-lg ${textColor} ${hoverColor}`}>
-                                                                            <Icon size={18} />
-                                                                        </div>
-                                                                        <span className="text-sm text-slate-300 group-hover:text-white font-medium">
-                                                                            {material.title}
-                                                                        </span>
-                                                                    </div>
-                                                                    <ExternalLink size={16} className="text-slate-500 group-hover:text-white" />
-                                                                </a>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="space-y-4">
-                                            {selectedEvent.location && (
-                                                <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
-                                                    <div className="flex items-start gap-3">
-                                                        <MapPin className="text-yellow-500 shrink-0 mt-1" size={18} />
-                                                        <div>
-                                                            <h4 className="text-sm font-bold text-white mb-1">Localização</h4>
-                                                            <p className="text-xs text-slate-400 leading-relaxed">{selectedEvent.location}</p>
-                                                            {selectedEvent.mapLink && (
-                                                                <a href={selectedEvent.mapLink} target="_blank" rel="noreferrer" className="text-xs text-yellow-500 hover:underline mt-2 inline-block">
-                                                                    Ver no Mapa
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className="pt-4 border-t border-slate-800">
-                                                <button className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm border border-slate-700">
-                                                    <CalendarPlus size={16} />
-                                                    Adicionar à Agenda
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <EventDetailsModal
+                            event={selectedEvent}
+                            onClose={() => setSelectedEvent(null)}
+                        />
                     )}
 
 

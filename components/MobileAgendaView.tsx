@@ -141,13 +141,18 @@ export const MobileAgendaView: React.FC<MobileAgendaViewProps> = ({ events, onSe
                                                 )}
 
                                                 {/* Category Badge */}
-                                                <div className="mt-2">
+                                                <div className="mt-2 flex items-center gap-2">
                                                     <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${isOnline
                                                         ? 'bg-green-500/20 text-green-400'
                                                         : 'bg-purple-600/20 text-purple-400'
                                                         }`}>
                                                         {isOnline ? '🟢 Online' : '🟣 Presencial'}
                                                     </span>
+                                                    {(event.sessions?.length || 0) > 1 && (
+                                                        <span className="inline-block px-2 py-1 text-xs font-bold rounded bg-orange-500/20 text-orange-400">
+                                                            📅 {event.sessions!.length} dias
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

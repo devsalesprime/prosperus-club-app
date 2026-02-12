@@ -107,6 +107,12 @@ export interface EventMaterial {
   type: 'PDF' | 'LINK' | 'DOC' | 'VIDEO';
 }
 
+export interface EventSession {
+  date: string;      // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string;   // HH:mm
+}
+
 export interface ClubEvent {
   id: string;
   title: string;
@@ -115,6 +121,9 @@ export interface ClubEvent {
   endDate?: string; // ISO string end
   type: 'MEMBER' | 'TEAM'; // Agenda Type
   category: EventCategory; // Visualization Category
+
+  // Multi-date Sessions (optional)
+  sessions?: EventSession[]; // For multi-day events with distinct schedules
 
   // Dynamic Fields
   location?: string; // For PRESENTIAL
