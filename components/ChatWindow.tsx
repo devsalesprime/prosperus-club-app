@@ -4,11 +4,12 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck } from 'lucide-react';
-import { conversationService, Message } from '../services/conversationService';
+import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download } from 'lucide-react';
+import { conversationService, Message, MessageType } from '../services/conversationService';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useUnreadCountContext } from '../contexts/UnreadCountContext';
+import { ImageLightbox } from './ImageLightbox';
 
 interface ChatWindowProps {
     conversationId: string;
@@ -59,9 +60,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     const [failedMessage, setFailedMessage] = useState<string | null>(null);
     const [showScrollFab, setShowScrollFab] = useState(false);
     const [newMsgCount, setNewMsgCount] = useState(0);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const isSubscribedRef = useRef(false);
     const isNearBottomRef = useRef(true);
     const { refreshUnreadCount } = useUnreadCountContext();
@@ -268,6 +274,94 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         setFailedMessage(null);
     };
 
+    // --- MEDIA HANDLING ---
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file size (max 25MB)
+        if (file.size > 25 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo permitido: 25MB.');
+            return;
+        }
+
+        setSelectedFile(file);
+
+        // Generate preview for images
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => setFilePreview(reader.result as string);
+            reader.readAsDataURL(file);
+        } else {
+            setFilePreview(null);
+        }
+
+        // Reset input so same file can be re-selected
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setFilePreview(null);
+    };
+
+    const handleSendMedia = async () => {
+        if (!selectedFile || uploading) return;
+
+        const file = selectedFile;
+        const isImage = file.type.startsWith('image/');
+
+        // Create optimistic message
+        const optimisticId = `optimistic-media-${Date.now()}`;
+        const optimisticMessage: OptimisticMessage = {
+            id: optimisticId,
+            conversation_id: conversationId,
+            sender_id: currentUserId,
+            content: isImage ? '📷 Enviando imagem...' : `📎 Enviando ${file.name}...`,
+            is_read: false,
+            message_type: isImage ? 'image' : 'file',
+            media_filename: file.name,
+            created_at: new Date().toISOString(),
+            _isOptimistic: true,
+            _failed: false
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
+        isNearBottomRef.current = true;
+        setSelectedFile(null);
+        setFilePreview(null);
+
+        try {
+            setUploading(true);
+            const sentMessage = await conversationService.sendMediaMessage(
+                conversationId,
+                currentUserId,
+                file,
+                newMessage.trim() || undefined
+            );
+
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...sentMessage, _isOptimistic: false, _failed: false } : m
+            ));
+            setNewMessage('');
+        } catch (error) {
+            console.error('Error sending media:', error);
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...m, _failed: true, content: `❌ Falha: ${file.name}` } : m
+            ));
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // Format file size for display
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes}B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+    };
+
     // Group messages with date separators
     const messagesWithSeparators = useMemo(() => {
         const result: Array<{ type: 'separator'; date: string } | { type: 'message'; message: OptimisticMessage; showAvatar: boolean }> = [];
@@ -448,13 +542,60 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                                                 ...(isFailed ? { borderRadius: '16px' } : {}),
                                             }}
                                         >
-                                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${(message as any).is_deleted ? 'italic opacity-60' : ''
-                                                } ${isFailed ? 'text-red-200' : 'text-white'}`}>
-                                                {(message as any).is_deleted
-                                                    ? '[Mensagem removida pelo moderador]'
-                                                    : message.content
-                                                }
-                                            </p>
+                                            {/* Deleted message */}
+                                            {(message as OptimisticMessage).is_deleted ? (
+                                                <p className="text-[14px] leading-relaxed italic opacity-60 text-white">
+                                                    [Mensagem removida pelo moderador]
+                                                </p>
+                                            ) : message.message_type === 'image' && message.media_url ? (
+                                                /* Image message */
+                                                <div className="space-y-1">
+                                                    <img
+                                                        src={message.media_url}
+                                                        alt={message.media_filename || 'Imagem'}
+                                                        className="max-w-[240px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setLightboxSrc(message.media_url!);
+                                                        }}
+                                                        loading="lazy"
+                                                    />
+                                                    {message.content && message.content !== '📷 Imagem' && (
+                                                        <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                            {message.content}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : message.message_type === 'file' && message.media_url ? (
+                                                /* File message */
+                                                <div className="space-y-1">
+                                                    <a
+                                                        href={message.media_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition hover:opacity-80 ${isOwn ? 'bg-amber-800/30' : 'bg-slate-700/40'}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <FileText size={20} className={isOwn ? 'text-amber-200' : 'text-slate-300'} />
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className={`text-[13px] font-medium truncate ${isOwn ? 'text-amber-100' : 'text-white'}`}>
+                                                                {message.media_filename || 'Arquivo'}
+                                                            </p>
+                                                        </div>
+                                                        <Download size={16} className={isOwn ? 'text-amber-200/70' : 'text-slate-400'} />
+                                                    </a>
+                                                    {message.content && !message.content.startsWith('📎') && (
+                                                        <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                            {message.content}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                /* Text message */
+                                                <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                    {message.content}
+                                                </p>
+                                            )}
 
                                             {/* Inline timestamp + status */}
                                             <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -536,15 +677,64 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     backdropFilter: 'blur(12px)',
                 }}
             >
-                <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                {/* File Preview Bar */}
+                {selectedFile && (
+                    <div className="flex items-center gap-2 mb-2 px-2 py-2 bg-slate-800/60 border border-slate-700/50 rounded-xl">
+                        {filePreview ? (
+                            <img src={filePreview} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center">
+                                <FileText size={20} className="text-slate-400" />
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white truncate font-medium">{selectedFile.name}</p>
+                            <p className="text-[10px] text-slate-500">{formatFileSize(selectedFile.size)}</p>
+                        </div>
+                        <button
+                            onClick={handleRemoveFile}
+                            className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition shrink-0"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Hidden file input — accepts all file types */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="*/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                />
+
+                <form onSubmit={selectedFile ? (e) => { e.preventDefault(); handleSendMedia(); } : handleSendMessage} className="flex items-end gap-2">
+                    {/* Attach Button */}
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={sending || uploading}
+                        className="rounded-full flex items-center justify-center transition-all duration-200 hover:bg-slate-700/60 active:scale-90 shrink-0 disabled:opacity-30"
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            minWidth: '40px',
+                            minHeight: '40px',
+                        }}
+                        title="Anexar arquivo"
+                    >
+                        <Paperclip size={20} className="text-slate-400" />
+                    </button>
+
                     <div className="flex-1 relative">
                         <textarea
                             ref={textareaRef}
                             value={newMessage}
                             onChange={handleTextareaChange}
                             onKeyDown={handleKeyDown}
-                            placeholder="Digite sua mensagem..."
-                            disabled={sending}
+                            placeholder={selectedFile ? 'Adicionar legenda...' : 'Digite sua mensagem...'}
+                            disabled={sending || uploading}
                             rows={1}
                             maxLength={2000}
                             className="w-full bg-slate-800/60 border border-slate-700/50 rounded-2xl px-4 py-2.5 text-white text-sm placeholder-slate-500 resize-none transition-all duration-200 focus:outline-none focus:border-yellow-600/50 focus:bg-slate-800/80 disabled:opacity-50"
@@ -564,22 +754,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
                     <button
                         type="submit"
-                        disabled={!newMessage.trim() || sending}
+                        disabled={(!newMessage.trim() && !selectedFile) || sending || uploading}
                         className="rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0"
                         style={{
                             width: '44px',
                             height: '44px',
                             minWidth: '44px',
                             minHeight: '44px',
-                            background: newMessage.trim()
+                            background: (newMessage.trim() || selectedFile)
                                 ? 'linear-gradient(135deg, #b45309, #d97706)'
                                 : 'rgba(51,65,85,0.5)',
-                            boxShadow: newMessage.trim()
+                            boxShadow: (newMessage.trim() || selectedFile)
                                 ? '0 2px 12px rgba(217,119,6,0.3)'
                                 : 'none',
                         }}
                     >
-                        {sending ? (
+                        {(sending || uploading) ? (
                             <Loader2 size={20} className="text-white animate-spin" />
                         ) : (
                             <Send size={20} className="text-white" />
@@ -587,6 +777,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     </button>
                 </form>
             </div>
+
+            {/* Image Lightbox */}
+            {lightboxSrc && (
+                <ImageLightbox
+                    src={lightboxSrc}
+                    onClose={() => setLightboxSrc(null)}
+                />
+            )}
 
             {/* CSS Animation + Layout */}
             <style>{`

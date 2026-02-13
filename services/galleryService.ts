@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { GalleryAlbum } from '../types';
+import { fetchWithOfflineCache } from './offlineStorage';
 
 /**
  * Gallery Service - CRUD operations for Gallery Albums
@@ -9,19 +10,27 @@ import { GalleryAlbum } from '../types';
 export const galleryService = {
     /**
      * Fetch all gallery albums, ordered by most recent first
+     * Uses offline cache for offline access (5 min TTL)
      */
     async getAllAlbums(): Promise<GalleryAlbum[]> {
-        const { data, error } = await supabase
-            .from('gallery_albums')
-            .select('id, title, description, embedUrl, coverImage, createdAt')
-            .order('createdAt', { ascending: false });
+        const { data } = await fetchWithOfflineCache<GalleryAlbum[]>(
+            'gallery:all-albums',
+            async () => {
+                const { data, error } = await supabase
+                    .from('gallery_albums')
+                    .select('id, title, description, embedUrl, coverImage, createdAt')
+                    .order('createdAt', { ascending: false });
 
-        if (error) {
-            console.error('Error fetching gallery albums:', error);
-            throw error;
-        }
+                if (error) {
+                    console.error('Error fetching gallery albums:', error);
+                    throw error;
+                }
 
-        return data || [];
+                return data || [];
+            },
+            5 * 60 * 1000 // 5 minutes
+        );
+        return data;
     },
 
     /**

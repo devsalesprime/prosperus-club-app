@@ -1,6 +1,7 @@
 // Service for managing user profiles
 
 import { supabase } from '../lib/supabase';
+import { fetchWithOfflineCache, cacheData, getCachedData } from './offlineStorage';
 
 export interface ProfileData {
     id: string;
@@ -66,9 +67,12 @@ export interface ProfileUpdateData {
 class ProfileService {
     /**
      * Get profile by user ID
-     * Includes 5-second timeout to prevent indefinite hanging
+     * Includes 15-second timeout to prevent indefinite hanging
+     * Uses offline cache as fallback
      */
     async getProfile(userId: string): Promise<ProfileData | null> {
+        const cacheKey = `profile:${userId}`;
+
         try {
             console.log('🔍 profileService.getProfile: Starting query for userId:', userId);
 
@@ -109,6 +113,12 @@ class ProfileService {
                 }
 
                 console.log('✅ profileService.getProfile: Profile found:', data?.name);
+
+                // Cache for offline use (10 minutes)
+                if (data) {
+                    await cacheData(cacheKey, data, 10 * 60 * 1000);
+                }
+
                 return data;
             }
 
@@ -121,6 +131,13 @@ class ProfileService {
                 userId
             });
 
+            // Fallback to offline cache
+            const cached = await getCachedData<ProfileData>(cacheKey);
+            if (cached) {
+                console.log('📦 profileService.getProfile: Returning cached profile');
+                return cached;
+            }
+
             // Return null to let caller create fallback profile
             return null;
         }
@@ -129,23 +146,32 @@ class ProfileService {
     /**
      * Get all member profiles (for Member Book)
      * Returns profiles ordered by name, excluding blocked users
+     * Uses offline cache for offline access (5 min TTL)
      * @param excludeUserId - Optional user ID to exclude from results (e.g., current user)
      */
     async getAllProfiles(excludeUserId?: string): Promise<ProfileData[]> {
+        const cacheKey = `all-profiles:${excludeUserId || 'all'}`;
+
         try {
-            let query = supabase
-                .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at');
+            const { data } = await fetchWithOfflineCache<ProfileData[]>(
+                cacheKey,
+                async () => {
+                    let query = supabase
+                        .from('profiles')
+                        .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at');
 
-            // Exclude specific user if provided (e.g., logged-in user)
-            if (excludeUserId) {
-                query = query.neq('id', excludeUserId);
-            }
+                    // Exclude specific user if provided (e.g., logged-in user)
+                    if (excludeUserId) {
+                        query = query.neq('id', excludeUserId);
+                    }
 
-            const { data, error } = await query.order('name', { ascending: true });
-
-            if (error) throw error;
-            return data || [];
+                    const { data, error } = await query.order('name', { ascending: true });
+                    if (error) throw error;
+                    return data || [];
+                },
+                5 * 60 * 1000 // 5 minutes
+            );
+            return data;
         } catch (error) {
             console.error('Error fetching all profiles:', error);
             return [];

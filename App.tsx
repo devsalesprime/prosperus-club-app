@@ -1,10 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Calendar, dateFnsLocalizer, Views, View, Navigate } from 'react-big-calendar';
-import format from 'date-fns/format';
-import parse from 'date-fns/parse';
-import startOfWeek from 'date-fns/startOfWeek';
-import getDay from 'date-fns/getDay';
-import ptBR from 'date-fns/locale/pt-BR';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
+import { Calendar, Views, View, Navigate } from 'react-big-calendar';
+import { localizer, YearView, generateGoogleCalendarUrl, generateOutlookCalendarUrl, downloadIcsFile } from './utils/calendarUtils.tsx';
 import {
     LayoutDashboard,
     Calendar as CalendarIcon,
@@ -62,180 +58,57 @@ import {
 import { ViewState, Member, Video, ClubEvent as Event, Article, Category, EventCategory, Conversation, Message, UserNotification } from './types';
 import { dataService } from './services/mockData.ts';
 import { profileService } from './services/profileService.ts';
+import { cleanExpiredCache } from './services/offlineStorage';
 import { SupportWidget } from './components/SupportWidget';
-import { AdminApp } from './AdminApp.tsx';
-import { Academy } from './components/Academy.tsx';
-import { ProsperusToolsPage } from './pages/ProsperusToolsPage';
-import { SolutionsListPage } from './pages/SolutionsListPage';
-import { ProgressListPage } from './pages/ProgressListPage';
+// --- STATIC IMPORTS (Critical Path — always needed) ---
 import { articleService, Article as ServiceArticle } from './services/articleService';
 import { NewsList } from './components/NewsList.tsx';
 import { ArticleReader } from './components/ArticleReader.tsx';
-import { MessagesView } from './components/MessagesView.tsx';
 import { NotificationCenter } from './components/NotificationCenter.tsx';
-import { NotificationsPage } from './components/NotificationsPage.tsx';
 import { ChatIconWithBadge } from './components/ChatIconWithBadge';
-import { FavoritesPage } from './components/FavoritesPage';
-import { ProfileEdit } from './components/ProfileEdit.tsx';
 import { ProfilePreview } from './components/ProfilePreview.tsx';
 import { ProfileData } from './services/profileService.ts';
 import { OnboardingBanner } from './components/OnboardingBanner.tsx';
-import { OnboardingWizard } from './components/OnboardingWizard';
 import { DashboardHome } from './components/DashboardHome';
 import { MemberBook } from './components/MemberBook';
 import { MobileAgendaView } from './components/MobileAgendaView';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { useAuth } from './contexts/AuthContext';
-import { ROIDashboardWidget, MyDealsScreen, ReferralsScreen, RankingsScreen } from './components/business';
 import { BenefitStatsCard } from './components/BenefitStatsCard';
 import { OfflineBanner } from './components/OfflineBanner';
 import { InstallPrompt } from './components/InstallPrompt';
+import ProfileSection from './components/ProfileSection';
+
+// --- LAZY IMPORTS (Code Splitting — loaded on demand) ---
+const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default: m.AdminApp })));
+const Academy = React.lazy(() => import('./components/Academy.tsx').then(m => ({ default: m.Academy })));
+const ProsperusToolsPage = React.lazy(() => import('./pages/ProsperusToolsPage').then(m => ({ default: m.ProsperusToolsPage })));
+const SolutionsListPage = React.lazy(() => import('./pages/SolutionsListPage').then(m => ({ default: m.SolutionsListPage })));
+const ProgressListPage = React.lazy(() => import('./pages/ProgressListPage').then(m => ({ default: m.ProgressListPage })));
+const MessagesView = React.lazy(() => import('./components/MessagesView.tsx').then(m => ({ default: m.MessagesView })));
+const NotificationsPage = React.lazy(() => import('./components/NotificationsPage.tsx').then(m => ({ default: m.NotificationsPage })));
+const FavoritesPage = React.lazy(() => import('./components/FavoritesPage').then(m => ({ default: m.FavoritesPage })));
+const ProfileEdit = React.lazy(() => import('./components/ProfileEdit.tsx').then(m => ({ default: m.ProfileEdit })));
+const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
+const Gallery = React.lazy(() => import('./components/Gallery').then(m => ({ default: m.Gallery })));
+const MyDealsScreen = React.lazy(() => import('./components/business/MyDealsScreen').then(m => ({ default: m.default })));
+const ReferralsScreen = React.lazy(() => import('./components/business/ReferralsScreen').then(m => ({ default: m.default })));
+const RankingsScreen = React.lazy(() => import('./components/business/RankingsScreen').then(m => ({ default: m.default })));
+const ROIDashboardWidget = React.lazy(() => import('./components/business/ROIDashboardWidget').then(m => ({ default: m.default })));
+
+// --- Lazy Loading Fallback ---
+const LazyFallback = () => (
+    <div className="flex items-center justify-center p-8 min-h-[200px]">
+        <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-slate-400">Carregando...</span>
+        </div>
+    </div>
+);
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// Setup Calendar Localizer
-const locales = {
-    'pt-BR': ptBR,
-};
-
-const localizer = dateFnsLocalizer({
-    format,
-    parse,
-    startOfWeek,
-    getDay,
-    locales,
-});
-
-// --- HELPER FUNCTIONS FOR CALENDAR ---
-
-const formatDateForCalendar = (date: Date) => {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return (
-        date.getFullYear() +
-        pad(date.getMonth() + 1) +
-        pad(date.getDate()) +
-        'T' +
-        pad(date.getHours()) +
-        pad(date.getMinutes()) +
-        pad(date.getSeconds())
-    );
-};
-
-const escapeICS = (text: string = '') =>
-    text.replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
-
-const generateGoogleCalendarUrl = (event: Event) => {
-    const startDate = formatDateForCalendar(new Date(event.date));
-    const endDate = event.endDate
-        ? formatDateForCalendar(new Date(event.endDate))
-        : formatDateForCalendar(new Date(new Date(event.date).getTime() + 3600000));
-
-    const details = `Detalhes do evento Prosperus:\n${event.description}\n\nLink: ${event.link || event.videoUrl || 'N/A'}`;
-    const location = event.location || 'Online';
-
-    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${startDate}/${endDate}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}&sf=true&output=xml`;
-};
-
-const generateOutlookCalendarUrl = (event: Event) => {
-    const start = new Date(event.date).toISOString(); // Outlook Web aceita ISO
-    const end = event.endDate
-        ? new Date(event.endDate).toISOString()
-        : new Date(new Date(event.date).getTime() + 3600000).toISOString();
-
-    const details = `Detalhes do evento Prosperus: ${event.description}. Link: ${event.link || event.videoUrl || 'N/A'}`;
-    const location = event.location || 'Online';
-
-    return `https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&startdt=${start}&enddt=${end}&subject=${encodeURIComponent(event.title)}&body=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`
-};
-
-const downloadIcsFile = (event: Event) => {
-    const start = formatDateForCalendar(new Date(event.date));
-    const end = event.endDate
-        ? formatDateForCalendar(new Date(event.endDate))
-        : formatDateForCalendar(new Date(new Date(event.date).getTime() + 3600000));
-
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Prosperus Club//App//PT
-BEGIN:VEVENT
-UID:${event.id}@prosperus.club
-DTSTAMP:${formatDateForCalendar(new Date())}
-DTSTART:${start}
-DTEND:${end}
-SUMMARY:${escapeICS(event.title)}
-DESCRIPTION:${escapeICS(event.description)}
-LOCATION:${escapeICS(event.location || 'Online')}
-URL:${event.link || event.videoUrl || ''}
-END:VEVENT
-END:VCALENDAR`;
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `${event.title.replace(/\s+/g, '_')}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
-
-// --- CUSTOM YEAR VIEW COMPONENT ---
-
-const YearView = ({ date, onNavigate, onView }: any) => {
-    const months = useMemo(() => {
-        const ms = [];
-        for (let i = 0; i < 12; i++) {
-            ms.push(new Date(date.getFullYear(), i, 1));
-        }
-        return ms;
-    }, [date]);
-
-    return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 h-full overflow-y-auto">
-            {months.map((month) => {
-                const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-                const startDay = month.getDay(); // 0 = Sunday
-
-                return (
-                    <div
-                        key={month.toISOString()}
-                        className="bg-slate-800 rounded-lg p-3 border border-slate-700 hover:border-yellow-600/50 cursor-pointer transition flex flex-col items-center"
-                        onClick={() => {
-                            onNavigate(month);
-                            onView('month');
-                        }}
-                    >
-                        <h3 className="font-bold text-white uppercase text-sm mb-2">
-                            {month.toLocaleString('pt-BR', { month: 'long' })}
-                        </h3>
-                        {/* Accurate Grid Representation */}
-                        <div className="grid grid-cols-7 gap-1 text-[8px] text-center w-full">
-                            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => <span key={d} className="text-slate-500 font-bold">{d}</span>)}
-
-                            {/* Spacers for start of month */}
-                            {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`}></div>)}
-
-                            {/* Days */}
-                            {Array.from({ length: daysInMonth }).map((_, i) => {
-                                const isWeekend = (startDay + i) % 7 === 0 || (startDay + i + 1) % 7 === 0;
-                                return (
-                                    <div key={i} className={`h-1 w-1 rounded-full mx-auto ${isWeekend ? 'bg-slate-700' : 'bg-slate-500'}`}></div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
-
-YearView.title = (date: Date) => { return date.getFullYear().toString(); };
-YearView.navigate = (date: Date, action: any) => {
-    if (action === Navigate.PREVIOUS) return new Date(date.getFullYear() - 1, 0, 1);
-    if (action === Navigate.NEXT) return new Date(date.getFullYear() + 1, 0, 1);
-    return date;
-};
+// Calendar utilities imported from utils/calendarUtils.ts
 
 // --- APP COMPONENT ---
 
@@ -245,8 +118,6 @@ import { HomeCarousel } from './components/HomeCarousel';
 import { bannerService, CarouselItem } from './services/bannerService';
 import { LoginModal } from './components/LoginModal';
 import { RoleSelector } from './components/RoleSelector';
-import { Gallery } from './components/Gallery';
-import { createClient } from '@supabase/supabase-js';
 
 import { supabase } from './lib/supabase';
 
@@ -319,6 +190,11 @@ const App = () => {
 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Clean expired offline cache on startup
+    useEffect(() => {
+        cleanExpiredCache();
     }, []);
 
     // Members list from Supabase (real data)
@@ -911,19 +787,21 @@ const App = () => {
     // Show Onboarding Wizard for new users
     if (showOnboarding && userProfile && !userProfile.has_completed_onboarding) {
         return (
-            <>
-                <div className="min-h-screen bg-slate-950" />
-                <OnboardingWizard
-                    currentUser={userProfile}
-                    onComplete={() => {
-                        setShowOnboarding(false);
-                        if (refreshProfile) refreshProfile();
-                    }}
-                    onProfileUpdate={(updatedProfile) => {
-                        if (refreshProfile) refreshProfile();
-                    }}
-                />
-            </>
+            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
+                <>
+                    <div className="min-h-screen bg-slate-950" />
+                    <OnboardingWizard
+                        currentUser={userProfile}
+                        onComplete={() => {
+                            setShowOnboarding(false);
+                            if (refreshProfile) refreshProfile();
+                        }}
+                        onProfileUpdate={(updatedProfile) => {
+                            if (refreshProfile) refreshProfile();
+                        }}
+                    />
+                </>
+            </Suspense>
         );
     }
 
@@ -933,7 +811,7 @@ const App = () => {
     }
 
     if (isAdmin && currentUser) {
-        return <AdminApp currentUser={currentUser} onLogout={() => { setIsAdmin(false); setSession(null); /* AuthContext handles cleanup */ }} />;
+        return <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}><AdminApp currentUser={currentUser} onLogout={() => { setIsAdmin(false); setSession(null); /* AuthContext handles cleanup */ }} /></Suspense>;
     }
 
     // Toggle accordion menu
@@ -1125,590 +1003,472 @@ const App = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
-                    {view === ViewState.DASHBOARD && (
-                        <DashboardHome
-                            currentUser={currentUser}
-                            members={members}
-                            carouselItems={carouselItems}
-                            setView={setView}
-                            onViewProfile={(memberId) => {
-                                profileService.getProfile(memberId).then(profile => {
-                                    if (profile) {
-                                        setSelectedMember(profile);
-                                        setView(ViewState.MEMBERS);
+                    <Suspense fallback={<LazyFallback />}>
+                        {view === ViewState.DASHBOARD && (
+                            <DashboardHome
+                                currentUser={currentUser}
+                                members={members}
+                                carouselItems={carouselItems}
+                                setView={setView}
+                                onViewProfile={(memberId) => {
+                                    profileService.getProfile(memberId).then(profile => {
+                                        if (profile) {
+                                            setSelectedMember(profile);
+                                            setView(ViewState.MEMBERS);
+                                        }
+                                    });
+                                }}
+                                onBannerClick={(banner) => {
+                                    if (banner.link_url) {
+                                        if (banner.link_type === 'EXTERNAL') {
+                                            window.open(banner.link_url, '_blank');
+                                        } else {
+                                            window.location.href = banner.link_url;
+                                        }
                                     }
-                                });
-                            }}
-                            onBannerClick={(banner) => {
-                                if (banner.link_url) {
-                                    if (banner.link_type === 'EXTERNAL') {
-                                        window.open(banner.link_url, '_blank');
-                                    } else {
-                                        window.location.href = banner.link_url;
-                                    }
-                                }
-                            }}
-                            onEditProfile={() => setIsEditingProfile(true)}
-                            memberToProfileData={memberToProfileData}
-                            onNavigateToBenefits={() => {
-                                setShowBenefitsFilter(true);
-                                setView(ViewState.MEMBERS);
-                            }}
-                        />
-                    )}
+                                }}
+                                onEditProfile={() => setIsEditingProfile(true)}
+                                memberToProfileData={memberToProfileData}
+                                onNavigateToBenefits={() => {
+                                    setShowBenefitsFilter(true);
+                                    setView(ViewState.MEMBERS);
+                                }}
+                            />
+                        )}
 
-                    {view === ViewState.AGENDA && (
-                        <div className="h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in">
-                            {/* Filter and Legend Bar */}
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
-                                {/* Legend - Only ONLINE and PRESENTIAL */}
-                                <div className="flex items-center gap-4 flex-wrap">
-                                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Legenda:</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 bg-[#9333ea]"></span>
-                                        <span className="text-sm text-slate-300 font-medium">Presencial</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="w-3 h-3 bg-[#10b981]"></span>
-                                        <span className="text-sm text-slate-300 font-medium">Online</span>
-                                    </div>
-                                </div>
-
-                                {/* Filters - Functional toggles */}
-                                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'TEAM') && (
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar:</span>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                defaultChecked
-                                                className="w-4 h-4 border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500/50"
-                                            />
-                                            <span className="text-sm text-slate-300 font-medium">Eventos do Clube</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                defaultChecked
-                                                className="w-4 h-4 border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500/50"
-                                            />
-                                            <span className="text-sm text-slate-300 font-medium">Eventos do Time</span>
-                                        </label>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Conditional Rendering: Mobile Hybrid vs Desktop Full Calendar */}
-                            {isMobile ? (
-                                <>
-                                    {/* Mobile Header with View Toggle */}
-                                    <div className="sticky top-0 bg-slate-900 z-20 px-4 py-3 border-b border-slate-800 mb-4">
-                                        <div className="flex items-center justify-between">
-                                            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                                                <CalendarIcon size={20} className="text-yellow-500" />
-                                                Agenda
-                                            </h2>
-
-                                            {/* Segmented Control Toggle */}
-                                            <div className="flex bg-slate-800 p-1 rounded-lg gap-1">
-                                                <button
-                                                    onClick={() => setMobileView('LIST')}
-                                                    className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'LIST'
-                                                        ? 'bg-yellow-600 text-white shadow-lg'
-                                                        : 'text-slate-400 hover:text-white'
-                                                        }`}
-                                                >
-                                                    <List size={14} className="inline mr-1" />
-                                                    Lista
-                                                </button>
-                                                <button
-                                                    onClick={() => setMobileView('MONTH')}
-                                                    className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'MONTH'
-                                                        ? 'bg-yellow-600 text-white shadow-lg'
-                                                        : 'text-slate-400 hover:text-white'
-                                                        }`}
-                                                >
-                                                    <CalendarIcon size={14} className="inline mr-1" />
-                                                    Mês
-                                                </button>
-                                            </div>
+                        {view === ViewState.AGENDA && (
+                            <div className="h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in">
+                                {/* Filter and Legend Bar */}
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
+                                    {/* Legend - Only ONLINE and PRESENTIAL */}
+                                    <div className="flex items-center gap-4 flex-wrap">
+                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Legenda:</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 bg-[#9333ea]"></span>
+                                            <span className="text-sm text-slate-300 font-medium">Presencial</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-3 h-3 bg-[#10b981]"></span>
+                                            <span className="text-sm text-slate-300 font-medium">Online</span>
                                         </div>
                                     </div>
 
-                                    {/* Mobile View Content */}
-                                    {mobileView === 'LIST' ? (
-                                        <MobileAgendaView
-                                            events={dataService.getClubEventsForUser(userProfile?.id || '')}
-                                            onSelectEvent={(event) => setSelectedEvent(event)}
-                                        />
-                                    ) : (
-                                        <div className="mobile-calendar-month px-2">
-                                            <style>{`
+                                    {/* Filters - Functional toggles */}
+                                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'TEAM') && (
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar:</span>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    defaultChecked
+                                                    className="w-4 h-4 border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500/50"
+                                                />
+                                                <span className="text-sm text-slate-300 font-medium">Eventos do Clube</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    defaultChecked
+                                                    className="w-4 h-4 border-slate-600 bg-slate-700 text-yellow-500 focus:ring-yellow-500/50"
+                                                />
+                                                <span className="text-sm text-slate-300 font-medium">Eventos do Time</span>
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Conditional Rendering: Mobile Hybrid vs Desktop Full Calendar */}
+                                {isMobile ? (
+                                    <>
+                                        {/* Mobile Header with View Toggle */}
+                                        <div className="sticky top-0 bg-slate-900 z-20 px-4 py-3 border-b border-slate-800 mb-4">
+                                            <div className="flex items-center justify-between">
+                                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                                    <CalendarIcon size={20} className="text-yellow-500" />
+                                                    Agenda
+                                                </h2>
+
+                                                {/* Segmented Control Toggle */}
+                                                <div className="flex bg-slate-800 p-1 rounded-lg gap-1">
+                                                    <button
+                                                        onClick={() => setMobileView('LIST')}
+                                                        className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'LIST'
+                                                            ? 'bg-yellow-600 text-white shadow-lg'
+                                                            : 'text-slate-400 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        <List size={14} className="inline mr-1" />
+                                                        Lista
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setMobileView('MONTH')}
+                                                        className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'MONTH'
+                                                            ? 'bg-yellow-600 text-white shadow-lg'
+                                                            : 'text-slate-400 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        <CalendarIcon size={14} className="inline mr-1" />
+                                                        Mês
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Mobile View Content */}
+                                        {mobileView === 'LIST' ? (
+                                            <MobileAgendaView
+                                                events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                                onSelectEvent={(event) => setSelectedEvent(event)}
+                                            />
+                                        ) : (
+                                            <div className="mobile-calendar-month px-2">
+                                                <style>{`
                                                 .mobile-calendar-month .rbc-header {
                                                     font-size: 0.8rem;
                                                 }
                                             `}</style>
-                                            <Calendar
-                                                localizer={localizer}
-                                                culture="pt-BR"
-                                                events={dataService.getClubEventsForUser(userProfile?.id || '')}
-                                                startAccessor={(event: Event) => {
-                                                    const date = new Date(event.date);
-                                                    return isNaN(date.getTime()) ? new Date() : date;
-                                                }}
-                                                endAccessor={(event: Event) => {
-                                                    if (event.endDate) {
-                                                        const endDate = new Date(event.endDate);
-                                                        return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
-                                                    }
-                                                    return new Date(new Date(event.date).getTime() + 3600000);
-                                                }}
-                                                defaultView="month"
-                                                views={['month']}
-                                                style={{ height: 'calc(100vh - 250px)' }}
-                                                formats={{
-                                                    weekdayFormat: (date, culture, localizer) => {
-                                                        const fullDay = localizer?.format(date, 'EEEE', culture) || '';
-                                                        return fullDay.substring(0, 3).toLowerCase();
-                                                    }
-                                                }}
-                                                messages={{
-                                                    next: "Próximo",
-                                                    previous: "Anterior",
-                                                    today: "Hoje",
-                                                    month: "Mês",
-                                                    noEventsInRange: "Sem eventos",
-                                                }}
-                                                onSelectEvent={(event) => setSelectedEvent(event)}
-                                                eventPropGetter={(event) => {
-                                                    let backgroundColor = '#10b981';
-                                                    let borderColor = '#059669';
-
-                                                    if (event.category === 'PRESENTIAL') {
-                                                        backgroundColor = '#9333ea';
-                                                        borderColor = '#7c3aed';
-                                                    }
-
-                                                    return {
-                                                        style: {
-                                                            backgroundColor,
-                                                            borderColor,
-                                                            color: 'white',
-                                                            borderWidth: '1px',
-                                                            borderStyle: 'solid',
-                                                            fontWeight: '600',
-                                                            fontSize: '11px'
+                                                <Calendar
+                                                    localizer={localizer}
+                                                    culture="pt-BR"
+                                                    events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                                    startAccessor={(event: Event) => {
+                                                        const date = new Date(event.date);
+                                                        return isNaN(date.getTime()) ? new Date() : date;
+                                                    }}
+                                                    endAccessor={(event: Event) => {
+                                                        if (event.endDate) {
+                                                            const endDate = new Date(event.endDate);
+                                                            return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
                                                         }
-                                                    };
-                                                }}
-                                                components={{
-                                                    toolbar: (props) => (
-                                                        <div className="flex justify-between items-center mb-3 px-2">
-                                                            <button
-                                                                onClick={() => props.onNavigate(Navigate.PREVIOUS)}
-                                                                className="p-2 hover:bg-slate-800 rounded transition-colors"
-                                                            >
-                                                                <ChevronLeft size={20} />
-                                                            </button>
-                                                            <span className="text-base font-bold text-white capitalize">
-                                                                {props.label}
-                                                            </span>
-                                                            <button
-                                                                onClick={() => props.onNavigate(Navigate.NEXT)}
-                                                                className="p-2 hover:bg-slate-800 rounded transition-colors"
-                                                            >
-                                                                <ChevronRight size={20} />
-                                                            </button>
-                                                        </div>
-                                                    )
-                                                }}
-                                            />
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <Calendar
-                                    localizer={localizer}
-                                    culture="pt-BR"
-                                    events={dataService.getClubEventsForUser(userProfile?.id || '')}
-                                    startAccessor={(event: Event) => {
-                                        // Ensure proper Date object with local time
-                                        const date = new Date(event.date);
-                                        return isNaN(date.getTime()) ? new Date() : date;
-                                    }}
-                                    endAccessor={(event: Event) => {
-                                        // Ensure proper Date object with local time
-                                        if (event.endDate) {
-                                            const endDate = new Date(event.endDate);
-                                            return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
-                                        }
-                                        // Default to 1 hour duration
-                                        return new Date(new Date(event.date).getTime() + 3600000);
-                                    }}
-                                    defaultView={calendarDefaultView}
-                                    style={{ height: 'calc(100% - 80px)' }}
-                                    messages={{
-                                        next: "Próximo",
-                                        previous: "Anterior",
-                                        today: "Hoje",
-                                        month: "Mês",
-                                        week: "Semana",
-                                        day: "Dia",
-                                        agenda: "Lista",
-                                        date: "Data",
-                                        time: "Hora",
-                                        event: "Evento",
-                                        noEventsInRange: "Não há eventos neste período.",
-                                        showMore: (total) => `+ ${total} mais`
-                                    }}
-                                    views={{ agenda: true, day: true, week: true, month: true }}
-                                    onSelectEvent={(event) => setSelectedEvent(event)}
-                                    eventPropGetter={(event) => {
-                                        // Only ONLINE (green) and PRESENTIAL (purple)
-                                        let backgroundColor = '#10b981'; // Default: ONLINE (Verde)
-                                        let borderColor = '#059669';
+                                                        return new Date(new Date(event.date).getTime() + 3600000);
+                                                    }}
+                                                    defaultView="month"
+                                                    views={['month']}
+                                                    style={{ height: 'calc(100vh - 250px)' }}
+                                                    formats={{
+                                                        weekdayFormat: (date, culture, localizer) => {
+                                                            const fullDay = localizer?.format(date, 'EEEE', culture) || '';
+                                                            return fullDay.substring(0, 3).toLowerCase();
+                                                        }
+                                                    }}
+                                                    messages={{
+                                                        next: "Próximo",
+                                                        previous: "Anterior",
+                                                        today: "Hoje",
+                                                        month: "Mês",
+                                                        noEventsInRange: "Sem eventos",
+                                                    }}
+                                                    onSelectEvent={(event) => setSelectedEvent(event)}
+                                                    eventPropGetter={(event) => {
+                                                        let backgroundColor = '#10b981';
+                                                        let borderColor = '#059669';
 
-                                        if (event.category === 'PRESENTIAL') {
-                                            backgroundColor = '#9333ea'; // Roxo
-                                            borderColor = '#7c3aed';
-                                        }
+                                                        if (event.category === 'PRESENTIAL') {
+                                                            backgroundColor = '#9333ea';
+                                                            borderColor = '#7c3aed';
+                                                        }
 
-                                        return {
-                                            style: {
-                                                backgroundColor,
-                                                borderColor,
-                                                color: 'white',
-                                                borderWidth: '1px',
-                                                borderStyle: 'solid',
-                                                fontWeight: '600'
+                                                        return {
+                                                            style: {
+                                                                backgroundColor,
+                                                                borderColor,
+                                                                color: 'white',
+                                                                borderWidth: '1px',
+                                                                borderStyle: 'solid',
+                                                                fontWeight: '600',
+                                                                fontSize: '11px'
+                                                            }
+                                                        };
+                                                    }}
+                                                    components={{
+                                                        toolbar: (props) => (
+                                                            <div className="flex justify-between items-center mb-3 px-2">
+                                                                <button
+                                                                    onClick={() => props.onNavigate(Navigate.PREVIOUS)}
+                                                                    className="p-2 hover:bg-slate-800 rounded transition-colors"
+                                                                >
+                                                                    <ChevronLeft size={20} />
+                                                                </button>
+                                                                <span className="text-base font-bold text-white capitalize">
+                                                                    {props.label}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => props.onNavigate(Navigate.NEXT)}
+                                                                    className="p-2 hover:bg-slate-800 rounded transition-colors"
+                                                                >
+                                                                    <ChevronRight size={20} />
+                                                                </button>
+                                                            </div>
+                                                        )
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Calendar
+                                        localizer={localizer}
+                                        culture="pt-BR"
+                                        events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                        startAccessor={(event: Event) => {
+                                            // Ensure proper Date object with local time
+                                            const date = new Date(event.date);
+                                            return isNaN(date.getTime()) ? new Date() : date;
+                                        }}
+                                        endAccessor={(event: Event) => {
+                                            // Ensure proper Date object with local time
+                                            if (event.endDate) {
+                                                const endDate = new Date(event.endDate);
+                                                return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
                                             }
-                                        };
-                                    }}
-                                    components={{
-                                        toolbar: (props) => (
-                                            <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 p-2">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => props.onNavigate(Navigate.PREVIOUS)}
-                                                        className="p-2 hover:bg-slate-800 transition-colors"
-                                                        title="Anterior"
-                                                    >
-                                                        <ChevronLeft size={20} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => props.onNavigate(Navigate.TODAY)}
-                                                        className="px-3 py-1 text-sm font-bold text-yellow-500 hover:text-yellow-400 transition-colors"
-                                                    >
-                                                        Hoje
-                                                    </button>
-                                                    <span className="text-lg font-bold text-white capitalize min-w-[200px] text-center">
-                                                        {props.label}
-                                                    </span>
-                                                    <button
-                                                        onClick={() => props.onNavigate(Navigate.NEXT)}
-                                                        className="p-2 hover:bg-slate-800 transition-colors"
-                                                        title="Próximo"
-                                                    >
-                                                        <ChevronRight size={20} />
-                                                    </button>
-                                                </div>
-                                                <div className="flex bg-slate-800 p-1 gap-1">
-                                                    {/* ORDER: Lista (Agenda) -> Dia -> Semana -> Mês */}
-                                                    {['agenda', 'day', 'week', 'month'].map(v => (
+                                            // Default to 1 hour duration
+                                            return new Date(new Date(event.date).getTime() + 3600000);
+                                        }}
+                                        defaultView={calendarDefaultView}
+                                        style={{ height: 'calc(100% - 80px)' }}
+                                        messages={{
+                                            next: "Próximo",
+                                            previous: "Anterior",
+                                            today: "Hoje",
+                                            month: "Mês",
+                                            week: "Semana",
+                                            day: "Dia",
+                                            agenda: "Lista",
+                                            date: "Data",
+                                            time: "Hora",
+                                            event: "Evento",
+                                            noEventsInRange: "Não há eventos neste período.",
+                                            showMore: (total) => `+ ${total} mais`
+                                        }}
+                                        views={{ agenda: true, day: true, week: true, month: true }}
+                                        onSelectEvent={(event) => setSelectedEvent(event)}
+                                        eventPropGetter={(event) => {
+                                            // Only ONLINE (green) and PRESENTIAL (purple)
+                                            let backgroundColor = '#10b981'; // Default: ONLINE (Verde)
+                                            let borderColor = '#059669';
+
+                                            if (event.category === 'PRESENTIAL') {
+                                                backgroundColor = '#9333ea'; // Roxo
+                                                borderColor = '#7c3aed';
+                                            }
+
+                                            return {
+                                                style: {
+                                                    backgroundColor,
+                                                    borderColor,
+                                                    color: 'white',
+                                                    borderWidth: '1px',
+                                                    borderStyle: 'solid',
+                                                    fontWeight: '600'
+                                                }
+                                            };
+                                        }}
+                                        components={{
+                                            toolbar: (props) => (
+                                                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 p-2">
+                                                    <div className="flex items-center gap-2">
                                                         <button
-                                                            key={v}
-                                                            onClick={() => props.onView(v as any)}
-                                                            className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v
-                                                                ? 'bg-yellow-600 text-white shadow-lg'
-                                                                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                                                                }`}
+                                                            onClick={() => props.onNavigate(Navigate.PREVIOUS)}
+                                                            className="p-2 hover:bg-slate-800 transition-colors"
+                                                            title="Anterior"
                                                         >
-                                                            {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
+                                                            <ChevronLeft size={20} />
                                                         </button>
-                                                    ))}
+                                                        <button
+                                                            onClick={() => props.onNavigate(Navigate.TODAY)}
+                                                            className="px-3 py-1 text-sm font-bold text-yellow-500 hover:text-yellow-400 transition-colors"
+                                                        >
+                                                            Hoje
+                                                        </button>
+                                                        <span className="text-lg font-bold text-white capitalize min-w-[200px] text-center">
+                                                            {props.label}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => props.onNavigate(Navigate.NEXT)}
+                                                            className="p-2 hover:bg-slate-800 transition-colors"
+                                                            title="Próximo"
+                                                        >
+                                                            <ChevronRight size={20} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex bg-slate-800 p-1 gap-1">
+                                                        {/* ORDER: Lista (Agenda) -> Dia -> Semana -> Mês */}
+                                                        {['agenda', 'day', 'week', 'month'].map(v => (
+                                                            <button
+                                                                key={v}
+                                                                onClick={() => props.onView(v as any)}
+                                                                className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v
+                                                                    ? 'bg-yellow-600 text-white shadow-lg'
+                                                                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                                                    }`}
+                                                            >
+                                                                {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )
-                                    }}
-                                />
-                            )}
-                        </div>
-                    )}
+                                            )
+                                        }}
+                                    />
+                                )}
+                            </div>
+                        )}
 
-                    {view === ViewState.PROSPERUS_TOOLS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <ProsperusToolsPage setView={setView} />
-                        </div>
-                    )}
+                        {view === ViewState.PROSPERUS_TOOLS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <ProsperusToolsPage setView={setView} />
+                            </div>
+                        )}
 
-                    {/* Academy - Video List */}
-                    {view === ViewState.ACADEMY && currentUser && (
-                        <div className="animate-in fade-in">
-                            <Academy userId={currentUser.id} />
-                        </div>
-                    )}
+                        {/* Academy - Video List */}
+                        {view === ViewState.ACADEMY && currentUser && (
+                            <div className="animate-in fade-in">
+                                <Academy userId={currentUser.id} />
+                            </div>
+                        )}
 
-                    {view === ViewState.SOLUTIONS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <SolutionsListPage setView={setView} />
-                        </div>
-                    )}
+                        {view === ViewState.SOLUTIONS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <SolutionsListPage setView={setView} />
+                            </div>
+                        )}
 
-                    {view === ViewState.PROGRESS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <ProgressListPage setView={setView} />
-                        </div>
-                    )}
+                        {view === ViewState.PROGRESS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <ProgressListPage setView={setView} />
+                            </div>
+                        )}
 
-                    {/* EVENT DETAILS MODAL */}
-                    {selectedEvent && (
-                        <EventDetailsModal
-                            event={selectedEvent}
-                            onClose={() => setSelectedEvent(null)}
-                            userId={userProfile?.id}
-                        />
-                    )}
-
-
-
-                    {view === ViewState.MEMBERS && (
-                        <MemberBook
-                            onSelectMember={setSelectedMember}
-                            currentUserId={currentUser?.id}
-                            initialBenefitsFilter={showBenefitsFilter}
-                        />
-                    )}
-
-                    {/* MEMBER DETAILS MODAL - Using ProfilePreview for complete data display */}
-                    {selectedMember && (
-                        <ProfilePreview
-                            profile={selectedMember}
-                            onClose={() => setSelectedMember(null)}
-                            currentUserId={currentUser?.id}
-                            onStartChat={() => {
-                                setSelectedMember(null);
-                                setView(ViewState.MESSAGES);
-                            }}
-                        />
-                    )}
-
-                    {view === ViewState.GALLERY && (
-                        <div className="animate-in fade-in h-full">
-                            <Gallery />
-                        </div>
-                    )}
-
-
-
-
-
-                    {view === ViewState.NEWS && (
-                        <div className="animate-in fade-in h-full">
-                            {selectedArticle ? (
-                                <ArticleReader
-                                    article={selectedArticle}
-                                    onBack={() => setSelectedArticle(null)}
-                                />
-                            ) : (
-                                <NewsList
-                                    onArticleSelect={(article) => setSelectedArticle(article)}
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    {view === ViewState.DEALS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <MyDealsScreen />
-                        </div>
-                    )}
-
-                    {view === ViewState.REFERRALS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <ReferralsScreen />
-                        </div>
-                    )}
-
-                    {view === ViewState.RANKINGS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <RankingsScreen />
-                        </div>
-                    )}
-
-                    {view === ViewState.MESSAGES && currentUser && (
-                        <div className="h-full animate-in fade-in">
-                            <MessagesView currentUserId={currentUser.id} />
-                        </div>
-                    )}
-
-                    {view === ViewState.NOTIFICATIONS && currentUser && (
-                        <div className="animate-in fade-in">
-                            <NotificationsPage
-                                currentUserId={currentUser.id}
-                                onNavigate={handleNotificationNavigate}
+                        {/* EVENT DETAILS MODAL */}
+                        {selectedEvent && (
+                            <EventDetailsModal
+                                event={selectedEvent}
+                                onClose={() => setSelectedEvent(null)}
+                                userId={userProfile?.id}
                             />
-                        </div>
-                    )}
+                        )}
 
-                    {view === ViewState.FAVORITES && currentUser && (
-                        <div className="animate-in fade-in">
-                            <FavoritesPage
+
+
+                        {view === ViewState.MEMBERS && (
+                            <MemberBook
+                                onSelectMember={setSelectedMember}
+                                currentUserId={currentUser?.id}
+                                initialBenefitsFilter={showBenefitsFilter}
+                            />
+                        )}
+
+                        {/* MEMBER DETAILS MODAL - Using ProfilePreview for complete data display */}
+                        {selectedMember && (
+                            <ProfilePreview
+                                profile={selectedMember}
+                                onClose={() => setSelectedMember(null)}
+                                currentUserId={currentUser?.id}
+                                onStartChat={() => {
+                                    setSelectedMember(null);
+                                    setView(ViewState.MESSAGES);
+                                }}
+                            />
+                        )}
+
+                        {view === ViewState.GALLERY && (
+                            <div className="animate-in fade-in h-full">
+                                <Gallery />
+                            </div>
+                        )}
+
+
+
+
+
+                        {view === ViewState.NEWS && (
+                            <div className="animate-in fade-in h-full">
+                                {selectedArticle ? (
+                                    <ArticleReader
+                                        article={selectedArticle}
+                                        onBack={() => setSelectedArticle(null)}
+                                    />
+                                ) : (
+                                    <NewsList
+                                        onArticleSelect={(article) => setSelectedArticle(article)}
+                                    />
+                                )}
+                            </div>
+                        )}
+
+                        {view === ViewState.DEALS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <MyDealsScreen />
+                            </div>
+                        )}
+
+                        {view === ViewState.REFERRALS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <ReferralsScreen />
+                            </div>
+                        )}
+
+                        {view === ViewState.RANKINGS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <RankingsScreen />
+                            </div>
+                        )}
+
+                        {view === ViewState.MESSAGES && currentUser && (
+                            <div className="h-full animate-in fade-in">
+                                <MessagesView currentUserId={currentUser.id} />
+                            </div>
+                        )}
+
+                        {view === ViewState.NOTIFICATIONS && currentUser && (
+                            <div className="animate-in fade-in">
+                                <NotificationsPage
+                                    currentUserId={currentUser.id}
+                                    onNavigate={handleNotificationNavigate}
+                                />
+                            </div>
+                        )}
+
+                        {view === ViewState.FAVORITES && currentUser && (
+                            <div className="animate-in fade-in">
+                                <FavoritesPage
+                                    setView={setView}
+                                    currentUserId={currentUser.id}
+                                />
+                            </div>
+                        )}
+
+                        {view === ViewState.PROFILE && currentUser && (
+                            <ProfileSection
+                                currentUser={currentUser}
                                 setView={setView}
+                                setIsEditingProfile={setIsEditingProfile}
+                                setShowPreviewProfile={setShowPreviewProfile}
+                                onLogout={handleLogout}
+                            />
+                        )}
+
+                        {/* PROFILE EDIT MODAL - Using Advanced ProfileEdit Component */}
+                        {isEditingProfile && currentUser && (
+                            <ProfileEdit
+                                currentUser={memberToProfileData(currentUser)}
+                                supabase={supabase}
+                                isMockMode={isMockMode}
+                                onSave={handleProfileSave}
+                                onCancel={() => setIsEditingProfile(false)}
+                            />
+                        )}
+
+                        {/* PROFILE PREVIEW MODAL */}
+                        {showPreviewProfile && currentUser && (
+                            <ProfilePreview
+                                profile={memberToProfileData(currentUser)}
+                                onClose={() => setShowPreviewProfile(false)}
                                 currentUserId={currentUser.id}
                             />
-                        </div>
-                    )}
+                        )}
 
-                    {view === ViewState.PROFILE && currentUser && (
-                        <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in relative">
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setView(ViewState.DASHBOARD)}
-                                className="absolute top-0 right-0 z-10 p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white"
-                                title="Fechar"
-                            >
-                                <X size={24} />
-                            </button>
-
-                            {/* Profile Header Card */}
-                            <div className="bg-slate-900 rounded-xl border border-slate-800 p-8">
-                                <div className="flex flex-col md:flex-row items-center gap-6">
-                                    {/* Avatar */}
-                                    <div className="relative">
-                                        <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-500 p-1">
-                                            <img
-                                                src={currentUser.image || '/default-avatar.svg'}
-                                                alt={currentUser.name}
-                                                className="w-full h-full rounded-full object-cover bg-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Info */}
-                                    <div className="flex-1 text-center md:text-left">
-                                        <h2 className="text-2xl font-bold text-white mb-1">{currentUser.name}</h2>
-                                        <p className="text-yellow-500 font-medium">
-                                            {currentUser.jobTitle || currentUser.role}
-                                            {currentUser.company && <span className="text-slate-400"> @ {currentUser.company}</span>}
-                                        </p>
-                                        {currentUser.description && (
-                                            <p className="text-slate-400 text-sm mt-3 max-w-md">{currentUser.description}</p>
-                                        )}
-
-                                        {/* Tags */}
-                                        {currentUser.tags && currentUser.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
-                                                {currentUser.tags.slice(0, 5).map((tag, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className="bg-yellow-600/10 text-yellow-500 text-xs px-3 py-1 rounded-full border border-yellow-600/30"
-                                                    >
-                                                        {tag}
-                                                    </span>
-                                                ))}
-                                                {currentUser.tags.length > 5 && (
-                                                    <span className="text-slate-500 text-xs px-2 py-1">
-                                                        +{currentUser.tags.length - 5}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-6 border-t border-slate-800">
-                                    <button
-                                        onClick={() => setIsEditingProfile(true)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-lg transition shadow-lg shadow-yellow-900/20"
-                                    >
-                                        <Settings size={18} />
-                                        Editar Perfil
-                                    </button>
-                                    <button
-                                        onClick={() => setShowPreviewProfile(true)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg border border-slate-700 transition"
-                                    >
-                                        <Eye size={18} />
-                                        Ver como Público
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Social Links */}
-                            {currentUser.socials && Object.values(currentUser.socials).some(v => v) && (
-                                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Redes Sociais</h3>
-                                    <div className="flex flex-wrap gap-3">
-                                        {currentUser.socials.linkedin && (
-                                            <a href={currentUser.socials.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition border border-slate-700 hover:border-blue-600">
-                                                <Linkedin size={18} /> LinkedIn
-                                            </a>
-                                        )}
-                                        {currentUser.socials.instagram && (
-                                            <a href={currentUser.socials.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-slate-800 hover:bg-pink-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition border border-slate-700 hover:border-pink-600">
-                                                <Instagram size={18} /> Instagram
-                                            </a>
-                                        )}
-                                        {currentUser.socials.whatsapp && (
-                                            <a href={`https://wa.me/${currentUser.socials.whatsapp}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-slate-800 hover:bg-green-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition border border-slate-700 hover:border-green-600">
-                                                <Phone size={18} /> WhatsApp
-                                            </a>
-                                        )}
-                                        {currentUser.socials.website && (
-                                            <a href={currentUser.socials.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-slate-800 hover:bg-yellow-600 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition border border-slate-700 hover:border-yellow-600">
-                                                <Globe size={18} /> Website
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Settings & Logout */}
-                            <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 space-y-4">
-                                <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Configurações</h3>
-                                <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition">
-                                    <span className="text-slate-300">Notificações</span>
-                                    <div className="w-10 h-6 bg-yellow-600 rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div></div>
-                                </button>
-
-                                <div className="border-t border-slate-700 my-4"></div>
-
-                                {/* Benefit Analytics - Performance Stats */}
-                                <BenefitStatsCard ownerId={currentUser.id} />
-                                <div className="border-t border-slate-700 my-4"></div>
-
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-red-600/10 border border-red-600/30 text-red-500 hover:bg-red-600 hover:text-white hover:border-red-600 transition font-medium"
-                                >
-                                    <LogOut size={20} />
-                                    <span>Sair da Conta</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* PROFILE EDIT MODAL - Using Advanced ProfileEdit Component */}
-                    {isEditingProfile && currentUser && (
-                        <ProfileEdit
-                            currentUser={memberToProfileData(currentUser)}
-                            supabase={supabase}
-                            isMockMode={isMockMode}
-                            onSave={handleProfileSave}
-                            onCancel={() => setIsEditingProfile(false)}
-                        />
-                    )}
-
-                    {/* PROFILE PREVIEW MODAL */}
-                    {showPreviewProfile && currentUser && (
-                        <ProfilePreview
-                            profile={memberToProfileData(currentUser)}
-                            onClose={() => setShowPreviewProfile(false)}
-                            currentUserId={currentUser.id}
-                        />
-                    )}
-
+                    </Suspense>
                 </div>
 
                 {/* Mobile Bottom Nav */}

@@ -1,6 +1,7 @@
 // Service for managing conversations and messages
 
 import { supabase } from '../lib/supabase';
+import { fetchWithOfflineCache } from './offlineStorage';
 
 export interface Conversation {
     id: string;
@@ -23,6 +24,8 @@ export interface ConversationParticipant {
     };
 }
 
+export type MessageType = 'text' | 'image' | 'file';
+
 export interface Message {
     id: string;
     conversation_id: string;
@@ -30,6 +33,9 @@ export interface Message {
     content: string;
     is_read: boolean;
     is_deleted?: boolean; // Added for soft delete support
+    message_type?: MessageType;
+    media_url?: string;
+    media_filename?: string;
     created_at: string;
     sender?: {
         id: string;
@@ -118,6 +124,9 @@ class ConversationService {
                         content: string;
                         is_read: boolean;
                         is_deleted?: boolean;
+                        message_type?: MessageType;
+                        media_url?: string;
+                        media_filename?: string;
                         created_at: string;
                     };
 
@@ -131,6 +140,9 @@ class ConversationService {
                         content: rawMessage.content,
                         is_read: rawMessage.is_read,
                         is_deleted: rawMessage.is_deleted,
+                        message_type: rawMessage.message_type || 'text',
+                        media_url: rawMessage.media_url,
+                        media_filename: rawMessage.media_filename,
                         created_at: rawMessage.created_at,
                         sender: senderProfile || {
                             id: rawMessage.sender_id,
@@ -161,6 +173,9 @@ class ConversationService {
                         content: string;
                         is_read: boolean;
                         is_deleted?: boolean;
+                        message_type?: MessageType;
+                        media_url?: string;
+                        media_filename?: string;
                         created_at: string;
                     };
 
@@ -174,6 +189,9 @@ class ConversationService {
                         content: rawMessage.content,
                         is_read: rawMessage.is_read,
                         is_deleted: rawMessage.is_deleted,
+                        message_type: rawMessage.message_type || 'text',
+                        media_url: rawMessage.media_url,
+                        media_filename: rawMessage.media_filename,
                         created_at: rawMessage.created_at,
                         sender: senderProfile || {
                             id: rawMessage.sender_id,
@@ -409,8 +427,25 @@ class ConversationService {
 
     /**
      * Get all conversations for the current user
+     * Uses offline cache for offline access (2 min TTL)
      */
     async getUserConversations(userId: string): Promise<ConversationWithDetails[]> {
+        const cacheKey = `conversations:${userId}`;
+
+        const { data } = await fetchWithOfflineCache<ConversationWithDetails[]>(
+            cacheKey,
+            async () => {
+                return this._fetchUserConversations(userId);
+            },
+            2 * 60 * 1000 // 2 minutes (short TTL for freshness)
+        );
+        return data;
+    }
+
+    /**
+     * Internal: fetch conversations from Supabase
+     */
+    private async _fetchUserConversations(userId: string): Promise<ConversationWithDetails[]> {
         try {
             // 1. Get all conversation IDs for this user
             const { data: participantData, error: participantError } = await supabase
@@ -587,6 +622,9 @@ class ConversationService {
                     content,
                     is_read,
                     is_deleted,
+                    message_type,
+                    media_url,
+                    media_filename,
                     created_at,
                     profiles:sender_id (
                         id,
@@ -616,7 +654,8 @@ class ConversationService {
                 .insert({
                     conversation_id: conversationId,
                     sender_id: senderId,
-                    content: content.trim()
+                    content: content.trim(),
+                    message_type: 'text'
                 })
                 .select(`
                     id,
@@ -624,6 +663,9 @@ class ConversationService {
                     sender_id,
                     content,
                     is_read,
+                    message_type,
+                    media_url,
+                    media_filename,
                     created_at,
                     profiles:sender_id (
                         id,
@@ -639,6 +681,94 @@ class ConversationService {
             return data;
         } catch (error) {
             console.error('Error sending message:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send a media message (image or file)
+     * Uploads file to chat-media bucket, then inserts message with media metadata
+     */
+    async sendMediaMessage(
+        conversationId: string,
+        senderId: string,
+        file: File,
+        caption?: string
+    ): Promise<Message> {
+        try {
+            // Validate file size (max 25MB)
+            const MAX_SIZE = 25 * 1024 * 1024;
+            if (file.size > MAX_SIZE) {
+                throw new Error('Arquivo muito grande. Máximo permitido: 25MB.');
+            }
+
+            // Determine message type
+            const isImage = file.type.startsWith('image/');
+            const messageType: MessageType = isImage ? 'image' : 'file';
+
+            // Generate unique path: conversationId/timestamp_filename
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = `${conversationId}/${Date.now()}_${safeName}`;
+
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('chat-media')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) {
+                console.error('❌ Chat Media: Upload error:', uploadError);
+                throw new Error('Falha ao enviar arquivo. Tente novamente.');
+            }
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('chat-media')
+                .getPublicUrl(filePath);
+
+            // Insert message with media metadata
+            const { data, error } = await supabase
+                .from('messages')
+                .insert({
+                    conversation_id: conversationId,
+                    sender_id: senderId,
+                    content: caption?.trim() || (isImage ? '📷 Imagem' : `📎 ${file.name}`),
+                    message_type: messageType,
+                    media_url: publicUrl,
+                    media_filename: file.name
+                })
+                .select(`
+                    id,
+                    conversation_id,
+                    sender_id,
+                    content,
+                    is_read,
+                    message_type,
+                    media_url,
+                    media_filename,
+                    created_at,
+                    profiles:sender_id (
+                        id,
+                        name,
+                        image_url
+                    )
+                `)
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error('Failed to send media message');
+
+            console.log('✅ Chat Media: Sent successfully', {
+                type: messageType,
+                filename: file.name,
+                size: `${(file.size / 1024).toFixed(0)}KB`
+            });
+
+            return data;
+        } catch (error) {
+            console.error('Error sending media message:', error);
             throw error;
         }
     }

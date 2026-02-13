@@ -55,7 +55,15 @@ import { GalleryModule } from './components/admin/GalleryModule';
 
 // --- SHARED ADMIN COMPONENTS ---
 
-const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: any) => {
+interface AdminSidebarProps {
+  currentView: AdminViewState;
+  setView: (view: AdminViewState) => void;
+  onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: AdminSidebarProps) => {
   const menuItems = [
     { id: AdminViewState.DASHBOARD, label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: AdminViewState.ANALYTICS, label: 'Analytics', icon: <BarChart size={20} /> },
@@ -124,7 +132,14 @@ const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: any) 
   );
 };
 
-const DataTable = ({ columns, data, onEdit, onDelete }: any) => {
+interface DataTableProps<T extends { id: string }> {
+  columns: string[];
+  data: T[];
+  onEdit: (row: T) => void;
+  onDelete: (id: string) => void;
+}
+
+function DataTable<T extends { id: string }>({ columns, data, onEdit, onDelete }: DataTableProps<T>) {
   const keyMap: { [key: string]: string } = {
     'título': 'title',
     'categoria': 'categoryName',
@@ -157,39 +172,41 @@ const DataTable = ({ columns, data, onEdit, onDelete }: any) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {data.map((row: any) => (
-              <tr key={row.id} className="hover:bg-slate-800/50 transition-colors">
-                {columns.map((col: string, idx: number) => {
-                  const headerLower = col.toLowerCase();
-                  const key = keyMap[headerLower] || headerLower;
-                  let val = row[key];
+            {data.map((row) => {
+              const r = row as Record<string, any>;
+              return (
+                <tr key={row.id} className="hover:bg-slate-800/50 transition-colors">
+                  {columns.map((col: string, idx: number) => {
+                    const headerLower = col.toLowerCase();
+                    const key = keyMap[headerLower] || headerLower;
+                    let val = r[key];
 
-                  if (col === 'Data' && val) val = new Date(val).toLocaleDateString();
-                  if (col === 'Título' || col === 'Nome') val = <span className="font-medium text-white">{val}</span>;
-                  if (col === 'Categoria' && !val && row.category) val = row.category;
+                    if (col === 'Data' && val) val = new Date(val).toLocaleDateString();
+                    if (col === 'Título' || col === 'Nome') val = <span className="font-medium text-white">{val}</span>;
+                    if (col === 'Categoria' && !val && r.category) val = r.category;
 
-                  if (key === 'status' && row.segment) {
-                    val = val === 'SENT' ? <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Enviado</span> :
-                      val === 'SCHEDULED' ? <span className="text-amber-400 flex items-center gap-1"><Clock size={12} /> Agendado</span> :
-                        <span className="text-red-400">Falha</span>;
-                  }
+                    if (key === 'status' && r.segment) {
+                      val = val === 'SENT' ? <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Enviado</span> :
+                        val === 'SCHEDULED' ? <span className="text-amber-400 flex items-center gap-1"><Clock size={12} /> Agendado</span> :
+                          <span className="text-red-400">Falha</span>;
+                    }
 
-                  if (col === 'Categoria' && !row.segment) {
-                    val = val === 'PRESENTIAL' ? <span className="text-purple-400 flex items-center gap-1"><MapPin size={12} /> Presencial</span> :
-                      val === 'ONLINE' ? <span className="text-emerald-400 flex items-center gap-1"><VideoIcon size={12} /> Online</span> :
-                        val === 'RECORDED' ? <span className="text-orange-400 flex items-center gap-1"><LinkIcon size={12} /> Gravada</span> :
-                          <span className="text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full text-xs border border-slate-700">{val}</span>;
-                  }
+                    if (col === 'Categoria' && !r.segment) {
+                      val = val === 'PRESENTIAL' ? <span className="text-purple-400 flex items-center gap-1"><MapPin size={12} /> Presencial</span> :
+                        val === 'ONLINE' ? <span className="text-emerald-400 flex items-center gap-1"><VideoIcon size={12} /> Online</span> :
+                          val === 'RECORDED' ? <span className="text-orange-400 flex items-center gap-1"><LinkIcon size={12} /> Gravada</span> :
+                            <span className="text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full text-xs border border-slate-700">{val}</span>;
+                    }
 
-                  return <td key={idx} className="px-6 py-4">{val || '-'}</td>
-                })}
-                <td className="px-6 py-4 text-right space-x-2">
-                  <button onClick={() => onEdit(row)} className="text-blue-400 hover:text-blue-300 p-1 inline-block"><Edit size={16} /></button>
-                  <button onClick={() => onDelete(row.id)} className="text-red-400 hover:text-red-300 p-1 inline-block"><Trash2 size={16} /></button>
-                </td>
-              </tr>
-            ))}
-            {data.length === 0 && (
+                    return <td key={idx} className="px-6 py-4">{val || '-'}</td>
+                  })}
+                  <td className="px-6 py-4 text-right space-x-2">
+                    <button onClick={() => onEdit(row)} className="text-blue-400 hover:text-blue-300 p-1 inline-block"><Edit size={16} /></button>
+                    <button onClick={() => onDelete(row.id)} className="text-red-400 hover:text-red-300 p-1 inline-block"><Trash2 size={16} /></button>
+                  </td>
+                </tr>
+              );
+            })}            {data.length === 0 && (
               <tr>
                 <td colSpan={columns.length + 1} className="px-6 py-8 text-center text-slate-600">
                   Nenhum registro encontrado.
@@ -203,7 +220,13 @@ const DataTable = ({ columns, data, onEdit, onDelete }: any) => {
   );
 };
 
-const Modal = ({ title, onClose, children }: any) => (
+interface ModalProps {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+const Modal = ({ title, onClose, children }: ModalProps) => (
   <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
     <div className="bg-slate-900 rounded-xl border border-slate-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
       <div className="flex justify-between items-center p-6 border-b border-slate-800">
@@ -217,12 +240,24 @@ const Modal = ({ title, onClose, children }: any) => (
   </div>
 );
 
-const FormInput = React.forwardRef(({ label, value, onChange, type = "text", placeholder, textarea = false, error, disabled = false, min }: any, ref: any) => (
+interface FormInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+  textarea?: boolean;
+  error?: string;
+  disabled?: boolean;
+  min?: string | number;
+}
+
+const FormInput = React.forwardRef<HTMLElement, FormInputProps>(({ label, value, onChange, type = "text", placeholder, textarea = false, error, disabled = false, min }, ref) => (
   <div className="space-y-1.5">
     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</label>
     {textarea ? (
       <textarea
-        ref={ref}
+        ref={ref as React.Ref<HTMLTextAreaElement>}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
@@ -232,7 +267,7 @@ const FormInput = React.forwardRef(({ label, value, onChange, type = "text", pla
       />
     ) : (
       <input
-        ref={ref}
+        ref={ref as React.Ref<HTMLInputElement>}
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
@@ -246,7 +281,12 @@ const FormInput = React.forwardRef(({ label, value, onChange, type = "text", pla
   </div>
 ));
 
-const RichTextEditor = ({ value, onChange }: any) => (
+interface RichTextEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const RichTextEditor = ({ value, onChange }: RichTextEditorProps) => (
   <div className="space-y-1.5">
     <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Conteúdo (HTML)</label>
     <div className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden">

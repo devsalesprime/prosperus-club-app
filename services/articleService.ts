@@ -3,6 +3,7 @@
 // Performance-focused with visibility check for menu control
 
 import { supabase } from '../lib/supabase';
+import { fetchWithOfflineCache } from './offlineStorage';
 
 // ============================================
 // TYPES
@@ -115,34 +116,44 @@ class ArticleService {
 
     /**
      * Get published articles with pagination
+     * Uses offline cache for offline reading (5 min TTL)
      */
     async getPublishedArticles(params: ArticleListParams = {}): Promise<ArticleListResult> {
+        const { page = 1, limit = 10, category } = params;
+        const cacheKey = `articles:published:p${page}:l${limit}:c${category || 'all'}`;
+
         try {
-            const { page = 1, limit = 10, category } = params;
-            const offset = (page - 1) * limit;
+            const { data } = await fetchWithOfflineCache<ArticleListResult>(
+                cacheKey,
+                async () => {
+                    const offset = (page - 1) * limit;
 
-            let query = supabase
-                .from('articles')
-                .select('*', { count: 'exact' })
-                .eq('status', 'PUBLISHED')
-                .order('published_date', { ascending: false });
+                    let query = supabase
+                        .from('articles')
+                        .select('*', { count: 'exact' })
+                        .eq('status', 'PUBLISHED')
+                        .order('published_date', { ascending: false });
 
-            if (category) {
-                query = query.eq('category_name', category);
-            }
+                    if (category) {
+                        query = query.eq('category_name', category);
+                    }
 
-            const { data, error, count } = await query.range(offset, offset + limit - 1);
+                    const { data, error, count } = await query.range(offset, offset + limit - 1);
 
-            if (error) throw error;
+                    if (error) throw error;
 
-            const total = count || 0;
+                    const total = count || 0;
 
-            return {
-                data: data || [],
-                total,
-                page,
-                hasMore: offset + limit < total
-            };
+                    return {
+                        data: data || [],
+                        total,
+                        page,
+                        hasMore: offset + limit < total
+                    };
+                },
+                5 * 60 * 1000 // 5 minutes
+            );
+            return data;
         } catch (error) {
             console.error('Error fetching published articles:', error);
             throw error;
