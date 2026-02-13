@@ -973,8 +973,9 @@ const App = () => {
                                     onClick={() => setView(ViewState.MESSAGES)}
                                 />
                                 <NotificationCenter currentUserId={currentUser.id} onNavigate={(url) => {
-                                    if (url === 'NOTIFICATIONS') setView(ViewState.NOTIFICATIONS);
-                                    else if (Object.values(ViewState).includes(url as ViewState)) setView(url as ViewState);
+                                    if (Object.values(ViewState).includes(url as ViewState)) { setView(url as ViewState); return; }
+                                    const m = url.match(/^\/?([a-zA-Z_-]+)/);
+                                    if (m) { const vk = m[1].toUpperCase().replace(/-/g, '_'); if (Object.values(ViewState).includes(vk as ViewState)) setView(vk as ViewState); }
                                 }} />
                             </div>
                         )}
@@ -1085,8 +1086,9 @@ const App = () => {
                                     <MessageCircle size={22} />
                                 </button>
                                 <NotificationCenter currentUserId={currentUser.id} onNavigate={(url) => {
-                                    if (url === 'NOTIFICATIONS') setView(ViewState.NOTIFICATIONS);
-                                    else if (Object.values(ViewState).includes(url as ViewState)) setView(url as ViewState);
+                                    if (Object.values(ViewState).includes(url as ViewState)) { setView(url as ViewState); return; }
+                                    const m = url.match(/^\/?([a-zA-Z_-]+)/);
+                                    if (m) { const vk = m[1].toUpperCase().replace(/-/g, '_'); if (Object.values(ViewState).includes(vk as ViewState)) setView(vk as ViewState); }
                                 }} />
                             </>
                         )}

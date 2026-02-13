@@ -172,11 +172,24 @@ class NotificationService {
                 .delete()
                 .eq('id', notificationId);
 
-            if (!error) return;
+            if (error) {
+                console.warn('Delete error, trying soft-delete:', error.message);
+            } else {
+                // Verify the record was actually deleted (RLS may silently block)
+                const { data: stillExists } = await supabase
+                    .from('user_notifications')
+                    .select('id')
+                    .eq('id', notificationId)
+                    .maybeSingle();
 
-            console.warn('Delete blocked, trying soft-delete:', error.message);
+                if (!stillExists) {
+                    // Successfully deleted
+                    return;
+                }
+                console.warn('Delete returned no error but record still exists (RLS block), using soft-delete');
+            }
 
-            // Fallback: update to mark as "deleted" by clearing content
+            // Fallback: soft-delete by marking title as "[Excluída]"
             const { error: updateError } = await supabase
                 .from('user_notifications')
                 .update({
@@ -190,6 +203,8 @@ class NotificationService {
                 console.error('Soft-delete also failed:', updateError);
                 throw updateError;
             }
+
+            console.log('✅ Notification soft-deleted successfully');
         } catch (error) {
             console.error('Error deleting notification:', error);
             throw error;
