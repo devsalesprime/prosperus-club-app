@@ -13,11 +13,20 @@ interface ProgressListPageProps {
 export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) => {
     const [files, setFiles] = useState<MemberProgressFile[]>([]);
     const [loading, setLoading] = useState(true);
-    const [previewFile, setPreviewFile] = useState<MemberProgressFile | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewTitle, setPreviewTitle] = useState('');
+    const [loadingPreview, setLoadingPreview] = useState(false);
 
     useEffect(() => {
         loadFiles();
     }, []);
+
+    // Cleanup blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
 
     const loadFiles = async () => {
         try {
@@ -59,6 +68,32 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
         return mb < 1 ? `${(bytes / 1024).toFixed(0)} KB` : `${mb.toFixed(1)} MB`;
     };
 
+    // Fetch HTML content and create a blob URL with correct MIME type
+    const handlePreview = async (file: MemberProgressFile) => {
+        setLoadingPreview(true);
+        setPreviewTitle(file.title);
+        try {
+            const response = await fetch(file.file_url);
+            const text = await response.text();
+            const blob = new Blob([text], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(blobUrl);
+        } catch (error) {
+            console.error('Failed to load preview:', error);
+            // Fallback: open directly
+            window.open(file.file_url, '_blank');
+        } finally {
+            setLoadingPreview(false);
+        }
+    };
+
+    const closePreview = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+        setPreviewTitle('');
+    };
+
     const handleDownload = async (file: MemberProgressFile) => {
         try {
             const response = await fetch(file.file_url);
@@ -73,7 +108,6 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Download failed:', error);
-            // Fallback: open in new tab
             window.open(file.file_url, '_blank');
         }
     };
@@ -121,12 +155,9 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                             {/* Card Content */}
                             <div className="p-4">
                                 <div className="flex items-start gap-3">
-                                    {/* Icon */}
                                     <div className="shrink-0 mt-0.5">
                                         {getFileIcon(file.file_type)}
                                     </div>
-
-                                    {/* Info */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-white text-base mb-1 truncate">{file.title}</h3>
                                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
@@ -142,11 +173,11 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                                 </div>
                             </div>
 
-                            {/* Action Buttons - Full width on mobile */}
+                            {/* Action Buttons */}
                             <div className="flex border-t border-slate-700/50">
-                                {file.file_type.toLowerCase() === 'html' && (
+                                {(file.file_type.toLowerCase() === 'html' || file.file_type.toLowerCase() === 'htm') && (
                                     <button
-                                        onClick={() => setPreviewFile(file)}
+                                        onClick={() => handlePreview(file)}
                                         className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-yellow-500 hover:bg-yellow-900/20 transition border-r border-slate-700/50"
                                     >
                                         <Eye size={16} />
@@ -166,38 +197,38 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                 </div>
             )}
 
-            {/* HTML Preview Modal */}
-            {previewFile && (
+            {/* Loading overlay for preview */}
+            {loadingPreview && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <Loader2 className="animate-spin text-yellow-500 mx-auto mb-3" size={32} />
+                        <p className="text-white text-sm">Carregando relatório...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* HTML Preview Modal - uses blob URL with correct MIME type */}
+            {previewUrl && (
                 <div className="fixed inset-0 bg-black/80 z-50 flex flex-col">
                     {/* Modal Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                             <FileCode size={18} className="text-orange-400 shrink-0" />
-                            <span className="font-bold text-white text-sm truncate">{previewFile.title}</span>
+                            <span className="font-bold text-white text-sm truncate">{previewTitle}</span>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                            <button
-                                onClick={() => handleDownload(previewFile)}
-                                className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-                                title="Baixar"
-                            >
-                                <Download size={18} />
-                            </button>
-                            <button
-                                onClick={() => setPreviewFile(null)}
-                                className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
+                        <button
+                            onClick={closePreview}
+                            className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
-                    {/* Modal Body - iframe */}
+                    {/* Modal Body - iframe with blob URL */}
                     <div className="flex-1 overflow-hidden">
                         <iframe
-                            src={previewFile.file_url}
+                            src={previewUrl}
                             className="w-full h-full bg-white"
-                            title={previewFile.title}
-                            sandbox="allow-scripts allow-same-origin"
+                            title={previewTitle}
                         />
                     </div>
                 </div>

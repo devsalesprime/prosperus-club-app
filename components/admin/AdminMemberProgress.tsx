@@ -66,8 +66,11 @@ export const AdminMemberProgress: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterMemberId, setFilterMemberId] = useState('');
 
-    // Preview state
-    const [previewFile, setPreviewFile] = useState<MemberProgressFile | null>(null);
+    // Preview state (blob-based for correct HTML rendering)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewTitle, setPreviewTitle] = useState('');
+    const [previewMemberName, setPreviewMemberName] = useState('');
+    const [loadingPreview, setLoadingPreview] = useState(false);
 
     // Feedback state
     const [success, setSuccess] = useState<string | null>(null);
@@ -76,6 +79,13 @@ export const AdminMemberProgress: React.FC = () => {
     useEffect(() => {
         loadData();
     }, []);
+
+    // Cleanup blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
 
     // Auto-dismiss feedback
     useEffect(() => {
@@ -368,8 +378,8 @@ export const AdminMemberProgress: React.FC = () => {
                             <button
                                 onClick={() => setUploadMode('bulk')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'bulk'
-                                        ? 'bg-yellow-600 text-white'
-                                        : 'text-slate-400 hover:text-white'
+                                    ? 'bg-yellow-600 text-white'
+                                    : 'text-slate-400 hover:text-white'
                                     }`}
                             >
                                 <Layers size={14} />
@@ -378,8 +388,8 @@ export const AdminMemberProgress: React.FC = () => {
                             <button
                                 onClick={() => setUploadMode('single')}
                                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'single'
-                                        ? 'bg-yellow-600 text-white'
-                                        : 'text-slate-400 hover:text-white'
+                                    ? 'bg-yellow-600 text-white'
+                                    : 'text-slate-400 hover:text-white'
                                     }`}
                             >
                                 <Upload size={14} />
@@ -687,9 +697,25 @@ export const AdminMemberProgress: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                                            {file.file_type.toLowerCase() === 'html' && (
+                                            {(file.file_type.toLowerCase() === 'html' || file.file_type.toLowerCase() === 'htm') && (
                                                 <button
-                                                    onClick={() => setPreviewFile(file)}
+                                                    onClick={async () => {
+                                                        setLoadingPreview(true);
+                                                        setPreviewTitle(file.title);
+                                                        setPreviewMemberName(file.member?.name || '');
+                                                        try {
+                                                            const response = await fetch(file.file_url);
+                                                            const text = await response.text();
+                                                            const blob = new Blob([text], { type: 'text/html' });
+                                                            if (previewUrl) URL.revokeObjectURL(previewUrl);
+                                                            setPreviewUrl(URL.createObjectURL(blob));
+                                                        } catch (err) {
+                                                            console.error('Preview failed:', err);
+                                                            window.open(file.file_url, '_blank');
+                                                        } finally {
+                                                            setLoadingPreview(false);
+                                                        }
+                                                    }}
                                                     className="p-2 hover:bg-yellow-900/30 text-yellow-500 rounded-lg transition"
                                                     title="Visualizar"
                                                 >
@@ -721,20 +747,35 @@ export const AdminMemberProgress: React.FC = () => {
                 </div>
             </div>
 
-            {/* HTML Preview Modal */}
-            {previewFile && (
+            {/* Loading overlay for preview */}
+            {loadingPreview && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+                    <div className="text-center">
+                        <Loader2 className="animate-spin text-yellow-500 mx-auto mb-3" size={32} />
+                        <p className="text-white text-sm">Carregando relatório...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* HTML Preview Modal - uses blob URL with correct MIME type */}
+            {previewUrl && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
                     <div className="bg-slate-900 rounded-xl border border-slate-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
                         <div className="flex items-center justify-between p-4 border-b border-slate-800">
                             <div className="flex items-center gap-3">
                                 <FileCode size={20} className="text-orange-400" />
                                 <div>
-                                    <h3 className="font-bold text-white">{previewFile.title}</h3>
-                                    <p className="text-xs text-slate-400">{previewFile.member?.name}</p>
+                                    <h3 className="font-bold text-white">{previewTitle}</h3>
+                                    <p className="text-xs text-slate-400">{previewMemberName}</p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setPreviewFile(null)}
+                                onClick={() => {
+                                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                                    setPreviewUrl(null);
+                                    setPreviewTitle('');
+                                    setPreviewMemberName('');
+                                }}
                                 className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
                             >
                                 <X size={18} />
@@ -742,10 +783,9 @@ export const AdminMemberProgress: React.FC = () => {
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <iframe
-                                src={previewFile.file_url}
+                                src={previewUrl}
                                 className="w-full h-full min-h-[60vh] bg-white rounded-b-xl"
-                                title={previewFile.title}
-                                sandbox="allow-scripts allow-same-origin"
+                                title={previewTitle}
                             />
                         </div>
                     </div>
