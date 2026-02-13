@@ -200,12 +200,28 @@ class ToolsService {
         if (!user) throw new Error('Not authenticated');
 
         // 1. Upload file to storage
-        const fileExt = input.file.name.split('.').pop();
+        const fileExt = input.file.name.split('.').pop()?.toLowerCase() || 'unknown';
         const fileName = `${input.member_id}/${Date.now()}.${fileExt}`;
+
+        // Map extension to correct MIME type for proper browser rendering
+        const mimeTypes: Record<string, string> = {
+            'html': 'text/html',
+            'htm': 'text/html',
+            'pdf': 'application/pdf',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls': 'application/vnd.ms-excel',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'csv': 'text/csv',
+        };
+        const contentType = mimeTypes[fileExt] || input.file.type || 'application/octet-stream';
 
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('member-reports')
-            .upload(fileName, input.file);
+            .upload(fileName, input.file, {
+                contentType,
+                upsert: true
+            });
 
         if (uploadError) throw uploadError;
 
