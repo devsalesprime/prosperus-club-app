@@ -339,6 +339,40 @@ const App = () => {
         }
     }, [view]);
 
+    /**
+     * Universal notification URL handler
+     * Handles: external URLs (new tab), ViewState values, and internal paths
+     */
+    const handleNotificationNavigate = (url: string) => {
+        if (!url) return;
+
+        // External URLs → open in new tab
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
+        // Direct ViewState match (e.g. "DEALS")
+        if (Object.values(ViewState).includes(url as ViewState)) {
+            setView(url as ViewState);
+            return;
+        }
+
+        // Parse internal paths (e.g. "/deals?tab=sales" → "DEALS")
+        const pathMatch = url.match(/^\/?([a-zA-Z_-]+)/);
+        if (pathMatch) {
+            const viewKey = pathMatch[1].toUpperCase().replace(/-/g, '_');
+            if (Object.values(ViewState).includes(viewKey as ViewState)) {
+                setView(viewKey as ViewState);
+                return;
+            }
+        }
+
+        // Last resort: try navigating to the URL directly
+        console.warn('Notification URL did not match any ViewState:', url);
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
     // Helper function to fetch and set user profile
     const fetchAndSetUserProfile = async (userId: string) => {
         // Check if already fetched or currently loading
@@ -972,11 +1006,7 @@ const App = () => {
                                     userId={currentUser.id}
                                     onClick={() => setView(ViewState.MESSAGES)}
                                 />
-                                <NotificationCenter currentUserId={currentUser.id} onNavigate={(url) => {
-                                    if (Object.values(ViewState).includes(url as ViewState)) { setView(url as ViewState); return; }
-                                    const m = url.match(/^\/?([a-zA-Z_-]+)/);
-                                    if (m) { const vk = m[1].toUpperCase().replace(/-/g, '_'); if (Object.values(ViewState).includes(vk as ViewState)) setView(vk as ViewState); }
-                                }} />
+                                <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
                             </div>
                         )}
                     </div>
@@ -1085,11 +1115,7 @@ const App = () => {
                                 >
                                     <MessageCircle size={22} />
                                 </button>
-                                <NotificationCenter currentUserId={currentUser.id} onNavigate={(url) => {
-                                    if (Object.values(ViewState).includes(url as ViewState)) { setView(url as ViewState); return; }
-                                    const m = url.match(/^\/?([a-zA-Z_-]+)/);
-                                    if (m) { const vk = m[1].toUpperCase().replace(/-/g, '_'); if (Object.values(ViewState).includes(vk as ViewState)) setView(vk as ViewState); }
-                                }} />
+                                <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
                             </>
                         )}
                         <button onClick={() => setView(ViewState.PROFILE)} className="p-2 text-prosperus-grey">
@@ -1519,22 +1545,7 @@ const App = () => {
                         <div className="animate-in fade-in">
                             <NotificationsPage
                                 currentUserId={currentUser.id}
-                                onNavigate={(url) => {
-                                    // Direct ViewState match (e.g. "DEALS")
-                                    if (Object.values(ViewState).includes(url as ViewState)) {
-                                        setView(url as ViewState);
-                                        return;
-                                    }
-                                    // Parse URL paths from notifications (e.g. "/deals?tab=sales" → "DEALS")
-                                    const pathMatch = url.match(/^\/?([a-zA-Z_-]+)/);
-                                    if (pathMatch) {
-                                        const viewKey = pathMatch[1].toUpperCase().replace(/-/g, '_');
-                                        if (Object.values(ViewState).includes(viewKey as ViewState)) {
-                                            setView(viewKey as ViewState);
-                                            return;
-                                        }
-                                    }
-                                }}
+                                onNavigate={handleNotificationNavigate}
                             />
                         </div>
                     )}

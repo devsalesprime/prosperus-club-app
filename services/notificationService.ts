@@ -353,13 +353,17 @@ class NotificationService {
 
     /**
      * Subscribe to new notifications (Realtime)
+     * Each caller gets a unique channel to avoid Supabase deduplication
      */
     subscribeToNotifications(
         userId: string,
         callback: (notification: UserNotification) => void
     ): () => void {
+        // Generate unique channel name per subscriber to prevent conflicts
+        const channelName = `user_notifications_${userId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
         const channel = supabase
-            .channel('user_notifications')
+            .channel(channelName)
             .on(
                 'postgres_changes',
                 {
@@ -369,10 +373,16 @@ class NotificationService {
                     filter: `user_id=eq.${userId}`
                 },
                 (payload) => {
+                    console.log('🔔 Realtime notification received:', payload.new);
                     callback(payload.new as UserNotification);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log(`📡 Realtime channel [${channelName}] status:`, status);
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Realtime subscription failed. Check if Realtime is enabled for user_notifications table in Supabase Dashboard.');
+                }
+            });
 
         // Return unsubscribe function
         return () => {
