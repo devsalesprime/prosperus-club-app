@@ -88,15 +88,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
     const handleNotificationClick = async (notification: UserNotification) => {
         try {
-            // Mark as read and remove from dropdown
-            if (!notification.is_read) {
-                await notificationService.markAsRead(notification.id);
-                setUnreadCount(prev => Math.max(0, prev - 1));
-            }
-            // Remove from the dropdown list so it disappears immediately
-            setNotifications(prev => prev.filter(n => n.id !== notification.id));
-
-            // Navigate if has action URL
+            // Navigate FIRST (synchronously) to avoid popup blocker on external URLs
             if (notification.action_url) {
                 setIsOpen(false);
                 if (onNavigate) {
@@ -105,6 +97,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                     window.location.href = notification.action_url;
                 }
             }
+
+            // Then mark as read and update UI (fire-and-forget)
+            if (!notification.is_read) {
+                await notificationService.markAsRead(notification.id);
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
+            // Remove from the dropdown list so it disappears immediately
+            setNotifications(prev => prev.filter(n => n.id !== notification.id));
         } catch (error) {
             console.error('Error handling notification click:', error);
         }

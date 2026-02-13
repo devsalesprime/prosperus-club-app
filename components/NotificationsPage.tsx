@@ -134,14 +134,14 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     };
 
     const handleNotificationClick = async (notification: UserNotification) => {
-        // Mark as read first
-        if (!notification.is_read) {
-            await handleMarkAsRead(notification);
-        }
-
-        // Navigate if has action URL
+        // Navigate FIRST (synchronously) to avoid popup blocker on external URLs
         if (notification.action_url && onNavigate) {
             onNavigate(notification.action_url);
+        }
+
+        // Then mark as read (fire-and-forget, no await to block navigation)
+        if (!notification.is_read) {
+            handleMarkAsRead(notification);
         }
     };
 
@@ -216,15 +216,15 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                             key={tab.key}
                             onClick={() => setActiveTab(tab.key)}
                             className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${activeTab === tab.key
-                                    ? 'bg-yellow-600 text-white shadow-sm'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                                ? 'bg-yellow-600 text-white shadow-sm'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                                 }`}
                         >
                             {tab.label}
                             {tab.count !== undefined && tab.count > 0 && (
                                 <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key
-                                        ? 'bg-white/20 text-white'
-                                        : 'bg-slate-700 text-slate-400'
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-slate-700 text-slate-400'
                                     }`}>
                                     {tab.count}
                                 </span>
@@ -286,8 +286,8 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                         <div
                             key={notification.id}
                             className={`group relative bg-slate-900 border rounded-xl transition overflow-hidden ${!notification.is_read
-                                    ? 'border-yellow-600/30 bg-yellow-900/5'
-                                    : 'border-slate-800 hover:border-slate-700'
+                                ? 'border-yellow-600/30 bg-yellow-900/5'
+                                : 'border-slate-800 hover:border-slate-700'
                                 } ${deletingIds.has(notification.id) ? 'opacity-50 scale-95' : ''}`}
                         >
                             <div className="flex items-start gap-3 p-4">
