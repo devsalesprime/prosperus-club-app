@@ -2,7 +2,7 @@
 // Card de indicação individual - Prosperus Club App v2.5
 
 import React, { useState } from 'react';
-import { Mail, Phone, FileText, ChevronDown, Loader2, MessageSquare } from 'lucide-react';
+import { Mail, Phone, FileText, ChevronDown, Loader2, MessageSquare, AlertTriangle } from 'lucide-react';
 import { Referral, ReferralStatus } from '../../types';
 import { businessService } from '../../services/businessService';
 
@@ -16,7 +16,8 @@ const statusConfig: Record<ReferralStatus, { label: string; color: string; bg: s
     NEW: { label: 'Novo', color: '#3b82f6', bg: '#dbeafe' },
     IN_PROGRESS: { label: 'Em Andamento', color: '#f59e0b', bg: '#fef3c7' },
     CONVERTED: { label: 'Convertido', color: '#10b981', bg: '#d1fae5' },
-    LOST: { label: 'Perdido', color: '#ef4444', bg: '#fee2e2' }
+    LOST: { label: 'Perdido', color: '#ef4444', bg: '#fee2e2' },
+    CONTESTED: { label: 'Contestado', color: '#f97316', bg: '#fff7ed' }
 };
 
 const formatCurrency = (value: number) =>
@@ -30,14 +31,17 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
     const [showStatusMenu, setShowStatusMenu] = useState(false);
     const [showConvertInput, setShowConvertInput] = useState(false);
     const [showFeedbackInput, setShowFeedbackInput] = useState(false);
+    const [showContestInput, setShowContestInput] = useState(false);
     const [convertAmount, setConvertAmount] = useState('');
     const [feedback, setFeedback] = useState('');
+    const [contestReason, setContestReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState(false);
 
     const partner = viewType === 'sent' ? referral.receiver : referral.referrer;
     const config = statusConfig[referral.status];
-    const canChangeStatus = viewType === 'received' && referral.status !== 'CONVERTED';
+    const canChangeStatus = viewType === 'received' && referral.status !== 'CONVERTED' && referral.status !== 'CONTESTED';
+    const canContest = viewType === 'received' && (referral.status === 'NEW' || referral.status === 'IN_PROGRESS');
 
     const formatAmount = (value: string) => {
         const numbers = value.replace(/\D/g, '');
@@ -112,6 +116,21 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
         }
     };
 
+    const handleContest = async () => {
+        if (!contestReason.trim()) return;
+
+        setLoading(true);
+        try {
+            await businessService.contestReferral(referral.id, contestReason.trim());
+            onStatusChange();
+            setShowContestInput(false);
+        } catch (error) {
+            console.error('Error contesting referral:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="referral-card">
             <div className="card-header">
@@ -144,17 +163,19 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
 
                             {showStatusMenu && (
                                 <div className="status-menu">
-                                    {Object.entries(statusConfig).map(([key, val]) => (
-                                        <button
-                                            key={key}
-                                            className="status-option"
-                                            onClick={() => handleStatusChange(key as ReferralStatus)}
-                                            disabled={loading}
-                                        >
-                                            <span className="dot" style={{ background: val.color }} />
-                                            {val.label}
-                                        </button>
-                                    ))}
+                                    {Object.entries(statusConfig)
+                                        .filter(([key]) => key !== 'CONTESTED')
+                                        .map(([key, val]) => (
+                                            <button
+                                                key={key}
+                                                className="status-option"
+                                                onClick={() => handleStatusChange(key as ReferralStatus)}
+                                                disabled={loading}
+                                            >
+                                                <span className="dot" style={{ background: val.color }} />
+                                                {val.label}
+                                            </button>
+                                        ))}
                                 </div>
                             )}
                         </div>
@@ -220,6 +241,41 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 </div>
             )}
 
+            {/* Contest Input */}
+            {showContestInput && (
+                <div className="action-form">
+                    <label>Motivo da contestação:</label>
+                    <textarea
+                        value={contestReason}
+                        onChange={e => setContestReason(e.target.value)}
+                        placeholder="Descreva por que está contestando esta indicação..."
+                        rows={3}
+                        autoFocus
+                    />
+                    <div className="form-actions">
+                        <button onClick={() => setShowContestInput(false)}>Cancelar</button>
+                        <button
+                            className="btn-contest"
+                            onClick={handleContest}
+                            disabled={loading || !contestReason.trim()}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={16} /> : 'Confirmar Contestação'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Contest Button */}
+            {canContest && !showContestInput && (
+                <button
+                    className="contest-btn"
+                    onClick={() => setShowContestInput(true)}
+                >
+                    <AlertTriangle size={14} />
+                    Contestar Indicação
+                </button>
+            )}
+
             {/* Contact Info */}
             <div className="contact-info">
                 {referral.lead_email && (
@@ -249,6 +305,17 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     <MessageSquare size={14} />
                     <div>
                         <strong>Feedback:</strong>
+                        <p>{referral.feedback}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Contestation reason (visible to referrer) */}
+            {viewType === 'sent' && referral.status === 'CONTESTED' && referral.feedback && (
+                <div className="feedback-box contest">
+                    <AlertTriangle size={14} />
+                    <div>
+                        <strong>Motivo da contestação:</strong>
                         <p>{referral.feedback}</p>
                     </div>
                 </div>
@@ -443,6 +510,38 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     background: #ef4444;
                     border: none;
                     color: white;
+                }
+
+                .btn-contest {
+                    background: #f97316;
+                    border: none;
+                    color: white;
+                }
+
+                .contest-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    width: 100%;
+                    padding: 10px 14px;
+                    border: 1px dashed #f97316;
+                    background: #fff7ed;
+                    color: #f97316;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin-bottom: 12px;
+                    justify-content: center;
+                }
+
+                .contest-btn:hover {
+                    background: #fed7aa;
+                }
+
+                .feedback-box.contest {
+                    background: #fff7ed;
+                    color: #ea580c;
                 }
 
                 .contact-info {

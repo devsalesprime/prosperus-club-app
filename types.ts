@@ -268,7 +268,7 @@ export interface Banner {
 // ========== BUSINESS CORE v2.5 ==========
 
 export type DealStatus = 'PENDING' | 'CONFIRMED' | 'CONTESTED' | 'AUDITADO' | 'INVALIDADO';
-export type ReferralStatus = 'NEW' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST';
+export type ReferralStatus = 'NEW' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST' | 'CONTESTED';
 
 export interface Deal {
   id: string;

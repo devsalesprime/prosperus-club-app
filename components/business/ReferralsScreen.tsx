@@ -15,7 +15,8 @@ const statusFilters: { value: ReferralStatus | 'ALL'; label: string }[] = [
     { value: 'NEW', label: 'Novos' },
     { value: 'IN_PROGRESS', label: 'Em Andamento' },
     { value: 'CONVERTED', label: 'Convertidos' },
-    { value: 'LOST', label: 'Perdidos' }
+    { value: 'LOST', label: 'Perdidos' },
+    { value: 'CONTESTED', label: 'Contestados' }
 ];
 
 export const ReferralsScreen: React.FC = () => {

@@ -6,8 +6,8 @@ import { supabase } from '../lib/supabase';
 
 // ========== TYPES ==========
 
-export type DealStatus = 'PENDING' | 'CONFIRMED' | 'CONTESTED';
-export type ReferralStatus = 'NEW' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST';
+export type DealStatus = 'PENDING' | 'CONFIRMED' | 'CONTESTED' | 'AUDITADO' | 'INVALIDADO';
+export type ReferralStatus = 'NEW' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST' | 'CONTESTED';
 
 export interface Deal {
     id: string;
@@ -306,6 +306,44 @@ class BusinessService {
     }
 
     /**
+     * Contest a referral (as receiver)
+     * Sets status to CONTESTED with a reason for admin review
+     */
+    async contestReferral(id: string, reason: string): Promise<Referral> {
+        if (!reason || reason.trim() === '') {
+            throw new Error('Motivo da contestação é obrigatório');
+        }
+
+        const { data: referral, error } = await supabase
+            .rpc('update_referral_status', {
+                referral_id: id,
+                new_status: 'CONTESTED',
+                amount: null,
+                loss_feedback: reason.trim()
+            });
+
+        if (error) throw error;
+
+        // Fetch full referral with joins for notification
+        const { data: fullReferral } = await supabase
+            .from('member_referrals')
+            .select(`
+                *,
+                referrer:referrer_id (id, name, image_url),
+                receiver:receiver_id (id, name, image_url)
+            `)
+            .eq('id', id)
+            .single();
+
+        // Notify referrer about contestation
+        if (fullReferral) {
+            await this.notifyReferrerContestation(fullReferral);
+        }
+
+        return fullReferral || referral;
+    }
+
+    /**
      * Get user's referrals (sent or received)
      */
     async getMyReferrals(type: 'sent' | 'received'): Promise<Referral[]> {
@@ -405,6 +443,25 @@ class BusinessService {
 
     // ==================== NOTIFICATIONS ====================
 
+    // ==================== PUSH HELPER ====================
+
+    /**
+     * Send push notification to a user via Supabase Edge Function
+     * Fails silently if Edge Function is not deployed or user has no push subscription
+     */
+    private async sendPushToUser(userId: string, title: string, message: string, url?: string): Promise<void> {
+        try {
+            await supabase.functions.invoke('send-push-notification', {
+                body: { user_id: userId, title, message, url }
+            });
+        } catch (error) {
+            // Silently fail - push is best-effort, in-app notification is the primary channel
+            console.debug('Push notification skipped:', error);
+        }
+    }
+
+    // ==================== NOTIFICATIONS ====================
+
     private async notifyBuyer(deal: Deal): Promise<void> {
         try {
             const formattedAmount = new Intl.NumberFormat('pt-BR', {
@@ -412,12 +469,19 @@ class BusinessService {
                 currency: 'BRL'
             }).format(deal.amount);
 
+            const title = 'Novo Negócio para Confirmar';
+            const message = `${deal.seller?.name || 'Um membro'} registrou um negócio de ${formattedAmount} com você. Confirme para validar!`;
+            const actionUrl = '/deals?tab=purchases';
+
             await supabase.from('user_notifications').insert({
                 user_id: deal.buyer_id,
-                title: 'Novo Negócio para Confirmar',
-                message: `${deal.seller?.name || 'Um membro'} registrou um negócio de ${formattedAmount} com você. Confirme para validar!`,
-                action_url: '/deals?tab=purchases'
+                title,
+                message,
+                action_url: actionUrl
             });
+
+            // Push notification
+            await this.sendPushToUser(deal.buyer_id, title, message, actionUrl);
         } catch (error) {
             console.error('Failed to notify buyer:', error);
         }
@@ -435,13 +499,17 @@ class BusinessService {
             const message = isConfirmed
                 ? `${deal.buyer?.name || 'O comprador'} confirmou o negócio de ${formattedAmount}!`
                 : `${deal.buyer?.name || 'O comprador'} contestou o negócio de ${formattedAmount}. Entre em contato para resolver.`;
+            const actionUrl = '/deals?tab=sales';
 
             await supabase.from('user_notifications').insert({
                 user_id: deal.seller_id,
                 title,
                 message,
-                action_url: '/deals?tab=sales'
+                action_url: actionUrl
             });
+
+            // Push notification
+            await this.sendPushToUser(deal.seller_id, title, message, actionUrl);
         } catch (error) {
             console.error('Failed to notify seller:', error);
         }
@@ -449,12 +517,19 @@ class BusinessService {
 
     private async notifyReceiver(referral: Referral): Promise<void> {
         try {
+            const title = 'Nova Indicação Recebida';
+            const message = `${referral.referrer?.name || 'Um membro'} indicou um lead para você: ${referral.lead_name}`;
+            const actionUrl = '/referrals?tab=received';
+
             await supabase.from('user_notifications').insert({
                 user_id: referral.receiver_id,
-                title: 'Nova Indicação Recebida',
-                message: `${referral.referrer?.name || 'Um membro'} indicou um lead para você: ${referral.lead_name}`,
-                action_url: '/referrals?tab=received'
+                title,
+                message,
+                action_url: actionUrl
             });
+
+            // Push notification
+            await this.sendPushToUser(referral.receiver_id, title, message, actionUrl);
         } catch (error) {
             console.error('Failed to notify receiver:', error);
         }
@@ -462,14 +537,41 @@ class BusinessService {
 
     private async notifyReferrerConversion(referral: Referral): Promise<void> {
         try {
+            const title = 'Indicação Convertida! 🎉';
+            const message = `Sua indicação "${referral.lead_name}" foi convertida por ${referral.receiver?.name || 'o membro'}!`;
+            const actionUrl = '/referrals?tab=sent';
+
             await supabase.from('user_notifications').insert({
                 user_id: referral.referrer_id,
-                title: 'Indicação Convertida! 🎉',
-                message: `Sua indicação "${referral.lead_name}" foi convertida por ${referral.receiver?.name || 'o membro'}!`,
-                action_url: '/referrals?tab=sent'
+                title,
+                message,
+                action_url: actionUrl
             });
+
+            // Push notification
+            await this.sendPushToUser(referral.referrer_id, title, message, actionUrl);
         } catch (error) {
             console.error('Failed to notify referrer:', error);
+        }
+    }
+
+    private async notifyReferrerContestation(referral: Referral): Promise<void> {
+        try {
+            const title = 'Indicação Contestada';
+            const message = `${referral.receiver?.name || 'O membro'} contestou sua indicação "${referral.lead_name}". A equipe irá analisar.`;
+            const actionUrl = '/referrals?tab=sent';
+
+            await supabase.from('user_notifications').insert({
+                user_id: referral.referrer_id,
+                title,
+                message,
+                action_url: actionUrl
+            });
+
+            // Push notification
+            await this.sendPushToUser(referral.referrer_id, title, message, actionUrl);
+        } catch (error) {
+            console.error('Failed to notify referrer contestation:', error);
         }
     }
 }

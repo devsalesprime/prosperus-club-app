@@ -17,7 +17,9 @@ import {
     Instagram,
     Globe,
     Tag,
-    Rocket
+    Rocket,
+    Search,
+    Users
 } from 'lucide-react';
 import { ProfileData, ProfileUpdateData, profileService } from '../services/profileService';
 import { supabase } from '../lib/supabase';
@@ -33,6 +35,14 @@ const AVAILABLE_TAGS = [
     'Consultoria', 'Saúde', 'Educação', 'Finanças',
     'Imobiliário', 'Jurídico', 'Indústria', 'Comércio',
     'Serviços', 'Agronegócio', 'Startups', 'E-commerce'
+];
+
+const PARTNERSHIP_SECTORS = [
+    'Tecnologia & SaaS', 'Saúde & Bem-estar', 'Educação & Treinamento',
+    'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
+    'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
+    'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
+    'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage'
 ];
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
@@ -58,10 +68,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             website: currentUser.socials?.website || '',
             whatsapp: currentUser.socials?.whatsapp || ''
         },
-        tags: currentUser.tags || []
+        tags: currentUser.tags || [],
+        // Strategic Profile Fields (PRD v2.1)
+        what_i_sell: currentUser.what_i_sell || '',
+        what_i_need: currentUser.what_i_need || '',
+        partnership_interests: currentUser.partnership_interests || []
     });
 
-    const totalSteps = 4;
+    const totalSteps = 5;
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,6 +95,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 return { ...prev, tags: tags.filter(t => t !== tag) };
             } else {
                 return { ...prev, tags: [...tags, tag] };
+            }
+        });
+    };
+
+    const handlePartnershipToggle = (sector: string) => {
+        setFormData(prev => {
+            const interests = prev.partnership_interests || [];
+            if (interests.includes(sector)) {
+                return { ...prev, partnership_interests: interests.filter(s => s !== sector) };
+            } else {
+                return { ...prev, partnership_interests: [...interests, sector] };
             }
         });
     };
@@ -169,7 +194,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             case 0: return renderWelcome();
             case 1: return renderProfileInfo();
             case 2: return renderSocialTags();
-            case 3: return renderReady();
+            case 3: return renderStrategicProfile();
+            case 4: return renderReady();
             default: return null;
         }
     };
@@ -364,12 +390,75 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                             key={tag}
                             onClick={() => handleTagToggle(tag)}
                             className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${(formData.tags || []).includes(tag)
-                                    ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/30 scale-105'
-                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/30 scale-105'
+                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
                                 }`}
                         >
                             {(formData.tags || []).includes(tag) && <Check size={12} className="inline mr-1" />}
                             {tag}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
+    // Step 4: Strategic Profile (PRD v2.1)
+    const renderStrategicProfile = () => (
+        <div className="space-y-6">
+            <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-white mb-1">Perfil Estratégico</h2>
+                <p className="text-slate-400 text-sm">Seus dados de negócio para conexões inteligentes</p>
+            </div>
+
+            {/* What I Sell */}
+            <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <Briefcase size={14} className="inline mr-1.5 -mt-0.5 text-yellow-500" />
+                    O que você vende/faz? <span className="text-yellow-500">*</span>
+                </label>
+                <textarea
+                    value={formData.what_i_sell || ''}
+                    onChange={(e) => handleInputChange('what_i_sell', e.target.value)}
+                    rows={2}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-500 transition resize-none"
+                    placeholder="Ex: Consultoria em gestão empresarial, software de CRM, serviços jurídicos..."
+                />
+            </div>
+
+            {/* What I Need */}
+            <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <Search size={14} className="inline mr-1.5 -mt-0.5 text-blue-400" />
+                    O que você precisa/compraria agora? <span className="text-yellow-500">*</span>
+                </label>
+                <textarea
+                    value={formData.what_i_need || ''}
+                    onChange={(e) => handleInputChange('what_i_need', e.target.value)}
+                    rows={2}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition resize-none"
+                    placeholder="Ex: Sistema de automação de marketing, parceiro logístico, assessoria contábil..."
+                />
+            </div>
+
+            {/* Partnership Interests */}
+            <div>
+                <label className="block text-sm font-medium text-slate-300 mb-3">
+                    <Users size={14} className="inline mr-1.5 -mt-0.5 text-emerald-400" />
+                    Setores de interesse para parcerias <span className="text-yellow-500">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                    {PARTNERSHIP_SECTORS.map(sector => (
+                        <button
+                            key={sector}
+                            onClick={() => handlePartnershipToggle(sector)}
+                            className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
+                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                }`}
+                        >
+                            {(formData.partnership_interests || []).includes(sector) && <Check size={12} className="inline mr-1" />}
+                            {sector}
                         </button>
                     ))}
                 </div>
@@ -465,10 +554,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         <div
                             key={i}
                             className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === step
-                                    ? 'bg-yellow-500 scale-125'
-                                    : i < step
-                                        ? 'bg-yellow-600/50'
-                                        : 'bg-slate-700'
+                                ? 'bg-yellow-500 scale-125'
+                                : i < step
+                                    ? 'bg-yellow-600/50'
+                                    : 'bg-slate-700'
                                 }`}
                         />
                     ))}

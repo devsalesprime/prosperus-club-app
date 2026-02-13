@@ -19,7 +19,9 @@ import {
     Video,
     PlayCircle,
     UploadCloud,
-    Loader2
+    Loader2,
+    Search,
+    Users
 } from 'lucide-react';
 import { ProfileData } from '../services/profileService';
 import { conversationService } from '../services/conversationService';
@@ -292,6 +294,54 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                     </span>
                                 ))}
                             </div>
+                        </div>
+                    )}
+
+                    {/* ========================================= */}
+                    {/* SECTION 3.5: STRATEGIC PROFILE (PRD v2.1) */}
+                    {/* ========================================= */}
+                    {(profile.what_i_sell || profile.what_i_need || (profile.partnership_interests && profile.partnership_interests.length > 0)) && (
+                        <div className="space-y-4">
+                            {profile.what_i_sell && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                                        <Briefcase size={14} className="text-yellow-500" />
+                                        O que ofereço
+                                    </h4>
+                                    <p className="text-slate-300 bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-sm leading-relaxed">
+                                        {profile.what_i_sell}
+                                    </p>
+                                </div>
+                            )}
+                            {profile.what_i_need && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                                        <Search size={14} className="text-blue-400" />
+                                        O que procuro
+                                    </h4>
+                                    <p className="text-slate-300 bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-sm leading-relaxed">
+                                        {profile.what_i_need}
+                                    </p>
+                                </div>
+                            )}
+                            {profile.partnership_interests && profile.partnership_interests.length > 0 && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase mb-2 flex items-center gap-2">
+                                        <Users size={14} className="text-emerald-400" />
+                                        Interesse em parcerias
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {profile.partnership_interests.map((sector, index) => (
+                                            <span
+                                                key={index}
+                                                className="inline-block bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 px-3 py-1 rounded-lg text-sm font-medium"
+                                            >
+                                                {sector}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 

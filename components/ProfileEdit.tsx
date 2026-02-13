@@ -26,7 +26,9 @@ import {
     ToggleLeft,
     ToggleRight,
     Sparkles,
-    Ticket
+    Ticket,
+    Search,
+    Users
 } from 'lucide-react';
 import { profileService, ProfileData, ProfileUpdateData, ExclusiveBenefit } from '../services/profileService';
 import { ImageUpload } from './ImageUpload';
@@ -72,7 +74,11 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             ctaUrl: '',
             code: '',
             active: false
-        }
+        },
+        // Strategic Profile Fields (PRD v2.1)
+        what_i_sell: currentUser.what_i_sell || '',
+        what_i_need: currentUser.what_i_need || '',
+        partnership_interests: currentUser.partnership_interests || []
     });
 
     const [newTag, setNewTag] = useState('');
@@ -107,7 +113,11 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                 ctaUrl: '',
                 code: '',
                 active: false
-            }
+            },
+            // Strategic Profile Fields
+            what_i_sell: currentUser.what_i_sell || '',
+            what_i_need: currentUser.what_i_need || '',
+            partnership_interests: currentUser.partnership_interests || []
         });
     }, [currentUser.id, currentUser.image_url, currentUser.name, currentUser.bio]);
 
@@ -532,6 +542,89 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                 }));
                             }}
                         />
+                    </div>
+
+                    {/* ========================================= */}
+                    {/* STRATEGIC PROFILE SECTION (PRD v2.1)      */}
+                    {/* ========================================= */}
+                    <div className="border border-emerald-600/30 rounded-xl p-6 bg-gradient-to-br from-emerald-900/10 to-transparent">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-emerald-600/20 rounded-lg">
+                                <Users className="text-emerald-400" size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white">Perfil Estratégico</h3>
+                                <p className="text-xs text-slate-400">Dados para conexões inteligentes entre sócios</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* What I Sell */}
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-2">
+                                    <Briefcase size={12} className="inline mr-1 text-yellow-500" />
+                                    O que você vende/faz?
+                                </label>
+                                <textarea
+                                    value={formData.what_i_sell || ''}
+                                    onChange={(e) => handleInputChange('what_i_sell', e.target.value)}
+                                    rows={2}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-600 transition resize-none"
+                                    placeholder="Ex: Consultoria em gestão, software de CRM, serviços jurídicos..."
+                                />
+                            </div>
+
+                            {/* What I Need */}
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-2">
+                                    <Search size={12} className="inline mr-1 text-blue-400" />
+                                    O que você precisa/compraria agora?
+                                </label>
+                                <textarea
+                                    value={formData.what_i_need || ''}
+                                    onChange={(e) => handleInputChange('what_i_need', e.target.value)}
+                                    rows={2}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition resize-none"
+                                    placeholder="Ex: Automação de marketing, parceiro logístico, assessoria contábil..."
+                                />
+                            </div>
+
+                            {/* Partnership Interests */}
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-2">
+                                    <Users size={12} className="inline mr-1 text-emerald-400" />
+                                    Setores de interesse para parcerias
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Tecnologia & SaaS', 'Saúde & Bem-estar', 'Educação & Treinamento',
+                                        'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
+                                        'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
+                                        'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
+                                        'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage'
+                                    ].map(sector => (
+                                        <button
+                                            key={sector}
+                                            type="button"
+                                            onClick={() => {
+                                                const interests = formData.partnership_interests || [];
+                                                if (interests.includes(sector)) {
+                                                    handleInputChange('partnership_interests', interests.filter(s => s !== sector) as any);
+                                                } else {
+                                                    handleInputChange('partnership_interests', [...interests, sector] as any);
+                                                }
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
+                                                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+                                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                                }`}
+                                        >
+                                            {(formData.partnership_interests || []).includes(sector) && '✓ '}
+                                            {sector}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* ========================================= */}

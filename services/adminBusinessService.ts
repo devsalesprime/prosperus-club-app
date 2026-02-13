@@ -114,6 +114,7 @@ class AdminBusinessService {
 
     /**
      * Audit a deal (approve or reject)
+     * Notifies both seller and buyer of the result
      */
     async auditDeal(
         dealId: string,
@@ -133,6 +134,63 @@ class AdminBusinessService {
         if (error) {
             console.error('Error auditing deal:', error);
             throw new Error(error.message || 'Erro ao auditar negócio');
+        }
+
+        // Notify both parties about the audit result
+        await this.notifyAuditResult(dealId, decision);
+    }
+
+    /**
+     * Notify seller and buyer about audit result
+     */
+    private async notifyAuditResult(dealId: string, decision: 'APPROVE' | 'REJECT'): Promise<void> {
+        try {
+            const deal = await this.getDealById(dealId);
+            if (!deal) return;
+
+            const formattedAmount = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(deal.amount);
+
+            const isApproved = decision === 'APPROVE';
+            const title = isApproved
+                ? 'Negócio Auditado ✅'
+                : 'Negócio Invalidado ❌';
+            const sellerMsg = isApproved
+                ? `Seu negócio de ${formattedAmount} foi auditado e aprovado oficialmente!`
+                : `Seu negócio de ${formattedAmount} foi revisado e invalidado pela auditoria.`;
+            const buyerMsg = isApproved
+                ? `O negócio de ${formattedAmount} contestado foi auditado e aprovado.`
+                : `O negócio de ${formattedAmount} contestado foi revisado e invalidado.`;
+
+            // Notify seller (in-app + push)
+            await supabase.from('user_notifications').insert({
+                user_id: deal.seller_id,
+                title,
+                message: sellerMsg,
+                action_url: '/deals?tab=sales'
+            });
+            try {
+                await supabase.functions.invoke('send-push-notification', {
+                    body: { user_id: deal.seller_id, title, message: sellerMsg, url: '/deals?tab=sales' }
+                });
+            } catch { /* push best-effort */ }
+
+            // Notify buyer (in-app + push)
+            await supabase.from('user_notifications').insert({
+                user_id: deal.buyer_id,
+                title,
+                message: buyerMsg,
+                action_url: '/deals?tab=purchases'
+            });
+            try {
+                await supabase.functions.invoke('send-push-notification', {
+                    body: { user_id: deal.buyer_id, title, message: buyerMsg, url: '/deals?tab=purchases' }
+                });
+            } catch { /* push best-effort */ }
+        } catch (err) {
+            console.error('Failed to notify audit result:', err);
         }
     }
 
@@ -342,6 +400,120 @@ class AdminBusinessService {
             audited_by: deal.auditor,
             audited_at: deal.audited_at
         }];
+    }
+
+    // ==================== CONTESTED REFERRALS ====================
+
+    /**
+     * Get all contested referrals for admin review
+     */
+    async getContestedReferrals(): Promise<any[]> {
+        const { data, error } = await supabase
+            .from('member_referrals')
+            .select(`
+                *,
+                referrer:referrer_id (id, name, email, image_url),
+                receiver:receiver_id (id, name, email, image_url)
+            `)
+            .eq('status', 'CONTESTED')
+            .order('updated_at', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching contested referrals:', error);
+            throw new Error('Erro ao buscar indicações contestadas');
+        }
+
+        return (data || []).map(r => ({
+            id: r.id,
+            referrer_id: r.referrer_id,
+            referrer_name: r.referrer?.name || 'Desconhecido',
+            referrer_email: r.referrer?.email || '',
+            referrer_image: r.referrer?.image_url || '',
+            receiver_id: r.receiver_id,
+            receiver_name: r.receiver?.name || 'Desconhecido',
+            receiver_email: r.receiver?.email || '',
+            receiver_image: r.receiver?.image_url || '',
+            lead_name: r.lead_name,
+            lead_email: r.lead_email,
+            lead_phone: r.lead_phone,
+            notes: r.notes,
+            feedback: r.feedback || r.loss_feedback || 'Sem motivo informado',
+            created_at: r.created_at
+        }));
+    }
+
+    /**
+     * Resolve a contested referral (admin decision)
+     * RESTORE = set back to NEW, DISMISS = set to LOST
+     */
+    async resolveContestedReferral(
+        referralId: string,
+        decision: 'RESTORE' | 'DISMISS',
+        notes: string
+    ): Promise<void> {
+        if (!notes || notes.trim() === '') {
+            throw new Error('Notas de resolução são obrigatórias');
+        }
+
+        const newStatus = decision === 'RESTORE' ? 'NEW' : 'LOST';
+
+        const { error } = await supabase
+            .from('member_referrals')
+            .update({
+                status: newStatus,
+                feedback: `[Admin] ${notes.trim()}`
+            })
+            .eq('id', referralId);
+
+        if (error) {
+            console.error('Error resolving contested referral:', error);
+            throw new Error(error.message || 'Erro ao resolver indicação contestada');
+        }
+
+        // Notify both parties
+        try {
+            const { data: referral } = await supabase
+                .from('member_referrals')
+                .select(`
+                    *,
+                    referrer:referrer_id (id, name),
+                    receiver:receiver_id (id, name)
+                `)
+                .eq('id', referralId)
+                .single();
+
+            if (referral) {
+                const isRestored = decision === 'RESTORE';
+                const title = isRestored ? 'Indicação Restaurada ✅' : 'Indicação Descartada ❌';
+                const referrerMsg = isRestored
+                    ? `Sua indicação "${referral.lead_name}" foi analisada e restaurada pela equipe.`
+                    : `Sua indicação "${referral.lead_name}" foi analisada e descartada pela equipe.`;
+                const receiverMsg = isRestored
+                    ? `A contestação da indicação "${referral.lead_name}" foi analisada. A indicação foi restaurada.`
+                    : `A contestação da indicação "${referral.lead_name}" foi analisada e aceita.`;
+
+                // Notify referrer
+                await supabase.from('user_notifications').insert({
+                    user_id: referral.referrer_id, title, message: referrerMsg, action_url: '/referrals?tab=sent'
+                });
+                // Notify receiver
+                await supabase.from('user_notifications').insert({
+                    user_id: referral.receiver_id, title, message: receiverMsg, action_url: '/referrals?tab=received'
+                });
+
+                // Push notifications (best-effort)
+                try {
+                    await supabase.functions.invoke('send-push-notification', {
+                        body: { user_id: referral.referrer_id, title, message: referrerMsg, url: '/referrals?tab=sent' }
+                    });
+                    await supabase.functions.invoke('send-push-notification', {
+                        body: { user_id: referral.receiver_id, title, message: receiverMsg, url: '/referrals?tab=received' }
+                    });
+                } catch { /* push best-effort */ }
+            }
+        } catch (err) {
+            console.error('Failed to notify referral resolution:', err);
+        }
     }
 }
 

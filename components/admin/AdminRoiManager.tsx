@@ -4,20 +4,22 @@
 // Main admin interface for ROI audit and management
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, AlertTriangle, CheckCircle, Trophy } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users } from 'lucide-react';
 import { adminBusinessService } from '../../services/adminBusinessService';
 import AdminKpiCards from './AdminKpiCards';
 import ContestedDealsTab from './ContestedDealsTab';
+import ContestedReferralsTab from './ContestedReferralsTab';
 import AuditTab from './AuditTab';
 import OfficialRankingsTab from './OfficialRankingsTab';
 
-type TabType = 'contested' | 'audit' | 'rankings';
+type TabType = 'contested' | 'contested-referrals' | 'audit' | 'rankings';
 
 export const AdminRoiManager: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('contested');
     const [loading, setLoading] = useState(true);
     const [kpis, setKpis] = useState<any>(null);
     const [contestedDeals, setContestedDeals] = useState<any[]>([]);
+    const [contestedReferrals, setContestedReferrals] = useState<any[]>([]);
     const [highValueDeals, setHighValueDeals] = useState<any[]>([]);
     const [suspiciousDeals, setSuspiciousDeals] = useState<any[]>([]);
     const [rankings, setRankings] = useState<any[]>([]);
@@ -29,9 +31,10 @@ export const AdminRoiManager: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const [kpisData, contested, highValue, suspicious, rankingsData] = await Promise.all([
+            const [kpisData, contested, contestedRefs, highValue, suspicious, rankingsData] = await Promise.all([
                 adminBusinessService.getAdminKPIs(),
                 adminBusinessService.getContestedDeals(),
+                adminBusinessService.getContestedReferrals(),
                 adminBusinessService.getHighValueDeals(),
                 adminBusinessService.getSuspiciousDeals(),
                 adminBusinessService.getOfficialRankings()
@@ -39,6 +42,7 @@ export const AdminRoiManager: React.FC = () => {
 
             setKpis(kpisData);
             setContestedDeals(contested);
+            setContestedReferrals(contestedRefs);
             setHighValueDeals(highValue);
             setSuspiciousDeals(suspicious);
             setRankings(rankingsData);
@@ -63,6 +67,16 @@ export const AdminRoiManager: React.FC = () => {
         try {
             await adminBusinessService.bulkAuditDeals(dealIds, decision, notes);
             await loadData(); // Reload all data
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            throw new Error(errorMessage);
+        }
+    };
+
+    const handleResolveReferral = async (referralId: string, decision: 'RESTORE' | 'DISMISS', notes: string) => {
+        try {
+            await adminBusinessService.resolveContestedReferral(referralId, decision, notes);
+            await loadData();
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
             throw new Error(errorMessage);
@@ -94,6 +108,13 @@ export const AdminRoiManager: React.FC = () => {
             icon: <CheckCircle size={18} />,
             count: highValueDeals.length,
             color: 'text-blue-500'
+        },
+        {
+            id: 'contested-referrals' as TabType,
+            label: 'Indicações',
+            icon: <Users size={18} />,
+            count: contestedReferrals.length,
+            color: 'text-amber-500'
         },
         {
             id: 'rankings' as TabType,
@@ -162,6 +183,14 @@ export const AdminRoiManager: React.FC = () => {
                             deals={contestedDeals}
                             loading={loading}
                             onAudit={handleAudit}
+                        />
+                    )}
+
+                    {activeTab === 'contested-referrals' && (
+                        <ContestedReferralsTab
+                            referrals={contestedReferrals}
+                            loading={loading}
+                            onResolve={handleResolveReferral}
                         />
                     )}
 

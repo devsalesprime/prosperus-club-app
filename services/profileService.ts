@@ -23,6 +23,11 @@ export interface ProfileData {
     has_completed_onboarding?: boolean;
     pitch_video_url?: string; // URL do vídeo de pitch (YouTube, Vimeo, Drive, Loom)
     hubspot_contact_id?: string; // HubSpot Contact ID for CRM sync
+    // Strategic Profile Fields (PRD v2.1)
+    what_i_sell?: string;              // ONB-FLD-001: O que vende/faz
+    what_i_need?: string;              // ONB-FLD-002: O que precisa/compraria
+    partnership_interests?: string[];   // ONB-FLD-003: Setores de interesse
+    member_since?: string;             // HUB-SYNC-008: Data de entrada no clube
     // phone?: string; // TODO: Uncomment after running migration 011_add_phone_to_profiles.sql
 }
 
@@ -51,6 +56,10 @@ export interface ProfileUpdateData {
     tags?: string[];
     exclusive_benefit?: ExclusiveBenefit | null;
     pitch_video_url?: string; // URL do vídeo de pitch (YouTube, Vimeo, Drive, Loom)
+    // Strategic Profile Fields (PRD v2.1)
+    what_i_sell?: string;
+    what_i_need?: string;
+    partnership_interests?: string[];
     // phone?: string; // TODO: Uncomment after running migration 011_add_phone_to_profiles.sql
 }
 
@@ -75,7 +84,7 @@ class ProfileService {
             // Create query promise
             const queryPromise = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, created_at, updated_at')
                 .eq('id', userId)
                 .single();
 
@@ -126,7 +135,7 @@ class ProfileService {
         try {
             let query = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, created_at');
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at');
 
             // Exclude specific user if provided (e.g., logged-in user)
             if (excludeUserId) {
