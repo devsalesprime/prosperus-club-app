@@ -317,22 +317,31 @@ self.addEventListener('notificationclick', (event) => {
     }
     
     // URL de destino (do payload ou raiz)
-    const targetUrl = event.notification.data?.url || '/app/';
+    let targetUrl = event.notification.data?.url || '/app/';
+    
+    // Resolve relative URLs to the app's base path (/app/)
+    // Notifications send paths like "/deals?tab=sales" which need to become "/app/deals?tab=sales"
+    if (targetUrl.startsWith('/') && !targetUrl.startsWith('/app/')) {
+        targetUrl = '/app' + targetUrl;
+    }
+    
+    // Build full absolute URL for reliable matching and navigation
+    const fullUrl = new URL(targetUrl, self.location.origin).href;
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
-            .then((clientList) => {
+            .then(async (clientList) => {
                 // Procura uma janela já aberta com o app
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        // Navega para a URL de destino e foca
-                        client.navigate(targetUrl);
+                        // Navega para a URL de destino e foca (await navigate before focus)
+                        await client.navigate(fullUrl);
                         return client.focus();
                     }
                 }
                 // Se não encontrou, abre uma nova janela
                 if (clients.openWindow) {
-                    return clients.openWindow(targetUrl);
+                    return clients.openWindow(fullUrl);
                 }
             })
     );
