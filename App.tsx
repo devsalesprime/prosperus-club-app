@@ -1518,8 +1518,19 @@ const App = () => {
                             <NotificationsPage
                                 currentUserId={currentUser.id}
                                 onNavigate={(url) => {
+                                    // Direct ViewState match (e.g. "DEALS")
                                     if (Object.values(ViewState).includes(url as ViewState)) {
                                         setView(url as ViewState);
+                                        return;
+                                    }
+                                    // Parse URL paths from notifications (e.g. "/deals?tab=sales" → "DEALS")
+                                    const pathMatch = url.match(/^\/?([a-zA-Z_-]+)/);
+                                    if (pathMatch) {
+                                        const viewKey = pathMatch[1].toUpperCase().replace(/-/g, '_');
+                                        if (Object.values(ViewState).includes(viewKey as ViewState)) {
+                                            setView(viewKey as ViewState);
+                                            return;
+                                        }
                                     }
                                 }}
                             />
