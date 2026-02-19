@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import { ViewState, Member, Video, ClubEvent as Event, Article, Category, EventCategory, Conversation, Message, UserNotification } from './types';
 import { dataService } from './services/mockData.ts';
+import { eventService } from './services/eventService';
 import { profileService } from './services/profileService.ts';
 import { cleanExpiredCache } from './services/offlineStorage';
 import { SupportWidget } from './components/SupportWidget';
@@ -199,9 +200,19 @@ const App = () => {
         cleanExpiredCache();
     }, []);
 
+    // Fetch events from Supabase
+    useEffect(() => {
+        if (userProfile?.id) {
+            eventService.getEventsForUser(userProfile.id).then(setClubEvents);
+        }
+    }, [userProfile?.id]);
+
     // Members list from Supabase (real data)
     const [members, setMembers] = useState<ProfileData[]>([]);
     const [membersLoading, setMembersLoading] = useState(true);
+
+    // Events from Supabase (replaces mockData localStorage)
+    const [clubEvents, setClubEvents] = useState<Event[]>([]);
 
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
     const profileFetchedRef = useRef(false); // Track if we've already fetched the profile
@@ -1131,7 +1142,7 @@ const App = () => {
                                         {/* Mobile View Content */}
                                         {mobileView === 'LIST' ? (
                                             <MobileAgendaView
-                                                events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                                events={clubEvents}
                                                 onSelectEvent={(event) => setSelectedEvent(event)}
                                             />
                                         ) : (
@@ -1148,7 +1159,7 @@ const App = () => {
                                                 <Calendar
                                                     localizer={localizer}
                                                     culture="pt-BR"
-                                                    events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                                    events={clubEvents}
                                                     startAccessor={(event: Event) => {
                                                         const date = new Date(event.date);
                                                         return isNaN(date.getTime()) ? new Date() : date;
@@ -1228,7 +1239,7 @@ const App = () => {
                                         <Calendar
                                             localizer={localizer}
                                             culture="pt-BR"
-                                            events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                            events={clubEvents}
                                             startAccessor={(event: Event) => {
                                                 // Ensure proper Date object with local time
                                                 const date = new Date(event.date);

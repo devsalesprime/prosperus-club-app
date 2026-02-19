@@ -27,7 +27,7 @@ import {
     Loader2
 } from 'lucide-react';
 import { ClubEvent, EventCategory, EventMaterial, EventSession } from '../../types';
-import { dataService } from '../../services/mockData';
+import { eventService } from '../../services/eventService';
 import { AdminPageHeader, AdminModal, AdminFormInput } from './shared';
 
 // --- ZOD SCHEMA ---
@@ -125,9 +125,17 @@ export const EventsModule: React.FC = () => {
     };
 
     useEffect(() => {
-        setEvents(dataService.getClubEvents());
-        return dataService.subscribe(() => setEvents(dataService.getClubEvents()));
+        const fetchEvents = async () => {
+            const data = await eventService.getAllEvents();
+            setEvents(data);
+        };
+        fetchEvents();
     }, []);
+
+    const refreshEvents = async () => {
+        const data = await eventService.getAllEvents();
+        setEvents(data);
+    };
 
     const openModal = (event?: ClubEvent) => {
         if (event) {
@@ -165,7 +173,7 @@ export const EventsModule: React.FC = () => {
         setIsModalOpen(true);
     };
 
-    const onSubmit = (data: any) => {
+    const onSubmit = async (data: any) => {
         const eventData = {
             ...data,
             materials,
@@ -185,10 +193,11 @@ export const EventsModule: React.FC = () => {
         }
 
         if (editingId) {
-            dataService.updateClubEvent(eventData);
+            await eventService.updateEvent(editingId, eventData);
         } else {
-            dataService.addClubEvent(eventData);
+            await eventService.createEvent(eventData);
         }
+        await refreshEvents();
         setIsModalOpen(false);
     };
 
@@ -398,7 +407,7 @@ export const EventsModule: React.FC = () => {
                                                     <button onClick={() => openModal(event)} className="p-2 text-slate-400 hover:text-yellow-500 hover:bg-slate-800 transition" title="Editar" style={{ minHeight: 'auto', minWidth: 'auto' }}>
                                                         <Edit size={16} />
                                                     </button>
-                                                    <button onClick={() => dataService.deleteClubEvent(event.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-800 transition" title="Excluir" style={{ minHeight: 'auto', minWidth: 'auto' }}>
+                                                    <button onClick={async () => { await eventService.deleteEvent(event.id); refreshEvents(); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-800 transition" title="Excluir" style={{ minHeight: 'auto', minWidth: 'auto' }}>
                                                         <Trash2 size={16} />
                                                     </button>
                                                 </div>

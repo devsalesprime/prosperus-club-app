@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
+import { eventService } from './services/eventService';
 import { AdminNotifications } from './components/AdminNotifications';
 import { ChatModerationList } from './components/admin/ChatModerationList';
 import { ChatModerationDetail } from './components/admin/ChatModerationDetail';
@@ -373,12 +374,16 @@ const NotificationsModule = () => {
   useEffect(() => {
     const updateData = () => {
       setNotifications(dataService.getNotifications());
-      setEvents(dataService.getClubEvents());
       setVideos(dataService.getVideos());
       setArticles(dataService.getArticles());
     };
     updateData();
-    return dataService.subscribe(updateData);
+    const unsub = dataService.subscribe(updateData);
+
+    // Fetch events from Supabase
+    eventService.getAllEvents().then(setEvents);
+
+    return unsub;
   }, []);
 
   const handleSend = (e: React.FormEvent) => {

@@ -31,7 +31,7 @@ import {
 import { ViewState, Member, ClubEvent } from '../types';
 import { ProfileData } from '../services/profileService';
 import { articleService } from '../services/articleService';
-import { dataService } from '../services/mockData';
+import { eventService } from '../services/eventService';
 import { searchService, GlobalSearchResults, SearchArticle, SearchVideo, SearchGalleryAlbum } from '../services/searchService';
 import { HomeCarousel } from './HomeCarousel';
 import { OnboardingBanner } from './OnboardingBanner';
@@ -416,12 +416,16 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     }, []);
 
 
-    // Get next event
+    // Get next event from Supabase
     useEffect(() => {
-        const events = dataService.getClubEventsForUser(currentUser?.id || '')
-            .filter(e => new Date(e.date) > new Date())
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        setNextEvent(events[0] || null);
+        const fetchNextEvent = async () => {
+            const events = await eventService.getEventsForUser(currentUser?.id || '');
+            const upcoming = events
+                .filter(e => new Date(e.date) > new Date())
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            setNextEvent(upcoming[0] || null);
+        };
+        fetchNextEvent();
     }, [currentUser]);
 
 
