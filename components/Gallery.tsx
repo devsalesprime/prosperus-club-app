@@ -51,10 +51,11 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
                     {/* Dark Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
 
-                    {/* Back Button (Top Left) */}
+                    {/* Back Button (Top Left) — safe area aware for iOS */}
                     <button
                         onClick={onBack}
-                        className="fixed top-4 left-4 z-30 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700 shadow-lg"
+                        className="fixed left-4 z-30 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700 shadow-lg"
+                        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
                     >
                         <ArrowLeft size={20} />
                         <span className="font-medium">Voltar</span>
@@ -77,7 +78,10 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
                     </div>
                 </div>
             ) : (
-                <div className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4">
+                <div
+                    className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4"
+                    style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+                >
                     <button
                         onClick={onBack}
                         className="flex items-center gap-2 text-slate-400 hover:text-white transition"
