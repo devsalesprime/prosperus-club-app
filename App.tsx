@@ -1027,7 +1027,7 @@ const App = () => {
                     </div>
                 </div>
 
-                <main className="flex-1 overflow-y-auto overflow-x-hidden relative overscroll-y-none p-4 md:p-8 pb-24 md:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative overscroll-y-none p-4 md:p-8 pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <Suspense fallback={<LazyFallback />}>
                         {view === ViewState.DASHBOARD && (
                             <DashboardHome
