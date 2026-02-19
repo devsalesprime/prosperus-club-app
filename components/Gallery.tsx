@@ -132,15 +132,32 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
 
                 {/* Iframe - Mobile: altura expansível, Desktop: comportamento padrão */}
                 {!hasError && (
-                    <iframe
-                        src={album.embedUrl}
-                        className="w-full h-full min-h-[calc(100vh-200px)] md:min-h-[500px] relative z-10 border-0"
-                        frameBorder="0"
-                        allowFullScreen
-                        onLoad={handleIframeLoad}
-                        onError={handleIframeError}
-                        title={`Galeria: ${album.title}`}
-                    />
+                    <>
+                        <iframe
+                            src={album.embedUrl}
+                            className="w-full h-full min-h-[calc(100vh-200px)] md:min-h-[500px] relative z-10 border-0"
+                            frameBorder="0"
+                            allowFullScreen
+                            allow="fullscreen; autoplay"
+                            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation"
+                            style={{ pointerEvents: 'auto', touchAction: 'auto' }}
+                            onLoad={handleIframeLoad}
+                            onError={handleIframeError}
+                            title={`Galeria: ${album.title}`}
+                        />
+                        {/* Fallback: abrir no navegador */}
+                        <div className="absolute bottom-4 right-4 z-30">
+                            <a
+                                href={album.embedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-slate-800/90 backdrop-blur-sm text-slate-300 hover:text-white hover:bg-slate-700 px-3 py-2 rounded-lg text-xs font-medium transition border border-slate-700 shadow-lg"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                                Abrir no navegador
+                            </a>
+                        </div>
+                    </>
                 )}
             </div>
         </div>
