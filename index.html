@@ -159,8 +159,7 @@
       -moz-osx-font-smoothing: grayscale;
       /* Prevent overscroll bounce on iOS */
       overscroll-behavior: none;
-      /* Safe area padding — bottom is handled by .safe-area-bottom on nav */
-      padding-top: var(--safe-area-inset-top);
+      /* Safe area: top is handled by .mobile-header, bottom by .safe-area-bottom */
       padding-left: var(--safe-area-inset-left);
       padding-right: var(--safe-area-inset-right);
     }
@@ -497,8 +496,13 @@
     /* Safari 100vh includes the address bar height, causing overflow.    */
     /* 100dvh (Dynamic Viewport Height) adjusts when the bar shows/hides */
     @supports (height: 100dvh) {
-      .min-h-screen { min-height: 100dvh !important; }
-      .h-screen     { height: 100dvh !important; }
+      .min-h-screen {
+        min-height: 100dvh !important;
+      }
+
+      .h-screen {
+        height: 100dvh !important;
+      }
     }
   </style>
 
