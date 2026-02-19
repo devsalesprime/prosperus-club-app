@@ -997,7 +997,7 @@ const App = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden overflow-x-hidden bg-prosperus-navy">
                 {/* Mobile Header */}
-                <div className="md:hidden flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light mobile-header">
+                <div className="md:hidden flex-none z-50 flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light mobile-header">
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
                         <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />
                     </button>
@@ -1027,7 +1027,7 @@ const App = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
+                <main className="flex-1 overflow-y-auto overflow-x-hidden relative overscroll-y-none p-4 md:p-8 pb-24 md:pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
                     <Suspense fallback={<LazyFallback />}>
                         {view === ViewState.DASHBOARD && (
                             <DashboardHome
@@ -1500,10 +1500,10 @@ const App = () => {
                         )}
 
                     </Suspense>
-                </div>
+                </main>
 
                 {/* Mobile Bottom Nav */}
-                <div className="md:hidden bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center p-2 pb-4 safe-area-bottom fixed bottom-0 w-full z-40">
+                <div className="md:hidden flex-none z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center p-2 pb-4 safe-area-bottom">
                     {navItems.slice(0, 5).map(item => {
                         // Use item.view if available (for hierarchical items), otherwise use item.id
                         const targetView = ('view' in item && item.view) ? item.view : item.id;
