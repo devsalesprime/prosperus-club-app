@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Video, VideoProgress } from '../types';
+import { Video, VideoProgress, VideoCategory } from '../types';
 
 /**
  * Video Service - Handles all video-related operations
@@ -82,6 +82,7 @@ export const videoService = {
                 thumbnail_url: video.thumbnail,
                 duration: video.duration,
                 category: video.category,
+                category_id: video.categoryId || null,
                 series_id: video.seriesId || null,
                 series_order: video.seriesOrder || null
             }])
@@ -110,6 +111,7 @@ export const videoService = {
                 thumbnail_url: updates.thumbnail,
                 duration: updates.duration,
                 category: updates.category,
+                category_id: updates.categoryId || null,
                 series_id: updates.seriesId || null,
                 series_order: updates.seriesOrder || null
             })
@@ -422,6 +424,86 @@ export const videoService = {
                 ...mapVideoFromDB(item.videos),
                 progress: 100
             }));
+    },
+
+    // ============================================
+    // CATEGORY CRUD
+    // ============================================
+
+    /**
+     * Fetch all video categories
+     */
+    async getCategories(): Promise<VideoCategory[]> {
+        const { data, error } = await supabase
+            .from('video_categories')
+            .select('*')
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+        return (data || []).map(mapCategoryFromDB);
+    },
+
+    /**
+     * Create a new video category
+     */
+    async createCategory(category: Partial<VideoCategory>): Promise<VideoCategory> {
+        const { data, error } = await supabase
+            .from('video_categories')
+            .insert([{
+                name: category.name,
+                description: category.description || null,
+                cover_image: category.coverImage || null
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return mapCategoryFromDB(data);
+    },
+
+    /**
+     * Update an existing video category
+     */
+    async updateCategory(id: string, updates: Partial<VideoCategory>): Promise<VideoCategory> {
+        const { data, error } = await supabase
+            .from('video_categories')
+            .update({
+                name: updates.name,
+                description: updates.description || null,
+                cover_image: updates.coverImage || null
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return mapCategoryFromDB(data);
+    },
+
+    /**
+     * Delete a video category
+     */
+    async deleteCategory(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('video_categories')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    /**
+     * Fetch videos by category_id (FK)
+     */
+    async getVideosByCategoryId(categoryId: string): Promise<Video[]> {
+        const { data, error } = await supabase
+            .from('videos')
+            .select('*')
+            .eq('category_id', categoryId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map(mapVideoFromDB);
     }
 };
 
@@ -437,9 +519,23 @@ function mapVideoFromDB(dbVideo: any): Video {
         videoUrl: dbVideo.video_url || '',
         duration: dbVideo.duration || '0:00',
         category: dbVideo.category || 'Geral',
+        categoryId: dbVideo.category_id || undefined,
         progress: 0, // Will be populated separately
         seriesId: dbVideo.series_id || undefined,
         seriesOrder: dbVideo.series_order || undefined,
         comments: []
+    };
+}
+
+/**
+ * Map database category to VideoCategory interface
+ */
+function mapCategoryFromDB(dbCategory: any): VideoCategory {
+    return {
+        id: dbCategory.id,
+        name: dbCategory.name,
+        description: dbCategory.description || undefined,
+        coverImage: dbCategory.cover_image || undefined,
+        createdAt: dbCategory.created_at || undefined
     };
 }

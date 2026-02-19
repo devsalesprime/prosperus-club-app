@@ -479,12 +479,18 @@
         /* Prevent rubber band scrolling */
         position: fixed;
         width: 100%;
-        height: 100dvh;
+        /* Subtract safe-area-inset-top so body fits below the status bar */
+        height: calc(100dvh - env(safe-area-inset-top, 0px));
         overflow: hidden;
+        /* Move body below the safe area (status bar / notch) */
+        top: env(safe-area-inset-top, 0px);
+        /* Reset general padding-top — we use top instead on iOS */
+        padding-top: 0;
       }
 
       #root {
-        height: 100dvh;
+        /* Fill body's content area — no hardcoded 100dvh */
+        height: 100%;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
       }

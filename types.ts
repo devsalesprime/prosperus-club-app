@@ -71,6 +71,7 @@ export interface Video {
   description: string;
   thumbnail: string;
   category: string;
+  categoryId?: string;  // FK → video_categories
   duration: string;
   progress: number; // 0-100
   videoUrl?: string; // Mock URL for iframe
@@ -97,6 +98,14 @@ export interface VideoSeries {
   description: string;
   thumbnail?: string;
   videos: Video[];
+}
+
+export interface VideoCategory {
+  id: string;
+  name: string;
+  description?: string;
+  coverImage?: string;
+  createdAt?: string;
 }
 
 export type EventCategory = 'PRESENTIAL' | 'ONLINE'; // RECORDED removed - legacy events may still exist in DB
