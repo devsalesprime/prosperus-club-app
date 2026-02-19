@@ -427,12 +427,12 @@
 
     /* Bottom Navigation with Safe Area Bottom */
     .safe-area-bottom {
-      padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;
     }
 
     /* Ensure content doesn't hide behind bottom nav */
     .pb-24 {
-      padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+      padding-bottom: calc(5rem + max(env(safe-area-inset-bottom, 0px), 8px)) !important;
     }
 
     /* Mobile-specific adjustments */
