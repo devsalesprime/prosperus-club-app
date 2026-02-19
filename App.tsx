@@ -117,6 +117,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { HomeCarousel } from './components/HomeCarousel';
 import { bannerService, CarouselItem } from './services/bannerService';
 import { LoginModal } from './components/LoginModal';
+import { UpdatePasswordModal } from './components/UpdatePasswordModal';
 import { RoleSelector } from './components/RoleSelector';
 
 import { supabase } from './lib/supabase';
@@ -124,7 +125,7 @@ import { supabase } from './lib/supabase';
 
 const App = () => {
     // 🔄 Use AuthContext for centralized user data
-    const { userProfile, session: authSession, isLoading: authContextLoading, isAuthenticated, refreshProfile } = useAuth();
+    const { userProfile, session: authSession, isLoading: authContextLoading, isAuthenticated, refreshProfile, isPasswordRecovery } = useAuth();
 
     // Helper: Convert ProfileData to Member format for backward compatibility
     const profileToMember = (profile: ProfileData | null): Member | null => {
@@ -741,6 +742,17 @@ const App = () => {
     // Use AuthContext loading state instead of local authLoading
     if (authContextLoading) {
         return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Carregando...</div>;
+    }
+
+    // Show Update Password modal if recovery flow is active
+    if (isPasswordRecovery) {
+        return (
+            <div className="min-h-screen bg-prosperus-navy flex items-center justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-prosperus-gold/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-prosperus-gold-dark/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                <UpdatePasswordModal />
+            </div>
+        );
     }
 
     // Show login screen if no session

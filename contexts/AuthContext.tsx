@@ -12,8 +12,11 @@ interface AuthContextType {
     userProfile: ProfileData | null;
     isLoading: boolean;
     isAuthenticated: boolean;
+    isPasswordRecovery: boolean;
     refreshProfile: () => Promise<void>;
     logout: () => Promise<void>;
+    resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+    updateUserPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +29,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
     const mountedRef = useRef(true);
     const profileCacheRef = useRef<ProfileData | null>(null);
     const sessionUserIdRef = useRef<string | null>(null);
@@ -105,8 +109,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(null);
             setUserProfile(null);
             profileCacheRef.current = null;
+            setIsPasswordRecovery(false);
         } catch (error) {
             console.error('❌ AuthContext: Error during logout:', error);
+        }
+    };
+
+    // Password reset: send recovery email
+    const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            console.log('🔑 AuthContext: Sending password reset email to:', email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin,
+            });
+
+            if (error) {
+                console.error('❌ AuthContext: Reset password error:', error);
+                if (error.message?.includes('rate limit')) {
+                    return { success: false, error: 'Muitas tentativas. Aguarde alguns minutos.' };
+                }
+                return { success: false, error: 'Erro ao enviar email de recuperação. Tente novamente.' };
+            }
+
+            console.log('✅ AuthContext: Password reset email sent');
+            return { success: true };
+        } catch (err) {
+            console.error('❌ AuthContext: Unexpected reset error:', err);
+            return { success: false, error: 'Erro inesperado. Tente novamente.' };
+        }
+    };
+
+    // Update password (called after clicking email link)
+    const updateUserPassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            console.log('🔑 AuthContext: Updating user password...');
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+            if (error) {
+                console.error('❌ AuthContext: Update password error:', error);
+                if (error.message?.includes('same password')) {
+                    return { success: false, error: 'A nova senha não pode ser igual à anterior.' };
+                }
+                return { success: false, error: 'Erro ao atualizar senha. Tente novamente.' };
+            }
+
+            console.log('✅ AuthContext: Password updated successfully');
+            setIsPasswordRecovery(false);
+            return { success: true };
+        } catch (err) {
+            console.error('❌ AuthContext: Unexpected update error:', err);
+            return { success: false, error: 'Erro inesperado. Tente novamente.' };
         }
     };
 
@@ -184,9 +236,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 } catch (error) {
                     console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
                 }
+            } else if (event === 'PASSWORD_RECOVERY') {
+                console.log('🔑 AuthContext: PASSWORD_RECOVERY event detected');
+                setIsPasswordRecovery(true);
             } else if (event === 'SIGNED_OUT') {
                 setUserProfile(null);
                 profileCacheRef.current = null;
+                setIsPasswordRecovery(false);
             }
         });
 
@@ -203,8 +259,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         userProfile,
         isLoading,
         isAuthenticated: !!session && !!userProfile,
+        isPasswordRecovery,
         refreshProfile,
         logout,
+        resetPassword,
+        updateUserPassword,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

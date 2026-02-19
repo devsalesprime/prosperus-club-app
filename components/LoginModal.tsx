@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { X, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react';
+import { X, AlertCircle, ArrowLeft, CheckCircle, Mail } from 'lucide-react';
 import { dataService } from '../services/mockData';
 import { supabase } from '../lib/supabase';
 import { Button } from './ui/Button';
+import { useAuth } from '../contexts/AuthContext';
 import type { User } from '@supabase/supabase-js';
 
 // Helper function to generate a valid UUID v4
@@ -20,9 +21,10 @@ interface LoginModalProps {
     onLoginSuccess: (user: User, loginMode: 'MEMBER' | 'ADMIN') => void;
 }
 
-type ModalView = 'LOGIN' | 'CHECK_EMAIL' | 'CREATE_PASSWORD';
+type ModalView = 'LOGIN' | 'CHECK_EMAIL' | 'CREATE_PASSWORD' | 'FORGOT_PASSWORD';
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+    const { resetPassword } = useAuth();
     const [view, setView] = useState<ModalView>('LOGIN');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -32,6 +34,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
     const [loginMode, setLoginMode] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
     const [profileData, setProfileData] = useState<{ fullName?: string; jobTitle?: string; company?: string; phone?: string } | null>(null); // Store HubSpot profile data
+    const [resetEmailSent, setResetEmailSent] = useState(false);
 
     // Hardcoded Admin Email (as per requirements)
     const ADMIN_EMAIL = 'admin@salesprime.com.br';
@@ -234,10 +237,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 <div className="text-center mb-8">
                     <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus Logo" className="h-12 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-white">
-                        {view === 'LOGIN' ? 'Bem-vindo de volta' : view === 'CHECK_EMAIL' ? 'Primeiro Acesso' : 'Criar Senha'}
+                        {view === 'LOGIN' ? 'Bem-vindo de volta' : view === 'CHECK_EMAIL' ? 'Primeiro Acesso' : view === 'FORGOT_PASSWORD' ? 'Recuperar Senha' : 'Criar Senha'}
                     </h2>
                     <p className="text-slate-400 text-sm">
-                        {view === 'LOGIN' ? 'Escolha como deseja acessar' : view === 'CHECK_EMAIL' ? 'Vamos verificar seu cadastro de sócio' : 'Defina uma senha segura para seu acesso'}
+                        {view === 'LOGIN' ? 'Escolha como deseja acessar' : view === 'CHECK_EMAIL' ? 'Vamos verificar seu cadastro de sócio' : view === 'FORGOT_PASSWORD' ? 'Digite o e-mail cadastrado para receber um link de recuperação' : 'Defina uma senha segura para seu acesso'}
                     </p>
                 </div>
 
@@ -328,7 +331,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                             <Button variant="ghost" size="sm" onClick={() => { setLoginMode(null); resetState(); }} className="text-xs text-yellow-500 hover:text-yellow-400">
                                 ← Voltar
                             </Button>
-                            <Button variant="ghost" size="sm" className="text-xs">Esqueceu sua senha?</Button>
+                            <Button variant="ghost" size="sm" onClick={() => { setView('FORGOT_PASSWORD'); resetState(); setResetEmailSent(false); }} className="text-xs text-yellow-500/70 hover:text-yellow-400">Esqueceu sua senha?</Button>
                         </div>
                     </form>
                 )}
@@ -359,6 +362,59 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         </Button>
 
                         <Button variant="ghost" size="md" onClick={() => { setView('LOGIN'); resetState(); }} className="w-full mt-2">
+                            <ArrowLeft size={16} /> Voltar para Login
+                        </Button>
+                    </form>
+                )}
+
+                {/* VIEW 4: FORGOT PASSWORD */}
+                {view === 'FORGOT_PASSWORD' && (
+                    <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        setLoading(true);
+                        resetState();
+                        const result = await resetPassword(email);
+                        setLoading(false);
+                        if (result.success) {
+                            setResetEmailSent(true);
+                            setSuccessMsg('Link enviado! Verifique sua caixa de entrada e spam.');
+                        } else {
+                            setError(result.error || 'Erro ao enviar email.');
+                        }
+                    }} className="space-y-4">
+                        {!resetEmailSent ? (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Cadastrado</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
+                                        placeholder="seu@email.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                    />
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    size="lg"
+                                    isLoading={loading}
+                                    className="w-full rounded-xl py-3.5"
+                                >
+                                    {loading ? 'Enviando...' : 'Enviar link de recuperação'}
+                                </Button>
+                            </>
+                        ) : (
+                            <div className="text-center py-4">
+                                <Mail size={40} className="mx-auto text-yellow-500 mb-3" />
+                                <p className="text-slate-300 text-sm">Verifique o email <span className="font-bold text-white">{email}</span></p>
+                                <p className="text-slate-500 text-xs mt-2">Não recebeu? Cheque a pasta de spam ou tente novamente.</p>
+                            </div>
+                        )}
+
+                        <Button variant="ghost" size="md" onClick={() => { setView('LOGIN'); resetState(); setResetEmailSent(false); }} className="w-full mt-2">
                             <ArrowLeft size={16} /> Voltar para Login
                         </Button>
                     </form>
