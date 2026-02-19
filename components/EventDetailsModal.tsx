@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useSwipeDismiss } from '../hooks/useSwipeDismiss';
 import {
     X,
     Clock,
@@ -87,6 +88,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     const [rsvpLoading, setRsvpLoading] = useState(false);
     const [rsvpToast, setRsvpToast] = useState<string | null>(null);
     const [confirmedCount, setConfirmedCount] = useState(0);
+
+    // ── Swipe-down dismiss gesture ──
+    const { offsetY, backdropOpacity, isDragging, bind: swipeBind, transition: swipeTransition } = useSwipeDismiss({
+        onDismiss: onClose,
+    });
 
     // ── Fetch RSVP status on mount ──
     useEffect(() => {
@@ -199,7 +205,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
             onClick={(e) => e.target === e.currentTarget && onClose()}
             style={{
                 animation: 'fadeIn 200ms ease-out',
@@ -207,9 +213,29 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 paddingBottom: 'env(safe-area-inset-bottom, 0)',
             }}
         >
+            {/* Backdrop — fades with drag */}
+            <div
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                style={{ opacity: backdropOpacity }}
+                onClick={onClose}
+            />
+
             <div className="bg-slate-900 border border-slate-700 w-[90%] md:w-full md:max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90dvh]"
-                style={{ animation: 'scaleIn 250ms ease-out' }}
+                style={{
+                    animation: offsetY === 0 && !isDragging ? 'scaleIn 250ms ease-out' : 'none',
+                    transform: `translateY(${offsetY}px)`,
+                    transition: swipeTransition,
+                    willChange: isDragging ? 'transform' : 'auto',
+                }}
             >
+                {/* Drag handle — swipe down to close */}
+                <div
+                    {...swipeBind()}
+                    className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex justify-center cursor-grab active:cursor-grabbing p-2"
+                    style={{ touchAction: 'none' }}
+                >
+                    <div className="w-10 h-1 bg-white/30 rounded-full" />
+                </div>
                 {/* Banner */}
                 <div className="h-32 bg-gradient-to-r from-yellow-600 to-yellow-800 relative rounded-t-2xl overflow-hidden shrink-0">
                     {event.bannerUrl && (

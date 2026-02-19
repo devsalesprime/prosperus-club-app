@@ -2,11 +2,13 @@
 // HOME CAROUSEL - Hybrid Banner + Member Suggestions
 // ============================================
 // Carrossel da Home que exibe banners promocionais e cards de sugestão de sócios
+// ✨ v2: Touch swipe support via @use-gesture/react
 
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles, Users, ExternalLink, Eye } from 'lucide-react';
 import { CarouselItem, MemberSuggestionData, Banner } from '../services/bannerService';
 import { Avatar } from './ui/Avatar';
+import { useSwipeCarousel } from '../hooks/useSwipeCarousel';
 
 interface HomeCarouselProps {
     items: CarouselItem[];
@@ -19,67 +21,101 @@ export const HomeCarousel: React.FC<HomeCarouselProps> = ({
     onViewProfile,
     onBannerClick
 }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
-    // Auto-rotate
+    const { index, setIndex, dragOffset, isDragging, bind, transition } = useSwipeCarousel({
+        total: items.length,
+        enabled: items.length > 1,
+    });
+
+    // Auto-rotate (paused during drag or hover)
     useEffect(() => {
-        if (items.length <= 1 || isPaused) return;
+        if (items.length <= 1 || isPaused || isDragging) return;
 
         const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % items.length);
-        }, 6000); // 6 seconds for better readability
+            setIndex((index + 1) % items.length);
+        }, 6000);
 
         return () => clearInterval(interval);
-    }, [items.length, isPaused]);
+    }, [items.length, isPaused, isDragging, index, setIndex]);
 
     if (items.length === 0) return null;
 
-    const currentItem = items[currentIndex];
+    const currentItem = items[index];
 
-    const handleNext = () => setCurrentIndex((prev) => (prev + 1) % items.length);
-    const handlePrev = () => setCurrentIndex((prev) => (prev === 0 ? items.length - 1 : prev - 1));
+    const handleNext = () => setIndex((index + 1) % items.length);
+    const handlePrev = () => setIndex(index === 0 ? items.length - 1 : index - 1);
 
     return (
         <div
-            className="relative w-full aspect-[21/9] md:aspect-[3/1] min-h-[200px] rounded-2xl overflow-hidden group shadow-2xl mb-6"
+            {...bind()}
+            className="relative w-full aspect-[21/9] md:aspect-[3/1] min-h-[200px] rounded-2xl overflow-hidden group shadow-2xl mb-6 select-none"
+            style={{ touchAction: 'pan-y' }}
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
-            {/* Render based on item type */}
-            {currentItem.type === 'PROMO' ? (
-                <BannerSlide
-                    banner={currentItem.data}
-                    onClick={() => onBannerClick?.(currentItem.data)}
-                />
-            ) : (
-                <MemberSuggestionSlide
-                    member={currentItem.data}
-                    reason={currentItem.reason}
-                    onViewProfile={() => onViewProfile?.(currentItem.data.id)}
-                />
-            )}
+            {/* Slides container with drag offset */}
+            <div
+                className="absolute inset-0"
+                style={{
+                    transform: `translate3d(${dragOffset}px, 0, 0)`,
+                    transition,
+                    willChange: isDragging ? 'transform' : 'auto',
+                }}
+            >
+                {/* Render based on item type */}
+                {currentItem.type === 'PROMO' ? (
+                    <BannerSlide
+                        banner={currentItem.data}
+                        onClick={() => onBannerClick?.(currentItem.data)}
+                    />
+                ) : (
+                    <MemberSuggestionSlide
+                        member={currentItem.data}
+                        reason={currentItem.reason}
+                        onViewProfile={() => onViewProfile?.(currentItem.data.id)}
+                    />
+                )}
+            </div>
 
-            {/* Navigation Arrows */}
+            {/* Navigation Arrows (accessibility fallback) */}
             {items.length > 1 && (
                 <>
                     <button
                         onClick={handlePrev}
                         className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white backdrop-blur-sm transition-all z-10 shadow-lg"
+                        aria-label="Slide anterior"
                     >
                         <ChevronLeft size={24} />
                     </button>
                     <button
                         onClick={handleNext}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full bg-black/40 text-white/80 hover:bg-black/60 hover:text-white backdrop-blur-sm transition-all z-10 shadow-lg"
+                        aria-label="Próximo slide"
                     >
                         <ChevronRight size={24} />
                     </button>
 
-                    {/* Slide Counter (minimal) */}
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                        {items.map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setIndex(i)}
+                                className={`rounded-full transition-all duration-300 ${i === index
+                                        ? 'w-6 h-2 bg-yellow-500'
+                                        : 'w-2 h-2 bg-white/40 hover:bg-white/60'
+                                    }`}
+                                aria-label={`Ir para slide ${i + 1}`}
+                                style={{ minHeight: 'auto', minWidth: 'auto' }}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Slide Counter */}
                     <div className="absolute bottom-3 right-3 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full z-10">
                         <span className="text-xs text-white/80 font-medium">
-                            {currentIndex + 1} / {items.length}
+                            {index + 1} / {items.length}
                         </span>
                     </div>
                 </>

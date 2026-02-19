@@ -41,6 +41,7 @@ import { ROIDashboardWidget } from './business/ROIDashboardWidget';
 import { TopRankingPreview } from './business/TopRankingPreview';
 import { EventCard } from './EventCard';
 import { EventDetailsModal } from './EventDetailsModal';
+import { PullToRefresh } from './ui/PullToRefresh';
 
 interface DashboardHomeProps {
     currentUser: Member | null;
@@ -53,6 +54,7 @@ interface DashboardHomeProps {
     memberToProfileData: (member: Member) => ProfileData;
     onSelectArticle?: (article: SearchArticle) => void;
     onNavigateToBenefits?: () => void; // Custom callback for benefits filter
+    onRefresh?: () => Promise<void>; // Pull-to-refresh callback
 }
 
 // Quick Access Card Component
@@ -402,7 +404,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     onEditProfile,
     memberToProfileData,
     onSelectArticle,
-    onNavigateToBenefits
+    onNavigateToBenefits,
+    onRefresh
 }) => {
     const [hasNews, setHasNews] = useState(false);
     const [nextEvent, setNextEvent] = useState<ClubEvent | null>(null);
@@ -517,100 +520,102 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in pb-10 max-w-7xl mx-auto">
-            {/* 1. Saudação */}
-            {currentUser && (
-                <div>
-                    <p className="text-slate-400 text-sm">Olá,</p>
-                    <h1 className="text-2xl font-bold text-white">
-                        {getFirstName()}
-                    </h1>
-                </div>
-            )}
+        <PullToRefresh onRefresh={onRefresh || (async () => { window.location.reload(); })}>
+            <div className="space-y-8 animate-in fade-in pb-10 max-w-7xl mx-auto">
+                {/* 1. Saudação */}
+                {currentUser && (
+                    <div>
+                        <p className="text-slate-400 text-sm">Olá,</p>
+                        <h1 className="text-2xl font-bold text-white">
+                            {getFirstName()}
+                        </h1>
+                    </div>
+                )}
 
-            {/* 2. Banners - Carrossel Híbrido */}
-            <HomeCarousel
-                items={carouselItems}
-                onViewProfile={onViewProfile}
-                onBannerClick={onBannerClick}
-            />
-
-            {/* 3. Busca Global */}
-            <GlobalSearchBar
-                onSelectMember={onViewProfile}
-                onSelectEvent={() => setView(ViewState.AGENDA)}
-                onSelectArticle={onSelectArticle}
-                setView={setView}
-            />
-
-            {/* 4. ROI Widget - Business Value Showcase */}
-            {currentUser && (
-                <ROIDashboardWidget
-                    onRegisterDeal={() => setView(ViewState.DEALS)}
-                    onNavigateToDeals={() => setView(ViewState.DEALS)}
+                {/* 2. Banners - Carrossel Híbrido */}
+                <HomeCarousel
+                    items={carouselItems}
+                    onViewProfile={onViewProfile}
+                    onBannerClick={onBannerClick}
                 />
-            )}
 
-            {/* 5. Ranking Preview */}
-            <TopRankingPreview
-                onViewFullRankings={() => setView(ViewState.RANKINGS)}
-            />
+                {/* 3. Busca Global */}
+                <GlobalSearchBar
+                    onSelectMember={onViewProfile}
+                    onSelectEvent={() => setView(ViewState.AGENDA)}
+                    onSelectArticle={onSelectArticle}
+                    setView={setView}
+                />
 
-            {/* 6. Próximo Evento */}
-            <div>
-                <SectionTitle>🎯 Próximo Encontro</SectionTitle>
-                {nextEvent ? (
-                    <EventCard
-                        event={nextEvent}
-                        variant="HERO"
-                        onClick={() => setSelectedEvent(nextEvent)}
-                        onViewAgenda={() => setView(ViewState.AGENDA)}
+                {/* 4. ROI Widget - Business Value Showcase */}
+                {currentUser && (
+                    <ROIDashboardWidget
+                        onRegisterDeal={() => setView(ViewState.DEALS)}
+                        onNavigateToDeals={() => setView(ViewState.DEALS)}
                     />
-                ) : (
-                    <NextEventEmptyState />
+                )}
+
+                {/* 5. Ranking Preview */}
+                <TopRankingPreview
+                    onViewFullRankings={() => setView(ViewState.RANKINGS)}
+                />
+
+                {/* 6. Próximo Evento */}
+                <div>
+                    <SectionTitle>🎯 Próximo Encontro</SectionTitle>
+                    {nextEvent ? (
+                        <EventCard
+                            event={nextEvent}
+                            variant="HERO"
+                            onClick={() => setSelectedEvent(nextEvent)}
+                            onViewAgenda={() => setView(ViewState.AGENDA)}
+                        />
+                    ) : (
+                        <NextEventEmptyState />
+                    )}
+                </div>
+
+                {/* 7. Acesso Rápido */}
+                <div>
+                    <SectionTitle>⚡ Acesso Rápido</SectionTitle>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                        {quickAccessItems.map(item => (
+                            <QuickAccessCard
+                                key={item.id}
+                                icon={item.icon}
+                                label={item.label}
+                                color={item.color}
+                                onClick={() => {
+                                    // Special handling for benefits - use custom callback if provided
+                                    if (item.id === 'benefits' && onNavigateToBenefits) {
+                                        onNavigateToBenefits();
+                                    } else {
+                                        setView(item.view);
+                                    }
+                                }}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* 8. Onboarding Banner (final, apenas para novos usuários) */}
+                {currentUser && (
+                    <OnboardingBanner
+                        currentUser={memberToProfileData(currentUser)}
+                        onEditProfile={onEditProfile}
+                    />
+                )}
+
+                {/* EVENT DETAILS MODAL - Full Featured with RSVP */}
+                {selectedEvent && (
+                    <EventDetailsModal
+                        event={selectedEvent}
+                        onClose={() => setSelectedEvent(null)}
+                        userId={currentUser?.id}
+                    />
                 )}
             </div>
-
-            {/* 7. Acesso Rápido */}
-            <div>
-                <SectionTitle>⚡ Acesso Rápido</SectionTitle>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                    {quickAccessItems.map(item => (
-                        <QuickAccessCard
-                            key={item.id}
-                            icon={item.icon}
-                            label={item.label}
-                            color={item.color}
-                            onClick={() => {
-                                // Special handling for benefits - use custom callback if provided
-                                if (item.id === 'benefits' && onNavigateToBenefits) {
-                                    onNavigateToBenefits();
-                                } else {
-                                    setView(item.view);
-                                }
-                            }}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* 8. Onboarding Banner (final, apenas para novos usuários) */}
-            {currentUser && (
-                <OnboardingBanner
-                    currentUser={memberToProfileData(currentUser)}
-                    onEditProfile={onEditProfile}
-                />
-            )}
-
-            {/* EVENT DETAILS MODAL - Full Featured with RSVP */}
-            {selectedEvent && (
-                <EventDetailsModal
-                    event={selectedEvent}
-                    onClose={() => setSelectedEvent(null)}
-                    userId={currentUser?.id}
-                />
-            )}
-        </div>
+        </PullToRefresh>
     );
 };
 
