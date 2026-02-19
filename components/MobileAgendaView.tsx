@@ -77,14 +77,14 @@ export const MobileAgendaView: React.FC<MobileAgendaViewProps> = ({ events, onSe
     }
 
     return (
-        <div className="mobile-agenda-view bg-slate-950 min-h-screen">
+        <div className="mobile-agenda-view bg-slate-950 min-h-screen relative overflow-y-auto">
             {/* Timeline */}
-            <div className="timeline-container">
+            <div className="timeline-container relative">
                 {groupedEvents.map((group, groupIndex) => (
                     <div key={group.date} className="date-group">
-                        {/* Sticky Date Header */}
-                        <div className="sticky top-[60px] bg-slate-800 z-10 px-4 py-3 border-b border-slate-700 flex items-center gap-3">
-                            <div className="flex flex-col items-center justify-center bg-slate-900 rounded-lg p-2 min-w-[60px]">
+                        {/* Sticky Date Header — opaque bg + elevated z for scroll-under */}
+                        <div className="sticky top-[60px] bg-slate-900 z-20 px-4 py-3 border-b border-slate-700/50 flex items-center gap-3 shadow-lg shadow-black/30">
+                            <div className="flex flex-col items-center justify-center bg-slate-800 rounded-lg p-2 min-w-[60px]">
                                 <div className="text-3xl font-bold text-yellow-500 leading-none">
                                     {group.dayNumber}
                                 </div>

@@ -1049,7 +1049,7 @@ const App = () => {
                         )}
 
                         {view === ViewState.AGENDA && (
-                            <div className="h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in">
+                            <div className="h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-hidden">
                                 {/* Filter and Legend Bar */}
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
                                     {/* Legend - Only ONLINE and PRESENTIAL */}
@@ -1133,10 +1133,14 @@ const App = () => {
                                                 onSelectEvent={(event) => setSelectedEvent(event)}
                                             />
                                         ) : (
-                                            <div className="mobile-calendar-month px-2">
+                                            <div className="mobile-calendar-month px-2 overflow-hidden">
                                                 <style>{`
                                                 .mobile-calendar-month .rbc-header {
                                                     font-size: 0.8rem;
+                                                }
+                                                .mobile-calendar-month .rbc-month-view {
+                                                    max-width: 100%;
+                                                    overflow: hidden;
                                                 }
                                             `}</style>
                                                 <Calendar
@@ -1218,110 +1222,112 @@ const App = () => {
                                         )}
                                     </>
                                 ) : (
-                                    <Calendar
-                                        localizer={localizer}
-                                        culture="pt-BR"
-                                        events={dataService.getClubEventsForUser(userProfile?.id || '')}
-                                        startAccessor={(event: Event) => {
-                                            // Ensure proper Date object with local time
-                                            const date = new Date(event.date);
-                                            return isNaN(date.getTime()) ? new Date() : date;
-                                        }}
-                                        endAccessor={(event: Event) => {
-                                            // Ensure proper Date object with local time
-                                            if (event.endDate) {
-                                                const endDate = new Date(event.endDate);
-                                                return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
-                                            }
-                                            // Default to 1 hour duration
-                                            return new Date(new Date(event.date).getTime() + 3600000);
-                                        }}
-                                        defaultView={calendarDefaultView}
-                                        style={{ height: 'calc(100% - 80px)' }}
-                                        messages={{
-                                            next: "Próximo",
-                                            previous: "Anterior",
-                                            today: "Hoje",
-                                            month: "Mês",
-                                            week: "Semana",
-                                            day: "Dia",
-                                            agenda: "Lista",
-                                            date: "Data",
-                                            time: "Hora",
-                                            event: "Evento",
-                                            noEventsInRange: "Não há eventos neste período.",
-                                            showMore: (total) => `+ ${total} mais`
-                                        }}
-                                        views={{ agenda: true, day: true, week: true, month: true }}
-                                        onSelectEvent={(event) => setSelectedEvent(event)}
-                                        eventPropGetter={(event) => {
-                                            // Only ONLINE (green) and PRESENTIAL (purple)
-                                            let backgroundColor = '#10b981'; // Default: ONLINE (Verde)
-                                            let borderColor = '#059669';
-
-                                            if (event.category === 'PRESENTIAL') {
-                                                backgroundColor = '#9333ea'; // Roxo
-                                                borderColor = '#7c3aed';
-                                            }
-
-                                            return {
-                                                style: {
-                                                    backgroundColor,
-                                                    borderColor,
-                                                    color: 'white',
-                                                    borderWidth: '1px',
-                                                    borderStyle: 'solid',
-                                                    fontWeight: '600'
+                                    <div className="h-full w-full overflow-hidden rounded-xl">
+                                        <Calendar
+                                            localizer={localizer}
+                                            culture="pt-BR"
+                                            events={dataService.getClubEventsForUser(userProfile?.id || '')}
+                                            startAccessor={(event: Event) => {
+                                                // Ensure proper Date object with local time
+                                                const date = new Date(event.date);
+                                                return isNaN(date.getTime()) ? new Date() : date;
+                                            }}
+                                            endAccessor={(event: Event) => {
+                                                // Ensure proper Date object with local time
+                                                if (event.endDate) {
+                                                    const endDate = new Date(event.endDate);
+                                                    return isNaN(endDate.getTime()) ? new Date(new Date(event.date).getTime() + 3600000) : endDate;
                                                 }
-                                            };
-                                        }}
-                                        components={{
-                                            toolbar: (props) => (
-                                                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 p-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => props.onNavigate(Navigate.PREVIOUS)}
-                                                            className="p-2 hover:bg-slate-800 transition-colors"
-                                                            title="Anterior"
-                                                        >
-                                                            <ChevronLeft size={20} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => props.onNavigate(Navigate.TODAY)}
-                                                            className="px-3 py-1 text-sm font-bold text-yellow-500 hover:text-yellow-400 transition-colors"
-                                                        >
-                                                            Hoje
-                                                        </button>
-                                                        <span className="text-lg font-bold text-white capitalize min-w-[200px] text-center">
-                                                            {props.label}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => props.onNavigate(Navigate.NEXT)}
-                                                            className="p-2 hover:bg-slate-800 transition-colors"
-                                                            title="Próximo"
-                                                        >
-                                                            <ChevronRight size={20} />
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex bg-slate-800 p-1 gap-1">
-                                                        {/* ORDER: Lista (Agenda) -> Dia -> Semana -> Mês */}
-                                                        {['agenda', 'day', 'week', 'month'].map(v => (
+                                                // Default to 1 hour duration
+                                                return new Date(new Date(event.date).getTime() + 3600000);
+                                            }}
+                                            defaultView={calendarDefaultView}
+                                            style={{ height: 'calc(100% - 80px)' }}
+                                            messages={{
+                                                next: "Próximo",
+                                                previous: "Anterior",
+                                                today: "Hoje",
+                                                month: "Mês",
+                                                week: "Semana",
+                                                day: "Dia",
+                                                agenda: "Lista",
+                                                date: "Data",
+                                                time: "Hora",
+                                                event: "Evento",
+                                                noEventsInRange: "Não há eventos neste período.",
+                                                showMore: (total) => `+ ${total} mais`
+                                            }}
+                                            views={{ agenda: true, day: true, week: true, month: true }}
+                                            onSelectEvent={(event) => setSelectedEvent(event)}
+                                            eventPropGetter={(event) => {
+                                                // Only ONLINE (green) and PRESENTIAL (purple)
+                                                let backgroundColor = '#10b981'; // Default: ONLINE (Verde)
+                                                let borderColor = '#059669';
+
+                                                if (event.category === 'PRESENTIAL') {
+                                                    backgroundColor = '#9333ea'; // Roxo
+                                                    borderColor = '#7c3aed';
+                                                }
+
+                                                return {
+                                                    style: {
+                                                        backgroundColor,
+                                                        borderColor,
+                                                        color: 'white',
+                                                        borderWidth: '1px',
+                                                        borderStyle: 'solid',
+                                                        fontWeight: '600'
+                                                    }
+                                                };
+                                            }}
+                                            components={{
+                                                toolbar: (props) => (
+                                                    <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 p-2">
+                                                        <div className="flex items-center gap-2">
                                                             <button
-                                                                key={v}
-                                                                onClick={() => props.onView(v as any)}
-                                                                className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v
-                                                                    ? 'bg-yellow-600 text-white shadow-lg'
-                                                                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
-                                                                    }`}
+                                                                onClick={() => props.onNavigate(Navigate.PREVIOUS)}
+                                                                className="p-2 hover:bg-slate-800 transition-colors"
+                                                                title="Anterior"
                                                             >
-                                                                {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
+                                                                <ChevronLeft size={20} />
                                                             </button>
-                                                        ))}
+                                                            <button
+                                                                onClick={() => props.onNavigate(Navigate.TODAY)}
+                                                                className="px-3 py-1 text-sm font-bold text-yellow-500 hover:text-yellow-400 transition-colors"
+                                                            >
+                                                                Hoje
+                                                            </button>
+                                                            <span className="text-lg font-bold text-white capitalize min-w-[200px] text-center">
+                                                                {props.label}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => props.onNavigate(Navigate.NEXT)}
+                                                                className="p-2 hover:bg-slate-800 transition-colors"
+                                                                title="Próximo"
+                                                            >
+                                                                <ChevronRight size={20} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex bg-slate-800 p-1 gap-1">
+                                                            {/* ORDER: Lista (Agenda) -> Dia -> Semana -> Mês */}
+                                                            {['agenda', 'day', 'week', 'month'].map(v => (
+                                                                <button
+                                                                    key={v}
+                                                                    onClick={() => props.onView(v as any)}
+                                                                    className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v
+                                                                        ? 'bg-yellow-600 text-white shadow-lg'
+                                                                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                                                                        }`}
+                                                                >
+                                                                    {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )
-                                        }}
-                                    />
+                                                )
+                                            }}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         )}
