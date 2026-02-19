@@ -36,52 +36,50 @@ export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }
         <div className="w-full min-h-[calc(100vh-140px)] md:min-h-0 md:h-full flex flex-col">
             {/* Header with Banner or Simple Header */}
             {album.coverImage ? (
-                <div className="relative h-64 md:h-80 overflow-hidden border-b border-slate-800">
+                <div className="relative overflow-hidden border-b border-slate-800">
+                    {/* Back Button — sticky, always visible above banner */}
+                    <div className="sticky top-0 z-30 bg-gradient-to-b from-slate-900/90 to-transparent p-4">
+                        <button
+                            onClick={onBack}
+                            className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700 shadow-lg"
+                        >
+                            <ArrowLeft size={20} />
+                            <span className="font-medium">Voltar</span>
+                        </button>
+                    </div>
+
                     {/* Cover Image */}
-                    <img
-                        src={album.coverImage}
-                        alt={album.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            // Fallback to simple header if image fails
-                            e.currentTarget.style.display = 'none';
-                        }}
-                    />
+                    <div className="relative h-48 md:h-64 -mt-16">
+                        <img
+                            src={album.coverImage}
+                            alt={album.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
+                        />
+                        {/* Dark Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
 
-                    {/* Dark Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
-
-                    {/* Back Button (Top Left) — safe area aware for iOS */}
-                    <button
-                        onClick={onBack}
-                        className="fixed left-4 z-30 flex items-center gap-2 bg-slate-900/80 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2 rounded-lg border border-slate-700 shadow-lg"
-                        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
-                    >
-                        <ArrowLeft size={20} />
-                        <span className="font-medium">Voltar</span>
-                    </button>
-
-                    {/* Title and Date (Bottom) */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{album.title}</h2>
-                        {album.description && (
-                            <p className="text-slate-300 text-sm md:text-base mb-3 max-w-3xl">{album.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-slate-400">
-                            <Calendar size={16} />
-                            <span>{new Date(album.createdAt).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric'
-                            })}</span>
+                        {/* Title and Date (Bottom) */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+                            <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{album.title}</h2>
+                            {album.description && (
+                                <p className="text-slate-300 text-sm md:text-base mb-3 max-w-3xl">{album.description}</p>
+                            )}
+                            <div className="flex items-center gap-2 text-sm text-slate-400">
+                                <Calendar size={16} />
+                                <span>{new Date(album.createdAt).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric'
+                                })}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             ) : (
-                <div
-                    className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4"
-                    style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
-                >
+                <div className="sticky top-0 z-20 bg-slate-900 border-b border-slate-800 p-4 flex items-center gap-4">
                     <button
                         onClick={onBack}
                         className="flex items-center gap-2 text-slate-400 hover:text-white transition"
