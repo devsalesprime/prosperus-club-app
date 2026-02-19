@@ -880,7 +880,7 @@ const App = () => {
     ];
 
     return (
-        <div className="bg-prosperus-navy min-h-screen text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden">
+        <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden">
             {/* Offline Status Banner */}
             <OfflineBanner />
             <InstallPrompt />
@@ -995,7 +995,7 @@ const App = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden overflow-x-hidden bg-prosperus-navy">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy">
                 {/* Mobile Header */}
                 <div className="md:hidden flex-none z-50 flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light mobile-header">
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
