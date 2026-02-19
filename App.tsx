@@ -1093,7 +1093,7 @@ const App = () => {
                                 {isMobile ? (
                                     <>
                                         {/* Mobile Header with View Toggle */}
-                                        <div className="sticky top-0 bg-slate-900 z-20 px-4 py-3 border-b border-slate-800 mb-4">
+                                        <div className="sticky top-0 bg-slate-900 z-30 px-4 py-3 border-b border-slate-800 mb-4">
                                             <div className="flex items-center justify-between">
                                                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                                     <CalendarIcon size={20} className="text-yellow-500" />

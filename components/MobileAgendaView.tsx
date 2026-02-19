@@ -77,9 +77,9 @@ export const MobileAgendaView: React.FC<MobileAgendaViewProps> = ({ events, onSe
     }
 
     return (
-        <div className="mobile-agenda-view bg-slate-950 min-h-screen relative overflow-y-auto">
+        <div className="mobile-agenda-view bg-slate-950 min-h-screen">
             {/* Timeline */}
-            <div className="timeline-container relative">
+            <div className="timeline-container">
                 {groupedEvents.map((group, groupIndex) => (
                     <div key={group.date} className="date-group">
                         {/* Sticky Date Header — opaque bg + elevated z for scroll-under */}
