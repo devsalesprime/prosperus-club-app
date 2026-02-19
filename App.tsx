@@ -1051,7 +1051,7 @@ const App = () => {
                         )}
 
                         {view === ViewState.AGENDA && (
-                            <div className="h-[calc(100vh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-hidden">
+                            <div className="h-[calc(100dvh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-y-auto overflow-x-hidden">
                                 {/* Filter and Legend Bar */}
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
                                     {/* Legend - Only ONLINE and PRESENTIAL */}
