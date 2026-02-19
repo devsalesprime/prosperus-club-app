@@ -34,11 +34,14 @@ const NO_CACHE_DOMAINS = [
     'googletagmanager.com'
 ];
 
-// Domínios de API com cache Network-First (dados para offline)
+// Domínios de API — Supabase REST queries always bypass cache for fresh data
 const API_CACHE_DOMAINS = [
     'supabase.co',
     'supabase.io'
 ];
+
+// Supabase Storage paths that CAN be cached (images, files — not data)
+const CACHEABLE_STORAGE_PATHS = ['/storage/v1/'];
 
 // Max API cache entries to prevent storage bloat
 const MAX_API_CACHE_ENTRIES = 100;
@@ -114,14 +117,16 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
-    // API requests: Network-First with cache fallback
+    // Supabase requests: split between data (no cache) and storage (cache)
     if (isApiRequest(url)) {
-        // Only cache read requests (SELECT queries, not mutations)
-        if (!url.pathname.includes('/auth/') && !url.pathname.includes('/realtime/')) {
-            event.respondWith(networkFirst(request));
+        // Supabase Storage (images, files) — Stale-While-Revalidate
+        if (CACHEABLE_STORAGE_PATHS.some(p => url.pathname.includes(p))) {
+            event.respondWith(staleWhileRevalidate(request));
             return;
         }
-        return; // Auth and realtime requests are never cached
+        // ALL other Supabase requests (REST API, auth, realtime) — NEVER cache
+        // This ensures events/agenda data is always fresh from the database
+        return;
     }
     
     // Navigation requests (HTML): Network-First to always get latest
