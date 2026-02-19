@@ -159,9 +159,10 @@
       -moz-osx-font-smoothing: grayscale;
       /* Prevent overscroll bounce on iOS */
       overscroll-behavior: none;
-      /* Safe area: top is handled by .mobile-header, bottom by .safe-area-bottom */
-      padding-left: var(--safe-area-inset-left);
-      padding-right: var(--safe-area-inset-right);
+      /* Safe area: top protects status bar on iPhone */
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
     }
 
     /* NOTE: Do NOT add overflow:hidden to html/body — it blocks scroll inside inner containers on Android */
@@ -421,20 +422,17 @@
       min-width: unset !important;
     }
 
-    /* Mobile Header with Safe Area Top */
-    .mobile-header {
-      padding-top: calc(1rem + var(--safe-area-inset-top));
-    }
+    /* Mobile Header — body already handles safe-area-inset-top */
+    /* .mobile-header is kept for semantic clarity only, no extra padding needed */
 
     /* Bottom Navigation with Safe Area Bottom */
     .safe-area-bottom {
-      padding-bottom: calc(1rem + var(--safe-area-inset-bottom)) !important;
-      height: calc(64px + var(--safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom, 0px) !important;
     }
 
     /* Ensure content doesn't hide behind bottom nav */
     .pb-24 {
-      padding-bottom: calc(6rem + var(--safe-area-inset-bottom)) !important;
+      padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
     }
 
     /* Mobile-specific adjustments */
