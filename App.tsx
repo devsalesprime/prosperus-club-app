@@ -891,7 +891,7 @@ const App = () => {
             <style>{`
                 :root {
                     --header-h: calc(60px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
+                    --nav-h: calc(56px + env(safe-area-inset-bottom, 0px));
                 }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
