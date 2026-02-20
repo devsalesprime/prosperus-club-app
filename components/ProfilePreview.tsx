@@ -178,7 +178,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                 onClose={onClose}
             />
 
-            <ModalBody noPadding>
+            <ModalBody noPadding className="overflow-x-hidden">
                 {/* Banner Hero */}
                 <div className="relative h-32 w-full -mt-4 -mx-4 mb-0" style={{ width: 'calc(100% + 2rem)' }}>
                     <img
@@ -488,12 +488,14 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                     )}
                 </div>
 
-                {/* Footer Note */}
-                <div className="p-4 bg-slate-800/50 border-t border-slate-700 text-center">
-                    <p className="text-xs text-slate-400">
-                        Perfil público visível para outros membros
-                    </p>
-                </div>
+                {/* Footer Note - only for own profile preview */}
+                {isOwnProfile && (
+                    <div className="p-4 bg-slate-800/50 border-t border-slate-700 text-center">
+                        <p className="text-xs text-slate-400">
+                            Perfil público visível para outros membros
+                        </p>
+                    </div>
+                )}
             </ModalBody>
         </ModalWrapper>
     );

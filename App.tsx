@@ -747,7 +747,13 @@ const App = () => {
             bio: member.description || '',
             socials: member.socials || {},
             tags: member.tags || [],
-            has_completed_onboarding: hasRequiredFields
+            has_completed_onboarding: hasRequiredFields,
+            // Fields from Supabase profile (exist at runtime but not in Member TS type)
+            exclusive_benefit: (member as any).exclusive_benefit || member.exclusiveBenefit || undefined,
+            pitch_video_url: (member as any).pitch_video_url || undefined,
+            what_i_sell: (member as any).what_i_sell || undefined,
+            what_i_need: (member as any).what_i_need || undefined,
+            partnership_interests: (member as any).partnership_interests || undefined
         };
     };
 
