@@ -1007,7 +1007,7 @@ const App = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy relative">
                 {/* Mobile Header */}
                 <header
                     className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
@@ -1043,16 +1043,8 @@ const App = () => {
                 </header>
 
                 <main
-                    className="md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
-                    style={{
-                        position: isMobile ? 'absolute' : undefined,
-                        top: isMobile ? '60px' : undefined,
-                        bottom: isMobile ? '64px' : undefined,
-                        left: isMobile ? 0 : undefined,
-                        right: isMobile ? 0 : undefined,
-                        paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined,
-                        WebkitOverflowScrolling: 'touch',
-                    }}
+                    className="absolute top-[60px] bottom-[64px] left-0 right-0 md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
+                    style={{ WebkitOverflowScrolling: 'touch' }}
                 >
                     <Suspense fallback={<LazyFallback />}>
                         {view === ViewState.DASHBOARD && (
