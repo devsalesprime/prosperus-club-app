@@ -384,7 +384,7 @@ class ConversationService {
                 .eq('conversation_id', conversationId)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single();
+                .maybeSingle();
 
             if (msgError && msgError.code !== 'PGRST116') {
                 console.error('Error fetching last message:', msgError);
@@ -512,7 +512,7 @@ class ConversationService {
                         .eq('is_deleted', false)
                         .order('created_at', { ascending: false })
                         .limit(1)
-                        .single();
+                        .maybeSingle();
 
                     if (msgError && msgError.code !== 'PGRST116') {
                         // PGRST116 = no rows returned, which is ok
@@ -563,14 +563,14 @@ class ConversationService {
             if (existingConvs && existingConvs.length > 0) {
                 // Check if any of these conversations include the other user
                 for (const conv of existingConvs) {
-                    const { data: otherUserInConv, error } = await supabase
+                    const { data: otherUserInConv } = await supabase
                         .from('conversation_participants')
                         .select('user_id')
                         .eq('conversation_id', conv.conversation_id)
                         .eq('user_id', otherUserId)
-                        .single();
+                        .maybeSingle();
 
-                    if (!error && otherUserInConv) {
+                    if (otherUserInConv) {
                         // Conversation exists
                         return conv.conversation_id;
                     }
@@ -578,7 +578,6 @@ class ConversationService {
             }
 
             // 2. Create new conversation
-            // Tabela conversations tem defaults para created_at/updated_at
             const { data: newConv, error: createError } = await supabase
                 .from('conversations')
                 .insert({
@@ -591,15 +590,19 @@ class ConversationService {
             if (createError) throw createError;
             if (!newConv) throw new Error('Failed to create conversation');
 
-            // 3. Add both participants
-            const { error: participantsError } = await supabase
+            // 3. Add current user as participant first (passes RLS: auth.uid() = user_id)
+            const { error: selfError } = await supabase
                 .from('conversation_participants')
-                .insert([
-                    { conversation_id: newConv.id, user_id: userId },
-                    { conversation_id: newConv.id, user_id: otherUserId }
-                ]);
+                .insert({ conversation_id: newConv.id, user_id: userId });
 
-            if (participantsError) throw participantsError;
+            if (selfError) throw selfError;
+
+            // 4. Add other user as participant (passes RLS: user is already a participant)
+            const { error: otherError } = await supabase
+                .from('conversation_participants')
+                .insert({ conversation_id: newConv.id, user_id: otherUserId });
+
+            if (otherError) throw otherError;
 
             return newConv.id;
         } catch (error) {
