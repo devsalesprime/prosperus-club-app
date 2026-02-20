@@ -8,6 +8,7 @@ import { Avatar } from '../ui/Avatar';
 
 interface TopRankingPreviewProps {
     onViewFullRankings: () => void;
+    onProfileClick?: (userId: string) => void;
 }
 
 const formatCurrency = (value: number) =>
@@ -31,7 +32,7 @@ const getMedalEmoji = (position: number): string => {
     }
 };
 
-export const TopRankingPreview: React.FC<TopRankingPreviewProps> = ({ onViewFullRankings }) => {
+export const TopRankingPreview: React.FC<TopRankingPreviewProps> = ({ onViewFullRankings, onProfileClick }) => {
     const [topSellers, setTopSellers] = useState<RankingEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(true); // Accordion state - default open for consistency with ROI widget
@@ -125,7 +126,14 @@ export const TopRankingPreview: React.FC<TopRankingPreviewProps> = ({ onViewFull
                         const medalEmoji = getMedalEmoji(position);
 
                         return (
-                            <div key={seller.user_id} className={`podium-card position-${position}`}>
+                            <div
+                                key={seller.user_id}
+                                className={`podium-card position-${position}`}
+                                onClick={() => onProfileClick?.(seller.user_id)}
+                                role={onProfileClick ? 'button' : undefined}
+                                tabIndex={onProfileClick ? 0 : undefined}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && onProfileClick) onProfileClick(seller.user_id); }}
+                            >
                                 <div className="medal-badge">{medalEmoji}</div>
                                 <div className={`avatar-wrapper ${medalColor}`}>
                                     <Avatar
@@ -258,6 +266,7 @@ const styles = `
             text-align: center;
             position: relative;
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
     }
 
             .podium-card:hover {

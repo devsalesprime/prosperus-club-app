@@ -558,6 +558,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 {/* 5. Ranking Preview */}
                 <TopRankingPreview
                     onViewFullRankings={() => setView(ViewState.RANKINGS)}
+                    onProfileClick={onViewProfile}
                 />
 
                 {/* 6. Próximo Evento */}

@@ -28,7 +28,9 @@ import {
     Sparkles,
     Ticket,
     Search,
-    Users
+    Users,
+    Video,
+    PlayCircle
 } from 'lucide-react';
 import { profileService, ProfileData, ProfileUpdateData, ExclusiveBenefit } from '../services/profileService';
 import { ImageUpload } from './ImageUpload';
@@ -59,6 +61,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
         job_title: currentUser.job_title || '',
         image_url: currentUser.image_url || '',
         bio: currentUser.bio || '',
+        pitch_video_url: currentUser.pitch_video_url || '',
         // phone: currentUser.phone || '', // TODO: Uncomment after running migration 011
         socials: {
             linkedin: currentUser.socials?.linkedin || '',
@@ -99,6 +102,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             job_title: currentUser.job_title || '',
             image_url: currentUser.image_url || '',
             bio: currentUser.bio || '',
+            pitch_video_url: currentUser.pitch_video_url || '',
             socials: {
                 linkedin: currentUser.socials?.linkedin || '',
                 instagram: currentUser.socials?.instagram || '',
@@ -545,6 +549,48 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     </div>
 
                     {/* ========================================= */}
+                    {/* VIDEO DE APRESENTAÇÃO SECTION              */}
+                    {/* ========================================= */}
+                    <div className="border border-purple-600/30 rounded-xl p-6 bg-gradient-to-br from-purple-900/10 to-transparent">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-2 bg-purple-600/20 rounded-lg">
+                                <Video className="text-purple-400" size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-white">Vídeo de Apresentação</h3>
+                                <p className="text-xs text-slate-400">Destaque seu perfil com um pitch em vídeo</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs text-slate-400 mb-2">
+                                    <Link2 size={12} className="inline mr-1 text-purple-400" />
+                                    Link do vídeo (YouTube, Vimeo, Google Drive ou Loom)
+                                </label>
+                                <div className="relative">
+                                    <PlayCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                                    <input
+                                        type="url"
+                                        value={formData.pitch_video_url || ''}
+                                        onChange={(e) => handleInputChange('pitch_video_url', e.target.value)}
+                                        placeholder="https://www.youtube.com/watch?v=... ou https://drive.google.com/file/d/..."
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-2 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                                <Sparkles className="text-purple-400 shrink-0 mt-0.5" size={14} />
+                                <p className="text-xs text-slate-400 leading-relaxed">
+                                    <span className="text-purple-400 font-medium">Dica:</span> Grave um vídeo de até 3 minutos se apresentando.
+                                    Suba no <strong className="text-slate-300">YouTube</strong> (não listado) ou <strong className="text-slate-300">Google Drive</strong> (modo público) e cole o link acima.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ========================================= */}
                     {/* STRATEGIC PROFILE SECTION (PRD v2.1)      */}
                     {/* ========================================= */}
                     <div className="border border-emerald-600/30 rounded-xl p-6 bg-gradient-to-br from-emerald-900/10 to-transparent">
@@ -614,8 +660,8 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                                 }
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
-                                                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
-                                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+                                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
                                                 }`}
                                         >
                                             {(formData.partnership_interests || []).includes(sector) && '✓ '}

@@ -348,7 +348,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                     {/* ========================================= */}
                     {/* VIDEO PITCH SECTION */}
                     {/* ========================================= */}
-                    {profile.pitch_video_url ? (() => {
+                    {profile.pitch_video_url && (() => {
                         const { embedUrl, platform } = getVideoEmbedUrl(profile.pitch_video_url);
                         return (
                             <div className="mb-6">
@@ -388,35 +388,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                 )}
                             </div>
                         );
-                    })() : isOwnProfile && (
-                        /* Card de Instrução - apenas para o próprio usuário */
-                        <div className="mb-6">
-                            <h4 className="text-sm font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                                <Video className="text-yellow-500" size={16} />
-                                Vídeo de Apresentação
-                            </h4>
-                            <div className="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center bg-slate-900/50">
-                                <div className="mb-4">
-                                    <div className="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-3">
-                                        <UploadCloud className="text-yellow-500" size={32} />
-                                    </div>
-                                    <h5 className="text-lg font-bold text-white mb-2">Destaque seu Perfil com um Vídeo</h5>
-                                    <p className="text-sm text-slate-400 leading-relaxed max-w-md mx-auto">
-                                        Grave um vídeo de até 3 minutos se apresentando. Suba no <strong className="text-slate-300">Google Drive</strong> (modo público) ou <strong className="text-slate-300">YouTube</strong> (não listado) e envie o link para nossa equipe de suporte.
-                                    </p>
-                                </div>
-                                <a
-                                    href="https://wa.me/5511999999999?text=Olá! Gostaria de enviar o link do meu vídeo de apresentação para o Prosperus Club."
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-5 py-2.5 rounded-lg transition"
-                                >
-                                    <MessageCircle size={18} />
-                                    Enviar Link para o Suporte
-                                </a>
-                            </div>
-                        </div>
-                    )}
+                    })()}
 
                     {/* ========================================= */}
                     {/* EXCLUSIVE BENEFIT SECTION */}
