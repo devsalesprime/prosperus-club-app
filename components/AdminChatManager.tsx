@@ -1,6 +1,7 @@
 // AdminChatManager.tsx
 // Painel de controle de chat para administradores
 // Permite visualizar todas as conversas, moderar e responder como suporte
+// Mobile-first responsive layout: full-width list → full-width chat
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -13,7 +14,8 @@ import {
     Shield,
     X,
     Ban,
-    UserCheck
+    UserCheck,
+    ArrowLeft
 } from 'lucide-react';
 import { adminChatService, ConversationWithParticipants, MessageWithSender } from '../services/adminChatService';
 import { adminUserService } from '../services/adminUserService';
@@ -105,10 +107,8 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 console.log('📩 AdminChatManager: Received message update:', newMessage);
 
                 setMessages(prev => {
-                    // Check if message already exists (UPDATE case)
                     const exists = prev.some(m => m.id === newMessage.id);
 
-                    // Cast to MessageWithSender with default values
                     const messageWithSender: MessageWithSender = {
                         ...newMessage,
                         is_deleted: newMessage.is_deleted || false,
@@ -121,13 +121,11 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                     };
 
                     if (exists) {
-                        // Update existing message (e.g., soft delete)
                         return prev.map(m =>
                             m.id === newMessage.id ? messageWithSender : m
                         );
                     }
 
-                    // New message - add to list
                     return [...prev, messageWithSender];
                 });
             }
@@ -154,7 +152,6 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 currentAdminId,
                 newMessage
             );
-            // Don't manually add message - realtime subscription will handle it
             setNewMessage('');
         } catch (error) {
             console.error('Error sending message:', error);
@@ -169,7 +166,6 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
 
         try {
             await adminChatService.deleteMessage(messageId, currentAdminId);
-            // Reload messages
             if (selectedConversation) {
                 loadMessages(selectedConversation.id);
             }
@@ -204,7 +200,6 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 selectedUserToBlock.isBlocked ? undefined : blockReason
             );
 
-            // Update blocked users list
             if (result.isBlocked) {
                 setBlockedUsers(prev => new Set([...prev, selectedUserToBlock.id]));
             } else {
@@ -265,7 +260,6 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
 
         try {
             const users = await profileService.getFilteredProfiles({ query: userSearchQuery });
-            // Filter out current admin
             setSearchedUsers(users.filter(u => u.id !== currentAdminId));
         } catch (error) {
             console.error('Error searching users:', error);
@@ -279,30 +273,25 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
         try {
             setCreatingConversation(true);
 
-            // Get or create conversation
             const conversationId = await conversationService.getOrCreateConversation(
                 currentAdminId,
                 selectedUser.id
             );
 
-            // Send initial message
             await adminChatService.sendAdminMessage(
                 conversationId,
                 currentAdminId,
                 newConversationMessage.trim()
             );
 
-            // Reload conversations
             await loadConversations();
 
-            // Find and select the new conversation
             const conversations = await adminChatService.getAllConversations(1, 100);
             const newConv = conversations.data.find(c => c.id === conversationId);
             if (newConv) {
                 setSelectedConversation(newConv);
             }
 
-            // Close modal and reset
             setShowNewConversationModal(false);
             setSelectedUser(null);
             setNewConversationMessage('');
@@ -328,22 +317,29 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
         return () => clearTimeout(timer);
     }, [userSearchQuery]);
 
+    // ─── MOBILE: Show chat view when conversation selected, list otherwise ───
+    // On desktop (md+): side-by-side layout
+    // On mobile: toggle between list and chat
+
     return (
-        <div className="flex h-screen bg-prosperus-navy">
-            {/* Left Column - Conversation List */}
-            <div className="w-1/3 border-r border-prosperus-navy-light flex flex-col">
+        <div className="flex h-full bg-prosperus-navy relative">
+            {/* ═══════════ LEFT: Conversation List ═══════════ */}
+            <div className={`
+                ${selectedConversation ? 'hidden md:flex' : 'flex'}
+                w-full md:w-80 lg:w-96 md:border-r border-prosperus-navy-light flex-col flex-shrink-0
+            `}>
                 {/* Header */}
                 <div className="p-4 border-b border-prosperus-navy-light">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-prosperus-gold flex items-center gap-2">
-                            <Shield size={24} />
+                        <h2 className="text-lg font-bold text-prosperus-gold flex items-center gap-2">
+                            <Shield size={20} />
                             Chat Manager
                         </h2>
                         <button
                             onClick={() => setShowNewConversationModal(true)}
                             className="px-3 py-1.5 bg-prosperus-gold text-prosperus-navy rounded-lg font-semibold hover:bg-prosperus-gold/90 transition-colors flex items-center gap-2 text-sm"
                         >
-                            <MessageSquare size={16} />
+                            <MessageSquare size={14} />
                             Nova Conversa
                         </button>
                     </div>
@@ -356,22 +352,22 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            className="w-full px-4 py-2 pl-10 bg-prosperus-navy-light text-white rounded-lg border border-prosperus-grey/20 focus:border-prosperus-gold focus:outline-none"
+                            className="w-full px-4 py-2.5 pl-10 bg-prosperus-navy-light text-white rounded-lg border border-prosperus-grey/20 focus:border-prosperus-gold focus:outline-none text-sm"
                         />
-                        <Search className="absolute left-3 top-2.5 text-prosperus-grey" size={20} />
+                        <Search className="absolute left-3 top-3 text-prosperus-grey" size={18} />
                     </div>
                 </div>
 
                 {/* Conversation List */}
                 <div className="flex-1 overflow-y-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center h-full">
+                        <div className="flex items-center justify-center py-16">
                             <Loader2 className="animate-spin text-prosperus-gold" size={32} />
                         </div>
                     ) : conversations.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-prosperus-grey">
-                            <MessageSquare size={48} className="mb-2" />
-                            <p>Nenhuma conversa encontrada</p>
+                        <div className="flex flex-col items-center justify-center py-16 text-prosperus-grey">
+                            <MessageSquare size={40} className="mb-2" />
+                            <p className="text-sm">Nenhuma conversa encontrada</p>
                         </div>
                     ) : (
                         conversations.map((conv) => (
@@ -386,22 +382,22 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                 <div className="flex items-start gap-3">
                                     <div className="flex-shrink-0">
                                         <div className="w-10 h-10 rounded-full bg-prosperus-gold/20 flex items-center justify-center">
-                                            <MessageSquare size={20} className="text-prosperus-gold" />
+                                            <MessageSquare size={18} className="text-prosperus-gold" />
                                         </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-white truncate">
+                                        <p className="font-semibold text-white truncate text-sm">
                                             {getParticipantNames(conv)}
                                         </p>
-                                        <p className="text-sm text-prosperus-grey truncate">
+                                        <p className="text-xs text-prosperus-grey truncate mt-0.5">
                                             {conv.lastMessage?.content || 'Sem mensagens'}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs text-prosperus-grey">
-                                                {conv.messageCount} mensagens
+                                            <span className="text-xs text-prosperus-grey/70">
+                                                {conv.messageCount} msg
                                             </span>
                                             {conv.lastMessage && (
-                                                <span className="text-xs text-prosperus-grey">
+                                                <span className="text-xs text-prosperus-grey/70">
                                                     • {formatDistanceToNow(new Date(conv.lastMessage.created_at), {
                                                         addSuffix: true,
                                                         locale: ptBR
@@ -417,7 +413,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 </div>
             </div>
 
-            {/* Block User Confirmation Modal */}
+            {/* ═══════════ Block User Modal ═══════════ */}
             {showBlockModal && selectedUserToBlock && (
                 <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-prosperus-navy border border-prosperus-navy-light rounded-xl p-6 max-w-md w-full">
@@ -504,7 +500,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 </div>
             )}
 
-            {/* New Conversation Modal */}
+            {/* ═══════════ New Conversation Modal ═══════════ */}
             {showNewConversationModal && (
                 <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
                     <div className="bg-prosperus-navy border border-prosperus-navy-light rounded-xl p-6 max-w-lg w-full max-h-[80vh] flex flex-col">
@@ -642,39 +638,51 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                     </div>
                 </div>
             )}
-            {/* Right Column - Chat View */}
-            <div className="flex-1 flex flex-col">
+
+            {/* ═══════════ RIGHT: Chat View ═══════════ */}
+            <div className={`
+                ${selectedConversation ? 'flex' : 'hidden md:flex'}
+                flex-1 flex-col min-w-0
+            `}>
                 {selectedConversation ? (
                     <>
                         {/* Chat Header */}
-                        <div className="p-4 border-b border-prosperus-navy-light bg-prosperus-navy-light">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="font-bold text-white">
+                        <div className="p-3 md:p-4 border-b border-prosperus-navy-light bg-prosperus-navy-light">
+                            <div className="flex items-center gap-3">
+                                {/* Back button — mobile only */}
+                                <button
+                                    onClick={() => setSelectedConversation(null)}
+                                    className="md:hidden p-2 -ml-1 hover:bg-prosperus-navy rounded-lg transition-colors"
+                                >
+                                    <ArrowLeft size={20} className="text-prosperus-grey" />
+                                </button>
+
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-white text-sm md:text-base truncate">
                                         {getParticipantNames(selectedConversation)}
                                     </h3>
-                                    <p className="text-sm text-prosperus-grey">
+                                    <p className="text-xs text-prosperus-grey truncate">
                                         {selectedConversation.participants.map(p => p.email).join(', ')}
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    {/* Block/Unblock User Button */}
+
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                    {/* Block/Unblock Button */}
                                     {selectedConversation.participants.length === 2 && selectedConversation.participants.map(participant => {
-                                        // Find the non-admin participant
                                         if (participant.id !== currentAdminId) {
                                             const isBlocked = isUserBlocked(participant.id);
                                             return (
                                                 <button
                                                     key={participant.id}
                                                     onClick={() => handleBlockClick(participant.id, participant.name, isBlocked)}
-                                                    className={`p-2 rounded-lg transition-colors flex items-center gap-2 ${isBlocked
+                                                    className={`p-2 rounded-lg transition-colors flex items-center gap-1.5 text-xs md:text-sm ${isBlocked
                                                         ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400'
                                                         : 'bg-orange-500/20 hover:bg-orange-500/30 text-orange-400'
                                                         }`}
                                                     title={isBlocked ? 'Desbloquear usuário' : 'Bloquear usuário'}
                                                 >
-                                                    {isBlocked ? <UserCheck size={18} /> : <Ban size={18} />}
-                                                    <span className="text-sm font-medium">
+                                                    {isBlocked ? <UserCheck size={16} /> : <Ban size={16} />}
+                                                    <span className="hidden sm:inline font-medium">
                                                         {isBlocked ? 'Desbloquear' : 'Bloquear'}
                                                     </span>
                                                 </button>
@@ -682,9 +690,11 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                         }
                                         return null;
                                     })}
+
+                                    {/* Close — desktop only */}
                                     <button
                                         onClick={() => setSelectedConversation(null)}
-                                        className="p-2 hover:bg-prosperus-navy rounded-lg transition-colors"
+                                        className="hidden md:block p-2 hover:bg-prosperus-navy rounded-lg transition-colors"
                                     >
                                         <X size={20} className="text-prosperus-grey" />
                                     </button>
@@ -700,8 +710,8 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                 </div>
                             ) : messages.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-prosperus-grey">
-                                    <MessageSquare size={48} className="mb-2" />
-                                    <p>Nenhuma mensagem ainda</p>
+                                    <MessageSquare size={40} className="mb-2" />
+                                    <p className="text-sm">Nenhuma mensagem ainda</p>
                                 </div>
                             ) : (
                                 messages.map((msg) => (
@@ -709,7 +719,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                         key={msg.id}
                                         className={`flex ${isAdminMessage(msg) ? 'justify-end' : 'justify-start'} group`}
                                     >
-                                        <div className={`max-w-[70%] ${isAdminMessage(msg) ? 'items-end' : 'items-start'} flex flex-col`}>
+                                        <div className={`max-w-[85%] md:max-w-[70%] ${isAdminMessage(msg) ? 'items-end' : 'items-start'} flex flex-col`}>
                                             {/* Sender name and badge */}
                                             <div className="flex items-center gap-2 mb-1">
                                                 {isAdminMessage(msg) && (
@@ -725,15 +735,15 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                             {/* Message bubble */}
                                             <div className="relative">
                                                 <div
-                                                    className={`px-4 py-2 rounded-lg ${isAdminMessage(msg)
-                                                        ? 'bg-prosperus-gold text-prosperus-navy'
+                                                    className={`px-4 py-2.5 rounded-2xl ${isAdminMessage(msg)
+                                                        ? 'bg-prosperus-gold text-prosperus-navy rounded-br-md'
                                                         : msg.is_deleted
-                                                            ? 'bg-red-500/20 text-red-300 italic'
-                                                            : 'bg-prosperus-navy-light text-white'
+                                                            ? 'bg-red-500/20 text-red-300 italic rounded-bl-md'
+                                                            : 'bg-prosperus-navy-light text-white rounded-bl-md'
                                                         }`}
                                                 >
-                                                    <p className="break-words">{msg.content}</p>
-                                                    <p className="text-xs mt-1 opacity-70">
+                                                    <p className="break-words text-sm">{msg.content}</p>
+                                                    <p className="text-xs mt-1 opacity-60">
                                                         {formatDistanceToNow(new Date(msg.created_at), {
                                                             addSuffix: true,
                                                             locale: ptBR
@@ -760,26 +770,26 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                         </div>
 
                         {/* Message Input */}
-                        <div className="p-4 border-t border-prosperus-navy-light bg-prosperus-navy-light">
+                        <div className="p-3 md:p-4 border-t border-prosperus-navy-light bg-prosperus-navy-light">
                             <div className="flex gap-2">
                                 <input
                                     type="text"
-                                    placeholder="Digite sua mensagem como suporte..."
+                                    placeholder="Digite sua mensagem..."
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                                     disabled={sending}
-                                    className="flex-1 px-4 py-2 bg-prosperus-navy text-white rounded-lg border border-prosperus-grey/20 focus:border-prosperus-gold focus:outline-none disabled:opacity-50"
+                                    className="flex-1 px-4 py-2.5 bg-prosperus-navy text-white text-sm rounded-xl border border-prosperus-grey/20 focus:border-prosperus-gold focus:outline-none disabled:opacity-50"
                                 />
                                 <button
                                     onClick={handleSendMessage}
                                     disabled={!newMessage.trim() || sending}
-                                    className="px-4 py-2 bg-prosperus-gold text-prosperus-navy rounded-lg font-semibold hover:bg-prosperus-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    className="px-4 py-2.5 bg-prosperus-gold text-prosperus-navy rounded-xl font-semibold hover:bg-prosperus-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 >
                                     {sending ? (
-                                        <Loader2 className="animate-spin" size={20} />
+                                        <Loader2 className="animate-spin" size={18} />
                                     ) : (
-                                        <Send size={20} />
+                                        <Send size={18} />
                                     )}
                                 </button>
                             </div>
@@ -787,8 +797,9 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                     </>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full text-prosperus-grey">
-                        <MessageSquare size={64} className="mb-4" />
-                        <p className="text-lg">Selecione uma conversa para visualizar</p>
+                        <MessageSquare size={56} className="mb-4 opacity-30" />
+                        <p className="text-base">Selecione uma conversa</p>
+                        <p className="text-sm text-prosperus-grey/60 mt-1">para visualizar as mensagens</p>
                     </div>
                 )}
             </div>
