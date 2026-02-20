@@ -455,7 +455,7 @@ class BannerService {
 
     /**
      * Score and filter member suggestions
-     * Prioritizes: New members + Tag matches
+     * Prioritizes: New members + Tag matches, but always includes some members
      */
     private scoreMemberSuggestions(
         members: MemberSuggestion[],
@@ -477,16 +477,14 @@ class BannerService {
             const hasMatchingTags = matchingTags.length > 0;
             const isNew = member.isNew;
 
-            // Only include if new OR has matching tags
-            if (!isNew && !hasMatchingTags) continue;
-
             // Determine primary reason
             const reason: 'NEW' | 'MATCH' = isNew ? 'NEW' : 'MATCH';
 
             // Calculate score (higher = shown first)
             // New members: base 10 + matching tags bonus
             // Tag matches: base 5 + number of matches
-            let score = 0;
+            // Others: base 1 (still shown as discovery suggestions)
+            let score = 1; // Base score so all members can appear
             if (isNew) score += 10;
             if (hasMatchingTags) score += 5 + matchingTags.length;
 

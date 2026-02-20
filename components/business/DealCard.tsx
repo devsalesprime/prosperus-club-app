@@ -122,11 +122,12 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
 
             <style>{`
                 .deal-card {
-                    background: white;
+                    background: #1e293b;
                     border-radius: 12px;
                     padding: 16px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                     margin-bottom: 12px;
+                    border: 1px solid #334155;
                 }
 
                 .deal-header {
@@ -151,12 +152,12 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
 
                 .partner-name {
                     font-weight: 600;
-                    color: #031A2B;
+                    color: #f1f5f9;
                 }
 
                 .deal-role {
                     font-size: 12px;
-                    color: #666;
+                    color: #94a3b8;
                 }
 
                 .status-badge {
@@ -172,12 +173,12 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
                 .deal-amount {
                     font-size: 24px;
                     font-weight: 700;
-                    color: #031A2B;
+                    color: #f1f5f9;
                     margin-bottom: 8px;
                 }
 
                 .deal-description {
-                    color: #666;
+                    color: #94a3b8;
                     font-size: 14px;
                     margin: 0 0 12px 0;
                     line-height: 1.5;
@@ -187,7 +188,7 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
                     display: flex;
                     align-items: center;
                     gap: 6px;
-                    color: #999;
+                    color: #64748b;
                     font-size: 13px;
                 }
 
@@ -196,7 +197,7 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
                     gap: 12px;
                     margin-top: 16px;
                     padding-top: 16px;
-                    border-top: 1px solid #eee;
+                    border-top: 1px solid #334155;
                 }
 
                 .btn-confirm, .btn-contest {
@@ -220,8 +221,8 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
                 }
 
                 .btn-contest {
-                    background: #fee2e2;
-                    color: #ef4444;
+                    background: rgba(239, 68, 68, 0.15);
+                    color: #fca5a5;
                 }
 
                 .btn-confirm:hover, .btn-contest:hover {
