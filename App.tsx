@@ -889,6 +889,7 @@ const App = () => {
         <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden relative">
             {/* Global Shell Styles */}
             <style>{`
+                html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
                 .app-scroll-main::-webkit-scrollbar { display: none; }
             `}</style>
