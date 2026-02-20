@@ -1068,9 +1068,9 @@ const App = () => {
                         )}
 
                         {view === ViewState.AGENDA && (
-                            <div className="h-[calc(100dvh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-y-auto overflow-x-hidden">
+                            <div className="h-[calc(100dvh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-hidden flex flex-col">
                                 {/* Filter and Legend Bar */}
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
+                                <div className="flex-none flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
                                     {/* Legend - Only ONLINE and PRESENTIAL */}
                                     <div className="flex items-center gap-4 flex-wrap">
                                         <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Legenda:</span>
@@ -1112,7 +1112,7 @@ const App = () => {
                                 {isMobile ? (
                                     <>
                                         {/* Mobile Header with View Toggle */}
-                                        <div className="sticky top-0 bg-slate-900 z-30 px-4 py-3 border-b border-slate-800 mb-4">
+                                        <div className="flex-none bg-slate-900 z-30 px-4 py-3 border-b border-slate-800">
                                             <div className="flex items-center justify-between">
                                                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                                     <CalendarIcon size={20} className="text-yellow-500" />
@@ -1147,20 +1147,29 @@ const App = () => {
 
                                         {/* Mobile View Content */}
                                         {mobileView === 'LIST' ? (
-                                            <MobileAgendaView
-                                                events={clubEvents}
-                                                onSelectEvent={(event) => setSelectedEvent(event)}
-                                            />
+                                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain agenda-scroll-area" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                                <MobileAgendaView
+                                                    events={clubEvents}
+                                                    onSelectEvent={(event) => setSelectedEvent(event)}
+                                                    onSwitchToMonth={() => setMobileView('MONTH')}
+                                                />
+                                            </div>
                                         ) : (
-                                            <div className="mobile-calendar-month px-2 overflow-hidden">
+                                            <div className="flex-1 min-h-0 flex flex-col mobile-calendar-month px-2 overflow-hidden">
                                                 <style>{`
+                                                .agenda-scroll-area { scrollbar-width: none; -ms-overflow-style: none; }
+                                                .agenda-scroll-area::-webkit-scrollbar { display: none; }
                                                 .mobile-calendar-month .rbc-header {
                                                     font-size: 0.8rem;
                                                 }
                                                 .mobile-calendar-month .rbc-month-view {
                                                     max-width: 100%;
+                                                    flex: 1;
+                                                    min-height: 0;
                                                     overflow: hidden;
                                                 }
+                                                .mobile-calendar-month .rbc-month-view::-webkit-scrollbar { display: none; }
+                                                .mobile-calendar-month .rbc-month-view { scrollbar-width: none; }
                                             `}</style>
                                                 <Calendar
                                                     localizer={localizer}
@@ -1179,7 +1188,7 @@ const App = () => {
                                                     }}
                                                     defaultView="month"
                                                     views={['month']}
-                                                    style={{ height: 'calc(100vh - 250px)' }}
+                                                    style={{ flex: 1, minHeight: 0 }}
                                                     formats={{
                                                         weekdayFormat: (date, culture, localizer) => {
                                                             const fullDay = localizer?.format(date, 'EEEE', culture) || '';
