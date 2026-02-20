@@ -137,8 +137,8 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div ref={overlayRef} className="modal-overlay" onClick={onClose}>
-            <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()}>
+        <div ref={overlayRef} className="crm-overlay" onClick={onClose}>
+            <div ref={contentRef} className="crm-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Nova Indicação</h2>
                     <button className="close-btn" onClick={onClose}>
@@ -272,24 +272,33 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                 </form>
 
                 <style>{`
-                    .modal-overlay {
+                    .crm-overlay {
                         position: fixed;
                         top: 0;
                         left: 0;
                         right: 0;
                         bottom: 0;
-                        background: rgba(0, 0, 0, 0.7);
+                        background: rgba(0, 0, 0, 0.8);
+                        backdrop-filter: blur(4px);
+                        -webkit-backdrop-filter: blur(4px);
                         display: flex;
-                        align-items: center;
+                        align-items: flex-end;
                         justify-content: center;
                         z-index: 1000;
-                        padding: 20px;
+                        padding: 0;
                     }
 
-                    .modal-content {
+                    @media (min-width: 768px) {
+                        .crm-overlay {
+                            align-items: center;
+                            padding: 20px;
+                        }
+                    }
+
+                    .crm-content {
                         background: white;
                         color: #1e293b !important;
-                        border-radius: 12px;
+                        border-radius: 16px 16px 0 0;
                         width: 100%;
                         max-width: 520px;
                         max-height: 90dvh;
@@ -299,7 +308,13 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         padding-bottom: env(safe-area-inset-bottom, 0);
                     }
 
-                    .modal-header {
+                    @media (min-width: 768px) {
+                        .crm-content {
+                            border-radius: 16px;
+                        }
+                    }
+
+                    .crm-content .modal-header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;

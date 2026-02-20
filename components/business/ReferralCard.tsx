@@ -6,6 +6,20 @@ import { Mail, Phone, FileText, ChevronDown, Loader2, MessageSquare, AlertTriang
 import { Referral, ReferralStatus } from '../../types';
 import { businessService } from '../../services/businessService';
 
+/** Formats a phone string: removes junk chars (commas, dots, spaces) and formats as (XX) XXXXX-XXXX */
+const formatPhone = (raw: string): string => {
+    // Strip everything that isn't a digit
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length === 11) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    // Fallback: just strip commas and extra spaces
+    return raw.replace(/,/g, '').trim();
+};
+
 interface ReferralCardProps {
     referral: Referral;
     viewType: 'sent' | 'received';
@@ -285,9 +299,9 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     </a>
                 )}
                 {referral.lead_phone && (
-                    <a href={`tel:${referral.lead_phone}`} className="contact-item">
+                    <a href={`tel:${referral.lead_phone.replace(/\D/g, '')}`} className="contact-item">
                         <Phone size={14} />
-                        {referral.lead_phone}
+                        {formatPhone(referral.lead_phone)}
                     </a>
                 )}
             </div>

@@ -188,9 +188,9 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div ref={overlayRef} className="modal-overlay" onClick={onClose}>
-            <div ref={contentRef} className="modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
+        <div ref={overlayRef} className="rdm-overlay" onClick={onClose}>
+            <div ref={contentRef} className="rdm-content" onClick={e => e.stopPropagation()}>
+                <div className="rdm-header">
                     <h2>Registrar Negócio</h2>
                     <button className="close-btn" onClick={onClose}>
                         <X size={20} />
@@ -332,26 +332,35 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                 </form>
 
                 <style>{`
-                    .modal-overlay {
+                    .rdm-overlay {
                         position: fixed;
                         top: 0;
                         left: 0;
                         right: 0;
                         bottom: 0;
-                        background: rgba(0, 0, 0, 0.7);
+                        background: rgba(0, 0, 0, 0.8);
+                        backdrop-filter: blur(4px);
+                        -webkit-backdrop-filter: blur(4px);
                         display: flex;
-                        align-items: center;
+                        align-items: flex-end;
                         justify-content: center;
                         z-index: 1000;
-                        padding: 20px;
+                        padding: 0;
                     }
 
-                    .modal-content {
+                    @media (min-width: 768px) {
+                        .rdm-overlay {
+                            align-items: center;
+                            padding: 20px;
+                        }
+                    }
+
+                    .rdm-content {
                         background: #0f172a;
                         border: 1px solid #334155;
-                        border-radius: 12px;
+                        border-radius: 16px 16px 0 0;
                         width: 100%;
-                        max-width: 480px;
+                        max-width: 520px;
                         max-height: 90dvh;
                         overflow-y: auto;
                         overscroll-behavior: contain;
@@ -359,7 +368,13 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         padding-bottom: env(safe-area-inset-bottom, 0);
                     }
 
-                    .modal-header {
+                    @media (min-width: 768px) {
+                        .rdm-content {
+                            border-radius: 16px;
+                        }
+                    }
+
+                    .rdm-header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
@@ -371,7 +386,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         z-index: 10;
                     }
 
-                    .modal-header h2 {
+                    .rdm-header h2 {
                         margin: 0;
                         font-size: 18px;
                         color: #fff;
@@ -428,6 +443,18 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         transition: border-color 0.2s;
                         background: #1e293b;
                         color: #f1f5f9;
+                        height: 48px;
+                        box-sizing: border-box;
+                    }
+
+                    .form-group textarea {
+                        height: auto;
+                    }
+
+                    .form-group input[type="date"] {
+                        height: 48px;
+                        -webkit-appearance: none;
+                        appearance: none;
                     }
 
                     .search-input::placeholder,

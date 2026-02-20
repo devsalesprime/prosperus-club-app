@@ -6,6 +6,8 @@ import { Trophy, Award, Users, TrendingUp, Loader2, Medal } from 'lucide-react';
 import { RankingEntry } from '../../types';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
+import { ProfilePreview } from '../ProfilePreview';
+import { profileService, ProfileData } from '../../services/profileService';
 
 type TabType = 'sellers' | 'referrers';
 
@@ -26,6 +28,8 @@ export const RankingsScreen: React.FC = () => {
     const [rankings, setRankings] = useState<RankingEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentUserId, setCurrentUserId] = useState<string>('');
+    const [selectedProfile, setSelectedProfile] = useState<ProfileData | null>(null);
+    const [profileLoading, setProfileLoading] = useState<string | null>(null); // userId being loaded
 
     useEffect(() => {
         const getUser = async () => {
@@ -62,6 +66,21 @@ export const RankingsScreen: React.FC = () => {
 
     const userPosition = rankings.findIndex(r => r.user_id === currentUserId) + 1;
     const userEntry = rankings.find(r => r.user_id === currentUserId);
+
+    const handleProfileClick = async (userId: string) => {
+        if (profileLoading) return; // prevent double-clicks
+        setProfileLoading(userId);
+        try {
+            const profile = await profileService.getProfile(userId);
+            if (profile) {
+                setSelectedProfile(profile);
+            }
+        } catch (error) {
+            console.error('[Rankings] Error loading profile:', error);
+        } finally {
+            setProfileLoading(null);
+        }
+    };
 
     return (
         <div className="rankings-screen">
@@ -121,7 +140,14 @@ export const RankingsScreen: React.FC = () => {
                             <div
                                 key={entry.user_id}
                                 className={`podium-item position-${position} ${isCurrentUser ? 'current-user' : ''}`}
+                                onClick={() => handleProfileClick(entry.user_id)}
+                                style={{ cursor: 'pointer' }}
                             >
+                                {profileLoading === entry.user_id && (
+                                    <div className="profile-loading-overlay">
+                                        <Loader2 className="animate-spin" size={20} />
+                                    </div>
+                                )}
                                 <div className="medal-container">
                                     <Medal size={position === 1 ? 32 : 24} style={{ color: getMedalColor(position) }} />
                                     <span className="position">{position}º</span>
@@ -171,7 +197,12 @@ export const RankingsScreen: React.FC = () => {
                             <div
                                 key={entry.user_id}
                                 className={`ranking-item ${isCurrentUser ? 'current-user' : ''}`}
+                                onClick={() => handleProfileClick(entry.user_id)}
+                                style={{ cursor: 'pointer' }}
                             >
+                                {profileLoading === entry.user_id && (
+                                    <Loader2 className="animate-spin" size={16} style={{ color: '#FFDA71' }} />
+                                )}
                                 <span className="position-number">{position}</span>
                                 <img
                                     src={entry.image_url || '/default-avatar.svg'}
@@ -318,7 +349,31 @@ export const RankingsScreen: React.FC = () => {
                     border: 1px solid #334155;
                     border-radius: 12px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                    transition: transform 0.2s;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .podium-item:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 6px 20px rgba(255, 218, 113, 0.2);
+                }
+
+                .podium-item.position-1:hover {
+                    transform: scale(1.15);
+                }
+
+                .profile-loading-overlay {
+                    position: absolute;
+                    inset: 0;
+                    background: rgba(0,0,0,0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 5;
+                    border-radius: 12px;
+                    color: #FFDA71;
                 }
 
                 .podium-item.current-user {
@@ -407,6 +462,13 @@ export const RankingsScreen: React.FC = () => {
                     border-radius: 10px;
                     margin-bottom: 8px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+                    cursor: pointer;
+                    transition: background 0.2s, border-color 0.2s;
+                }
+
+                .ranking-item:hover {
+                    background: #273548;
+                    border-color: rgba(255, 218, 113, 0.3);
                 }
 
                 .ranking-item.current-user {
@@ -504,6 +566,15 @@ export const RankingsScreen: React.FC = () => {
                     animation: spin 1s linear infinite;
                 }
             `}</style>
+
+            {/* Profile Preview Modal */}
+            {selectedProfile && (
+                <ProfilePreview
+                    profile={selectedProfile}
+                    onClose={() => setSelectedProfile(null)}
+                    currentUserId={currentUserId}
+                />
+            )}
         </div>
     );
 };

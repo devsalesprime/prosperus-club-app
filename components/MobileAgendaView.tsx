@@ -77,7 +77,7 @@ export const MobileAgendaView: React.FC<MobileAgendaViewProps> = ({ events, onSe
     }
 
     return (
-        <div className="mobile-agenda-view bg-slate-950">
+        <div className="mobile-agenda-view bg-slate-950 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
             {/* Timeline */}
             <div className="timeline-container">
                 {groupedEvents.map((group, groupIndex) => (
