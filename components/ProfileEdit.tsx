@@ -699,7 +699,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                         }
                                     }));
                                 }}
-                                className={`relative shrink-0 w-14 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${formData.exclusive_benefit?.active
+                                className={`relative shrink-0 w-14 h-8 !min-h-0 !min-w-0 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${formData.exclusive_benefit?.active
                                     ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.4)]'
                                     : 'bg-slate-700 hover:bg-slate-600'
                                     }`}

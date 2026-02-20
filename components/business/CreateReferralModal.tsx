@@ -296,8 +296,8 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     }
 
                     .crm-content {
-                        background: white;
-                        color: #1e293b !important;
+                        background: #0f172a;
+                        color: #f1f5f9 !important;
                         border-radius: 16px 16px 0 0;
                         width: 100%;
                         max-width: 520px;
@@ -306,6 +306,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         overscroll-behavior: contain;
                         -webkit-overflow-scrolling: touch;
                         padding-bottom: env(safe-area-inset-bottom, 0);
+                        border: 1px solid #334155;
                     }
 
                     @media (min-width: 768px) {
@@ -319,24 +320,24 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         justify-content: space-between;
                         align-items: center;
                         padding: 20px;
-                        border-bottom: 1px solid #eee;
+                        border-bottom: 1px solid #334155;
                         position: sticky;
                         top: 0;
-                        background: white;
+                        background: #0f172a;
                         z-index: 10;
                     }
 
                     .modal-header h2 {
                         margin: 0;
                         font-size: 18px;
-                        color: #031A2B;
+                        color: #f1f5f9;
                     }
 
                     .close-btn {
                         background: none;
                         border: none;
                         cursor: pointer;
-                        color: #666;
+                        color: #94a3b8;
                         padding: 4px;
                     }
 
@@ -345,20 +346,21 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     }
 
                     .error-message {
-                        background: #fee2e2;
-                        color: #dc2626;
+                        background: rgba(239, 68, 68, 0.15);
+                        color: #fca5a5;
                         padding: 12px;
                         border-radius: 8px;
                         margin-bottom: 16px;
                         font-size: 14px;
+                        border: 1px solid rgba(239, 68, 68, 0.3);
                     }
 
                     .section-title {
                         font-weight: 600;
-                        color: #031A2B;
+                        color: #f1f5f9;
                         margin: 20px 0 12px;
                         padding-bottom: 8px;
-                        border-bottom: 1px solid #eee;
+                        border-bottom: 1px solid #334155;
                     }
 
                     .form-group {
@@ -370,7 +372,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         align-items: center;
                         gap: 6px;
                         font-weight: 600;
-                        color: #031A2B !important;
+                        color: #e2e8f0 !important;
                         margin-bottom: 8px;
                         font-size: 14px;
                     }
@@ -386,12 +388,18 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     .form-group textarea {
                         width: 100%;
                         padding: 12px;
-                        border: 1px solid #ddd;
+                        border: 1px solid #334155;
                         border-radius: 8px;
                         font-size: 14px;
-                        color: #1e293b !important;
-                        background: white !important;
+                        color: #f1f5f9 !important;
+                        background: #1e293b !important;
                         transition: border-color 0.2s;
+                    }
+
+                    .form-group input::placeholder,
+                    .form-group textarea::placeholder,
+                    .search-input::placeholder {
+                        color: #64748b;
                     }
 
                     .form-group input:focus,
@@ -403,7 +411,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     .member-list {
                         max-height: 180px;
                         overflow-y: auto;
-                        border: 1px solid #eee;
+                        border: 1px solid #334155;
                         border-radius: 8px;
                         margin-top: 8px;
                     }
@@ -412,7 +420,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         display: flex;
                         justify-content: center;
                         padding: 20px;
-                        color: #666;
+                        color: #94a3b8;
                     }
 
                     .member-option {
@@ -425,11 +433,12 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     }
 
                     .member-option:hover {
-                        background: #f5f5f5;
+                        background: #1e293b;
                     }
 
                     .member-option.selected {
-                        background: #FFF9E6;
+                        background: rgba(255, 218, 113, 0.1);
+                        border-left: 3px solid #FFDA71;
                     }
 
                     .member-avatar {
@@ -446,12 +455,12 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
 
                     .member-name {
                         font-weight: 600;
-                        color: #031A2B;
+                        color: #f1f5f9;
                     }
 
                     .member-company {
                         font-size: 12px;
-                        color: #666 !important;
+                        color: #94a3b8 !important;
                     }
 
                     .modal-actions {
@@ -463,9 +472,9 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
 
                     .btn-secondary {
                         padding: 12px 20px;
-                        border: 1px solid #ddd;
-                        background: white;
-                        color: #666;
+                        border: 1px solid #334155;
+                        background: #1e293b;
+                        color: #94a3b8;
                         border-radius: 8px;
                         cursor: pointer;
                         font-weight: 600;

@@ -353,11 +353,12 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
 
             <style>{`
                 .referral-card {
-                    background: white;
+                    background: #1e293b;
                     border-radius: 12px;
                     padding: 16px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                     margin-bottom: 12px;
+                    border: 1px solid #334155;
                 }
 
                 .card-header {
@@ -370,7 +371,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 .lead-name {
                     margin: 0 0 8px;
                     font-size: 18px;
-                    color: #031A2B;
+                    color: #f1f5f9;
                 }
 
                 .partner-row {
@@ -388,7 +389,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
 
                 .partner-name {
                     font-size: 13px;
-                    color: #666;
+                    color: #94a3b8;
                 }
 
                 .status-dropdown {
@@ -415,12 +416,13 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     right: 0;
                     top: 100%;
                     margin-top: 4px;
-                    background: white;
+                    background: #0f172a;
                     border-radius: 8px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
                     overflow: hidden;
                     z-index: 10;
                     min-width: 150px;
+                    border: 1px solid #334155;
                 }
 
                 .status-option {
@@ -430,14 +432,15 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     width: 100%;
                     padding: 12px 16px;
                     border: none;
-                    background: white;
+                    background: transparent;
+                    color: #f1f5f9;
                     text-align: left;
                     cursor: pointer;
                     font-size: 14px;
                 }
 
                 .status-option:hover {
-                    background: #f5f5f5;
+                    background: #1e293b;
                 }
 
                 .status-option .dot {
@@ -447,10 +450,11 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 }
 
                 .action-form {
-                    background: #f9fafb;
+                    background: #0f172a;
                     border-radius: 8px;
                     padding: 16px;
                     margin-bottom: 12px;
+                    border: 1px solid #334155;
                 }
 
                 .action-form label {
@@ -458,13 +462,14 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     font-weight: 600;
                     margin-bottom: 8px;
                     font-size: 14px;
+                    color: #e2e8f0;
                 }
 
                 .currency-input {
                     display: flex;
                     align-items: center;
-                    background: white;
-                    border: 1px solid #ddd;
+                    background: #1e293b;
+                    border: 1px solid #334155;
                     border-radius: 8px;
                     overflow: hidden;
                     margin-bottom: 12px;
@@ -472,8 +477,8 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
 
                 .currency-input span {
                     padding: 12px;
-                    background: #f5f5f5;
-                    color: #666;
+                    background: #334155;
+                    color: #94a3b8;
                     font-weight: 600;
                 }
 
@@ -482,16 +487,20 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     border: none;
                     padding: 12px;
                     font-size: 16px;
+                    background: transparent;
+                    color: #f1f5f9;
                 }
 
                 .action-form textarea {
                     width: 100%;
                     padding: 12px;
-                    border: 1px solid #ddd;
+                    border: 1px solid #334155;
                     border-radius: 8px;
                     margin-bottom: 12px;
                     font-size: 14px;
                     resize: none;
+                    background: #1e293b;
+                    color: #f1f5f9;
                 }
 
                 .form-actions {
@@ -509,9 +518,9 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 }
 
                 .form-actions button:first-child {
-                    background: white;
-                    border: 1px solid #ddd;
-                    color: #666;
+                    background: #1e293b;
+                    border: 1px solid #334155;
+                    color: #94a3b8;
                 }
 
                 .btn-confirm {
@@ -539,8 +548,8 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     width: 100%;
                     padding: 10px 14px;
                     border: 1px dashed #f97316;
-                    background: #fff7ed;
-                    color: #f97316;
+                    background: rgba(249, 115, 22, 0.1);
+                    color: #fb923c;
                     border-radius: 8px;
                     font-size: 13px;
                     font-weight: 600;
@@ -550,12 +559,12 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 }
 
                 .contest-btn:hover {
-                    background: #fed7aa;
+                    background: rgba(249, 115, 22, 0.2);
                 }
 
                 .feedback-box.contest {
-                    background: #fff7ed;
-                    color: #ea580c;
+                    background: rgba(249, 115, 22, 0.1);
+                    color: #fb923c;
                 }
 
                 .contact-info {
@@ -569,29 +578,30 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     display: flex;
                     align-items: center;
                     gap: 6px;
-                    color: #3b82f6;
+                    color: #60a5fa;
                     font-size: 13px;
                     text-decoration: none;
                 }
 
                 .converted-amount {
-                    background: #d1fae5;
-                    color: #059669;
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #34d399;
                     padding: 10px 14px;
                     border-radius: 8px;
                     font-weight: 600;
                     font-size: 14px;
                     margin-bottom: 12px;
+                    border: 1px solid rgba(16, 185, 129, 0.3);
                 }
 
                 .feedback-box {
                     display: flex;
                     gap: 10px;
-                    background: #fee2e2;
+                    background: rgba(239, 68, 68, 0.1);
                     padding: 12px;
                     border-radius: 8px;
                     margin-bottom: 12px;
-                    color: #dc2626;
+                    color: #fca5a5;
                 }
 
                 .feedback-box strong {
@@ -607,7 +617,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                 .notes-section {
                     margin-top: 12px;
                     padding-top: 12px;
-                    border-top: 1px solid #eee;
+                    border-top: 1px solid #334155;
                 }
 
                 .notes-toggle {
@@ -616,14 +626,14 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     gap: 6px;
                     background: none;
                     border: none;
-                    color: #666;
+                    color: #94a3b8;
                     cursor: pointer;
                     font-size: 13px;
                 }
 
                 .notes-content {
                     margin: 12px 0 0;
-                    color: #666;
+                    color: #94a3b8;
                     font-size: 14px;
                     line-height: 1.5;
                 }
