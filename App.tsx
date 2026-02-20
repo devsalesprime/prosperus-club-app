@@ -1014,7 +1014,7 @@ const App = () => {
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy relative">
                 {/* Mobile Header */}
                 <header
-                    className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-end justify-between px-4 pb-2 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
+                    className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
                     style={{ height: 'var(--header-h, 60px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
                 >
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
@@ -1047,9 +1047,9 @@ const App = () => {
                 </header>
 
                 <main
-                    className="md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
+                    className="md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain md:p-8 app-scroll-main scroll-smooth"
                     style={{
-                        position: isMobile ? 'absolute' : undefined,
+                        position: isMobile ? 'fixed' : undefined,
                         top: isMobile ? 'var(--header-h, 60px)' : undefined,
                         bottom: isMobile ? 'var(--nav-h, 64px)' : undefined,
                         left: isMobile ? 0 : undefined,
@@ -1542,7 +1542,7 @@ const App = () => {
 
                 {/* Mobile Bottom Nav */}
                 <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-start px-2 pt-2"
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-2"
                     style={{ height: 'var(--nav-h, 64px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 >
                     {navItems.slice(0, 5).map(item => {
