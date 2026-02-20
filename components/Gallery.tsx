@@ -1,98 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Loader2, RefreshCw, ArrowLeft, Calendar, Image as ImageIcon, Heart } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw, Calendar, Image as ImageIcon, Heart, ExternalLink } from 'lucide-react';
 import { galleryService } from '../services/galleryService';
 import { favoriteService } from '../services/favoriteService';
 import { GalleryAlbum } from '../types';
 
 /**
- * GALERIA — Smart Launcher Pattern
+ * GALERIA — One-Click Access Pattern
  * 
- * GalleryList  → Shows all available albums as cards (with favorite button)
- * GalleryViewer → Full-screen cover + CTA that opens gallery in native browser
- *                 (bypasses iframe restrictions on Pixellu lightbox)
+ * Cards abrem a galeria Pixellu diretamente no navegador nativo
+ * (sem tela intermediária — reduz cliques e melhora UX)
  */
 
 // ============================================
-// Album Detail Viewer — Smart Launcher
+// Album List Component (Grid with Direct Access)
 // ============================================
-export const GalleryViewer: React.FC<{ album: GalleryAlbum; onBack: () => void }> = ({ album, onBack }) => {
-
-    const handleOpenGallery = () => {
-        window.open(album.embedUrl, '_blank', 'noopener,noreferrer');
-    };
-
-    return (
-        <div className="h-full w-full relative flex flex-col justify-end -m-4 md:-m-8" style={{ width: 'calc(100% + 2rem)', height: 'calc(100% + 2rem)' }}>
-            {/* Background Cover Image */}
-            {album.coverImage ? (
-                <img
-                    src={album.coverImage}
-                    alt={album.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-            ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950" />
-            )}
-
-            {/* Dark Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/30" />
-
-            {/* Back Button — top-left, always visible */}
-            <button
-                onClick={onBack}
-                className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-slate-900/70 backdrop-blur-sm text-white hover:bg-slate-900 transition px-4 py-2.5 rounded-xl border border-slate-700/50 shadow-lg"
-            >
-                <ArrowLeft size={18} />
-                <span className="font-medium text-sm">Voltar</span>
-            </button>
-
-            {/* Content — Bottom positioned, thumb-reachable on mobile */}
-            <div className="relative z-10 p-6 pb-8 space-y-5">
-                {/* Date Badge */}
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <Calendar size={14} />
-                    <span>{new Date(album.createdAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric'
-                    })}</span>
-                </div>
-
-                {/* Title */}
-                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
-                    {album.title}
-                </h2>
-
-                {/* Description */}
-                {album.description && (
-                    <p className="text-slate-300 text-base leading-relaxed max-w-xl">
-                        {album.description}
-                    </p>
-                )}
-
-                {/* CTA Button — Full width, gold, prominent */}
-                <button
-                    onClick={handleOpenGallery}
-                    className="w-full flex items-center justify-center gap-3 bg-yellow-600 hover:bg-yellow-500 active:bg-yellow-700 text-white py-4 rounded-xl text-lg font-bold transition-all shadow-lg shadow-yellow-600/20 active:scale-[0.98]"
-                >
-                    <ImageIcon size={22} />
-                    Abrir Galeria Completa
-                </button>
-
-                {/* Subtle hint */}
-                <p className="text-center text-xs text-slate-500">
-                    Abre no navegador para visualização completa das fotos
-                </p>
-            </div>
-        </div>
-    );
-};
-
-// ============================================
-// Album List Component
-// ============================================
-export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => void }> = ({ onSelectAlbum }) => {
+const GalleryList: React.FC = () => {
     const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -129,6 +51,7 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
 
     const handleToggleFavorite = async (e: React.MouseEvent, albumId: string) => {
         e.stopPropagation();
+        e.preventDefault();
         setTogglingFav(albumId);
         try {
             const isFav = await favoriteService.toggleFavorite('gallery', albumId);
@@ -146,6 +69,11 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
         } finally {
             setTogglingFav(null);
         }
+    };
+
+    /** One-Click: abre a galeria direto no navegador nativo */
+    const handleOpenGallery = (album: GalleryAlbum) => {
+        window.open(album.embedUrl, '_blank', 'noopener,noreferrer');
     };
 
     if (isLoading) {
@@ -207,7 +135,11 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
                 {albums.map((album) => (
                     <div
                         key={album.id}
-                        className="group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden hover:border-yellow-600/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative"
+                        className="group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden hover:border-yellow-600/50 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative cursor-pointer"
+                        onClick={() => handleOpenGallery(album)}
+                        role="link"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleOpenGallery(album); }}
                     >
                         {/* Favorite Button (top-right) */}
                         <button
@@ -229,12 +161,8 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
                             )}
                         </button>
 
-                        {/* Clickable Area */}
-                        <button
-                            onClick={() => onSelectAlbum(album)}
-                            className="w-full text-left"
-                        >
-                            {/* Card Header with Cover Image or Icon */}
+                        {/* Card Header with Cover Image or Icon */}
+                        <div className="relative">
                             {album.coverImage ? (
                                 <div className="relative h-48 overflow-hidden border-b border-slate-800">
                                     <img
@@ -263,24 +191,30 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
                                 </div>
                             )}
 
-                            {/* Card Content */}
-                            <div className="p-6 space-y-3">
-                                <h3 className="text-lg font-bold text-white group-hover:text-yellow-500 transition-colors line-clamp-2">
-                                    {album.title}
-                                </h3>
-
-                                {album.description && (
-                                    <p className="text-sm text-slate-400 line-clamp-3">
-                                        {album.description}
-                                    </p>
-                                )}
-
-                                <div className="flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-800">
-                                    <Calendar size={14} />
-                                    <span>{new Date(album.createdAt).toLocaleDateString('pt-BR')}</span>
-                                </div>
+                            {/* ✨ "Acessar Galeria" Overlay Badge — always visible */}
+                            <div className="absolute bottom-3 right-3 z-20 bg-yellow-600/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 text-sm shadow-lg group-hover:bg-yellow-500 transition-colors">
+                                <ExternalLink size={16} />
+                                Acessar Galeria
                             </div>
-                        </button>
+                        </div>
+
+                        {/* Card Content */}
+                        <div className="p-6 space-y-3">
+                            <h3 className="text-lg font-bold text-white group-hover:text-yellow-500 transition-colors line-clamp-2">
+                                {album.title}
+                            </h3>
+
+                            {album.description && (
+                                <p className="text-sm text-slate-400 line-clamp-3">
+                                    {album.description}
+                                </p>
+                            )}
+
+                            <div className="flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-800">
+                                <Calendar size={14} />
+                                <span>{new Date(album.createdAt).toLocaleDateString('pt-BR')}</span>
+                            </div>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -289,19 +223,10 @@ export const GalleryList: React.FC<{ onSelectAlbum: (album: GalleryAlbum) => voi
 };
 
 // ============================================
-// Main Gallery Component (Router)
+// Main Gallery Component (Direct Render)
 // ============================================
 export const Gallery: React.FC = () => {
-    const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum | null>(null);
-
-    if (selectedAlbum) {
-        return (
-            <GalleryViewer
-                album={selectedAlbum}
-                onBack={() => setSelectedAlbum(null)}
-            />
-        );
-    }
-
-    return <GalleryList onSelectAlbum={setSelectedAlbum} />;
+    return <GalleryList />;
 };
+
+export default Gallery;
