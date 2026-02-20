@@ -2,7 +2,7 @@
 // Multi-step onboarding modal for first-time users
 // 4 steps: Welcome → Profile Info → Social & Tags → Ready!
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     X,
     ChevronRight,
@@ -53,7 +53,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    // Touch swipe state
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const touchEndX = useRef(0);
+    const isSwiping = useRef(false);
 
     // Form state
     const [formData, setFormData] = useState<ProfileUpdateData>({
@@ -142,17 +150,67 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         }
     };
 
-    const handleNext = () => {
+    const handleNext = useCallback(() => {
         if (step < totalSteps - 1) {
-            setStep(step + 1);
+            setSlideDirection('left');
+            setTimeout(() => {
+                setStep(s => s + 1);
+                setSlideDirection(null);
+            }, 150);
         }
-    };
+    }, [step]);
 
-    const handleBack = () => {
+    const handleBack = useCallback(() => {
         if (step > 0) {
-            setStep(step - 1);
+            setSlideDirection('right');
+            setTimeout(() => {
+                setStep(s => s - 1);
+                setSlideDirection(null);
+            }, 150);
         }
-    };
+    }, [step]);
+
+    // --- Touch Swipe Handlers ---
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        // Don't capture swipe if user is interacting with input/textarea
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+            isSwiping.current = false;
+            return;
+        }
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchEndX.current = e.touches[0].clientX;
+        isSwiping.current = true;
+    }, []);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!isSwiping.current) return;
+        touchEndX.current = e.touches[0].clientX;
+        // If vertical scroll is dominant, cancel swipe
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current);
+        const deltaX = Math.abs(touchEndX.current - touchStartX.current);
+        if (deltaY > deltaX) {
+            isSwiping.current = false;
+        }
+    }, []);
+
+    const handleTouchEnd = useCallback(() => {
+        if (!isSwiping.current) return;
+        const SWIPE_THRESHOLD = 50;
+        const diff = touchStartX.current - touchEndX.current;
+
+        if (Math.abs(diff) > SWIPE_THRESHOLD) {
+            if (diff > 0) {
+                // Swipe left → next step
+                handleNext();
+            } else {
+                // Swipe right → previous step
+                handleBack();
+            }
+        }
+        isSwiping.current = false;
+    }, [handleNext, handleBack]);
 
     const handleComplete = async () => {
         setSaving(true);
@@ -551,8 +609,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     ))}
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto px-8 py-4">
+                {/* Content — swipeable area */}
+                <div
+                    ref={contentRef}
+                    className="flex-1 overflow-y-auto px-8 py-4 touch-pan-y"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    style={{
+                        transition: slideDirection ? 'transform 0.15s ease-out, opacity 0.15s ease-out' : 'none',
+                        transform: slideDirection === 'left' ? 'translateX(-30px)'
+                            : slideDirection === 'right' ? 'translateX(30px)'
+                                : 'translateX(0)',
+                        opacity: slideDirection ? 0.3 : 1,
+                    }}
+                >
                     {renderStep()}
                 </div>
 
