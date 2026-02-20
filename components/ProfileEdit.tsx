@@ -677,17 +677,17 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     {/* EXCLUSIVE BENEFIT SECTION (PREMIUM) */}
                     {/* ========================================= */}
                     <div className="border border-yellow-600/30 rounded-xl p-6 bg-gradient-to-br from-yellow-900/10 to-transparent">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-yellow-600/20 rounded-lg">
+                        <div className="flex items-center justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2 bg-yellow-600/20 rounded-lg shrink-0">
                                     <Gift className="text-yellow-500" size={20} />
                                 </div>
-                                <div>
+                                <div className="min-w-0">
                                     <h3 className="text-sm font-bold text-white">Oferta para o Clube</h3>
-                                    <p className="text-xs text-slate-400">Ofereça algo exclusivo para os membros</p>
+                                    <p className="text-xs text-slate-400 truncate">Ofereça algo exclusivo para os membros</p>
                                 </div>
                             </div>
-                            {/* Toggle Switch - Premium Range Slider Style */}
+                            {/* Toggle Switch */}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -699,7 +699,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                         }
                                     }));
                                 }}
-                                className={`btn-sm relative w-[52px] h-7 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${formData.exclusive_benefit?.active
+                                className={`relative shrink-0 w-14 h-8 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${formData.exclusive_benefit?.active
                                     ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.4)]'
                                     : 'bg-slate-700 hover:bg-slate-600'
                                     }`}
@@ -709,8 +709,8 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             >
                                 {/* Slider Knob */}
                                 <span
-                                    className={`absolute top-[3px] left-[3px] w-[22px] h-[22px] bg-white rounded-full shadow-md transition-all duration-300 ease-in-out ${formData.exclusive_benefit?.active
-                                        ? 'translate-x-[24px] shadow-lg'
+                                    className={`absolute top-[4px] left-[4px] w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ease-in-out ${formData.exclusive_benefit?.active
+                                        ? 'translate-x-6 shadow-lg'
                                         : 'translate-x-0'
                                         }`}
                                 />
