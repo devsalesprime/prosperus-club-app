@@ -891,7 +891,7 @@ const App = () => {
             <style>{`
                 :root {
                     --header-h: calc(60px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(56px + env(safe-area-inset-bottom, 0px));
+                    --nav-h: calc(44px + env(safe-area-inset-bottom, 0px));
                 }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
@@ -1540,22 +1540,21 @@ const App = () => {
                     </Suspense>
                 </main>
 
-                {/* Mobile Bottom Nav */}
+                {/* Mobile Bottom Nav — KI §10.1 Compact Pattern */}
                 <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-2"
-                    style={{ height: 'var(--nav-h, 64px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center px-2 py-2"
+                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 >
                     {navItems.slice(0, 5).map(item => {
-                        // Use item.view if available (for hierarchical items), otherwise use item.id
                         const targetView = ('view' in item && item.view) ? item.view : item.id;
                         return (
                             <button
                                 key={item.id}
                                 onClick={() => setView(targetView as ViewState)}
-                                className={`mobile-nav-item flex flex-col items-center rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
+                                className={`flex-1 min-w-0 flex flex-col items-center gap-0 py-1 rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
                             >
-                                {item.icon}
-                                <span className="text-[10px] mt-1">{item.label}</span>
+                                <span className="w-5 h-5 mb-1">{item.icon}</span>
+                                <span className="text-[9px] leading-tight">{item.label}</span>
                             </button>
                         );
                     })}
