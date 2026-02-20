@@ -887,8 +887,12 @@ const App = () => {
 
     return (
         <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden relative">
-            {/* Global Shell Styles */}
+            {/* Global Shell Styles — Safe Area CSS Variables */}
             <style>{`
+                :root {
+                    --header-h: calc(60px + env(safe-area-inset-top, 0px));
+                    --nav-h: calc(64px + env(safe-area-inset-bottom, 0px));
+                }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
                 .app-scroll-main::-webkit-scrollbar { display: none; }
@@ -1010,8 +1014,8 @@ const App = () => {
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy relative">
                 {/* Mobile Header */}
                 <header
-                    className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
-                    style={{ height: '60px', paddingTop: 'env(safe-area-inset-top)' }}
+                    className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-end justify-between px-4 pb-2 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
+                    style={{ height: 'var(--header-h, 60px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
                 >
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
                         <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />
@@ -1043,8 +1047,15 @@ const App = () => {
                 </header>
 
                 <main
-                    className="absolute top-[60px] bottom-[64px] left-0 right-0 md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
-                    style={{ WebkitOverflowScrolling: 'touch' }}
+                    className="md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
+                    style={{
+                        position: isMobile ? 'absolute' : undefined,
+                        top: isMobile ? 'var(--header-h, 60px)' : undefined,
+                        bottom: isMobile ? 'var(--nav-h, 64px)' : undefined,
+                        left: isMobile ? 0 : undefined,
+                        right: isMobile ? 0 : undefined,
+                        WebkitOverflowScrolling: 'touch',
+                    }}
                 >
                     <Suspense fallback={<LazyFallback />}>
                         {view === ViewState.DASHBOARD && (
@@ -1531,8 +1542,8 @@ const App = () => {
 
                 {/* Mobile Bottom Nav */}
                 <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-2"
-                    style={{ height: '64px', paddingBottom: 'env(safe-area-inset-bottom)' }}
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-start px-2 pt-2"
+                    style={{ height: 'var(--nav-h, 64px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 >
                     {navItems.slice(0, 5).map(item => {
                         // Use item.view if available (for hierarchical items), otherwise use item.id
