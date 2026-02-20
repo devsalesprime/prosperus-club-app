@@ -886,7 +886,12 @@ const App = () => {
     ];
 
     return (
-        <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden">
+        <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden relative">
+            {/* Global Shell Styles */}
+            <style>{`
+                .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
+                .app-scroll-main::-webkit-scrollbar { display: none; }
+            `}</style>
             {/* Offline Status Banner */}
             <OfflineBanner />
             <InstallPrompt />
@@ -1003,7 +1008,10 @@ const App = () => {
             {/* Main Content */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy">
                 {/* Mobile Header */}
-                <div className="md:hidden flex-none z-50 flex items-center justify-between p-4 bg-prosperus-navy border-b border-prosperus-navy-light mobile-header">
+                <header
+                    className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
+                    style={{ height: '60px', paddingTop: 'env(safe-area-inset-top)' }}
+                >
                     <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
                         <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />
                     </button>
@@ -1031,9 +1039,20 @@ const App = () => {
                             {currentUser ? <img src={currentUser.image || '/default-avatar.svg'} className="w-8 h-8 rounded-full object-cover" /> : <User size={24} />}
                         </button>
                     </div>
-                </div>
+                </header>
 
-                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative overscroll-y-none p-4 md:p-8 pb-8" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <main
+                    className="md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 pb-8 app-scroll-main scroll-smooth"
+                    style={{
+                        position: isMobile ? 'absolute' : undefined,
+                        top: isMobile ? '60px' : undefined,
+                        bottom: isMobile ? '64px' : undefined,
+                        left: isMobile ? 0 : undefined,
+                        right: isMobile ? 0 : undefined,
+                        paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : undefined,
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                >
                     <Suspense fallback={<LazyFallback />}>
                         {view === ViewState.DASHBOARD && (
                             <DashboardHome
@@ -1068,7 +1087,7 @@ const App = () => {
                         )}
 
                         {view === ViewState.AGENDA && (
-                            <div className="h-[calc(100dvh-140px)] bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-hidden flex flex-col">
+                            <div className="h-full bg-slate-900 border border-slate-800 p-2 md:p-4 animate-in fade-in overflow-hidden flex flex-col">
                                 {/* Filter and Legend Bar */}
                                 <div className="flex-none flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 p-3 bg-slate-800/50 border border-slate-700">
                                     {/* Legend - Only ONLINE and PRESENTIAL */}
@@ -1518,7 +1537,10 @@ const App = () => {
                 </main>
 
                 {/* Mobile Bottom Nav */}
-                <div className="md:hidden flex-none z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center p-2 pb-4 safe-area-bottom">
+                <nav
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-md border-t border-slate-800/60 flex justify-around items-center px-2"
+                    style={{ height: '64px', paddingBottom: 'env(safe-area-inset-bottom)' }}
+                >
                     {navItems.slice(0, 5).map(item => {
                         // Use item.view if available (for hierarchical items), otherwise use item.id
                         const targetView = ('view' in item && item.view) ? item.view : item.id;
@@ -1533,7 +1555,7 @@ const App = () => {
                             </button>
                         );
                     })}
-                </div>
+                </nav>
 
                 {view !== ViewState.MESSAGES && <SupportWidget />}
             </div>
