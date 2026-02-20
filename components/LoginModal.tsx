@@ -1,27 +1,17 @@
 import React, { useState } from 'react';
-import { X, AlertCircle, ArrowLeft, CheckCircle, Mail, Eye, EyeOff } from 'lucide-react';
-import { dataService } from '../services/mockData';
+import { AlertCircle, ArrowLeft, CheckCircle, Mail, Eye, EyeOff, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from './ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import type { User } from '@supabase/supabase-js';
 
-// Helper function to generate a valid UUID v4
-const generateUUID = (): string => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-};
-
 interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onLoginSuccess: (user: User, loginMode: 'MEMBER' | 'ADMIN') => void;
+    onLoginSuccess: (user: User) => void;
 }
 
-type ModalView = 'LOGIN' | 'CHECK_EMAIL' | 'CREATE_PASSWORD' | 'FORGOT_PASSWORD';
+type ModalView = 'LOGIN' | 'LOGIN_PASSWORD' | 'CHECK_EMAIL' | 'CREATE_PASSWORD' | 'FORGOT_PASSWORD';
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
     const { resetPassword } = useAuth();
@@ -32,14 +22,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
-    const [loginMode, setLoginMode] = useState<'MEMBER' | 'ADMIN'>('MEMBER');
-    const [profileData, setProfileData] = useState<{ fullName?: string; jobTitle?: string; company?: string; phone?: string } | null>(null); // Store HubSpot profile data
+    const [profileData, setProfileData] = useState<{ fullName?: string; jobTitle?: string; company?: string; phone?: string } | null>(null);
     const [resetEmailSent, setResetEmailSent] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    // Hardcoded Admin Email (as per requirements)
-    const ADMIN_EMAIL = 'admin@salesprime.com.br';
 
     if (!isOpen) return null;
 
@@ -48,6 +34,72 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         setSuccessMsg(null);
         setLoading(false);
     };
+
+    // ─── VIEW HEADERS ───────────────────────────────────────────────
+
+    const getViewTitle = (): string => {
+        switch (view) {
+            case 'LOGIN': return 'Bem-vindo ao Prosperus';
+            case 'LOGIN_PASSWORD': return 'Bem-vindo de volta';
+            case 'CHECK_EMAIL': return 'Primeiro Acesso';
+            case 'CREATE_PASSWORD': return 'Criar Senha';
+            case 'FORGOT_PASSWORD': return 'Recuperar Senha';
+            default: return '';
+        }
+    };
+
+    const getViewSubtitle = (): string => {
+        switch (view) {
+            case 'LOGIN': return 'Digite seu email para continuar';
+            case 'LOGIN_PASSWORD': return 'Digite sua senha para acessar';
+            case 'CHECK_EMAIL': return 'Vamos verificar seu cadastro de sócio';
+            case 'CREATE_PASSWORD': return 'Defina uma senha segura para seu acesso';
+            case 'FORGOT_PASSWORD': return 'Digite o e-mail cadastrado para receber um link';
+            default: return '';
+        }
+    };
+
+    // ─── STEP 1: EMAIL CHECK ────────────────────────────────────────
+
+    const handleEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email.trim()) return;
+
+        setLoading(true);
+        resetState();
+
+        try {
+            // Check if email already has an account via Edge Function
+            const { data, error: fnError } = await supabase.functions.invoke('check-email-exists', {
+                body: { email: email.trim().toLowerCase() }
+            });
+
+            if (fnError) {
+                console.error('check-email-exists error:', fnError);
+                // On error, assume user exists and let them try to login
+                setView('LOGIN_PASSWORD');
+                return;
+            }
+
+            if (data?.exists) {
+                // Email found — go to password
+                setView('LOGIN_PASSWORD');
+            } else {
+                // Email not found — redirect to first access (HubSpot check)
+                setSuccessMsg('Vamos verificar seu cadastro de sócio');
+                setView('CHECK_EMAIL');
+            }
+
+        } catch (err: unknown) {
+            console.error('Email check error:', err);
+            // Fallback: go to password view anyway
+            setView('LOGIN_PASSWORD');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ─── STEP 2: LOGIN WITH PASSWORD ────────────────────────────────
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,11 +115,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
             if (authError) {
                 console.error('Supabase Auth Error:', authError);
-
-                // Handle specific error cases with user-friendly messages
-                if (authError.message?.includes('Email not confirmed')) {
-                    throw new Error('Seu email ainda não foi confirmado. Verifique a caixa de entrada (ou spam) do seu email.');
-                }
 
                 if (authError.message?.includes('Invalid login credentials')) {
                     throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
@@ -86,11 +133,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
             if (!authData.user) throw new Error('Usuário não encontrado.');
 
-            const user = authData.user;
-
-            // Pass the authenticated user directly - App.tsx will handle profile fetching
-            // Do NOT override the user.id with mock data!
-            onLoginSuccess(user, loginMode);
+            // 2. Pass user to App.tsx — role routing is handled there via AuthContext
+            onLoginSuccess(authData.user);
 
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro inesperado.';
@@ -100,13 +144,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         }
     };
 
+    // ─── FIRST ACCESS: CHECK HUBSPOT ────────────────────────────────
+
     const handleCheckFirstAccess = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         resetState();
 
         try {
-            // Call the Supabase Edge Function to validate against HubSpot
             const { data, error } = await supabase.functions.invoke('login-socio', {
                 body: { email }
             });
@@ -116,14 +161,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 throw new Error('Erro ao validar cadastro. Tente novamente.');
             }
 
-            // Check validation result
             if (data?.valid) {
-                // Store profile data from HubSpot
                 setProfileData(data.profile);
                 setSuccessMsg('Email localizado! Defina sua senha de acesso.');
                 setView('CREATE_PASSWORD');
             } else {
-                // Invalid or payment proof not found
                 const message = data?.message || 'Cadastro não encontrado ou etapa de pagamento pendente.';
                 setError(message);
             }
@@ -136,6 +178,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             setLoading(false);
         }
     };
+
+    // ─── CREATE PASSWORD + AUTO-LOGIN ───────────────────────────────
 
     const handleCreatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -152,11 +196,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         resetState();
 
         try {
-            // 1. Update Supabase Auth (Sign Up)
-            // In a real "First Access" scenario, the user might not exist in Auth yet, only in DB.
-            // So we use signUp. If they exist, it might return error or we use updateUser.
-            // For this project context: we assume signUp.
-
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
@@ -188,30 +227,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 throw new Error(error.message || 'Erro ao criar conta. Tente novamente.');
             }
 
-            // If real success
+            // Account created — auto-login
             setSuccessMsg('Conta ativada com sucesso! Entrando...');
 
-            setTimeout(() => {
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (loginError || !loginData.user) {
+                // Fallback: use the signUp user if auto-login fails
                 if (data.user) {
-                    // Enrich user object with HubSpot profile data
-                    const enrichedUser = {
-                        ...data.user,
-                        user_metadata: {
-                            ...data.user.user_metadata,
-                            full_name: profileData?.fullName || data.user.email,
-                            job_title: profileData?.jobTitle || '',
-                            company: profileData?.company || '',
-                            phone: profileData?.phone || ''
-                        }
-                    };
-                    onLoginSuccess(enrichedUser, 'MEMBER');
-                    onClose();
+                    setTimeout(() => {
+                        onLoginSuccess(data.user!);
+                        onClose();
+                    }, 1500);
                 } else {
-                    // Sometimes signUp requires email confirmation. 
-                    setError('Verifique seu e-mail para confirmar o cadastro antes de entrar.');
-                    setView('LOGIN');
+                    throw new Error('Conta criada, mas houve um erro ao entrar. Faça login normalmente.');
                 }
-            }, 1500);
+            } else {
+                // Auto-login succeeded
+                setTimeout(() => {
+                    onLoginSuccess(loginData.user);
+                    onClose();
+                }, 1500);
+            }
 
         } catch (err: unknown) {
             console.error('Signup error:', err);
@@ -222,89 +262,119 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         }
     };
 
+    // ─── RENDER ─────────────────────────────────────────────────────
+
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-md p-6 rounded-2xl shadow-2xl relative">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onClose}
-                    className="absolute top-4 right-4"
-                    title="Fechar"
-                >
-                    <X size={20} />
-                </Button>
+                {/* Close button — only visible on non-primary views */}
+                {view !== 'LOGIN' && (
+                    <button
+                        onClick={() => {
+                            if (view === 'LOGIN_PASSWORD' || view === 'CHECK_EMAIL') {
+                                setView('LOGIN');
+                                resetState();
+                            } else if (view === 'FORGOT_PASSWORD') {
+                                setView('LOGIN_PASSWORD');
+                                resetState();
+                                setResetEmailSent(false);
+                            } else if (view === 'CREATE_PASSWORD') {
+                                setView('CHECK_EMAIL');
+                                resetState();
+                            }
+                        }}
+                        className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                )}
 
                 {/* HEADER */}
                 <div className="text-center mb-8">
                     <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus Logo" className="h-12 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-white">
-                        {view === 'LOGIN' ? 'Bem-vindo de volta' : view === 'CHECK_EMAIL' ? 'Primeiro Acesso' : view === 'FORGOT_PASSWORD' ? 'Recuperar Senha' : 'Criar Senha'}
+                        {getViewTitle()}
                     </h2>
                     <p className="text-slate-400 text-sm">
-                        {view === 'LOGIN' ? 'Escolha como deseja acessar' : view === 'CHECK_EMAIL' ? 'Vamos verificar seu cadastro de sócio' : view === 'FORGOT_PASSWORD' ? 'Digite o e-mail cadastrado para receber um link de recuperação' : 'Defina uma senha segura para seu acesso'}
+                        {getViewSubtitle()}
                     </p>
                 </div>
 
                 {/* ALERTS */}
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-lg mb-6 flex items-center gap-2">
-                        <AlertCircle size={16} />
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl mb-6 flex items-center gap-2">
+                        <AlertCircle size={16} className="shrink-0" />
                         {error}
                     </div>
                 )}
                 {successMsg && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm p-3 rounded-lg mb-6 flex items-center gap-2">
-                        <CheckCircle size={16} />
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm p-3 rounded-xl mb-6 flex items-center gap-2">
+                        <CheckCircle size={16} className="shrink-0" />
                         {successMsg}
                     </div>
                 )}
 
-                {/* VIEW 1: LOGIN - MODE SELECTION */}
-                {view === 'LOGIN' && !loginMode && (
-                    <div className="space-y-4">
-                        <Button
-                            variant="primary"
-                            size="lg"
-                            onClick={() => setLoginMode('MEMBER')}
-                            className="w-full rounded-xl py-4"
-                        >
-                            Entrar como Sócio
-                        </Button>
-                        <Button
-                            variant="danger"
-                            size="lg"
-                            onClick={() => setLoginMode('ADMIN')}
-                            className="w-full rounded-xl py-4 bg-red-600 hover:bg-red-500 shadow-lg shadow-red-900/20"
-                        >
-                            Entrar como Administrador
-                        </Button>
-                        <div className="mt-6 text-center">
-                            <Button variant="ghost" size="sm" onClick={() => { setView('CHECK_EMAIL'); resetState(); }} className="text-xs">
-                                Primeiro Acesso?
-                            </Button>
-                        </div>
-                    </div>
-                )}
-
-                {/* VIEW 1B: LOGIN FORM (after mode selection) */}
-                {view === 'LOGIN' && loginMode && (
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700 mb-4">
-                            <p className="text-xs text-slate-300 text-center">
-                                Modo: <span className="font-bold text-{loginMode === 'ADMIN' ? 'red' : 'yellow'}-400">{loginMode === 'ADMIN' ? 'Administrador' : 'Sócio'}</span>
-                            </p>
-                        </div>
+                {/* ═══════════════ VIEW: LOGIN (email-first) ═══════════════ */}
+                {view === 'LOGIN' && (
+                    <form onSubmit={handleEmailSubmit} className="space-y-4 animate-in fade-in duration-200">
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
                             <input
                                 type="email"
                                 required
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
+                                autoFocus
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                 placeholder="seu@email.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                readOnly={loading}
                             />
+                        </div>
+
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            size="lg"
+                            isLoading={loading}
+                            className="w-full rounded-xl py-3.5 flex items-center justify-center gap-2"
+                        >
+                            {loading ? 'Verificando...' : (
+                                <>
+                                    Continuar
+                                    <ChevronRight size={18} />
+                                </>
+                            )}
+                        </Button>
+
+                        <div className="mt-6 text-center">
+                            <span className="text-slate-500 text-sm">Primeiro Acesso? </span>
+                            <button
+                                type="button"
+                                onClick={() => { setView('CHECK_EMAIL'); resetState(); }}
+                                className="text-yellow-600 hover:text-yellow-400 text-sm font-medium transition-colors"
+                            >
+                                Ative sua conta →
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {/* ═══════════════ VIEW: LOGIN_PASSWORD ═══════════════ */}
+                {view === 'LOGIN_PASSWORD' && (
+                    <form onSubmit={handleLogin} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        {/* Email chip */}
+                        <div className="flex items-center justify-between bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 mb-1">
+                            <div className="flex items-center gap-2">
+                                <Mail size={14} className="text-slate-400" />
+                                <span className="text-sm text-slate-300">{email}</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => { setView('LOGIN'); resetState(); }}
+                                className="text-xs text-yellow-600 hover:text-yellow-400 transition-colors font-medium"
+                            >
+                                Trocar
+                            </button>
                         </div>
 
                         <div>
@@ -313,7 +383,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white focus:outline-none focus:border-yellow-600 transition"
+                                    autoFocus
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -330,32 +401,35 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
                         <Button
                             type="submit"
-                            variant={loginMode === 'ADMIN' ? 'danger' : 'primary'}
+                            variant="primary"
                             size="lg"
                             isLoading={loading}
-                            className={`w-full rounded-xl py-3.5 ${loginMode === 'ADMIN' ? 'bg-red-600 hover:bg-red-500' : ''}`}
+                            className="w-full rounded-xl py-3.5"
                         >
                             {loading ? 'Verificando...' : 'Entrar na Plataforma'}
                         </Button>
 
-                        <div className="mt-6 flex items-center justify-between">
-                            <Button variant="ghost" size="sm" onClick={() => { setLoginMode(null); resetState(); }} className="text-xs text-yellow-500 hover:text-yellow-400">
-                                ← Voltar
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => { setView('FORGOT_PASSWORD'); resetState(); setResetEmailSent(false); }} className="text-xs text-yellow-500/70 hover:text-yellow-400">Esqueceu sua senha?</Button>
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                onClick={() => { setView('FORGOT_PASSWORD'); resetState(); setResetEmailSent(false); }}
+                                className="text-yellow-600/70 hover:text-yellow-400 text-sm transition-colors"
+                            >
+                                Esqueci minha senha
+                            </button>
                         </div>
                     </form>
                 )}
 
-                {/* VIEW 2: CHECK EMAIL */}
+                {/* ═══════════════ VIEW: CHECK_EMAIL (HubSpot) ═══════════════ */}
                 {view === 'CHECK_EMAIL' && (
-                    <form onSubmit={handleCheckFirstAccess} className="space-y-4">
+                    <form onSubmit={handleCheckFirstAccess} className="space-y-4 animate-in fade-in duration-200">
                         <div>
                             <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Cadastrado (HubSpot)</label>
                             <input
                                 type="email"
                                 required
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                 placeholder="ex: carlos@empresa.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -371,14 +445,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         >
                             {loading ? 'Buscando...' : 'Verificar Cadastro'}
                         </Button>
-
-                        <Button variant="ghost" size="md" onClick={() => { setView('LOGIN'); resetState(); }} className="w-full mt-2">
-                            <ArrowLeft size={16} /> Voltar para Login
-                        </Button>
                     </form>
                 )}
 
-                {/* VIEW 4: FORGOT PASSWORD */}
+                {/* ═══════════════ VIEW: FORGOT_PASSWORD ═══════════════ */}
                 {view === 'FORGOT_PASSWORD' && (
                     <form onSubmit={async (e) => {
                         e.preventDefault();
@@ -392,7 +462,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         } else {
                             setError(result.error || 'Erro ao enviar email.');
                         }
-                    }} className="space-y-4">
+                    }} className="space-y-4 animate-in fade-in duration-200">
                         {!resetEmailSent ? (
                             <>
                                 <div>
@@ -400,7 +470,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                     <input
                                         type="email"
                                         required
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                         placeholder="seu@email.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -424,17 +494,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 <p className="text-slate-500 text-xs mt-2">Não recebeu? Cheque a pasta de spam ou tente novamente.</p>
                             </div>
                         )}
-
-                        <Button variant="ghost" size="md" onClick={() => { setView('LOGIN'); resetState(); setResetEmailSent(false); }} className="w-full mt-2">
-                            <ArrowLeft size={16} /> Voltar para Login
-                        </Button>
                     </form>
                 )}
 
-                {/* VIEW 3: CREATE PASSWORD */}
+                {/* ═══════════════ VIEW: CREATE_PASSWORD ═══════════════ */}
                 {view === 'CREATE_PASSWORD' && (
-                    <form onSubmit={handleCreatePassword} className="space-y-4">
-                        <div className="p-3 bg-slate-800 rounded-lg text-xs text-slate-300 mb-4 border border-slate-700">
+                    <form onSubmit={handleCreatePassword} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div className="p-3 bg-slate-800 rounded-xl text-xs text-slate-300 mb-4 border border-slate-700">
                             Olá! Localizamos seu cadastro. Defina sua senha pessoal para acessar o clube.
                         </div>
 
@@ -444,7 +510,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white focus:outline-none focus:border-yellow-600 transition"
+                                    autoFocus
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                     placeholder="Mínimo 6 caracteres"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -465,7 +532,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 <input
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     required
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white focus:outline-none focus:border-yellow-600 transition"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                     placeholder="Repita a senha"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -488,10 +555,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                             className="w-full rounded-xl py-3.5 bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20"
                         >
                             {loading ? 'Ativando...' : 'Ativar Minha Conta'}
-                        </Button>
-
-                        <Button variant="ghost" size="md" onClick={() => { setView('LOGIN'); resetState(); }} className="w-full mt-2">
-                            Cancelar
                         </Button>
                     </form>
                 )}
