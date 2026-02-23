@@ -149,7 +149,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
     const memberCount = filteredMembers.length;
 
     return (
-        <div className="space-y-6 animate-in fade-in">
+        <div className="space-y-6 animate-in fade-in px-4 pt-4 pb-8">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

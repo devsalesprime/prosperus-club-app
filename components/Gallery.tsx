@@ -125,7 +125,7 @@ const GalleryList: React.FC = () => {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 px-4 pt-4 pb-8">
             <div>
                 <h2 className="text-2xl font-bold text-white mb-2">Galerias de Fotos</h2>
                 <p className="text-slate-400">Reviva os melhores momentos dos nossos eventos</p>
