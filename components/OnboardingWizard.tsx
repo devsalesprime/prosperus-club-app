@@ -302,7 +302,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         className="w-28 h-28 rounded-full border-4 border-yellow-600/50 overflow-hidden bg-slate-800 cursor-pointer hover:border-yellow-500 transition-colors"
                         onClick={() => fileInputRef.current?.click()}
                     >
-                        <img src={formData.image_url || '/default-avatar.png'} alt="Avatar" className="w-full h-full object-cover" />
+                        <img src={formData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt="Avatar" className="w-full h-full object-cover" />
                         {uploadingPhoto && (
                             <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
                                 <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
@@ -529,7 +529,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         return (
             <div className="text-center py-6">
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full overflow-hidden border-4 border-yellow-600 shadow-lg shadow-yellow-900/30">
-                    <img src={formData.image_url || '/default-avatar.png'} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={formData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt="Avatar" className="w-full h-full object-cover" />
                 </div>
 
                 <h2 className="text-3xl font-bold text-white mb-2">
