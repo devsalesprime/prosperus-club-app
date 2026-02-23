@@ -708,33 +708,35 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                             </p>
                                         </div>
 
-                                        {/* Tag grid — flex-wrap, whitespace-nowrap per tag */}
-                                        <div className="flex flex-wrap gap-2">
-                                            {SECTOR_OPTIONS.map(sector => {
-                                                const isSelected = interests.includes(sector);
-                                                return (
-                                                    <button
-                                                        key={sector}
-                                                        type="button"
-                                                        onClick={() => toggleSector(sector)}
-                                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 active:scale-95 whitespace-nowrap ${isSelected
+                                        {/* Tag grid — flex-wrap with stretch override */}
+                                        <div className="w-full">
+                                            <div className="flex flex-wrap gap-2 items-start content-start">
+                                                {SECTOR_OPTIONS.map(sector => {
+                                                    const isSelected = interests.includes(sector);
+                                                    return (
+                                                        <button
+                                                            key={sector}
+                                                            type="button"
+                                                            onClick={() => toggleSector(sector)}
+                                                            className={`whitespace-nowrap flex-shrink-0 self-start w-auto px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 active:scale-95 ${isSelected
                                                                 ? 'bg-yellow-600 border-yellow-500 text-white shadow-sm shadow-yellow-900/30'
                                                                 : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white'
-                                                            }`}
-                                                    >
-                                                        {isSelected && sector !== 'Outros' && (
-                                                            <span className="mr-1 text-yellow-200">✓</span>
-                                                        )}
-                                                        {sector}
-                                                    </button>
-                                                );
-                                            })}
+                                                                }`}
+                                                        >
+                                                            {isSelected && sector !== 'Outros' && (
+                                                                <span className="mr-1 text-yellow-200">✓</span>
+                                                            )}
+                                                            {sector}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
 
                                         {/* Custom input — only when "Outros" selected */}
                                         {hasOthers && (
                                             <div style={{ animation: 'sectorFadeIn 250ms ease-out' }} className="space-y-2">
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 w-full">
                                                     <input
                                                         type="text"
                                                         id="sector-custom-input"
@@ -759,7 +761,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                                                 input.focus();
                                                             }
                                                         }}
-                                                        className="flex-shrink-0 px-3 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
+                                                        className="flex-shrink-0 flex-none px-4 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
                                                     >
                                                         + Add
                                                     </button>
