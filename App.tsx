@@ -1560,7 +1560,7 @@ const App = () => {
                     })}
                 </nav>
 
-                {view !== ViewState.MESSAGES && <SupportWidget />}
+                {view !== ViewState.MESSAGES && <SupportWidget visible={!(view === ViewState.AGENDA && mobileView === 'MONTH' && isMobile)} />}
             </div>
 
             {/* Role Selector Modal - Shows when admin/team logs in */}

@@ -65,12 +65,17 @@ const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }
     </div>
 );
 
-export const SupportWidget: React.FC = () => {
+export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Auto-close popover when button becomes hidden
+    useEffect(() => {
+        if (!visible && isOpen) setIsOpen(false);
+    }, [visible, isOpen]);
 
     // Load settings when opened
     useEffect(() => {
@@ -114,14 +119,18 @@ export const SupportWidget: React.FC = () => {
 
     return (
         <>
-            {/* Floating Button */}
+            {/* Floating Button — animated visibility via opacity + scale */}
             <button
                 ref={buttonRef}
                 onClick={() => setIsOpen(!isOpen)}
                 className={`fixed z-50 p-3.5 rounded-full shadow-xl transition-all duration-300 ${isOpen
-                        ? 'bg-slate-700 text-white rotate-180'
-                        : 'bg-gradient-to-br from-slate-800 to-slate-900 text-slate-300 hover:text-white border border-slate-600 hover:border-yellow-600/50 hover:shadow-yellow-600/20'
-                    } bottom-24 right-4 md:bottom-6 md:right-6`}
+                    ? 'bg-slate-700 text-white rotate-180'
+                    : 'bg-gradient-to-br from-slate-800 to-slate-900 text-slate-300 hover:text-white border border-slate-600 hover:border-yellow-600/50 hover:shadow-yellow-600/20'
+                    } bottom-24 right-4 md:bottom-6 md:right-6
+                    ${visible
+                        ? 'opacity-100 scale-100 pointer-events-auto'
+                        : 'opacity-0 scale-75 pointer-events-none'
+                    }`}
                 title="Central de Ajuda"
             >
                 {isOpen ? <X size={22} /> : <Info size={22} />}
