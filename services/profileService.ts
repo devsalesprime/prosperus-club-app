@@ -192,7 +192,7 @@ class ProfileService {
         try {
             let queryBuilder = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, created_at');
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at');
 
             // Exclude specific user if provided (e.g., logged-in user)
             if (filters?.excludeUserId) {
@@ -326,7 +326,7 @@ class ProfileService {
                 .from('profiles')
                 .update(cleanUpdates)
                 .eq('id', userId)
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, created_at, updated_at')
                 .single();
 
             if (error) {
