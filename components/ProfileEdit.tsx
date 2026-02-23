@@ -197,8 +197,13 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             }
 
             // Normal flow: save to Supabase
-            console.log('📸 ProfileEdit: Saving profile with image_url:', formData.image_url);
-            const updatedProfile = await profileService.updateProfile(currentUser.id, formData);
+            // Strip internal '__outros__' marker before persisting
+            const cleanedFormData = {
+                ...formData,
+                partnership_interests: (formData.partnership_interests || []).filter((s: string) => s !== '__outros__')
+            };
+            console.log('📸 ProfileEdit: Saving profile with image_url:', cleanedFormData.image_url);
+            const updatedProfile = await profileService.updateProfile(currentUser.id, cleanedFormData);
 
             if (updatedProfile) {
                 // Check if profile is now complete and mark onboarding as done
@@ -636,40 +641,138 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             </div>
 
                             {/* Partnership Interests */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    <Users size={12} className="inline mr-1 text-emerald-400" />
-                                    Setores de interesse para parcerias
-                                </label>
-                                <div className="flex flex-wrap gap-2">
-                                    {['Tecnologia & SaaS', 'Saúde & Bem-estar', 'Educação & Treinamento',
-                                        'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
-                                        'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
-                                        'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
-                                        'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage'
-                                    ].map(sector => (
-                                        <button
-                                            key={sector}
-                                            type="button"
-                                            onClick={() => {
-                                                const interests = formData.partnership_interests || [];
-                                                if (interests.includes(sector)) {
-                                                    handleInputChange('partnership_interests', interests.filter(s => s !== sector) as any);
-                                                } else {
-                                                    handleInputChange('partnership_interests', [...interests, sector] as any);
-                                                }
-                                            }}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
-                                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
-                                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
-                                                }`}
-                                        >
-                                            {(formData.partnership_interests || []).includes(sector) && '✓ '}
-                                            {sector}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            {(() => {
+                                const PRESET_SECTORS = [
+                                    'Tecnologia & SaaS', 'Saúde & Bem-estar', 'Educação & Treinamento',
+                                    'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
+                                    'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
+                                    'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
+                                    'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage'
+                                ];
+                                const interests = formData.partnership_interests || [];
+                                const customSectors = interests.filter(s => !PRESET_SECTORS.includes(s));
+                                const showCustomInput = interests.includes('__outros__');
+
+                                const toggleSector = (sector: string) => {
+                                    if (interests.includes(sector)) {
+                                        handleInputChange('partnership_interests', interests.filter(s => s !== sector) as any);
+                                    } else {
+                                        handleInputChange('partnership_interests', [...interests, sector] as any);
+                                    }
+                                };
+
+                                const addCustomSector = (value: string) => {
+                                    const trimmed = value.trim();
+                                    if (!trimmed || interests.includes(trimmed)) return;
+                                    handleInputChange('partnership_interests', [...interests, trimmed] as any);
+                                };
+
+                                return (
+                                    <div>
+                                        <label className="block text-xs text-slate-400 mb-2">
+                                            <Users size={12} className="inline mr-1 text-emerald-400" />
+                                            Setores de interesse para parcerias
+                                        </label>
+
+                                        {/* Preset sector pills */}
+                                        <div className="flex flex-wrap gap-2">
+                                            {PRESET_SECTORS.map(sector => (
+                                                <button
+                                                    key={sector}
+                                                    type="button"
+                                                    onClick={() => toggleSector(sector)}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${interests.includes(sector)
+                                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+                                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                                        }`}
+                                                >
+                                                    {interests.includes(sector) && '✓ '}
+                                                    {sector}
+                                                </button>
+                                            ))}
+
+                                            {/* "Outros" toggle pill */}
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSector('__outros__')}
+                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${showCustomInput
+                                                    ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/30'
+                                                    : 'bg-slate-800 text-yellow-500 hover:bg-slate-700 border border-yellow-600/30 hover:border-yellow-600/50'
+                                                    }`}
+                                            >
+                                                {showCustomInput ? '✓ ' : '+ '}Outros
+                                            </button>
+                                        </div>
+
+                                        {/* Custom sector input — revealed when "Outros" is selected */}
+                                        {showCustomInput && (
+                                            <div className="mt-3" style={{ animation: 'profileCustomFadeIn 300ms ease-out' }}>
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        id="custom-sector-input"
+                                                        placeholder="Digite o setor personalizado..."
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                const input = e.currentTarget;
+                                                                addCustomSector(input.value);
+                                                                input.value = '';
+                                                            }
+                                                        }}
+                                                        className="flex-1 bg-slate-800 border border-yellow-600/30 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-yellow-500 transition placeholder:text-slate-600"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const input = document.getElementById('custom-sector-input') as HTMLInputElement;
+                                                            if (input) {
+                                                                addCustomSector(input.value);
+                                                                input.value = '';
+                                                                input.focus();
+                                                            }
+                                                        }}
+                                                        className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-semibold transition-colors active:scale-95"
+                                                    >
+                                                        Adicionar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Custom sectors already added — yellow gold pills with ✕ */}
+                                        {customSectors.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-3">
+                                                {customSectors.map(sector => (
+                                                    <span
+                                                        key={sector}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-600/20 text-yellow-400 border border-yellow-600/30"
+                                                        style={{ animation: 'profileCustomFadeIn 200ms ease-out' }}
+                                                    >
+                                                        {sector}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleSector(sector)}
+                                                            className="w-3.5 h-3.5 rounded-full bg-yellow-600/30 hover:bg-red-500/50 flex items-center justify-center transition-colors"
+                                                            title="Remover"
+                                                        >
+                                                            <span className="text-[9px] leading-none">✕</span>
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <style>{`
+                                            @keyframes profileCustomFadeIn {
+                                                from { opacity: 0; transform: translateY(-6px); }
+                                                to { opacity: 1; transform: translateY(0); }
+                                            }
+                                        `}</style>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
 
