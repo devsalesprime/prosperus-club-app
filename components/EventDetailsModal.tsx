@@ -1,11 +1,12 @@
 // ==============================================
-// EVENT DETAILS MODAL — Premium Component
+// EVENT DETAILS MODAL v2.0 — Premium Bottom Sheet
 // ==============================================
-// Extracted from App.tsx inline modal with enhancements:
-// - Multi-day timeline visualization
-// - Session selection for "Add to Calendar"
-// - Premium micro-interactions
-// - Portal rendering for proper z-index
+// UX Redesign:
+// - Bottom-sheet pattern (mobile-first)
+// - Interactive timeline with visual selection states
+// - Hero image with gradient overlay
+// - State-aware RSVP footer
+// - Swipe-down dismiss preserved
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -20,7 +21,6 @@ import {
     BookOpen,
     ExternalLink,
     CalendarDays,
-    ChevronRight,
     Video,
     Check,
     UserCheck,
@@ -39,7 +39,7 @@ type RsvpStatus = 'NONE' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'WAITLIST' | '
 interface EventDetailsModalProps {
     event: ClubEvent;
     onClose: () => void;
-    userId?: string; // From useAuth, enables RSVP
+    userId?: string;
 }
 
 // ── Helper: Generate .ics calendar link ──
@@ -52,13 +52,11 @@ const generateCalendarUrl = (event: ClubEvent, session?: EventSession) => {
     let endDate: string;
 
     if (session) {
-        // Use specific session
         const start = new Date(`${session.date}T${session.startTime}:00`);
         const end = new Date(`${session.date}T${session.endTime}:00`);
         startDate = start.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
         endDate = end.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
     } else {
-        // Use global dates
         startDate = new Date(event.date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
         endDate = event.endDate
             ? new Date(event.endDate).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
@@ -79,9 +77,143 @@ const getMaterialIconAndColor = (type: string) => {
     }
 };
 
+// ── Format session date ──
+const formatSessionDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return format(date, "EEEE, dd 'de' MMMM", { locale: ptBR });
+};
+
+// ═══════════════════════════════════════════════
+// SUBCOMPONENT: TimelineSession — Interactive node
+// ═══════════════════════════════════════════════
+function TimelineSession({
+    session,
+    index,
+    isActive,
+    isLast,
+    onSelect,
+    event,
+    isAdded,
+    onAddToCalendar,
+}: {
+    session: EventSession;
+    index: number;
+    isActive: boolean;
+    isLast: boolean;
+    onSelect: () => void;
+    event: ClubEvent;
+    isAdded: boolean;
+    onAddToCalendar: () => void;
+}) {
+    return (
+        <div className="flex gap-3">
+            {/* COLUMN LEFT: line + node */}
+            <div className="flex flex-col items-center" style={{ minWidth: '20px' }}>
+                {/* Line above node (skip for first item) */}
+                {index > 0 && (
+                    <div className={`w-0.5 h-3 transition-colors duration-300 ${isActive ? 'bg-yellow-500' : 'bg-slate-700'
+                        }`} />
+                )}
+
+                {/* TIMELINE NODE — the heart of interactivity */}
+                <button
+                    onClick={onSelect}
+                    className={`
+                        relative flex-shrink-0 w-5 h-5 rounded-full
+                        border-2 transition-all duration-300 ease-out
+                        ${isActive
+                            ? 'bg-yellow-500 border-yellow-400'
+                            : 'bg-transparent border-slate-600 hover:border-yellow-500/60'
+                        }
+                    `}
+                    style={{
+                        boxShadow: isActive ? '0 0 12px rgba(202,138,4,0.6)' : 'none',
+                        minHeight: '20px',
+                        minWidth: '20px',
+                    }}
+                    aria-label={`Selecionar Dia ${index + 1}`}
+                >
+                    {isActive && (
+                        <span className="absolute inset-0 rounded-full bg-yellow-400/30 animate-ping pointer-events-none" />
+                    )}
+                </button>
+
+                {/* Line below node (skip for last item) */}
+                {!isLast && (
+                    <div className={`w-0.5 flex-1 min-h-[40px] transition-colors duration-300 ${isActive ? 'bg-yellow-500/50' : 'bg-slate-700'
+                        }`} />
+                )}
+            </div>
+
+            {/* COLUMN RIGHT: day card */}
+            <button
+                onClick={onSelect}
+                className={`
+                    flex-1 mb-3 p-3 rounded-xl border text-left
+                    transition-all duration-300 ease-out
+                    ${isActive
+                        ? 'bg-slate-800 border-yellow-600/40 shadow-lg shadow-yellow-900/10'
+                        : 'bg-slate-800/40 border-slate-700/50 hover:border-slate-600'
+                    }
+                `}
+                style={{
+                    transform: isActive ? 'scale(1.01)' : 'scale(1)',
+                }}
+            >
+                {/* Card header */}
+                <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-bold uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-yellow-500' : 'text-slate-500'
+                        }`}>
+                        Dia {index + 1}
+                    </span>
+                    <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onAddToCalendar();
+                        }}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                e.stopPropagation();
+                                onAddToCalendar();
+                            }
+                        }}
+                        className={`text-xs px-2 py-1 rounded transition-all ${isAdded
+                            ? 'bg-green-500/10 text-green-400'
+                            : 'bg-slate-800 hover:bg-yellow-600 text-slate-400 hover:text-white active:scale-95'
+                            }`}
+                    >
+                        {isAdded ? '✓ Adicionado' : '+ Agenda'}
+                    </span>
+                </div>
+
+                {/* Date */}
+                <p className={`text-sm font-semibold mb-1 capitalize transition-colors duration-300 ${isActive ? 'text-white' : 'text-slate-300'
+                    }`}>
+                    {formatSessionDate(session.date)}
+                </p>
+
+                {/* Time */}
+                <div className="flex items-center gap-1.5">
+                    <Clock size={12} className={`transition-colors duration-300 ${isActive ? 'text-yellow-500' : 'text-slate-500'}`} />
+                    <span className={`text-xs transition-colors duration-300 ${isActive ? 'text-slate-300' : 'text-slate-500'}`}>
+                        {session.startTime} — {session.endTime}
+                    </span>
+                </div>
+            </button>
+        </div>
+    );
+}
+
+
+// ═══════════════════════════════════════════════
+// MAIN COMPONENT: EventDetailsModal v2.0
+// ═══════════════════════════════════════════════
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onClose, userId }) => {
-    const [calendarMenuOpen, setCalendarMenuOpen] = useState(false);
     const [addedSessions, setAddedSessions] = useState<Set<number>>(new Set());
+    const [activeSessionIndex, setActiveSessionIndex] = useState<number>(0);
 
     // ── RSVP State ──
     const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>('NONE');
@@ -99,7 +231,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
         if (!userId) return;
         const fetchRsvp = async () => {
             try {
-                // Get user's RSVP
                 const { data } = await supabase
                     .from('event_rsvps')
                     .select('status')
@@ -108,7 +239,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     .maybeSingle();
                 setRsvpStatus(data?.status || 'NONE');
 
-                // Get confirmed count
                 const { count } = await supabase
                     .from('event_rsvps')
                     .select('*', { count: 'exact', head: true })
@@ -133,7 +263,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     const handleRequestRsvp = useCallback(async () => {
         if (!userId || rsvpLoading) return;
         setRsvpLoading(true);
-        // Optimistic
         setRsvpStatus('PENDING');
         try {
             const { error } = await supabase
@@ -177,20 +306,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     const isMultiDay = (event.sessions?.length || 0) > 1;
     const sessions = event.sessions || [];
 
-    // Format session date for display
-    const formatSessionDate = (dateStr: string) => {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        return format(date, "EEEE, dd 'de' MMMM", { locale: ptBR });
-    };
-
     const handleAddToCalendar = (session?: EventSession, index?: number) => {
         const url = generateCalendarUrl(event, session);
         window.open(url, '_blank');
         if (index !== undefined) {
             setAddedSessions(prev => new Set([...prev, index]));
         }
-        if (!isMultiDay) setCalendarMenuOpen(false);
     };
 
     const handleAddAll = () => {
@@ -199,277 +320,304 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 const url = generateCalendarUrl(event, session);
                 window.open(url, '_blank');
                 setAddedSessions(prev => new Set([...prev, i]));
-            }, i * 500); // Stagger to avoid popup blocking
+            }, i * 500);
         });
     };
 
+    const heroImage = event.coverImage || event.bannerUrl;
+
     return createPortal(
         <div
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[70] flex items-end justify-center"
             onClick={(e) => e.target === e.currentTarget && onClose()}
             style={{
-                animation: 'fadeIn 200ms ease-out',
-                paddingTop: 'env(safe-area-inset-top, 0)',
-                paddingBottom: 'env(safe-area-inset-bottom, 0)',
+                animation: 'edm-fadeIn 200ms ease-out',
+                paddingBottom: 0,
             }}
         >
-            {/* Backdrop — fades with drag */}
+            {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                 style={{ opacity: backdropOpacity }}
                 onClick={onClose}
             />
 
-            <div className="bg-slate-900 border border-slate-700 w-[90%] md:w-full md:max-w-2xl rounded-2xl shadow-2xl relative flex flex-col max-h-[90dvh]"
+            {/* ═══ BOTTOM SHEET MODAL ═══ */}
+            <div
+                className="relative w-full md:max-w-2xl max-h-[92dvh] bg-slate-900 rounded-t-3xl flex flex-col overflow-hidden"
                 style={{
-                    animation: offsetY === 0 && !isDragging ? 'scaleIn 250ms ease-out' : 'none',
+                    animation: offsetY === 0 && !isDragging ? 'edm-slideUp 300ms ease-out' : 'none',
                     transform: `translateY(${offsetY}px)`,
                     transition: swipeTransition,
                     willChange: isDragging ? 'transform' : 'auto',
                 }}
             >
-                {/* Drag handle — swipe down to close */}
-                <div
-                    {...swipeBind()}
-                    className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex justify-center cursor-grab active:cursor-grabbing p-2"
-                    style={{ touchAction: 'none' }}
-                >
-                    <div className="w-10 h-1 bg-white/30 rounded-full" />
-                </div>
-                {/* Banner */}
-                <div className="h-32 bg-gradient-to-r from-yellow-600 to-yellow-800 relative rounded-t-2xl overflow-hidden shrink-0">
-                    {event.bannerUrl && (
-                        <img src={event.bannerUrl} alt={event.title} className="w-full h-full object-cover opacity-50" />
+                {/* ══ HERO IMAGE ══ */}
+                <div className="relative flex-shrink-0" style={{ height: '200px' }}>
+                    {heroImage ? (
+                        <img
+                            src={heroImage}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${event.category === 'PRESENTIAL'
+                                ? 'bg-gradient-to-br from-purple-900/60 to-slate-900'
+                                : 'bg-gradient-to-br from-emerald-900/60 to-slate-900'
+                            }`}>
+                            <CalendarDays size={48} className="text-slate-600" />
+                        </div>
                     )}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all hover:scale-110 active:scale-95"
-                    >
-                        <X size={20} />
-                    </button>
 
-                    {/* Multi-day Badge */}
+                    {/* Gradient overlay at base */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent pointer-events-none" />
+
+                    {/* Drag handle */}
+                    <div
+                        {...swipeBind()}
+                        className="absolute top-0 left-0 right-0 z-20 flex justify-center pt-2 pb-4 cursor-grab active:cursor-grabbing"
+                        style={{ touchAction: 'none' }}
+                    >
+                        <div className="w-10 h-1 bg-white/30 rounded-full" />
+                    </div>
+
+                    {/* Multi-day badge — top left */}
                     {isMultiDay && (
-                        <div className="absolute top-4 left-4 px-3 py-1.5 bg-orange-500/90 backdrop-blur-sm rounded-full flex items-center gap-1.5 shadow-lg"
-                            style={{ animation: 'slideIn 300ms ease-out 100ms both' }}
-                        >
-                            <CalendarDays size={14} className="text-white" />
+                        <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 rounded-full shadow-lg">
+                            <CalendarDays size={12} className="text-white" />
                             <span className="text-xs font-bold text-white">{sessions.length} dias</span>
                         </div>
                     )}
+
+                    {/* Close button — top right */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60 transition-colors z-20"
+                    >
+                        <X size={16} className="text-white" />
+                    </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-6 overflow-y-auto">
-                    {/* Category & Date Badges */}
-                    <div className="flex items-center gap-3 mb-4 flex-wrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${event.category === 'ONLINE'
-                            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                            : 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
+                {/* ══ SCROLLABLE CONTENT ══ */}
+                <div
+                    className="flex-1 overflow-y-auto overscroll-contain"
+                    style={{
+                        WebkitOverflowScrolling: 'touch',
+                        paddingBottom: userId ? '100px' : '24px',
+                    }}
+                >
+
+                    {/* Event Header */}
+                    <div className="px-4 pt-4 pb-3">
+                        {/* Category badge */}
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${event.category === 'PRESENTIAL'
+                                ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             }`}>
-                            {event.category === 'PRESENTIAL' ? '📍 Presencial' : '🖥️ Online'}
-                        </span>
-                        <span className="text-slate-400 text-sm flex items-center gap-1">
-                            <Clock size={14} />
-                            {new Date(event.date).toLocaleDateString('pt-BR')} às {new Date(event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                            {event.category === 'PRESENTIAL'
+                                ? <MapPin size={11} />
+                                : <Video size={11} />
+                            }
+                            {event.category === 'PRESENTIAL' ? 'Presencial' : 'Online'}
+                        </div>
+
+                        {/* Date & time */}
+                        <div className="flex items-center gap-1.5 mb-2">
+                            <Clock size={13} className="text-slate-500" />
+                            <span className="text-sm text-slate-400">
+                                {new Date(event.date).toLocaleDateString('pt-BR')} às {new Date(event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+
+                        {/* Title */}
+                        <h2 className="text-xl font-bold text-white leading-tight mb-3">
+                            {event.title}
+                        </h2>
+
+                        {/* Description — no "SOBRE O EVENTO" label */}
+                        {event.description && (
+                            <p className="text-sm text-slate-400 leading-relaxed">
+                                {event.description}
+                            </p>
+                        )}
                     </div>
 
-                    <h2 className="text-2xl font-bold text-white mb-4">{event.title}</h2>
+                    {/* ═══ DIVIDER ═══ */}
+                    {(isMultiDay || event.location || event.link || (event.materials && event.materials.length > 0)) && (
+                        <div className="h-px bg-slate-800 mx-4" />
+                    )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2 space-y-6">
-                            {/* Description */}
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">Sobre o Evento</h3>
-                                <p className="text-slate-300 leading-relaxed text-sm">
-                                    {event.description || 'Nenhuma descrição disponível para este evento.'}
-                                </p>
+                    {/* ═══ TIMELINE SECTION ═══ */}
+                    {isMultiDay && (
+                        <div className="px-4 py-4">
+                            <div className="flex items-center gap-2 mb-4">
+                                <CalendarDays size={16} className="text-yellow-500" />
+                                <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+                                    Cronograma
+                                </h3>
                             </div>
 
-                            {/* ═══ TIMELINE SECTION (Sessions) ═══ */}
-                            {isMultiDay && (
-                                <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
-                                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                                        <CalendarDays size={16} className="text-yellow-500" />
-                                        Cronograma
-                                    </h3>
-                                    <div className="relative">
-                                        {/* Vertical timeline line */}
-                                        <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gradient-to-b from-yellow-500 via-yellow-600 to-yellow-700 rounded-full" />
+                            <div className="pl-1">
+                                {sessions.map((session, index) => (
+                                    <TimelineSession
+                                        key={index}
+                                        session={session}
+                                        index={index}
+                                        isActive={activeSessionIndex === index}
+                                        isLast={index === sessions.length - 1}
+                                        onSelect={() => setActiveSessionIndex(index)}
+                                        event={event}
+                                        isAdded={addedSessions.has(index)}
+                                        onAddToCalendar={() => handleAddToCalendar(session, index)}
+                                    />
+                                ))}
+                            </div>
 
-                                        <div className="space-y-4">
-                                            {sessions.map((session, index) => {
-                                                const isAdded = addedSessions.has(index);
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className="relative pl-10 group"
-                                                        style={{ animation: `slideUp 300ms ease-out ${index * 100}ms both` }}
-                                                    >
-                                                        {/* Timeline dot */}
-                                                        <div className={`absolute left-1 top-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${isAdded
-                                                            ? 'bg-green-500 border-green-400 scale-110'
-                                                            : 'bg-slate-900 border-yellow-500 group-hover:bg-yellow-500/20'
-                                                            }`}>
-                                                            {isAdded && <Check size={10} className="text-white" />}
-                                                        </div>
+                            {/* Add All button */}
+                            <button
+                                onClick={handleAddAll}
+                                className="w-full mt-2 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium py-2.5 rounded-xl transition-all text-xs border border-slate-700 active:scale-[0.98]"
+                            >
+                                <CalendarPlus size={14} />
+                                Adicionar Todos à Agenda
+                            </button>
+                        </div>
+                    )}
 
-                                                        <div className="bg-slate-900/80 rounded-lg p-3 border border-slate-700/50 transition-all hover:border-yellow-500/30 hover:shadow-lg hover:shadow-yellow-500/5">
-                                                            <div className="flex items-center justify-between mb-1">
-                                                                <span className="text-xs font-bold text-yellow-500 uppercase">
-                                                                    Dia {index + 1}
-                                                                </span>
-                                                                <button
-                                                                    onClick={() => handleAddToCalendar(session, index)}
-                                                                    className={`text-xs px-2 py-1 rounded transition-all ${isAdded
-                                                                        ? 'bg-green-500/10 text-green-400 cursor-default'
-                                                                        : 'bg-slate-800 hover:bg-yellow-600 text-slate-400 hover:text-white active:scale-95'
-                                                                        }`}
-                                                                    disabled={isAdded}
-                                                                >
-                                                                    {isAdded ? '✓ Adicionado' : '+ Agenda'}
-                                                                </button>
-                                                            </div>
-                                                            <p className="text-sm text-white font-medium capitalize">
-                                                                {formatSessionDate(session.date)}
-                                                            </p>
-                                                            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                                                                <Clock size={12} />
-                                                                {session.startTime} — {session.endTime}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                    {/* Single-day: simple calendar button */}
+                    {!isMultiDay && sessions.length <= 1 && (
+                        <div className="px-4 py-3">
+                            <button
+                                onClick={() => handleAddToCalendar(sessions[0])}
+                                className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium py-2.5 rounded-xl transition-all text-sm border border-slate-700 active:scale-[0.98]"
+                            >
+                                <CalendarPlus size={16} />
+                                Adicionar à Agenda
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ═══ DIVIDER ═══ */}
+                    {(event.location || event.link) && (
+                        <div className="h-px bg-slate-800 mx-4" />
+                    )}
+
+                    {/* ═══ LOCATION ═══ */}
+                    {event.location && (
+                        <div className="px-4 py-3">
+                            <a
+                                href={event.mapLink || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-purple-500/30 transition-colors group"
+                                onClick={(e) => !event.mapLink && e.preventDefault()}
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                                    <MapPin size={15} className="text-purple-400" />
                                 </div>
-                            )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500 mb-0.5">Local</p>
+                                    <p className="text-sm text-slate-200 group-hover:text-purple-300 transition-colors">
+                                        {event.location}
+                                    </p>
+                                </div>
+                                {event.mapLink && (
+                                    <ExternalLink size={14} className="text-slate-600 ml-auto self-center flex-shrink-0" />
+                                )}
+                            </a>
+                        </div>
+                    )}
 
-                            {/* Materials */}
-                            {event.materials && event.materials.length > 0 && (
-                                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                                    <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                        <FileText size={16} className="text-yellow-500" />
+                    {/* ═══ ONLINE LINK ═══ */}
+                    {event.link && (
+                        <div className="px-4 py-3">
+                            <a
+                                href={event.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-emerald-500/30 transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Video size={15} className="text-emerald-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs text-slate-500 mb-0.5">Link da Reunião</p>
+                                    <p className="text-sm text-emerald-400 truncate">{event.link}</p>
+                                    {event.meetingPassword && (
+                                        <p className="text-xs text-slate-500 mt-0.5">Senha: {event.meetingPassword}</p>
+                                    )}
+                                </div>
+                                <ExternalLink size={14} className="text-slate-600 flex-shrink-0" />
+                            </a>
+                        </div>
+                    )}
+
+                    {/* ═══ MATERIALS ═══ */}
+                    {event.materials && event.materials.length > 0 && (
+                        <>
+                            <div className="h-px bg-slate-800 mx-4" />
+                            <div className="px-4 py-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileText size={16} className="text-yellow-500" />
+                                    <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
                                         Ata e Materiais
                                     </h3>
-                                    <div className="space-y-2">
-                                        {event.materials.map((material, index) => {
-                                            const { icon: Icon, color } = getMaterialIconAndColor(material.type);
-                                            return (
-                                                <a
-                                                    key={index}
-                                                    href={material.url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 group active:scale-[0.98]"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-2 bg-${color}-500/10 rounded-lg text-${color}-400`}>
-                                                            <Icon size={18} />
-                                                        </div>
-                                                        <span className="text-sm text-slate-300 group-hover:text-white font-medium">
-                                                            {material.title}
-                                                        </span>
+                                </div>
+                                <div className="space-y-2">
+                                    {event.materials.map((material, index) => {
+                                        const { icon: Icon, color } = getMaterialIconAndColor(material.type);
+                                        return (
+                                            <a
+                                                key={index}
+                                                href={material.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl transition border border-slate-700/50 group active:scale-[0.98]"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${color === 'red' ? 'bg-red-500/10 text-red-400' :
+                                                            color === 'purple' ? 'bg-purple-500/10 text-purple-400' :
+                                                                color === 'blue' ? 'bg-blue-500/10 text-blue-400' :
+                                                                    'bg-green-500/10 text-green-400'
+                                                        }`}>
+                                                        <Icon size={18} />
                                                     </div>
-                                                    <ExternalLink size={16} className="text-slate-500 group-hover:text-white" />
-                                                </a>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Sidebar */}
-                        <div className="space-y-4">
-                            {/* Location */}
-                            {event.location && (
-                                <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/50 transition-all hover:border-slate-600">
-                                    <div className="flex items-start gap-3">
-                                        <MapPin className="text-yellow-500 shrink-0 mt-1" size={18} />
-                                        <div>
-                                            <h4 className="text-sm font-bold text-white mb-1">Localização</h4>
-                                            <p className="text-xs text-slate-400 leading-relaxed">{event.location}</p>
-                                            {event.mapLink && (
-                                                <a href={event.mapLink} target="_blank" rel="noreferrer" className="text-xs text-yellow-500 hover:underline mt-2 inline-flex items-center gap-1 transition-all hover:gap-2">
-                                                    Ver no Mapa <ChevronRight size={12} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Online Link */}
-                            {event.category === 'ONLINE' && event.link && (
-                                <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700/50">
-                                    <div className="flex items-start gap-3">
-                                        <Video className="text-emerald-500 shrink-0 mt-1" size={18} />
-                                        <div>
-                                            <h4 className="text-sm font-bold text-white mb-1">Link da Reunião</h4>
-                                            <a href={event.link} target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:underline break-all">
-                                                Acessar Reunião
+                                                    <span className="text-sm text-slate-300 group-hover:text-white font-medium">
+                                                        {material.title}
+                                                    </span>
+                                                </div>
+                                                <ExternalLink size={16} className="text-slate-500 group-hover:text-white" />
                                             </a>
-                                            {event.meetingPassword && (
-                                                <p className="text-xs text-slate-500 mt-1">Senha: {event.meetingPassword}</p>
-                                            )}
-                                        </div>
-                                    </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-
-                            {/* Add to Calendar */}
-                            <div className="pt-4 border-t border-slate-800">
-                                {isMultiDay ? (
-                                    <div className="space-y-2">
-                                        <button
-                                            onClick={handleAddAll}
-                                            className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm active:scale-[0.97] shadow-lg shadow-yellow-900/20"
-                                        >
-                                            <CalendarPlus size={16} />
-                                            Adicionar Todos os Dias
-                                        </button>
-                                        <p className="text-[10px] text-slate-500 text-center">
-                                            Ou adicione dias específicos na seção Cronograma
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => handleAddToCalendar()}
-                                        className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm border border-slate-700 active:scale-[0.97]"
-                                    >
-                                        <CalendarPlus size={16} />
-                                        Adicionar à Agenda
-                                    </button>
-                                )}
                             </div>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* ═══ RSVP STICKY FOOTER ═══ */}
                 {userId && (
-                    <div className="shrink-0 border-t border-slate-700 bg-slate-900/95 backdrop-blur-sm px-4 py-3 rounded-b-2xl">
+                    <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent pt-8 rounded-b-none">
                         <div className="flex flex-col items-center gap-2">
 
-                            {/* RSVP Button — Full width on mobile */}
+                            {/* NONE: Confirmar Presença */}
                             {rsvpStatus === 'NONE' && (
                                 <button
                                     onClick={handleRequestRsvp}
                                     disabled={rsvpLoading}
-                                    className="w-full flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-yellow-900/20 text-sm disabled:opacity-50"
+                                    className="w-full flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3.5 px-4 rounded-xl transition-all active:scale-[0.97] shadow-lg shadow-yellow-900/20 text-sm disabled:opacity-50"
                                 >
                                     {rsvpLoading ? <Loader2 size={16} className="animate-spin" /> : <UserCheck size={16} />}
                                     Confirmar Presença
                                 </button>
                             )}
 
+                            {/* PENDING: Aguardando */}
                             {rsvpStatus === 'PENDING' && (
                                 <div className="w-full flex flex-col items-center gap-2">
-                                    <div className="w-full flex items-center justify-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
-                                        <Clock3 size={16} className="shrink-0" />
+                                    <div className="w-full flex items-center justify-center gap-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold py-3.5 px-4 rounded-xl text-sm">
+                                        <Clock3 size={16} className="shrink-0 animate-pulse" />
                                         <span>Aguardando Aprovação</span>
                                     </div>
                                     <button
@@ -482,9 +630,10 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                 </div>
                             )}
 
+                            {/* CONFIRMED: Presença Confirmada */}
                             {rsvpStatus === 'CONFIRMED' && (
                                 <div className="w-full flex flex-col items-center gap-2">
-                                    <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                    <div className="w-full flex items-center justify-center gap-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold py-3.5 px-4 rounded-xl text-sm">
                                         <Check size={16} className="shrink-0" />
                                         <span>Presença Confirmada</span>
                                     </div>
@@ -498,21 +647,23 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                 </div>
                             )}
 
+                            {/* REJECTED */}
                             {rsvpStatus === 'REJECTED' && (
-                                <div className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                <div className="w-full flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 font-semibold py-3.5 px-4 rounded-xl text-sm">
                                     <XCircle size={16} className="shrink-0" />
                                     <span>Não Aprovado</span>
                                 </div>
                             )}
 
+                            {/* WAITLIST */}
                             {rsvpStatus === 'WAITLIST' && (
-                                <div className="w-full flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold py-3 px-4 rounded-xl text-sm">
+                                <div className="w-full flex items-center justify-center gap-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold py-3.5 px-4 rounded-xl text-sm">
                                     <Clock3 size={16} className="shrink-0" />
                                     <span>Lista de Espera</span>
                                 </div>
                             )}
 
-                            {/* Confirmed counter — below button */}
+                            {/* Confirmed counter */}
                             {confirmedCount > 0 && (
                                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                                     <Users size={12} className="text-emerald-500" />
@@ -523,8 +674,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
                         {/* Toast */}
                         {rsvpToast && (
-                            <div className="mt-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 text-center"
-                                style={{ animation: 'slideUp 200ms ease-out' }}
+                            <div
+                                className="mt-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-300 text-center"
+                                style={{ animation: 'edm-slideUpSmall 200ms ease-out' }}
                             >
                                 {rsvpToast}
                             </div>
@@ -533,21 +685,17 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 )}
             </div>
 
-            {/* CSS Animations */}
+            {/* CSS Animations — namespaced to avoid conflicts */}
             <style>{`
-                @keyframes fadeIn {
+                @keyframes edm-fadeIn {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                @keyframes scaleIn {
-                    from { opacity: 0; transform: scale(0.95); }
-                    to { opacity: 1; transform: scale(1); }
+                @keyframes edm-slideUp {
+                    from { opacity: 0; transform: translateY(40px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
-                @keyframes slideIn {
-                    from { opacity: 0; transform: translateX(-10px); }
-                    to { opacity: 1; transform: translateX(0); }
-                }
-                @keyframes slideUp {
+                @keyframes edm-slideUpSmall {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
