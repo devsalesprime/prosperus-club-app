@@ -214,7 +214,7 @@ const GlobalSearchBar = ({
 
             {/* Results Dropdown */}
             {showDropdown && results && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50 max-h-[60vh] overflow-y-auto">
                     {/* Members Section */}
                     {results.members.length > 0 && (
                         <div className="p-3 border-b border-slate-800">
