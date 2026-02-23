@@ -891,7 +891,7 @@ const App = () => {
             <style>{`
                 :root {
                     --header-h: calc(60px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(44px + env(safe-area-inset-bottom, 0px));
+                    --nav-h: calc(48px + env(safe-area-inset-bottom, 0px));
                 }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
@@ -1051,7 +1051,7 @@ const App = () => {
                     style={{
                         position: isMobile ? 'fixed' : undefined,
                         top: isMobile ? 'var(--header-h, 60px)' : undefined,
-                        bottom: isMobile ? 'var(--nav-h, 64px)' : undefined,
+                        bottom: isMobile ? 'var(--nav-h, 48px)' : undefined,
                         left: isMobile ? 0 : undefined,
                         right: isMobile ? 0 : undefined,
                         WebkitOverflowScrolling: 'touch',
@@ -1540,10 +1540,10 @@ const App = () => {
                     </Suspense>
                 </main>
 
-                {/* Mobile Bottom Nav — KI §10.1 Compact Pattern */}
+                {/* Mobile Bottom Nav — Explicit height sync with --nav-h */}
                 <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center px-2 py-2"
-                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-start px-2 pt-1.5"
+                    style={{ height: 'var(--nav-h, 48px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 >
                     {navItems.slice(0, 5).map(item => {
                         const targetView = ('view' in item && item.view) ? item.view : item.id;
@@ -1551,9 +1551,9 @@ const App = () => {
                             <button
                                 key={item.id}
                                 onClick={() => setView(targetView as ViewState)}
-                                className={`flex-1 min-w-0 flex flex-col items-center gap-0 py-1 rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
+                                className={`flex-1 min-w-0 flex flex-col items-center rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
                             >
-                                <span className="w-5 h-5 mb-1">{item.icon}</span>
+                                <span className="w-5 h-5 mb-0.5">{item.icon}</span>
                                 <span className="text-[9px] leading-tight">{item.label}</span>
                             </button>
                         );
