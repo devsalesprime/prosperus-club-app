@@ -52,6 +52,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 }) => {
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [triedNext, setTriedNext] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,10 +92,52 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     };
 
     const handleSocialChange = (field: string, value: string) => {
+        // Strip @ if user types it
+        const clean = value.replace(/^@/, '').trim();
+
+        // Auto-build full URL from username
+        let fullUrl = clean;
+        if (clean && field === 'linkedin') {
+            fullUrl = `https://linkedin.com/in/${clean}`;
+        } else if (clean && field === 'instagram') {
+            fullUrl = `https://instagram.com/${clean}`;
+        }
+
         setFormData(prev => ({
             ...prev,
-            socials: { ...prev.socials, [field]: value }
+            socials: { ...prev.socials, [field]: field === 'website' ? value : fullUrl }
         }));
+        if (triedNext) setErrors({});
+    };
+
+    // Extract username from stored URL for display
+    const getUsernameFromUrl = (url: string, platform: string): string => {
+        if (!url) return '';
+        if (platform === 'linkedin') return url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '');
+        if (platform === 'instagram') return url.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/$/, '');
+        return url;
+    };
+
+    // Per-step validation
+    const validateStep = (s: number): Record<string, string> => {
+        const errs: Record<string, string> = {};
+        if (s === 1) {
+            if (!formData.name?.trim()) errs.name = 'Nome é obrigatório';
+            if (!formData.company?.trim()) errs.company = 'Empresa é obrigatória';
+            if (!formData.job_title?.trim()) errs.job_title = 'Cargo é obrigatório';
+            if (!formData.bio?.trim()) errs.bio = 'Conte sobre você';
+        } else if (s === 2) {
+            const liUser = getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin');
+            const igUser = getUsernameFromUrl(formData.socials?.instagram || '', 'instagram');
+            if (!liUser) errs.linkedin = 'LinkedIn é obrigatório';
+            if (!igUser) errs.instagram = 'Instagram é obrigatório';
+            if (!(formData.tags && formData.tags.length >= 1)) errs.tags = 'Selecione pelo menos 1 área';
+        } else if (s === 3) {
+            if (!formData.what_i_sell?.trim()) errs.what_i_sell = 'Campo obrigatório';
+            if (!formData.what_i_need?.trim()) errs.what_i_need = 'Campo obrigatório';
+            if (!(formData.partnership_interests && formData.partnership_interests.length >= 1)) errs.partnership_interests = 'Selecione pelo menos 1 setor';
+        }
+        return errs;
     };
 
     const handleTagToggle = (tag: string) => {
@@ -151,6 +195,16 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     };
 
     const handleNext = useCallback(() => {
+        // Validate current step before advancing
+        const stepErrors = validateStep(step);
+        if (Object.keys(stepErrors).length > 0) {
+            setErrors(stepErrors);
+            setTriedNext(true);
+            return;
+        }
+        setErrors({});
+        setTriedNext(false);
+
         if (step < totalSteps - 1) {
             setSlideDirection('left');
             setTimeout(() => {
@@ -158,7 +212,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 setSlideDirection(null);
             }, 150);
         }
-    }, [step]);
+    }, [step, formData]);
 
     const handleBack = useCallback(() => {
         if (step > 0) {
@@ -233,18 +287,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         }
     };
 
-    const handleSkip = async () => {
-        setSaving(true);
-        try {
-            await profileService.completeOnboarding(currentUser.id);
-            onProfileUpdate({ ...currentUser, has_completed_onboarding: true });
-            onComplete();
-        } catch (error) {
-            console.error('Error skipping onboarding:', error);
-        } finally {
-            setSaving(false);
-        }
-    };
+    // handleSkip removed — all fields are now required
 
     // Step components
     const renderStep = () => {
@@ -329,61 +372,65 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     <User size={14} className="inline mr-1.5 -mt-0.5" />
-                    Nome Completo
+                    Nome Completo <span className="text-yellow-500">*</span>
                 </label>
                 <input
                     type="text"
                     value={formData.name || ''}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-600 transition"
+                    onChange={(e) => { handleInputChange('name', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.name; return n; }); }}
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition ${errors.name ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-600'}`}
                     placeholder="Seu nome completo"
                 />
+                {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         <Building2 size={14} className="inline mr-1.5 -mt-0.5" />
-                        Empresa
+                        Empresa <span className="text-yellow-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={formData.company || ''}
-                        onChange={(e) => handleInputChange('company', e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-600 transition"
+                        onChange={(e) => { handleInputChange('company', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.company; return n; }); }}
+                        className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition ${errors.company ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-600'}`}
                         placeholder="Sua empresa"
                     />
+                    {errors.company && <p className="text-xs text-red-400 mt-1">{errors.company}</p>}
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         <Briefcase size={14} className="inline mr-1.5 -mt-0.5" />
-                        Cargo
+                        Cargo <span className="text-yellow-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={formData.job_title || ''}
-                        onChange={(e) => handleInputChange('job_title', e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-600 transition"
+                        onChange={(e) => { handleInputChange('job_title', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.job_title; return n; }); }}
+                        className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition ${errors.job_title ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-600'}`}
                         placeholder="Seu cargo"
                     />
+                    {errors.job_title && <p className="text-xs text-red-400 mt-1">{errors.job_title}</p>}
                 </div>
             </div>
 
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Sobre Você
+                    Sobre Você <span className="text-yellow-500">*</span>
                 </label>
                 <textarea
                     value={formData.bio || ''}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    onChange={(e) => { handleInputChange('bio', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.bio; return n; }); }}
                     rows={3}
                     maxLength={300}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-600 transition resize-none"
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.bio ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-600'}`}
                     placeholder="Conte um pouco sobre você e seu negócio..."
                 />
-                <p className="text-xs text-slate-500 mt-1 text-right">
-                    {(formData.bio || '').length}/300
-                </p>
+                <div className="flex justify-between mt-1">
+                    {errors.bio ? <p className="text-xs text-red-400">{errors.bio}</p> : <span />}
+                    <p className="text-xs text-slate-500">{(formData.bio || '').length}/300</p>
+                </div>
             </div>
         </div>
     );
@@ -396,27 +443,37 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <p className="text-slate-400 text-sm">Redes sociais e áreas de interesse</p>
             </div>
 
-            {/* Social Links */}
+            {/* Social Links — username only */}
             <div className="space-y-3">
-                <div className="relative">
-                    <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400" size={18} />
-                    <input
-                        type="url"
-                        value={formData.socials?.linkedin || ''}
-                        onChange={(e) => handleSocialChange('linkedin', e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                        placeholder="https://linkedin.com/in/seuperfil"
-                    />
+                <div>
+                    <div className="relative">
+                        <Linkedin className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400" size={18} />
+                        <span className="absolute left-12 top-1/2 -translate-y-1/2 text-slate-500 text-sm">@</span>
+                        <input
+                            type="text"
+                            value={getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin')}
+                            onChange={(e) => handleSocialChange('linkedin', e.target.value)}
+                            className={`w-full bg-slate-800 border rounded-xl pl-16 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none transition ${errors.linkedin ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-blue-500'}`}
+                            placeholder="seuperfil"
+                        />
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1 ml-1">linkedin.com/in/<span className="text-blue-400">{getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin') || '...'}</span></p>
+                    {errors.linkedin && <p className="text-xs text-red-400 mt-0.5 ml-1">{errors.linkedin}</p>}
                 </div>
-                <div className="relative">
-                    <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400" size={18} />
-                    <input
-                        type="url"
-                        value={formData.socials?.instagram || ''}
-                        onChange={(e) => handleSocialChange('instagram', e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-pink-500 transition"
-                        placeholder="https://instagram.com/seuperfil"
-                    />
+                <div>
+                    <div className="relative">
+                        <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-pink-400" size={18} />
+                        <span className="absolute left-12 top-1/2 -translate-y-1/2 text-slate-500 text-sm">@</span>
+                        <input
+                            type="text"
+                            value={getUsernameFromUrl(formData.socials?.instagram || '', 'instagram')}
+                            onChange={(e) => handleSocialChange('instagram', e.target.value)}
+                            className={`w-full bg-slate-800 border rounded-xl pl-16 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none transition ${errors.instagram ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-pink-500'}`}
+                            placeholder="seuperfil"
+                        />
+                    </div>
+                    <p className="text-[10px] text-slate-600 mt-1 ml-1">instagram.com/<span className="text-pink-400">{getUsernameFromUrl(formData.socials?.instagram || '', 'instagram') || '...'}</span></p>
+                    {errors.instagram && <p className="text-xs text-red-400 mt-0.5 ml-1">{errors.instagram}</p>}
                 </div>
                 <div className="relative">
                     <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-400" size={18} />
@@ -425,7 +482,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         value={formData.socials?.website || ''}
                         onChange={(e) => handleSocialChange('website', e.target.value)}
                         className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
-                        placeholder="https://seusite.com.br"
+                        placeholder="https://seusite.com.br (opcional)"
                     />
                 </div>
             </div>
@@ -434,13 +491,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-3">
                     <Tag size={14} className="inline mr-1.5 -mt-0.5" />
-                    Áreas de Interesse <span className="text-slate-500">(selecione pelo menos 1)</span>
+                    Áreas de Interesse <span className="text-yellow-500">*</span> <span className="text-slate-500">(selecione pelo menos 1)</span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className={`flex flex-wrap gap-2 ${errors.tags ? 'ring-1 ring-red-500/50 rounded-xl p-2 -m-2' : ''}`}>
                     {AVAILABLE_TAGS.map(tag => (
                         <button
                             key={tag}
-                            onClick={() => handleTagToggle(tag)}
+                            onClick={() => { handleTagToggle(tag); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.tags; return n; }); }}
                             className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${(formData.tags || []).includes(tag)
                                 ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/30 scale-105'
                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
@@ -451,6 +508,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         </button>
                     ))}
                 </div>
+                {errors.tags && <p className="text-xs text-red-400 mt-2">{errors.tags}</p>}
             </div>
         </div>
     );
@@ -471,11 +529,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </label>
                 <textarea
                     value={formData.what_i_sell || ''}
-                    onChange={(e) => handleInputChange('what_i_sell', e.target.value)}
+                    onChange={(e) => { handleInputChange('what_i_sell', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.what_i_sell; return n; }); }}
                     rows={2}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-500 transition resize-none"
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.what_i_sell ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-500'}`}
                     placeholder="Ex: Consultoria em gestão empresarial, software de CRM, serviços jurídicos..."
                 />
+                {errors.what_i_sell && <p className="text-xs text-red-400 mt-1">{errors.what_i_sell}</p>}
             </div>
 
             {/* What I Need */}
@@ -486,11 +545,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </label>
                 <textarea
                     value={formData.what_i_need || ''}
-                    onChange={(e) => handleInputChange('what_i_need', e.target.value)}
+                    onChange={(e) => { handleInputChange('what_i_need', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.what_i_need; return n; }); }}
                     rows={2}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition resize-none"
+                    className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.what_i_need ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-blue-500'}`}
                     placeholder="Ex: Sistema de automação de marketing, parceiro logístico, assessoria contábil..."
                 />
+                {errors.what_i_need && <p className="text-xs text-red-400 mt-1">{errors.what_i_need}</p>}
             </div>
 
             {/* Partnership Interests */}
@@ -499,11 +559,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <Users size={14} className="inline mr-1.5 -mt-0.5 text-emerald-400" />
                     Setores de interesse para parcerias <span className="text-yellow-500">*</span>
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className={`flex flex-wrap gap-2 ${errors.partnership_interests ? 'ring-1 ring-red-500/50 rounded-xl p-2 -m-2' : ''}`}>
                     {PARTNERSHIP_SECTORS.map(sector => (
                         <button
                             key={sector}
-                            onClick={() => handlePartnershipToggle(sector)}
+                            onClick={() => { handlePartnershipToggle(sector); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.partnership_interests; return n; }); }}
                             className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
                                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
@@ -514,6 +574,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         </button>
                     ))}
                 </div>
+                {errors.partnership_interests && <p className="text-xs text-red-400 mt-2">{errors.partnership_interests}</p>}
             </div>
         </div>
     );
@@ -576,15 +637,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in p-4">
             <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                {/* Skip button */}
-                <button
-                    onClick={handleSkip}
-                    disabled={saving}
-                    className="absolute top-4 right-4 z-10 text-slate-400 hover:text-white text-sm flex items-center gap-1 transition"
-                >
-                    Pular
-                    <X size={16} />
-                </button>
+                {/* Skip button removed — all fields are required */}
 
                 {/* Progress Bar */}
                 <div className="h-1 bg-slate-800">
