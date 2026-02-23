@@ -61,9 +61,6 @@ export const ProsperusToolsPage: React.FC<ProsperusToolsPageProps> = ({ setView 
                                     setView(section.view);
                                 }}
                                 className="w-full group relative overflow-hidden rounded-2xl h-80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
-                                style={{
-                                    animationDelay: `${index * 100}ms`
-                                }}
                             >
                                 {/* Background Image */}
                                 <div
@@ -104,23 +101,7 @@ export const ProsperusToolsPage: React.FC<ProsperusToolsPageProps> = ({ setView 
                 </div>
             </div>
 
-            <style>{`
-                @keyframes fadeInUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
 
-                button {
-                    animation: fadeInUp 0.6s ease-out forwards;
-                    opacity: 0;
-                }
-            `}</style>
         </div>
     );
 };
