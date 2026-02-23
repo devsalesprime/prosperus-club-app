@@ -506,11 +506,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
             {/* ── Delete Confirmation Modal (Bottom Sheet) ── */}
             {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-end justify-center
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20
                     bg-black/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
                     <div
-                        className="w-full max-w-md bg-slate-900 border border-slate-800
-                            rounded-t-2xl p-5"
+                        className="w-full max-w-sm bg-slate-900 border border-slate-800
+                            rounded-2xl p-5"
                         onClick={e => e.stopPropagation()}
                         style={{ animation: 'slideUp 0.3s ease-out' }}
                     >
