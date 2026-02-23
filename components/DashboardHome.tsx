@@ -521,7 +521,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
     return (
         <PullToRefresh onRefresh={onRefresh || (async () => { window.location.reload(); })}>
-            <div className="space-y-4 animate-in fade-in px-4 pt-4 pb-4 max-w-7xl mx-auto">
+            <div className="space-y-4 animate-in fade-in px-4 pt-4 pb-8 max-w-7xl mx-auto">
                 {/* 1. Saudação */}
                 {currentUser && (
                     <div>
