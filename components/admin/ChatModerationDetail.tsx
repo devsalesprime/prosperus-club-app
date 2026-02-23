@@ -333,7 +333,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
                                                 }`}>
                                                 {/* Avatar */}
                                                 <img
-                                                    src={msg.sender.image_url || '/default-avatar.svg'}
+                                                    src={msg.sender.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                     alt={msg.sender.name}
                                                     className="w-10 h-10 rounded-full object-cover shrink-0"
                                                 />

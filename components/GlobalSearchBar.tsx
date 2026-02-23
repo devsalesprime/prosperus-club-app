@@ -188,7 +188,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                                             className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-left"
                                         >
                                             <img
-                                                src={member.image_url || '/default-avatar.svg'}
+                                                src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt={member.name}
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />

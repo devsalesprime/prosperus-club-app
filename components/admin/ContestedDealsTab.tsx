@@ -118,7 +118,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
                         {/* Seller */}
                         <div className="flex items-center gap-3">
                             <img
-                                src={deal.seller_image || '/default-avatar.svg'}
+                                src={deal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt={deal.seller_name}
                                 className="w-10 h-10 rounded-full object-cover border border-slate-700"
                             />
@@ -142,7 +142,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
                         {/* Buyer */}
                         <div className="flex items-center gap-3">
                             <img
-                                src={deal.buyer_image || '/default-avatar.svg'}
+                                src={deal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt={deal.buyer_name}
                                 className="w-10 h-10 rounded-full object-cover border border-slate-700"
                             />
@@ -204,7 +204,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
                                     <p className="text-xs text-green-400 font-bold uppercase mb-3">Vendedor</p>
                                     <div className="flex items-center gap-3 mb-3">
                                         <img
-                                            src={selectedDeal.seller_image || '/default-avatar.svg'}
+                                            src={selectedDeal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={selectedDeal.seller_name}
                                             className="w-12 h-12 rounded-full object-cover"
                                         />
@@ -227,7 +227,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
                                     <p className="text-xs text-red-400 font-bold uppercase mb-3">Comprador (Contestou)</p>
                                     <div className="flex items-center gap-3 mb-3">
                                         <img
-                                            src={selectedDeal.buyer_image || '/default-avatar.svg'}
+                                            src={selectedDeal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={selectedDeal.buyer_name}
                                             className="w-12 h-12 rounded-full object-cover"
                                         />

@@ -214,7 +214,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         {selectedMember ? (
                             <div className="selected-member-card">
                                 <img
-                                    src={selectedMember.image_url || '/default-avatar.svg'}
+                                    src={selectedMember.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                     alt={selectedMember.name}
                                     className="selected-avatar"
                                 />
@@ -256,7 +256,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                                                 }}
                                             >
                                                 <img
-                                                    src={member.image_url || '/default-avatar.svg'}
+                                                    src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                     alt={member.name}
                                                     className="member-avatar"
                                                 />

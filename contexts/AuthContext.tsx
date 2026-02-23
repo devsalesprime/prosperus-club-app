@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         email: currentSession.user.email || '',
                         name: currentSession.user.user_metadata?.full_name || currentSession.user.email || 'Usuário',
                         role: 'MEMBER',
-                        image_url: currentSession.user.user_metadata?.avatar_url || '/default-avatar.svg',
+                        image_url: currentSession.user.user_metadata?.avatar_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                         has_completed_onboarding: false
                     };
                     setUserProfile(fallbackProfile);

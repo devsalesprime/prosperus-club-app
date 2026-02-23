@@ -152,7 +152,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
                     <h3 className="lead-name">{referral.lead_name}</h3>
                     <div className="partner-row">
                         <img
-                            src={partner?.image_url || '/default-avatar.svg'}
+                            src={partner?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                             alt={partner?.name}
                             className="partner-avatar"
                         />

@@ -181,7 +181,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                                         }}
                                     >
                                         <img
-                                            src={member.image_url || '/default-avatar.svg'}
+                                            src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={member.name}
                                             className="member-avatar"
                                         />

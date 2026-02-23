@@ -111,7 +111,7 @@ export const RankingsScreen: React.FC = () => {
                 <div className="user-position-card">
                     <span className="position-badge">#{userPosition}</span>
                     <img
-                        src={userEntry.image_url || '/default-avatar.svg'}
+                        src={userEntry.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                         alt="Você"
                         className="user-avatar"
                     />
@@ -153,7 +153,7 @@ export const RankingsScreen: React.FC = () => {
                                     <span className="position">{position}º</span>
                                 </div>
                                 <img
-                                    src={entry.image_url || '/default-avatar.svg'}
+                                    src={entry.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                     alt={entry.name}
                                     className="podium-avatar"
                                 />
@@ -205,7 +205,7 @@ export const RankingsScreen: React.FC = () => {
                                 )}
                                 <span className="position-number">{position}</span>
                                 <img
-                                    src={entry.image_url || '/default-avatar.svg'}
+                                    src={entry.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                     alt={entry.name}
                                     className="item-avatar"
                                 />

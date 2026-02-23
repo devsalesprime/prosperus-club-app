@@ -43,7 +43,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                     <div className="relative">
                         <div className="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-500 p-1">
                             <img
-                                src={currentUser.image || '/default-avatar.svg'}
+                                src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt={currentUser.name}
                                 className="w-full h-full rounded-full object-cover bg-slate-800"
                             />

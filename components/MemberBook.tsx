@@ -431,7 +431,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                 >
                                     <div className="flex items-start justify-between mb-3">
                                         <img
-                                            src={profile.image_url || '/default-avatar.svg'}
+                                            src={profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={profile.name}
                                             className="w-12 h-12 rounded-xl object-cover bg-slate-800"
                                         />
@@ -532,7 +532,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                     {/* Avatar with badges */}
                                     <div className="relative mb-4">
                                         <img
-                                            src={member.image_url || '/default-avatar.svg'}
+                                            src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={member.name}
                                             className="w-24 h-24 rounded-full border-4 border-slate-900 object-cover group-hover:border-yellow-600/50 transition-colors shadow-lg"
                                         />

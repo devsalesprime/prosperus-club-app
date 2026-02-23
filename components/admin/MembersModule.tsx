@@ -188,7 +188,7 @@ export const MembersModule: React.FC = () => {
                                 <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <img src={member.image_url || '/default-avatar.svg'} alt={member.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                                            <img src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={member.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
                                             <span className="font-medium text-white">{member.name || 'Sem nome'}</span>
                                         </div>
                                     </td>
@@ -234,7 +234,7 @@ export const MembersModule: React.FC = () => {
                         {/* Member Info (Read-only) */}
                         <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
                             <div className="flex items-center gap-3 mb-3">
-                                <img src={editingMember.image_url || '/default-avatar.svg'} alt={editingMember.name} className="w-12 h-12 rounded-full object-cover border border-slate-600" />
+                                <img src={editingMember.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={editingMember.name} className="w-12 h-12 rounded-full object-cover border border-slate-600" />
                                 <div>
                                     <p className="font-bold text-white">{editingMember.name}</p>
                                     <p className="text-sm text-slate-400">{editingMember.email}</p>

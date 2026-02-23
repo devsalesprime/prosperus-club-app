@@ -100,7 +100,7 @@ export const ContestedReferralsTab: React.FC<ContestedReferralsTabProps> = ({ re
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <img
-                                src={ref.referrer_image || '/default-avatar.svg'}
+                                src={ref.referrer_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt={ref.referrer_name}
                                 style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                             />
@@ -116,7 +116,7 @@ export const ContestedReferralsTab: React.FC<ContestedReferralsTabProps> = ({ re
                                 <div style={{ color: '#94a3b8', fontSize: 12 }}>Receptor (contestou)</div>
                             </div>
                             <img
-                                src={ref.receiver_image || '/default-avatar.svg'}
+                                src={ref.receiver_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt={ref.receiver_name}
                                 style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
                             />

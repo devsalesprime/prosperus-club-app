@@ -627,7 +627,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                                 className="w-full p-3 bg-prosperus-navy-light hover:bg-prosperus-grey/20 rounded-lg transition text-left flex items-center gap-3"
                                             >
                                                 <img
-                                                    src={user.image_url || '/default-avatar.svg'}
+                                                    src={user.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                     alt={user.name}
                                                     className="w-10 h-10 rounded-full object-cover"
                                                 />
@@ -645,7 +645,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                 {/* Selected User */}
                                 <div className="mb-4 p-3 bg-prosperus-navy-light rounded-lg flex items-center gap-3">
                                     <img
-                                        src={selectedUser.image_url || '/default-avatar.svg'}
+                                        src={selectedUser.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                         alt={selectedUser.name}
                                         className="w-10 h-10 rounded-full object-cover"
                                     />
@@ -909,8 +909,8 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                     key={reason}
                                     onClick={() => setDeleteReason(reason)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${deleteReason === reason
-                                            ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                                            : 'bg-prosperus-navy-light text-prosperus-grey border border-prosperus-grey/20 hover:border-prosperus-grey/40'
+                                        ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                        : 'bg-prosperus-navy-light text-prosperus-grey border border-prosperus-grey/20 hover:border-prosperus-grey/40'
                                         }`}
                                 >
                                     {reason}

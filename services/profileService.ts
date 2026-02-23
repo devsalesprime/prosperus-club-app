@@ -267,7 +267,7 @@ class ProfileService {
                     role: profileData.role || 'MEMBER',
                     company: profileData.company || '',
                     job_title: profileData.job_title || '',
-                    image_url: profileData.image_url || '/default-avatar.svg',
+                    image_url: profileData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                     bio: profileData.bio || '',
                     socials: profileData.socials || {},
                     tags: profileData.tags || [],

@@ -85,7 +85,7 @@ export const OfficialRankingsTab: React.FC<OfficialRankingsTabProps> = ({ rankin
                             <div className="flex flex-col items-center w-32">
                                 <div className="relative mb-3">
                                     <img
-                                        src={topThree[1].image_url || '/default-avatar.svg'}
+                                        src={topThree[1].image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                         alt={topThree[1].name}
                                         className="w-20 h-20 rounded-full object-cover border-4 border-slate-300"
                                     />
@@ -108,7 +108,7 @@ export const OfficialRankingsTab: React.FC<OfficialRankingsTabProps> = ({ rankin
                             <div className="flex flex-col items-center w-32">
                                 <div className="relative mb-3">
                                     <img
-                                        src={topThree[0].image_url || '/default-avatar.svg'}
+                                        src={topThree[0].image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                         alt={topThree[0].name}
                                         className="w-24 h-24 rounded-full object-cover border-4 border-yellow-400 ring-4 ring-yellow-400/30"
                                     />
@@ -132,7 +132,7 @@ export const OfficialRankingsTab: React.FC<OfficialRankingsTabProps> = ({ rankin
                             <div className="flex flex-col items-center w-32">
                                 <div className="relative mb-3">
                                     <img
-                                        src={topThree[2].image_url || '/default-avatar.svg'}
+                                        src={topThree[2].image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                         alt={topThree[2].name}
                                         className="w-20 h-20 rounded-full object-cover border-4 border-orange-400"
                                     />
@@ -199,7 +199,7 @@ export const OfficialRankingsTab: React.FC<OfficialRankingsTabProps> = ({ rankin
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
                                                 <img
-                                                    src={entry.image_url || '/default-avatar.svg'}
+                                                    src={entry.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                     alt={entry.name}
                                                     className="w-10 h-10 rounded-full object-cover border border-slate-700"
                                                 />

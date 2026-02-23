@@ -62,7 +62,7 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
         <div className="deal-card">
             <div className="deal-header">
                 <img
-                    src={partner?.image_url || '/default-avatar.svg'}
+                    src={partner?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                     alt={partner?.name}
                     className="partner-avatar"
                 />

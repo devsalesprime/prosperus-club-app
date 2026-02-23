@@ -168,19 +168,19 @@ export const ChatModerationList: React.FC<ChatModerationListProps> = ({
                                     {conv.participants.length >= 2 ? (
                                         <div className="relative w-12 h-12">
                                             <img
-                                                src={conv.participants[0]?.image_url || '/default-avatar.svg'}
+                                                src={conv.participants[0]?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt=""
                                                 className="absolute top-0 left-0 w-8 h-8 rounded-full object-cover border-2 border-slate-900"
                                             />
                                             <img
-                                                src={conv.participants[1]?.image_url || '/default-avatar.svg'}
+                                                src={conv.participants[1]?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt=""
                                                 className="absolute bottom-0 right-0 w-8 h-8 rounded-full object-cover border-2 border-slate-900"
                                             />
                                         </div>
                                     ) : (
                                         <img
-                                            src={conv.participants[0]?.image_url || '/default-avatar.svg'}
+                                            src={conv.participants[0]?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt=""
                                             className="w-12 h-12 rounded-full object-cover border-2 border-slate-700"
                                         />

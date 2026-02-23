@@ -442,7 +442,7 @@ class BannerService {
                 email: profile.email,
                 company: profile.company || '',
                 jobTitle: profile.job_title || '',
-                imageUrl: profile.image_url || '/default-avatar.svg',
+                imageUrl: profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                 tags: profile.tags || [],
                 createdAt: profile.created_at,
                 isNew: new Date(profile.created_at) >= fifteenDaysAgo

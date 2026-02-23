@@ -212,7 +212,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                                     <div className="grid grid-cols-2 gap-4 mb-4">
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={deal.seller_image || '/default-avatar.svg'}
+                                                src={deal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt={deal.seller_name}
                                                 className="w-10 h-10 rounded-full object-cover border border-slate-700"
                                             />
@@ -224,7 +224,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
 
                                         <div className="flex items-center gap-3">
                                             <img
-                                                src={deal.buyer_image || '/default-avatar.svg'}
+                                                src={deal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt={deal.buyer_name}
                                                 className="w-10 h-10 rounded-full object-cover border border-slate-700"
                                             />

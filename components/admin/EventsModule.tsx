@@ -613,7 +613,7 @@ export const EventsModule: React.FC = () => {
                                                             style={{ minHeight: 'auto', minWidth: 'auto' }}
                                                         >
                                                             <img
-                                                                src={m.image_url || '/default-avatar.svg'}
+                                                                src={m.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                                 alt={m.name}
                                                                 className="w-8 h-8 rounded-full object-cover border border-slate-700"
                                                             />

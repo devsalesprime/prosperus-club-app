@@ -138,7 +138,7 @@ const App = () => {
             role: profile.role,
             company: profile.company || '',
             jobTitle: profile.job_title, // Convert job_title -> jobTitle
-            image: profile.image_url || '/default-avatar.svg', // Convert image_url -> image
+            image: profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`, // Convert image_url -> image
             description: profile.bio || '', // Convert bio -> description
             socials: profile.socials || {},
             tags: profile.tags || []
@@ -318,7 +318,7 @@ const App = () => {
                                 role: 'MEMBER',
                                 company: user.user_metadata?.company || '',
                                 job_title: user.user_metadata?.job_title || '',
-                                image_url: user.user_metadata?.avatar_url || '/default-avatar.svg'
+                                image_url: user.user_metadata?.avatar_url || `${import.meta.env.BASE_URL}default-avatar.svg`
                             });
 
                             if (newProfile) {
@@ -495,7 +495,7 @@ const App = () => {
                     company: userProfile.company || '',
                     jobTitle: userProfile.job_title || '',
                     phone: '',
-                    image: userProfile.image_url || '/default-avatar.svg',
+                    image: userProfile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                     description: userProfile.bio || '',
                     socials: userProfile.socials || {},
                     tags: userProfile.tags || []
@@ -607,7 +607,7 @@ const App = () => {
                     company: user.user_metadata?.company || '',
                     jobTitle: user.user_metadata?.job_title || '',
                     phone: user.user_metadata?.phone || '',
-                    image: user.user_metadata?.avatar_url || '/default-avatar.svg',
+                    image: user.user_metadata?.avatar_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
                     description: '',
                     socials: {},
                     tags: []
@@ -1000,7 +1000,7 @@ const App = () => {
                 {currentUser && (
                     <div className="p-4 border-t border-prosperus-navy-light">
                         <div className="flex items-center gap-3 p-2 rounded-lg bg-prosperus-navy-light/50">
-                            <img src={currentUser.image || '/default-avatar.svg'} alt={currentUser.name} className="w-8 h-8 rounded-full border border-prosperus-gold-dark object-cover" />
+                            <img src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={currentUser.name} className="w-8 h-8 rounded-full border border-prosperus-gold-dark object-cover" />
                             <div className="overflow-hidden">
                                 <p className="text-sm font-bold text-prosperus-white truncate">{currentUser.name}</p>
                                 <p className="text-xs text-prosperus-grey truncate">{currentUser.jobTitle || currentUser.role}</p>
@@ -1041,7 +1041,7 @@ const App = () => {
                             </>
                         )}
                         <button onClick={() => setView(ViewState.PROFILE)} className="p-2 text-prosperus-grey">
-                            {currentUser ? <img src={currentUser.image || '/default-avatar.svg'} className="w-8 h-8 rounded-full object-cover" /> : <User size={24} />}
+                            {currentUser ? <img src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`} className="w-8 h-8 rounded-full object-cover" /> : <User size={24} />}
                         </button>
                     </div>
                 </header>

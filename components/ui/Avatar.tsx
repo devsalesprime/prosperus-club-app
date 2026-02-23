@@ -18,7 +18,7 @@ interface AvatarProps {
     onClick?: () => void;
 }
 
-const DEFAULT_AVATAR = '/default-avatar.svg';
+const DEFAULT_AVATAR = `${import.meta.env.BASE_URL}default-avatar.svg`;
 
 const sizeClasses: Record<AvatarSize, string> = {
     'xs': 'w-6 h-6',
