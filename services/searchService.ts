@@ -119,12 +119,12 @@ class SearchService {
                     .or(`name.ilike.${searchTerm},company.ilike.${searchTerm}`)
                     .limit(3),
 
-                // 2. Search Events (all events for testing)
+                // 2. Search Events (from club_events table)
                 supabase
-                    .from('events')
-                    .select('id, title, description, start_date, end_date, type, category, location')
+                    .from('club_events')
+                    .select('id, title, description, date, end_date, type, category, location')
                     .ilike('title', searchTerm)
-                    .order('start_date', { ascending: true })
+                    .order('date', { ascending: true })
                     .limit(3),
 
                 // 3. Search Articles (published only)
@@ -179,8 +179,7 @@ class SearchService {
                 ? []
                 : eventsResult.data.map((e: any) => ({
                     ...e,
-                    date: e.start_date, // Map start_date to date for ClubEvent compatibility
-                    endDate: e.end_date // Map end_date to endDate
+                    endDate: e.end_date // Map end_date to endDate for ClubEvent compatibility
                 } as ClubEvent));
 
             const articles = articlesResult.error
