@@ -285,20 +285,20 @@ class ToolsService {
 
     /**
      * Upload solution banner/icon
-     * Reuses 'member-reports' bucket with solutions/ subfolder
+     * Reuses 'banners' bucket (accepts image MIME types) with solutions/ subfolder
      */
     async uploadSolutionAsset(file: File, type: 'banner' | 'icon'): Promise<string> {
         const fileExt = file.name.split('.').pop();
         const fileName = `solutions/${type}s/${Date.now()}.${fileExt}`;
 
         const { data, error } = await supabase.storage
-            .from('member-reports')
+            .from('banners')
             .upload(fileName, file, { upsert: true });
 
         if (error) throw error;
 
         const { data: { publicUrl } } = supabase.storage
-            .from('member-reports')
+            .from('banners')
             .getPublicUrl(fileName);
 
         return publicUrl;
