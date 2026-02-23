@@ -15,7 +15,9 @@ import {
     X,
     Ban,
     UserCheck,
-    ArrowLeft
+    ArrowLeft,
+    AlertTriangle,
+    CheckCircle
 } from 'lucide-react';
 import { adminChatService, ConversationWithParticipants, MessageWithSender } from '../services/adminChatService';
 import { adminUserService } from '../services/adminUserService';
@@ -53,6 +55,13 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [newConversationMessage, setNewConversationMessage] = useState('');
     const [creatingConversation, setCreatingConversation] = useState(false);
+
+    // Delete conversation states
+    const [showDeleteConvModal, setShowDeleteConvModal] = useState(false);
+    const [convToDelete, setConvToDelete] = useState<ConversationWithParticipants | null>(null);
+    const [deleteReason, setDeleteReason] = useState('');
+    const [deletingConv, setDeletingConv] = useState(false);
+    const [adminToast, setAdminToast] = useState<string | null>(null);
 
     // Load all conversations
     useEffect(() => {
@@ -177,6 +186,56 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
 
     const getParticipantNames = (conv: ConversationWithParticipants): string => {
         return conv.participants.map(p => p.name).join(' × ');
+    };
+
+    // ─── Admin Delete Conversation ─────────────────────────────
+    const DELETE_REASONS = [
+        'Conteúdo impróprio',
+        'Spam / Propaganda',
+        'Conta inativa',
+        'Solicitação do usuário',
+        'Violação de políticas'
+    ];
+
+    const handleDeleteConversation = (conv: ConversationWithParticipants) => {
+        setConvToDelete(conv);
+        setDeleteReason('');
+        setShowDeleteConvModal(true);
+    };
+
+    const confirmDeleteConversation = async () => {
+        if (!convToDelete) return;
+
+        try {
+            setDeletingConv(true);
+            await conversationService.deleteConversation(convToDelete.id);
+
+            // Audit log
+            console.log('🗑️ [ADMIN AUDIT] Conversation deleted:', {
+                conversationId: convToDelete.id,
+                participants: convToDelete.participants.map(p => p.name).join(', '),
+                deletedBy: currentAdminId,
+                reason: deleteReason || 'Sem motivo informado',
+                timestamp: new Date().toISOString()
+            });
+
+            // Remove from list
+            setConversations(prev => prev.filter(c => c.id !== convToDelete.id));
+            if (selectedConversation?.id === convToDelete.id) {
+                setSelectedConversation(null);
+                setMessages([]);
+            }
+
+            setShowDeleteConvModal(false);
+            setConvToDelete(null);
+            setAdminToast('Conversa excluída permanentemente');
+            setTimeout(() => setAdminToast(null), 3000);
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            alert('Erro ao excluir conversa');
+        } finally {
+            setDeletingConv(false);
+        }
     };
 
     const isAdminMessage = (msg: MessageWithSender): boolean => {
@@ -374,7 +433,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                             <div
                                 key={conv.id}
                                 onClick={() => setSelectedConversation(conv)}
-                                className={`p-4 border-b border-prosperus-navy-light cursor-pointer transition-colors ${selectedConversation?.id === conv.id
+                                className={`p-4 border-b border-prosperus-navy-light cursor-pointer transition-colors group ${selectedConversation?.id === conv.id
                                     ? 'bg-prosperus-navy-light'
                                     : 'hover:bg-prosperus-navy-light/50'
                                     }`}
@@ -406,6 +465,19 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                                             )}
                                         </div>
                                     </div>
+                                    {/* Delete conversation button */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteConversation(conv);
+                                        }}
+                                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20
+                                                transition-colors opacity-0 group-hover:opacity-100
+                                                flex-shrink-0"
+                                        title="Excluir conversa"
+                                    >
+                                        <Trash2 size={14} className="text-red-400" />
+                                    </button>
                                 </div>
                             </div>
                         ))
@@ -803,6 +875,105 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                     </div>
                 )}
             </div>
+
+            {/* ═══════════ Delete Conversation Modal ═══════════ */}
+            {showDeleteConvModal && convToDelete && (
+                <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-prosperus-navy border border-prosperus-navy-light rounded-xl p-6 max-w-md w-full">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 rounded-full bg-red-500/20">
+                                <AlertTriangle className="text-red-400" size={24} />
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-bold text-white">
+                                    Excluir Conversa
+                                </h4>
+                                <p className="text-sm text-prosperus-grey">
+                                    {getParticipantNames(convToDelete)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <p className="text-prosperus-grey mb-4 text-sm">
+                            Esta ação é <span className="text-red-400 font-semibold">irreversível</span>.
+                            Todas as mensagens e mídias serão excluídas permanentemente.
+                        </p>
+
+                        {/* Reason chips */}
+                        <label className="block text-sm text-prosperus-grey mb-2">
+                            Motivo da exclusão
+                        </label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {DELETE_REASONS.map((reason) => (
+                                <button
+                                    key={reason}
+                                    onClick={() => setDeleteReason(reason)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${deleteReason === reason
+                                            ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                            : 'bg-prosperus-navy-light text-prosperus-grey border border-prosperus-grey/20 hover:border-prosperus-grey/40'
+                                        }`}
+                                >
+                                    {reason}
+                                </button>
+                            ))}
+                        </div>
+
+                        <textarea
+                            value={DELETE_REASONS.includes(deleteReason) ? '' : deleteReason}
+                            onChange={(e) => setDeleteReason(e.target.value)}
+                            placeholder="Ou descreva outro motivo..."
+                            className="w-full bg-prosperus-navy-light border border-prosperus-grey/20 rounded-lg p-3 text-white text-sm focus:outline-none focus:border-prosperus-gold transition resize-none mb-4"
+                            rows={2}
+                        />
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConvModal(false);
+                                    setConvToDelete(null);
+                                }}
+                                disabled={deletingConv}
+                                className="flex-1 py-2.5 rounded-lg border border-prosperus-grey/30 text-sm text-prosperus-grey hover:text-white transition-colors disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDeleteConversation}
+                                disabled={deletingConv}
+                                className="flex-1 py-2.5 rounded-lg bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {deletingConv ? (
+                                    <Loader2 className="animate-spin" size={16} />
+                                ) : (
+                                    <>
+                                        <Trash2 size={14} />
+                                        Excluir
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════ Admin Toast ═══════════ */}
+            {adminToast && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80]
+                    flex items-center gap-2 px-5 py-3 rounded-xl
+                    bg-slate-800 border border-slate-700 shadow-2xl"
+                    style={{ animation: 'fadeInUp 0.3s ease-out' }}
+                >
+                    <CheckCircle size={16} className="text-emerald-400" />
+                    <span className="text-sm text-white font-medium">{adminToast}</span>
+                </div>
+            )}
+
+            <style>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 };

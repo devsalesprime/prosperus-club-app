@@ -540,7 +540,9 @@ class ConversationService {
                 })
             );
 
-            return conversationsWithDetails;
+            // Filter out conversations archived by this user
+            const archivedIds = this.getArchivedConversationIds(userId);
+            return conversationsWithDetails.filter(c => !archivedIds.includes(c.id));
         } catch (error) {
             console.error('Error fetching conversations:', error);
             throw error;
@@ -804,6 +806,43 @@ class ConversationService {
             console.error('Error marking messages as read:', error);
             throw error;
         }
+    }
+
+    // ─── Local Archive (Member soft-delete) ──────────────────────
+
+    /**
+     * Archive a conversation for a specific user (localStorage-based).
+     * The conversation disappears from their list but remains for the other participant.
+     */
+    archiveConversation(conversationId: string, userId: string): void {
+        const key = `archived_conversations:${userId}`;
+        const archived = this.getArchivedConversationIds(userId);
+        if (!archived.includes(conversationId)) {
+            archived.push(conversationId);
+            localStorage.setItem(key, JSON.stringify(archived));
+        }
+    }
+
+    /**
+     * Get all archived conversation IDs for a user.
+     */
+    getArchivedConversationIds(userId: string): string[] {
+        try {
+            const key = `archived_conversations:${userId}`;
+            return JSON.parse(localStorage.getItem(key) || '[]');
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Unarchive a conversation (e.g., when a new message arrives).
+     */
+    unarchiveConversation(conversationId: string, userId: string): void {
+        const key = `archived_conversations:${userId}`;
+        const archived = this.getArchivedConversationIds(userId);
+        const filtered = archived.filter(id => id !== conversationId);
+        localStorage.setItem(key, JSON.stringify(filtered));
     }
 
     /**

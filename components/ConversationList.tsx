@@ -3,7 +3,7 @@
 // With Supabase Realtime for live updates
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageCircle, Search, Plus, Loader2, Users } from 'lucide-react';
+import { MessageCircle, Search, Plus, Loader2, Users, Trash2, CheckCircle } from 'lucide-react';
 import { conversationService, ConversationWithDetails } from '../services/conversationService';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -38,6 +38,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
     const isSubscribedRef = useRef(false);
+
+    // Swipe-to-delete state
+    const [swipedConvId, setSwipedConvId] = useState<string | null>(null);
+    const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
+    const [isSwiping, setIsSwiping] = useState(false);
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const SWIPE_THRESHOLD = 72;
+
+    // Delete modal state
+    const [deleteTarget, setDeleteTarget] = useState<ConversationWithDetails | null>(null);
+    const [removingId, setRemovingId] = useState<string | null>(null);
+    const [toast, setToast] = useState<string | null>(null);
 
     // Load conversations and setup realtime subscription
     useEffect(() => {
@@ -152,6 +165,65 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         const otherName = conv.otherParticipant?.name?.toLowerCase() || '';
         return otherName.includes(searchQuery.toLowerCase());
     });
+
+    // ─── Swipe handlers ──────────────────────────────────────
+    const handleTouchStart = (convId: string, e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        setIsSwiping(true);
+    };
+
+    const handleTouchMove = (convId: string, e: React.TouchEvent) => {
+        const dx = e.touches[0].clientX - touchStartX.current;
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+
+        // If vertical movement is dominant, let the browser scroll
+        if (dy > Math.abs(dx)) { setIsSwiping(false); return; }
+
+        // Only allow left swipe (negative dx)
+        if (dx < 0) {
+            setSwipeOffsets(prev => ({ ...prev, [convId]: Math.max(dx, -SWIPE_THRESHOLD) }));
+        }
+    };
+
+    const handleTouchEnd = (convId: string) => {
+        setIsSwiping(false);
+        const offset = swipeOffsets[convId] || 0;
+        if (offset < -SWIPE_THRESHOLD / 2) {
+            setSwipeOffsets(prev => ({ ...prev, [convId]: -SWIPE_THRESHOLD }));
+            setSwipedConvId(convId);
+        } else {
+            setSwipeOffsets(prev => ({ ...prev, [convId]: 0 }));
+            setSwipedConvId(null);
+        }
+    };
+
+    const closeSwipe = (convId: string) => {
+        setSwipeOffsets(prev => ({ ...prev, [convId]: 0 }));
+        setSwipedConvId(null);
+    };
+
+    const handleArchiveConversation = (conv: ConversationWithDetails) => {
+        setDeleteTarget(conv);
+    };
+
+    const confirmArchive = () => {
+        if (!deleteTarget) return;
+        const convId = deleteTarget.id;
+
+        // Optimistic removal with animation
+        setRemovingId(convId);
+        setDeleteTarget(null);
+        closeSwipe(convId);
+
+        setTimeout(() => {
+            conversationService.archiveConversation(convId, currentUserId);
+            setConversations(prev => prev.filter(c => c.id !== convId));
+            setRemovingId(null);
+            setToast('Conversa apagada');
+            setTimeout(() => setToast(null), 2500);
+        }, 300);
+    };
 
     if (loading) {
         return (
@@ -300,104 +372,197 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                             const lastMsg = conversation.lastMessage;
                             const unread = conversation.unreadCount || 0;
                             const isSelected = selectedConversationId === conversation.id;
+                            const offset = swipeOffsets[conversation.id] || 0;
+                            const isRevealed = swipedConvId === conversation.id;
+                            const isRemoving = removingId === conversation.id;
 
                             return (
-                                <button
+                                <div
                                     key={conversation.id}
-                                    onClick={() => onSelectConversation(conversation.id)}
-                                    className="w-full px-3 py-3 transition-all duration-200 text-left flex items-center gap-3 group relative"
-                                    style={{
-                                        background: isSelected
-                                            ? 'linear-gradient(90deg, rgba(217,119,6,0.12), rgba(217,119,6,0.04))'
-                                            : 'transparent',
-                                        animation: `fadeInUp 0.3s ease-out ${index * 0.03}s both`,
-                                    }}
+                                    className={`relative overflow-hidden transition-all duration-300 ${isRemoving ? 'max-h-0 opacity-0 -translate-x-full' : 'max-h-32 opacity-100'
+                                        }`}
                                 >
-                                    {/* Selection indicator */}
-                                    {isSelected && (
-                                        <div
-                                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full"
-                                            style={{ background: 'linear-gradient(180deg, #d97706, #f59e0b)' }}
-                                        />
-                                    )}
+                                    {/* Delete button — behind the item */}
+                                    <div className="absolute inset-y-0 right-0 flex items-center
+                                        bg-red-500/90 px-5 rounded-r-xl z-0">
+                                        <button
+                                            onClick={() => handleArchiveConversation(conversation)}
+                                            className="flex flex-col items-center gap-1"
+                                        >
+                                            <Trash2 size={18} className="text-white" />
+                                            <span className="text-[10px] text-white font-medium">Apagar</span>
+                                        </button>
+                                    </div>
 
-                                    {/* Avatar */}
-                                    <div className="relative shrink-0">
-                                        <div
-                                            className={`w-12 h-12 rounded-full p-[2px] transition-all duration-200 ${isSelected ? '' : 'group-hover:shadow-lg'
-                                                }`}
+                                    {/* Conversation item — slides */}
+                                    <div
+                                        className="relative z-10"
+                                        style={{
+                                            transform: `translateX(${offset}px)`,
+                                            transition: isSwiping ? 'none' : 'transform 0.25s ease-out',
+                                            background: '#0f172a',
+                                        }}
+                                        onTouchStart={(e) => handleTouchStart(conversation.id, e)}
+                                        onTouchMove={(e) => handleTouchMove(conversation.id, e)}
+                                        onTouchEnd={() => handleTouchEnd(conversation.id)}
+                                    >
+                                        <button
+                                            onClick={() => isRevealed ? closeSwipe(conversation.id) : onSelectConversation(conversation.id)}
+                                            className="w-full px-3 py-3 transition-all duration-200 text-left flex items-center gap-3 group relative"
                                             style={{
                                                 background: isSelected
-                                                    ? 'linear-gradient(135deg, #d97706, #f59e0b)'
-                                                    : unread > 0
-                                                        ? 'linear-gradient(135deg, #d97706, #f59e0b)'
-                                                        : 'rgba(51,65,85,0.5)',
+                                                    ? 'linear-gradient(90deg, rgba(217,119,6,0.12), rgba(217,119,6,0.04))'
+                                                    : 'transparent',
+                                                animation: `fadeInUp 0.3s ease-out ${index * 0.03}s both`,
                                             }}
                                         >
-                                            <img
-                                                src={otherUser?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                                alt={otherUser?.name || 'Usuário'}
-                                                className="w-full h-full rounded-full object-cover border-2 border-slate-900"
-                                            />
-                                        </div>
-
-                                        {/* Unread badge */}
-                                        {unread > 0 && (
-                                            <div
-                                                className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
-                                                style={{
-                                                    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
-                                                    boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
-                                                    animation: 'pulseScale 2s ease-in-out infinite',
-                                                }}
-                                            >
-                                                {unread > 9 ? '9+' : unread}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                                            <h3 className={`font-semibold text-sm truncate transition-colors duration-200 ${isSelected
-                                                    ? 'text-yellow-500'
-                                                    : unread > 0
-                                                        ? 'text-white'
-                                                        : 'text-slate-200 group-hover:text-white'
-                                                }`}>
-                                                {otherUser?.name || 'Usuário Desconhecido'}
-                                            </h3>
-                                            {lastMsg && (
-                                                <span className={`text-[10px] shrink-0 ${unread > 0 ? 'text-yellow-500 font-semibold' : 'text-slate-600'
-                                                    }`}>
-                                                    {formatTimestamp(lastMsg.created_at)}
-                                                </span>
+                                            {/* Selection indicator */}
+                                            {isSelected && (
+                                                <div
+                                                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-8 rounded-r-full"
+                                                    style={{ background: 'linear-gradient(180deg, #d97706, #f59e0b)' }}
+                                                />
                                             )}
-                                        </div>
 
-                                        {otherUser?.job_title && (
-                                            <p className="text-[11px] text-slate-600 mb-0.5 truncate">
-                                                {otherUser.job_title}
-                                                {otherUser.company && ` · ${otherUser.company}`}
-                                            </p>
-                                        )}
+                                            {/* Avatar */}
+                                            <div className="relative shrink-0">
+                                                <div
+                                                    className={`w-12 h-12 rounded-full p-[2px] transition-all duration-200 ${isSelected ? '' : 'group-hover:shadow-lg'
+                                                        }`}
+                                                    style={{
+                                                        background: isSelected
+                                                            ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                                                            : unread > 0
+                                                                ? 'linear-gradient(135deg, #d97706, #f59e0b)'
+                                                                : 'rgba(51,65,85,0.5)',
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={otherUser?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                        alt={otherUser?.name || 'Usuário'}
+                                                        className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                                                    />
+                                                </div>
 
-                                        {lastMsg && (
-                                            <p className={`text-xs truncate ${unread > 0 ? 'text-slate-300 font-medium' : 'text-slate-500'
-                                                }`}>
-                                                {lastMsg.sender_id === currentUserId && (
-                                                    <span className="text-slate-600">Você: </span>
+                                                {/* Unread badge */}
+                                                {unread > 0 && (
+                                                    <div
+                                                        className="absolute -top-0.5 -right-0.5 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #d97706, #f59e0b)',
+                                                            boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
+                                                            animation: 'pulseScale 2s ease-in-out infinite',
+                                                        }}
+                                                    >
+                                                        {unread > 9 ? '9+' : unread}
+                                                    </div>
                                                 )}
-                                                {lastMsg.content}
-                                            </p>
-                                        )}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                                                    <h3 className={`font-semibold text-sm truncate transition-colors duration-200 ${isSelected
+                                                        ? 'text-yellow-500'
+                                                        : unread > 0
+                                                            ? 'text-white'
+                                                            : 'text-slate-200 group-hover:text-white'
+                                                        }`}>
+                                                        {otherUser?.name || 'Usuário Desconhecido'}
+                                                    </h3>
+                                                    {lastMsg && (
+                                                        <span className={`text-[10px] shrink-0 ${unread > 0 ? 'text-yellow-500 font-semibold' : 'text-slate-600'
+                                                            }`}>
+                                                            {formatTimestamp(lastMsg.created_at)}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {otherUser?.job_title && (
+                                                    <p className="text-[11px] text-slate-600 mb-0.5 truncate">
+                                                        {otherUser.job_title}
+                                                        {otherUser.company && ` · ${otherUser.company}`}
+                                                    </p>
+                                                )}
+
+                                                {lastMsg && (
+                                                    <p className={`text-xs truncate ${unread > 0 ? 'text-slate-300 font-medium' : 'text-slate-500'
+                                                        }`}>
+                                                        {lastMsg.sender_id === currentUserId && (
+                                                            <span className="text-slate-600">Você: </span>
+                                                        )}
+                                                        {lastMsg.content}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </button>
                                     </div>
-                                </button>
+                                </div>
                             );
                         })}
                     </div>
                 )}
             </div>
+
+            {/* ── Delete Confirmation Modal (Bottom Sheet) ── */}
+            {deleteTarget && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center
+                    bg-black/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+                    <div
+                        className="w-full max-w-md bg-slate-900 border border-slate-800
+                            rounded-t-2xl p-5"
+                        onClick={e => e.stopPropagation()}
+                        style={{ animation: 'slideUp 0.3s ease-out' }}
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center
+                            justify-center mb-4">
+                            <Trash2 size={18} className="text-red-400" />
+                        </div>
+
+                        <h3 className="text-base font-bold text-white mb-1">
+                            Apagar conversa?
+                        </h3>
+                        <p className="text-sm text-slate-400 mb-1">
+                            A conversa com <span className="text-white font-medium">
+                                {deleteTarget.otherParticipant?.name || 'este membro'}
+                            </span> será removida da sua lista.
+                        </p>
+                        <p className="text-xs text-slate-600 mb-5">
+                            O outro participante não será afetado.
+                        </p>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteTarget(null)}
+                                className="flex-1 py-3 rounded-xl border border-slate-700
+                                    text-sm text-slate-400 hover:text-white transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmArchive}
+                                className="flex-1 py-3 rounded-xl bg-red-500/15 border border-red-500/30
+                                    text-sm font-semibold text-red-400 hover:bg-red-500/25 transition-colors"
+                            >
+                                Apagar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Toast ── */}
+            {toast && (
+                <div
+                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+                        flex items-center gap-2 px-4 py-2.5 rounded-xl
+                        bg-slate-800 border border-slate-700 shadow-xl"
+                    style={{ animation: 'fadeInUp 0.3s ease-out' }}
+                >
+                    <CheckCircle size={14} className="text-emerald-400" />
+                    <span className="text-sm text-white">{toast}</span>
+                </div>
+            )}
 
             {/* CSS Animations */}
             <style>{`
@@ -408,6 +573,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 @keyframes pulseScale {
                     0%, 100% { transform: scale(1); }
                     50% { transform: scale(1.1); }
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
                 }
             `}</style>
         </div>
