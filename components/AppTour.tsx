@@ -79,18 +79,20 @@ export function AppTour({
     const isLast = stepIndex === steps.length - 1;
     const progress = ((stepIndex + 1) / steps.length) * 100;
 
-    // Determine tooltip position style
-    const tooltipPositionClass = (() => {
+    // Determine tooltip inline position relative to spotlight
+    const tooltipStyle: React.CSSProperties = (() => {
         if (step.tooltipPosition === 'center' || !spotlight) {
-            // Centered — no spotlight or fullscreen step
-            return 'top-1/2 -translate-y-1/2';
+            // Centered — no spotlight or fullscreen welcome step
+            return { top: '50%', transform: 'translateY(-50%)' };
         }
         if (step.tooltipPosition === 'top') {
-            // Above nav — tooltip near the top
-            return 'top-[calc(var(--header-h,60px)+20px)]';
+            // Place tooltip ABOVE the spotlight
+            const bottom = window.innerHeight - spotlight.top + 12;
+            return { bottom: `${Math.max(bottom, 16)}px` };
         }
-        // Bottom — above bottom nav
-        return 'bottom-[calc(var(--nav-h,64px)+20px)]';
+        // 'bottom' → Place tooltip BELOW the spotlight
+        const top = spotlight.top + spotlight.height + 12;
+        return { top: `${Math.min(top, window.innerHeight - 200)}px` };
     })();
 
     return (
@@ -154,13 +156,11 @@ export function AppTour({
             {/* ── TOOLTIP ── */}
             <div
                 ref={tooltipRef}
-                className={`
-                    absolute left-4 right-4 z-10 max-w-md mx-auto
+                className="absolute left-4 right-4 z-10 max-w-md mx-auto
                     bg-slate-900/95 backdrop-blur-sm border border-slate-700 rounded-2xl p-5
                     shadow-2xl shadow-black/60
-                    transition-all duration-300 ease-out
-                    ${tooltipPositionClass}
-                `}
+                    transition-all duration-300 ease-out"
+                style={tooltipStyle}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Progress bar */}
