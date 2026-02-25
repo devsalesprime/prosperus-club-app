@@ -112,10 +112,11 @@ class SearchService {
                 referralsResult,
                 benefitsResult
             ] = await Promise.all([
-                // 1. Search Members (profiles)
+                // 1. Search Members (profiles — MEMBER only)
                 supabase
                     .from('profiles')
                     .select('id, name, email, company, job_title, image_url, tags')
+                    .eq('role', 'MEMBER')
                     .or(`name.ilike.${searchTerm},company.ilike.${searchTerm}`)
                     .limit(3),
 

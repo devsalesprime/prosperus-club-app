@@ -41,6 +41,7 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
                 .from('profiles')
                 .select('id, name, email, company, job_title, image_url, role, tags')
                 .neq('id', currentUserId)
+                .eq('role', 'MEMBER')
                 .order('name', { ascending: true });
 
             if (error) {

@@ -62,9 +62,9 @@ const AppShell: React.FC = () => {
         refreshProfile
     } = useApp();
 
-    // ─── Auto-start tour if replay was requested ────
+    // ─── Auto-start tour if replay was requested (MEMBER only) ────
     useEffect(() => {
-        if (currentUser && !showOnboarding && !authContextLoading) {
+        if (currentUser && currentUser.role === 'MEMBER' && !showOnboarding && !authContextLoading) {
             tour.checkPendingReplay();
         }
     }, [currentUser, showOnboarding, authContextLoading]);
@@ -128,7 +128,24 @@ const AppShell: React.FC = () => {
         );
     }
 
-    // ─── Guard 6: Onboarding Wizard ──────────────────
+    // ─── Guard 6: Route Guard — MEMBER can't access Admin ──
+    if (isAdmin && currentUser.role === 'MEMBER') {
+        setIsAdmin(false);
+    }
+
+    // ─── Guard 7: Admin Panel (BEFORE onboarding — Admin/Team skip wizard + tour) ──
+    if (isAdmin) {
+        return (
+            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
+                <AdminApp
+                    currentUser={currentUser}
+                    onLogout={() => { setIsAdmin(false); setSession(null); }}
+                />
+            </Suspense>
+        );
+    }
+
+    // ─── Guard 8: Onboarding Wizard (MEMBER only) ────
     if (showOnboarding && userProfile && !userProfile.has_completed_onboarding) {
         return (
             <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
@@ -146,23 +163,6 @@ const AppShell: React.FC = () => {
                         }}
                     />
                 </>
-            </Suspense>
-        );
-    }
-
-    // ─── Guard 7: Route Guard — MEMBER can't access Admin ──
-    if (isAdmin && currentUser.role === 'MEMBER') {
-        setIsAdmin(false);
-    }
-
-    // ─── Guard 8: Admin Panel ────────────────────────
-    if (isAdmin) {
-        return (
-            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
-                <AdminApp
-                    currentUser={currentUser}
-                    onLogout={() => { setIsAdmin(false); setSession(null); }}
-                />
             </Suspense>
         );
     }
