@@ -148,8 +148,8 @@ export function AppTour({
                 )}
             </svg>
 
-            {/* Click on overlay = skip tour */}
-            <div className="absolute inset-0" onClick={onSkip} />
+            {/* Click on overlay = advance to next step (tour only ends via Skip button or completion) */}
+            <div className="absolute inset-0" onClick={onNext} />
 
             {/* ── TOOLTIP ── */}
             <div
@@ -213,10 +213,10 @@ export function AppTour({
                             <div
                                 key={i}
                                 className={`rounded-full transition-all duration-300 ${i === stepIndex
-                                        ? 'w-4 h-1.5 bg-yellow-500'
-                                        : i < stepIndex
-                                            ? 'w-1.5 h-1.5 bg-yellow-600/50'
-                                            : 'w-1.5 h-1.5 bg-slate-700'
+                                    ? 'w-4 h-1.5 bg-yellow-500'
+                                    : i < stepIndex
+                                        ? 'w-1.5 h-1.5 bg-yellow-600/50'
+                                        : 'w-1.5 h-1.5 bg-slate-700'
                                     }`}
                             />
                         ))}
