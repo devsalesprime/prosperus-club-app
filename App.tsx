@@ -768,6 +768,7 @@ const App = () => {
                 <div className="absolute top-0 right-0 w-96 h-96 bg-prosperus-gold/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-prosperus-gold-dark/10 rounded-full blur-3xl -ml-20 -mb-20"></div>
                 <UpdatePasswordModal />
+                <InstallPrompt />
             </div>
         );
     }
@@ -785,6 +786,7 @@ const App = () => {
                     onClose={() => { }}
                     onLoginSuccess={handleLoginSuccess}
                 />
+                <InstallPrompt />
             </div>
         );
     }

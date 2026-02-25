@@ -160,7 +160,7 @@ export const InstallPrompt: React.FC = () => {
             <div
                 style={{ bottom: `${bannerBottom}px` }}
                 className="
-                    fixed left-4 right-4 z-[60]
+                    fixed left-4 right-4 z-[80]
                     bg-slate-900 border border-slate-700/80 rounded-2xl
                     shadow-xl shadow-black/40
                     flex items-center gap-3 px-4 py-3
@@ -232,7 +232,7 @@ export const InstallPrompt: React.FC = () => {
             {/* ── GUIDE MODAL (iOS) ── */}
             {guideOpen && instructions.steps && (
                 <div
-                    className="fixed inset-0 z-[70] flex items-end justify-center
+                    className="fixed inset-0 z-[90] flex items-end justify-center
                         bg-black/70 backdrop-blur-sm"
                     onClick={(e) => { if (e.target === e.currentTarget) { setGuideOpen(false); handleDismiss(); } }}
                 >
