@@ -9,7 +9,7 @@
 //     ├── Loading/Login/Recovery/Onboarding screens (guards)
 //     └── AppLayout > ViewSwitcher (main app)
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -61,6 +61,13 @@ const AppShell: React.FC = () => {
         tour,
         refreshProfile
     } = useApp();
+
+    // ─── Auto-start tour if replay was requested ────
+    useEffect(() => {
+        if (currentUser && !showOnboarding && !authContextLoading) {
+            tour.checkPendingReplay();
+        }
+    }, [currentUser, showOnboarding, authContextLoading]);
 
     // ─── Guard 1: Auth Loading ───────────────────────
     if (authContextLoading) {

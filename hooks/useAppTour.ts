@@ -16,6 +16,7 @@ export interface TourStep {
 }
 
 const TOUR_STORAGE_KEY = 'app-tour-completed';
+const TOUR_REPLAY_KEY = 'app-tour-replay';
 
 export function useAppTour() {
     const [isActive, setIsActive] = useState(false);
@@ -26,8 +27,9 @@ export function useAppTour() {
         []
     );
 
-    const startTour = useCallback(() => {
-        if (localStorage.getItem(TOUR_STORAGE_KEY) === 'true') return;
+    const startTour = useCallback((force?: boolean) => {
+        if (!force && localStorage.getItem(TOUR_STORAGE_KEY) === 'true') return;
+        localStorage.removeItem(TOUR_STORAGE_KEY);
         setStepIndex(0);
         setIsActive(true);
     }, []);
@@ -55,6 +57,22 @@ export function useAppTour() {
         localStorage.removeItem(TOUR_STORAGE_KEY);
     }, []);
 
+    // Set a flag so after reload, the tour auto-starts
+    const requestReplay = useCallback(() => {
+        localStorage.removeItem(TOUR_STORAGE_KEY);
+        localStorage.setItem(TOUR_REPLAY_KEY, 'true');
+    }, []);
+
+    // Check if a replay was requested (call on mount)
+    const checkPendingReplay = useCallback(() => {
+        if (localStorage.getItem(TOUR_REPLAY_KEY) === 'true') {
+            localStorage.removeItem(TOUR_REPLAY_KEY);
+            startTour(true);
+            return true;
+        }
+        return false;
+    }, [startTour]);
+
     return {
         isActive,
         stepIndex,
@@ -63,6 +81,8 @@ export function useAppTour() {
         prevStep,
         skipTour,
         resetTour,
+        requestReplay,
+        checkPendingReplay,
         hasCompleted,
     };
 }
