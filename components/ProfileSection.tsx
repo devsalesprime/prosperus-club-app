@@ -8,6 +8,7 @@ import {
     Linkedin, Instagram, Phone, Globe, HelpCircle
 } from 'lucide-react';
 import { Member, ViewState } from '../types';
+import { useApp } from '../contexts/AppContext';
 import { BenefitStatsCard } from './BenefitStatsCard';
 
 interface ProfileSectionProps {
@@ -25,6 +26,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
     setShowPreviewProfile,
     onLogout
 }) => {
+    const { tour } = useApp();
     return (
         <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in relative">
             {/* Close Button */}
@@ -148,8 +150,8 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                 <button
                     onClick={() => {
                         localStorage.removeItem('app-tour-completed');
-                        localStorage.setItem('app-tour-replay', 'true');
-                        window.location.reload();
+                        setView(ViewState.DASHBOARD);
+                        setTimeout(() => tour.startTour(true), 400);
                     }}
                     className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition"
                 >
