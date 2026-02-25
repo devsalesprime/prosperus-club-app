@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Message } from '../types/types';
+import type { Message } from '../types';
 import { logger } from '../utils/logger';
 
 /**
