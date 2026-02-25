@@ -1,187 +1,237 @@
 // InstallPrompt.tsx
-// Smart PWA install prompt that works on Android (native prompt) and iOS (guided instructions)
-// Shows a banner at the bottom of the screen encouraging users to install the app
+// Unified PWA install prompt — context-aware by platform and browser
+// Replaces both InstallPrompt.tsx and InstallPromptIOS.tsx
 
-import React, { useState, useEffect } from 'react';
-import { Download, X, Share, Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Download, X, ChevronRight } from 'lucide-react';
+import { detectPlatform, isStandaloneMode } from '../utils/platformDetect';
+import { INSTALL_INSTRUCTIONS } from '../utils/installInstructions';
 
-interface BeforeInstallPromptEvent extends Event {
-    prompt(): Promise<void>;
-    userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+// Single dismiss key — replaces 'pwa-install-dismissed' + 'prosperus_ios_prompt_dismissed'
+const DISMISS_KEY = 'pwa-install-dismissed';
+const DISMISS_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function isDismissed(): boolean {
+    const ts = localStorage.getItem(DISMISS_KEY);
+    if (!ts) return false;
+    return Date.now() - Number(ts) < DISMISS_COOLDOWN;
+}
+
+function saveDismiss() {
+    localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    // Clean up old iOS-specific key if it exists
+    localStorage.removeItem('prosperus_ios_prompt_dismissed');
 }
 
 export const InstallPrompt: React.FC = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-    const [showPrompt, setShowPrompt] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
-    const [showIOSGuide, setShowIOSGuide] = useState(false);
+    const [visible, setVisible] = useState(false);
+    const [guideOpen, setGuideOpen] = useState(false);
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+    const platform = detectPlatform();
+    const instructions = INSTALL_INSTRUCTIONS[platform];
 
     useEffect(() => {
-        // Check if already installed as PWA
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-            || (window.navigator as any).standalone === true;
+        // Don't show if already installed as PWA
+        if (isStandaloneMode()) return;
+        // Don't show if no instructions for this platform
+        if (instructions.type === 'none') return;
+        // Don't show if dismissed recently
+        if (isDismissed()) return;
 
-        if (isStandalone) return; // Already installed, don't show
-
-        // Check if user dismissed before (respect for 7 days)
-        const dismissedAt = localStorage.getItem('pwa-install-dismissed');
-        if (dismissedAt) {
-            const daysSinceDismissed = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
-            if (daysSinceDismissed < 7) return;
-        }
-
-        // Detect iOS
-        const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-        setIsIOS(isIOSDevice);
-
-        if (isIOSDevice) {
-            // iOS: Show custom guide after 3 seconds
-            const timer = setTimeout(() => setShowPrompt(true), 3000);
-            return () => clearTimeout(timer);
-        }
-
-        // Android/Desktop: Listen for beforeinstallprompt
-        const handler = (e: Event) => {
+        // Capture native install event (Android/Desktop Chrome/Edge)
+        const handleBeforeInstall = (e: Event) => {
             e.preventDefault();
-            setDeferredPrompt(e as BeforeInstallPromptEvent);
-            setTimeout(() => setShowPrompt(true), 2000);
+            setDeferredPrompt(e);
         };
 
-        window.addEventListener('beforeinstallprompt', handler);
-        return () => window.removeEventListener('beforeinstallprompt', handler);
+        window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+        // UX delay before showing banner
+        const delay = platform.startsWith('ios') ? 3000 : 2000;
+        const timer = setTimeout(() => setVisible(true), delay);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+            clearTimeout(timer);
+        };
     }, []);
 
-    const handleInstall = async () => {
-        if (!deferredPrompt) return;
+    const handleDismiss = useCallback(() => {
+        setVisible(false);
+        setGuideOpen(false);
+        saveDismiss();
+    }, []);
 
-        try {
-            await deferredPrompt.prompt();
+    const handleCTA = useCallback(async () => {
+        if (instructions.type === 'native' && deferredPrompt) {
+            // Android / Desktop Chrome — native dialog
+            deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            console.log('📱 PWA Install:', outcome);
-
-            if (outcome === 'accepted') {
-                setShowPrompt(false);
-            }
-        } catch (error) {
-            console.error('❌ PWA Install error:', error);
+            if (outcome === 'accepted') setVisible(false);
+            else handleDismiss();
+            setDeferredPrompt(null);
+        } else if (instructions.type === 'guide') {
+            // iOS — open step-by-step modal
+            setGuideOpen(true);
+        } else if (instructions.type === 'info') {
+            // Desktop Safari — just close
+            handleDismiss();
         }
+    }, [instructions, deferredPrompt, handleDismiss]);
 
-        setDeferredPrompt(null);
-    };
+    if (!visible) return null;
 
-    const handleDismiss = () => {
-        setShowPrompt(false);
-        setShowIOSGuide(false);
-        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-    };
-
-    if (!showPrompt) return null;
-
-    const slideUpStyle = `
-        @keyframes slideUp {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-    `;
-
-    // iOS Guide Modal
-    if (isIOS && showIOSGuide) {
-        return (
-            <div className="fixed inset-0 bg-black/60 z-[9999] flex items-end justify-center p-4"
-                onClick={handleDismiss}>
-                <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-sm border border-slate-700 shadow-2xl mb-4"
-                    onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-white">Instalar Prosperus Club</h3>
-                        <button onClick={handleDismiss}
-                            className="p-1 rounded-lg hover:bg-slate-700 text-slate-400">
-                            <X size={20} />
-                        </button>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">1</div>
-                            <div>
-                                <p className="text-white font-medium">Toque em Compartilhar</p>
-                                <p className="text-slate-400 text-sm flex items-center gap-1">
-                                    Toque no ícone <Share size={14} className="inline text-blue-400" /> na barra do Safari
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">2</div>
-                            <div>
-                                <p className="text-white font-medium">Adicionar à Tela de Início</p>
-                                <p className="text-slate-400 text-sm flex items-center gap-1">
-                                    Role e toque em <Plus size={14} className="inline text-white bg-slate-600 rounded" /> "Tela de Início"
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 font-bold text-sm">3</div>
-                            <div>
-                                <p className="text-white font-medium">Confirme Adicionar</p>
-                                <p className="text-slate-400 text-sm">Toque em "Adicionar" no canto superior direito</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onClick={handleDismiss}
-                        className="w-full mt-5 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors">
-                        Entendi
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // Install Banner (Android + iOS)
     return (
         <>
-            <style>{slideUpStyle}</style>
-            <div className="fixed bottom-20 left-4 right-4 z-[9998]"
-                style={{ animation: 'slideUp 0.4s ease-out forwards' }}>
-                <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-4 border border-yellow-600/30 shadow-2xl shadow-yellow-900/20">
-                    <div className="flex items-center gap-3">
-                        <img
-                            src="/app/icons/icon-192x192.png"
-                            alt="Prosperus Club"
-                            className="w-12 h-12 rounded-xl shadow-lg"
-                        />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-white font-semibold text-sm">Instalar Prosperus Club</p>
-                            <p className="text-slate-400 text-xs">Acesse direto da sua tela inicial</p>
+            {/* ── BANNER ── */}
+            <div
+                className="
+                    fixed bottom-[calc(var(--nav-h,64px)+12px)] left-4 right-4 z-50
+                    bg-slate-900 border border-slate-700/80 rounded-2xl
+                    shadow-xl shadow-black/40
+                    flex items-center gap-3 px-4 py-3
+                    animate-in slide-in-from-bottom-4 duration-300
+                "
+            >
+                {/* App icon */}
+                <div className="w-10 h-10 rounded-xl bg-yellow-600/15 border border-yellow-600/25
+                    flex items-center justify-center flex-shrink-0">
+                    <img
+                        src="/icons/icon-72x72.png"
+                        alt="Prosperus Club"
+                        className="w-7 h-7 object-contain"
+                        onError={e => {
+                            // Fallback to text if icon not found
+                            const el = e.target as HTMLImageElement;
+                            el.style.display = 'none';
+                            el.parentElement!.innerHTML = '<span class="text-lg font-black text-yellow-500">P</span>';
+                        }}
+                    />
+                </div>
+
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white leading-tight truncate">
+                        {instructions.title}
+                    </p>
+                    {instructions.subtitle && (
+                        <p className="text-xs text-slate-400 mt-0.5 truncate">
+                            {instructions.subtitle}
+                        </p>
+                    )}
+                    {instructions.infoText && (
+                        <p className="text-xs text-slate-400 mt-0.5 leading-snug">
+                            {instructions.infoText}
+                        </p>
+                    )}
+                </div>
+
+                {/* CTA */}
+                <button
+                    onClick={handleCTA}
+                    className="
+                        flex-shrink-0 flex items-center gap-1.5
+                        px-3 py-2 rounded-xl
+                        bg-yellow-600 hover:bg-yellow-500
+                        text-white text-xs font-semibold
+                        transition-all active:scale-95
+                    "
+                >
+                    {instructions.type === 'native' && <Download size={13} />}
+                    {instructions.type === 'guide' && <ChevronRight size={13} />}
+                    {instructions.ctaLabel}
+                </button>
+
+                {/* Close */}
+                <button
+                    onClick={handleDismiss}
+                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center
+                        rounded-full text-slate-500 hover:text-slate-300 hover:bg-slate-800
+                        transition-colors"
+                    aria-label="Fechar"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+
+            {/* ── GUIDE MODAL (iOS) ── */}
+            {guideOpen && instructions.steps && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-end justify-center
+                        bg-black/70 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) { setGuideOpen(false); handleDismiss(); } }}
+                >
+                    <div className="
+                        w-full max-w-md
+                        bg-slate-900 border border-slate-800 rounded-t-3xl
+                        px-5 pt-5 pb-8
+                        animate-in slide-in-from-bottom-4 duration-300
+                    ">
+                        {/* Handle bar */}
+                        <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-5" />
+
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-base font-bold text-white">
+                                Como instalar o app
+                            </h3>
+                            <button
+                                onClick={() => { setGuideOpen(false); handleDismiss(); }}
+                                className="w-7 h-7 flex items-center justify-center rounded-full
+                                    text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+                                aria-label="Fechar"
+                            >
+                                <X size={14} />
+                            </button>
                         </div>
 
-                        {isIOS ? (
-                            <button
-                                onClick={() => setShowIOSGuide(true)}
-                                className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-slate-900 rounded-xl font-bold text-sm hover:from-yellow-500 hover:to-yellow-400 transition-all"
-                            >
-                                Como instalar
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleInstall}
-                                className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 text-slate-900 rounded-xl font-bold text-sm hover:from-yellow-500 hover:to-yellow-400 transition-all flex items-center gap-1.5"
-                            >
-                                <Download size={16} />
-                                Instalar
-                            </button>
+                        {/* Steps */}
+                        <div className="space-y-4">
+                            {instructions.steps.map((step, i) => (
+                                <div key={i} className="flex items-start gap-3">
+                                    <div className="
+                                        w-7 h-7 rounded-full flex-shrink-0
+                                        bg-yellow-600/15 border border-yellow-600/30
+                                        flex items-center justify-center
+                                        text-xs font-bold text-yellow-500
+                                    ">
+                                        {i + 1}
+                                    </div>
+                                    <p className="text-sm text-slate-300 leading-relaxed pt-0.5">
+                                        {step}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Arrow indicator for iOS Safari */}
+                        {platform === 'ios_safari' && (
+                            <div className="mt-6 flex flex-col items-center gap-1">
+                                <p className="text-xs text-slate-600">
+                                    O botão está na barra inferior do Safari
+                                </p>
+                                <div className="text-slate-700 text-lg">↓</div>
+                            </div>
                         )}
 
+                        {/* Close button */}
                         <button
-                            onClick={handleDismiss}
-                            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-slate-700 text-slate-500 transition-colors"
+                            onClick={() => { setGuideOpen(false); handleDismiss(); }}
+                            className="
+                                mt-6 w-full py-3 rounded-xl
+                                bg-slate-800 border border-slate-700
+                                text-sm text-slate-400 hover:text-white
+                                transition-colors
+                            "
                         >
-                            <X size={16} />
+                            Entendi
                         </button>
                     </div>
                 </div>
-            </div>
+            )}
         </>
     );
 };
+
+export default InstallPrompt;

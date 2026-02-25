@@ -78,7 +78,6 @@ import { useAuth } from './contexts/AuthContext';
 import { BenefitStatsCard } from './components/BenefitStatsCard';
 import { OfflineBanner } from './components/OfflineBanner';
 import { InstallPrompt } from './components/InstallPrompt';
-import { InstallPromptIOS } from './components/InstallPromptIOS';
 import ProfileSection from './components/ProfileSection';
 
 // --- LAZY IMPORTS (Code Splitting — loaded on demand) ---
@@ -900,7 +899,6 @@ const App = () => {
             {/* Offline Status Banner */}
             <OfflineBanner />
             <InstallPrompt />
-            <InstallPromptIOS />
             {/* Sidebar (Desktop) */}
             <div className="hidden md:flex w-64 flex-col border-r border-prosperus-navy-light bg-prosperus-navy">
                 <div className="p-6 border-b border-prosperus-navy-light">
