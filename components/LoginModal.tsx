@@ -425,7 +425,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 {view === 'CHECK_EMAIL' && (
                     <form onSubmit={handleCheckFirstAccess} className="space-y-4 animate-in fade-in duration-200">
                         <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Cadastrado (HubSpot)</label>
+                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email da Assinatura do Contrato</label>
                             <input
                                 type="email"
                                 required
@@ -466,7 +466,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         {!resetEmailSent ? (
                             <>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email Cadastrado</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email da Assinatura do Contrato</label>
                                     <input
                                         type="email"
                                         required
