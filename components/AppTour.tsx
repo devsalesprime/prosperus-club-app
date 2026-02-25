@@ -85,14 +85,24 @@ export function AppTour({
             // Centered — no spotlight or fullscreen welcome step
             return { top: '50%', transform: 'translateY(-50%)' };
         }
-        if (step.tooltipPosition === 'top') {
-            // Place tooltip ABOVE the spotlight
-            const bottom = window.innerHeight - spotlight.top + 12;
-            return { bottom: `${Math.max(bottom, 16)}px` };
+
+        const vh = window.innerHeight;
+        const spaceBelow = vh - (spotlight.top + spotlight.height);
+        const spaceAbove = spotlight.top;
+        const tooltipHeight = 240; // approximate height of tooltip with buttons
+        const navHeight = 64;      // bottom nav safe area
+
+        if (step.tooltipPosition === 'top' || spaceBelow < tooltipHeight + navHeight) {
+            // Place tooltip ABOVE the spotlight (or auto-flip when no room below)
+            const bottomPx = vh - spotlight.top + 12;
+            // Clamp so tooltip doesn't go above the screen
+            return { bottom: `${Math.min(Math.max(bottomPx, 16), vh - tooltipHeight)}px` };
         }
+
         // 'bottom' → Place tooltip BELOW the spotlight
-        const top = spotlight.top + spotlight.height + 12;
-        return { top: `${Math.min(top, window.innerHeight - 200)}px` };
+        const topPx = spotlight.top + spotlight.height + 12;
+        // Clamp so tooltip + its height doesn't go below the nav
+        return { top: `${Math.min(topPx, vh - tooltipHeight - navHeight)}px` };
     })();
 
     return (

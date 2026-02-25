@@ -187,8 +187,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             const timestampedUrl = `${publicUrl}?t=${Date.now()}`;
             setFormData(prev => ({ ...prev, image_url: timestampedUrl }));
+
+            // Persist immediately to DB so it's not lost if user closes the wizard
+            await profileService.updateProfileImage(currentUser.id, timestampedUrl);
         } catch (error) {
             console.error('Error uploading photo:', error);
+            setErrors(prev => ({ ...prev, photo: 'Erro ao enviar a foto. Tente novamente.' }));
         } finally {
             setUploadingPhoto(false);
         }
@@ -367,6 +371,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     />
                 </div>
             </div>
+            {errors.photo && (
+                <p className="text-center text-red-400 text-xs -mt-4 mb-4">{errors.photo}</p>
+            )}
 
             {/* Form Fields */}
             <div>
@@ -705,7 +712,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     ) : (
                         <button
                             onClick={handleComplete}
-                            disabled={saving}
+                            disabled={saving || uploadingPhoto}
                             className="flex items-center gap-2 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition disabled:opacity-50"
                         >
                             {saving ? (
