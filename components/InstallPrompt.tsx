@@ -32,24 +32,59 @@ export const InstallPrompt: React.FC = () => {
     const instructions = INSTALL_INSTRUCTIONS[platform];
 
     useEffect(() => {
+        // Diagnostic logging — helps debug on real devices via Safari Web Inspector
+        const standalone = isStandaloneMode();
+        const dismissed = isDismissed();
+        console.log('📱 InstallPrompt init:', {
+            platform,
+            type: instructions.type,
+            standalone,
+            dismissed,
+            dismissKey: localStorage.getItem(DISMISS_KEY),
+            oldIosKey: localStorage.getItem('prosperus_ios_prompt_dismissed'),
+            ua: navigator.userAgent.substring(0, 100)
+        });
+
+        // Clean up legacy iOS dismiss key on every mount
+        // This ensures old dismissals don't interfere
+        const oldIosValue = localStorage.getItem('prosperus_ios_prompt_dismissed');
+        if (oldIosValue) {
+            console.log('🧹 Removing old iOS dismiss key');
+            localStorage.removeItem('prosperus_ios_prompt_dismissed');
+        }
+
         // Don't show if already installed as PWA
-        if (isStandaloneMode()) return;
+        if (standalone) {
+            console.log('📱 InstallPrompt: Skipping — standalone mode');
+            return;
+        }
         // Don't show if no instructions for this platform
-        if (instructions.type === 'none') return;
+        if (instructions.type === 'none') {
+            console.log('📱 InstallPrompt: Skipping — no instructions for', platform);
+            return;
+        }
         // Don't show if dismissed recently
-        if (isDismissed()) return;
+        if (dismissed) {
+            console.log('📱 InstallPrompt: Skipping — dismissed recently');
+            return;
+        }
 
         // Capture native install event (Android/Desktop Chrome/Edge)
         const handleBeforeInstall = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
+            console.log('📱 InstallPrompt: beforeinstallprompt captured');
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
         // UX delay before showing banner
         const delay = platform.startsWith('ios') ? 3000 : 2000;
-        const timer = setTimeout(() => setVisible(true), delay);
+        console.log(`📱 InstallPrompt: Will show banner in ${delay}ms`);
+        const timer = setTimeout(() => {
+            console.log('📱 InstallPrompt: Showing banner now');
+            setVisible(true);
+        }, delay);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -98,7 +133,7 @@ export const InstallPrompt: React.FC = () => {
                 <div className="w-10 h-10 rounded-xl bg-yellow-600/15 border border-yellow-600/25
                     flex items-center justify-center flex-shrink-0">
                     <img
-                        src="/icons/icon-72x72.png"
+                        src={`${import.meta.env.BASE_URL}icons/icon-72x72.png`}
                         alt="Prosperus Club"
                         className="w-7 h-7 object-contain"
                         onError={e => {
