@@ -4,6 +4,7 @@
 // Lista de membros com filtros avançados, matching empresarial inteligente
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { usePagination } from '../hooks/usePagination';
 import {
     Search,
     Filter,
@@ -32,7 +33,7 @@ import { FavoriteButton } from './FavoriteButton';
 import { favoriteService } from '../services/favoriteService';
 import { exportMembersCSV, exportMembersVCard } from '../services/exportService';
 import { useAuth } from '../contexts/AuthContext';
-import { rankMatches, MatchResult } from '../utils/matchEngine';
+import { calculateMatch, MatchResult } from '../utils/matchEngine';
 
 // ─── Match Badge Config ───────────────────────────────────────────
 const MATCH_CONFIG = {
@@ -93,12 +94,8 @@ function useDebounce<T>(value: T, delay: number): T {
 export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentUserId, initialBenefitsFilter = false }) => {
     const { userProfile } = useAuth();
 
-    // State
-    const [members, setMembers] = useState<ProfileData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showFilters, setShowFilters] = useState(false);
-
     // Filter states
+    const [showFilters, setShowFilters] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
     const [tagFilter, setTagFilter] = useState('');
@@ -108,22 +105,70 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
+    const sentinelRef = useRef<HTMLDivElement>(null);
 
     // Debounced values (500ms delay)
     const debouncedQuery = useDebounce(searchQuery, 500);
     const debouncedRole = useDebounce(roleFilter, 500);
 
-    // ─── Match Engine ─────────────────────────────────────────────
-    const matches = useMemo(() => {
-        if (!userProfile || members.length === 0) return [];
-        return rankMatches(userProfile, members);
-    }, [userProfile, members]);
+    // ─── Build filters object ─────────────────────────────────────
+    const filters = useMemo(() => {
+        const f: { query?: string; role?: string; tag?: string; excludeUserId?: string } = {};
+        if (debouncedQuery) f.query = debouncedQuery;
+        if (debouncedRole) f.role = debouncedRole;
+        if (tagFilter) f.tag = tagFilter;
+        if (currentUserId) f.excludeUserId = currentUserId;
+        return f;
+    }, [debouncedQuery, debouncedRole, tagFilter, currentUserId]);
 
-    const matchMap = useMemo(() => {
-        const map = new Map<string, MatchResult>();
-        matches.forEach(m => map.set(m.profile.id, m));
-        return map;
-    }, [matches]);
+    // ─── Paginated Fetch ──────────────────────────────────────────
+    const fetcher = useCallback(
+        (page: number, pageSize: number) =>
+            profileService.getProfilesPaginated(page, pageSize, filters),
+        [filters]
+    );
+
+    const {
+        items: members,
+        isLoading: loading,
+        isLoadingMore,
+        hasMore,
+        totalCount,
+        loadMore,
+        reset: resetPagination,
+    } = usePagination<ProfileData>({ fetcher, pageSize: 20, autoFetch: false });
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        resetPagination();
+    }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ─── Match Engine (Incremental) ───────────────────────────────
+    const [matchMap, setMatchMap] = useState<Map<string, MatchResult>>(new Map());
+
+    useEffect(() => {
+        if (!userProfile || members.length === 0) return;
+        // Only score profiles not yet in the map
+        const newProfiles = members.filter(p => !matchMap.has(p.id));
+        if (newProfiles.length === 0) return;
+        const newMatches = newProfiles
+            .map(p => calculateMatch(userProfile, p))
+            .filter(r => r.matchType !== 'NONE');
+        setMatchMap(prev => {
+            const updated = new Map(prev);
+            newMatches.forEach(m => updated.set(m.profile.id, m));
+            return updated;
+        });
+    }, [members, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Reset match map when filters change
+    useEffect(() => {
+        setMatchMap(new Map());
+    }, [filters]);
+
+    const matches = useMemo(() => {
+        return Array.from(matchMap.values()).sort((a, b) => b.score - a.score);
+    }, [matchMap]);
 
     const strongMatches = useMemo(
         () => matches.filter(m => m.matchType === 'STRONG'),
@@ -144,38 +189,24 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Fetch members with filters
-    const fetchMembers = useCallback(async () => {
-        setLoading(true);
-        try {
-            const filters: { query?: string; role?: string; tag?: string; excludeUserId?: string } = {};
-            if (debouncedQuery) filters.query = debouncedQuery;
-            if (debouncedRole) filters.role = debouncedRole;
-            if (tagFilter) filters.tag = tagFilter;
-
-            // Always exclude current user from listings
-            if (currentUserId) filters.excludeUserId = currentUserId;
-
-            const hasFilters = Object.keys(filters).length > 0;
-            const data = hasFilters
-                ? await profileService.getFilteredProfiles(filters)
-                : await profileService.getAllProfiles(currentUserId);
-            setMembers(data);
-        } catch (error) {
-            console.error('Error fetching members:', error);
-            setMembers([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [debouncedQuery, debouncedRole, tagFilter, currentUserId]);
-
-    useEffect(() => {
-        fetchMembers();
-    }, [fetchMembers]);
-
     useEffect(() => {
         favoriteService.getFavoritedIds('member').then(setFavoritedMemberIds);
     }, []);
+
+    // ─── Infinite Scroll Observer ─────────────────────────────────
+    useEffect(() => {
+        if (!sentinelRef.current) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !isLoadingMore && !loading) {
+                    loadMore();
+                }
+            },
+            { rootMargin: '200px' }
+        );
+        observer.observe(sentinelRef.current);
+        return () => observer.disconnect();
+    }, [hasMore, isLoadingMore, loading, loadMore]);
 
     // Clear all filters
     const clearFilters = () => {
@@ -186,7 +217,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
         setMatchesOnly(false);
     };
 
-    // Filter members client-side
+    // Filter members client-side (benefits/matches are client toggles)
     const filteredMembers = useMemo(() => {
         let list = members;
         if (benefitsOnly) {
@@ -199,8 +230,8 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
         return list;
     }, [members, benefitsOnly, matchesOnly, matches]);
 
-    // Member count
-    const memberCount = filteredMembers.length;
+    // Member count — prefer server total when no client filters active
+    const memberCount = (benefitsOnly || matchesOnly) ? filteredMembers.length : (totalCount ?? filteredMembers.length);
 
     return (
         <div className="space-y-6 animate-in fade-in px-4 pt-4 pb-8">
@@ -481,207 +512,228 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                     )}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredMembers.map((member) => {
-                        const matchResult = matchMap.get(member.id);
-                        const matchConfig = matchResult ? MATCH_CONFIG[matchResult.matchType] : null;
-                        const isExpanded = expandedMatchId === member.id;
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredMembers.map((member) => {
+                            const matchResult = matchMap.get(member.id);
+                            const matchConfig = matchResult ? MATCH_CONFIG[matchResult.matchType] : null;
+                            const isExpanded = expandedMatchId === member.id;
 
-                        return (
-                            <div
-                                key={member.id}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => e.key === 'Enter' && onSelectMember(member)}
-                                onClick={() => onSelectMember(member)}
-                                className={`bg-slate-900 rounded-xl border overflow-hidden ${member.id === currentUserId
-                                    ? 'border-yellow-600/50 ring-1 ring-yellow-600/20'
-                                    : matchConfig ? matchConfig.borderClass : 'border-slate-800'
-                                    } flex flex-col cursor-pointer hover:border-yellow-600 hover:shadow-xl hover:shadow-yellow-900/10 hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-slate-950 group`}
-                            >
-                                {/* Banner Header */}
-                                <div className="relative h-24 w-full">
-                                    <img
-                                        src={(member as any).banner_url || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
-                                        alt=""
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-black/20" />
-
-                                    {/* Match Badge — top-left overlay */}
-                                    {matchConfig && matchResult && (
-                                        <div className={`absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border backdrop-blur-sm ${matchConfig.className}`}>
-                                            {matchConfig.label}
-                                        </div>
-                                    )}
-
-                                    {/* Favorite Button */}
-                                    {member.id !== currentUserId && (
-                                        <FavoriteButton
-                                            entityType="member"
-                                            entityId={member.id}
-                                            initialFavorited={favoritedMemberIds.has(member.id)}
-                                            overlay
-                                            size={18}
-                                        />
-                                    )}
-                                </div>
-
-                                {/* Content with Avatar overlapping banner */}
-                                <div className="flex flex-col items-center text-center px-6 pb-6 -mt-12">
-                                    {/* Avatar with badges */}
-                                    <div className="relative mb-4">
+                            return (
+                                <div
+                                    key={member.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => e.key === 'Enter' && onSelectMember(member)}
+                                    onClick={() => onSelectMember(member)}
+                                    className={`bg-slate-900 rounded-xl border overflow-hidden ${member.id === currentUserId
+                                        ? 'border-yellow-600/50 ring-1 ring-yellow-600/20'
+                                        : matchConfig ? matchConfig.borderClass : 'border-slate-800'
+                                        } flex flex-col cursor-pointer hover:border-yellow-600 hover:shadow-xl hover:shadow-yellow-900/10 hover:scale-[1.02] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-yellow-600 focus:ring-offset-2 focus:ring-offset-slate-950 group`}
+                                >
+                                    {/* Banner Header */}
+                                    <div className="relative h-24 w-full">
                                         <img
-                                            src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                            alt={member.name}
-                                            className="w-24 h-24 rounded-full border-4 border-slate-900 object-cover group-hover:border-yellow-600/50 transition-colors shadow-lg"
+                                            src={(member as any).banner_url || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
+                                            alt=""
+                                            className="w-full h-full object-cover"
                                         />
-                                        {/* Online indicator */}
-                                        <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-slate-900 rounded-full"></div>
+                                        <div className="absolute inset-0 bg-black/20" />
 
-                                        {/* Video badge */}
-                                        {member.pitch_video_url && (
-                                            <div className="absolute -top-1 -left-1 bg-purple-600 text-white p-1.5 rounded-full shadow-lg" title="Tem vídeo de apresentação">
-                                                <PlayCircle size={12} />
+                                        {/* Match Badge — top-left overlay */}
+                                        {matchConfig && matchResult && (
+                                            <div className={`absolute top-2 left-2 text-[10px] font-semibold px-2 py-0.5 rounded-full border backdrop-blur-sm ${matchConfig.className}`}>
+                                                {matchConfig.label}
                                             </div>
                                         )}
 
-                                        {/* Benefit badge */}
-                                        {member.exclusive_benefit?.active && (
-                                            <div className={`absolute -top-1 -right-1 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg transition-all ${benefitsOnly
-                                                ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 ring-2 ring-yellow-400/50 animate-pulse'
-                                                : 'bg-yellow-600'
-                                                }`}>
-                                                <Gift size={10} />
-                                                Oferta
-                                            </div>
-                                        )}
-
-                                        {/* You badge */}
-                                        {member.id === currentUserId && (
-                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-2 py-0.5 rounded text-[10px] font-bold">
-                                                VOCÊ
-                                            </div>
+                                        {/* Favorite Button */}
+                                        {member.id !== currentUserId && (
+                                            <FavoriteButton
+                                                entityType="member"
+                                                entityId={member.id}
+                                                initialFavorited={favoritedMemberIds.has(member.id)}
+                                                overlay
+                                                size={18}
+                                            />
                                         )}
                                     </div>
 
-                                    {/* Member info */}
-                                    <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">
-                                        {member.name}
-                                    </h3>
-                                    <p className="text-yellow-500 font-medium text-sm mb-1">
-                                        {member.job_title || 'Sócio'}
-                                    </p>
-                                    <p className="text-slate-400 text-sm mb-2">
-                                        {member.company && `@${member.company}`}
-                                    </p>
+                                    {/* Content with Avatar overlapping banner */}
+                                    <div className="flex flex-col items-center text-center px-6 pb-6 -mt-12">
+                                        {/* Avatar with badges */}
+                                        <div className="relative mb-4">
+                                            <img
+                                                src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                alt={member.name}
+                                                className="w-24 h-24 rounded-full border-4 border-slate-900 object-cover group-hover:border-yellow-600/50 transition-colors shadow-lg"
+                                            />
+                                            {/* Online indicator */}
+                                            <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-slate-900 rounded-full"></div>
 
-                                    {/* Tags */}
-                                    {member.tags && member.tags.length > 0 && (
-                                        <div className="flex flex-wrap justify-center gap-1 mb-3">
-                                            {member.tags.slice(0, 3).map((tag, i) => (
-                                                <span
-                                                    key={i}
-                                                    className={`px-2 py-0.5 text-[10px] rounded ${tag === tagFilter
-                                                        ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
-                                                        : 'bg-slate-800 text-slate-400'
-                                                        }`}
-                                                >
-                                                    {tag}
-                                                </span>
-                                            ))}
-                                            {member.tags.length > 3 && (
-                                                <span className="px-2 py-0.5 text-[10px] bg-slate-800 text-slate-500 rounded">
-                                                    +{member.tags.length - 3}
-                                                </span>
+                                            {/* Video badge */}
+                                            {member.pitch_video_url && (
+                                                <div className="absolute -top-1 -left-1 bg-purple-600 text-white p-1.5 rounded-full shadow-lg" title="Tem vídeo de apresentação">
+                                                    <PlayCircle size={12} />
+                                                </div>
                                             )}
-                                        </div>
-                                    )}
 
-                                    {/* Bio preview */}
-                                    {member.bio && (
-                                        <p className="text-slate-500 text-sm mb-4 line-clamp-2">{member.bio}</p>
-                                    )}
+                                            {/* Benefit badge */}
+                                            {member.exclusive_benefit?.active && (
+                                                <div className={`absolute -top-1 -right-1 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-lg transition-all ${benefitsOnly
+                                                    ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 ring-2 ring-yellow-400/50 animate-pulse'
+                                                    : 'bg-yellow-600'
+                                                    }`}>
+                                                    <Gift size={10} />
+                                                    Oferta
+                                                </div>
+                                            )}
 
-                                    {/* ── Match Compatibility Section ── */}
-                                    {matchResult && matchResult.reasons.length > 0 && (
-                                        <div className="w-full mt-2 border-t border-slate-800 pt-3">
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setExpandedMatchId(isExpanded ? null : member.id);
-                                                }}
-                                                className="flex items-center gap-1.5 w-full text-xs text-slate-500 hover:text-slate-300 transition-colors"
-                                            >
-                                                <ChevronDown
-                                                    size={12}
-                                                    className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                                />
-                                                {isExpanded ? 'Ocultar compatibilidade' : 'Ver compatibilidade'}
-                                                <span className="ml-auto text-yellow-600 font-semibold">
-                                                    {matchResult.score} pts
-                                                </span>
-                                            </button>
-
-                                            {isExpanded && (
-                                                <div className="mt-3 space-y-2 animate-in fade-in duration-200">
-                                                    {matchResult.reasons.map((reason, i) => (
-                                                        <div key={i} className="flex gap-2.5 p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50 text-left">
-                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${reason.type === 'SELLS_NEEDS' ? 'bg-yellow-600/15' :
-                                                                reason.type === 'NEEDS_SELLS' ? 'bg-blue-500/15' :
-                                                                    reason.type === 'SECTOR' ? 'bg-purple-500/15' :
-                                                                        'bg-emerald-500/15'
-                                                                }`}>
-                                                                {reason.type === 'SELLS_NEEDS' && <ShoppingBag size={12} className="text-yellow-500" />}
-                                                                {reason.type === 'NEEDS_SELLS' && <HeartHandshake size={12} className="text-blue-400" />}
-                                                                {reason.type === 'SECTOR' && <Layers size={12} className="text-purple-400" />}
-                                                                {reason.type === 'TAG' && <Tag size={12} className="text-emerald-400" />}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-[11px] font-semibold text-slate-300">{reason.label}</p>
-                                                                <p className="text-[10px] text-slate-500 mt-0.5">{reason.detail}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                            {/* You badge */}
+                                            {member.id === currentUserId && (
+                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                                                    VOCÊ
                                                 </div>
                                             )}
                                         </div>
-                                    )}
 
-                                    {/* Social links */}
-                                    <div className="flex gap-3 mt-auto pt-2">
-                                        {member.socials?.linkedin && (
-                                            <a
-                                                href={member.socials.linkedin}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="text-slate-400 hover:text-blue-500 transition-colors"
-                                            >
-                                                <Linkedin size={20} />
-                                            </a>
+                                        {/* Member info */}
+                                        <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">
+                                            {member.name}
+                                        </h3>
+                                        <p className="text-yellow-500 font-medium text-sm mb-1">
+                                            {member.job_title || 'Sócio'}
+                                        </p>
+                                        <p className="text-slate-400 text-sm mb-2">
+                                            {member.company && `@${member.company}`}
+                                        </p>
+
+                                        {/* Tags */}
+                                        {member.tags && member.tags.length > 0 && (
+                                            <div className="flex flex-wrap justify-center gap-1 mb-3">
+                                                {member.tags.slice(0, 3).map((tag, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className={`px-2 py-0.5 text-[10px] rounded ${tag === tagFilter
+                                                            ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
+                                                            : 'bg-slate-800 text-slate-400'
+                                                            }`}
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                                {member.tags.length > 3 && (
+                                                    <span className="px-2 py-0.5 text-[10px] bg-slate-800 text-slate-500 rounded">
+                                                        +{member.tags.length - 3}
+                                                    </span>
+                                                )}
+                                            </div>
                                         )}
-                                        {member.socials?.instagram && (
-                                            <a
-                                                href={member.socials.instagram}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="text-slate-400 hover:text-pink-500 transition-colors"
-                                            >
-                                                <Instagram size={20} />
-                                            </a>
+
+                                        {/* Bio preview */}
+                                        {member.bio && (
+                                            <p className="text-slate-500 text-sm mb-4 line-clamp-2">{member.bio}</p>
                                         )}
+
+                                        {/* ── Match Compatibility Section ── */}
+                                        {matchResult && matchResult.reasons.length > 0 && (
+                                            <div className="w-full mt-2 border-t border-slate-800 pt-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setExpandedMatchId(isExpanded ? null : member.id);
+                                                    }}
+                                                    className="flex items-center gap-1.5 w-full text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                                                >
+                                                    <ChevronDown
+                                                        size={12}
+                                                        className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                    />
+                                                    {isExpanded ? 'Ocultar compatibilidade' : 'Ver compatibilidade'}
+                                                    <span className="ml-auto text-yellow-600 font-semibold">
+                                                        {matchResult.score} pts
+                                                    </span>
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="mt-3 space-y-2 animate-in fade-in duration-200">
+                                                        {matchResult.reasons.map((reason, i) => (
+                                                            <div key={i} className="flex gap-2.5 p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/50 text-left">
+                                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${reason.type === 'SELLS_NEEDS' ? 'bg-yellow-600/15' :
+                                                                    reason.type === 'NEEDS_SELLS' ? 'bg-blue-500/15' :
+                                                                        reason.type === 'SECTOR' ? 'bg-purple-500/15' :
+                                                                            'bg-emerald-500/15'
+                                                                    }`}>
+                                                                    {reason.type === 'SELLS_NEEDS' && <ShoppingBag size={12} className="text-yellow-500" />}
+                                                                    {reason.type === 'NEEDS_SELLS' && <HeartHandshake size={12} className="text-blue-400" />}
+                                                                    {reason.type === 'SECTOR' && <Layers size={12} className="text-purple-400" />}
+                                                                    {reason.type === 'TAG' && <Tag size={12} className="text-emerald-400" />}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[11px] font-semibold text-slate-300">{reason.label}</p>
+                                                                    <p className="text-[10px] text-slate-500 mt-0.5">{reason.detail}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Social links */}
+                                        <div className="flex gap-3 mt-auto pt-2">
+                                            {member.socials?.linkedin && (
+                                                <a
+                                                    href={member.socials.linkedin}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="text-slate-400 hover:text-blue-500 transition-colors"
+                                                >
+                                                    <Linkedin size={20} />
+                                                </a>
+                                            )}
+                                            {member.socials?.instagram && (
+                                                <a
+                                                    href={member.socials.instagram}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="text-slate-400 hover:text-pink-500 transition-colors"
+                                                >
+                                                    <Instagram size={20} />
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Infinite Scroll Sentinel */}
+                    <div ref={sentinelRef} className="h-1" />
+
+                    {/* Loading More Indicator */}
+                    {isLoadingMore && (
+                        <div className="flex items-center justify-center py-8 gap-3">
+                            <div className="animate-spin w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full" />
+                            <span className="text-sm text-slate-400">Carregando mais sócios...</span>
+                        </div>
+                    )}
+
+                    {/* End of List */}
+                    {!hasMore && filteredMembers.length > 0 && (
+                        <div className="text-center py-6">
+                            <p className="text-xs text-slate-600">Todos os {memberCount} sócios carregados</p>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
 };
 
 export default MemberBook;
+

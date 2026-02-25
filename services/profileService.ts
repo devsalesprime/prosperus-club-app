@@ -227,6 +227,69 @@ class ProfileService {
     }
 
     /**
+     * Get paginated member profiles (for Member Book with infinite scroll)
+     * Uses Supabase .range() for efficient server-side pagination
+     * @param page - Zero-based page index
+     * @param pageSize - Number of items per page
+     * @param filters - Optional filters (query, role, tag, excludeUserId)
+     * @returns { data: ProfileData[], count: number | null }
+     */
+    async getProfilesPaginated(
+        page: number,
+        pageSize: number,
+        filters?: {
+            query?: string;
+            role?: string;
+            tag?: string;
+            excludeUserId?: string;
+        }
+    ): Promise<{ data: ProfileData[]; count: number | null }> {
+        try {
+            const from = page * pageSize;
+            const to = from + pageSize - 1;
+
+            let queryBuilder = supabase
+                .from('profiles')
+                .select(
+                    'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at',
+                    { count: 'exact', head: false }
+                );
+
+            // Exclude specific user if provided
+            if (filters?.excludeUserId) {
+                queryBuilder = queryBuilder.neq('id', filters.excludeUserId);
+            }
+
+            // Text search — name or company
+            if (filters?.query && filters.query.trim()) {
+                const searchTerm = `%${filters.query.trim()}%`;
+                queryBuilder = queryBuilder.or(`name.ilike.${searchTerm},company.ilike.${searchTerm}`);
+            }
+
+            // Job title filter
+            if (filters?.role && filters.role.trim()) {
+                const roleTerm = `%${filters.role.trim()}%`;
+                queryBuilder = queryBuilder.ilike('job_title', roleTerm);
+            }
+
+            // Tag filter — using contains for array
+            if (filters?.tag && filters.tag.trim()) {
+                queryBuilder = queryBuilder.contains('tags', [filters.tag.trim()]);
+            }
+
+            const { data, error, count } = await queryBuilder
+                .order('name', { ascending: true })
+                .range(from, to);
+
+            if (error) throw error;
+            return { data: data || [], count };
+        } catch (error) {
+            console.error('Error fetching paginated profiles:', error);
+            return { data: [], count: null };
+        }
+    }
+
+    /**
      * Create a new profile (called on first login)
      */
     async createProfile(userId: string, profileData: Partial<ProfileData>): Promise<ProfileData | null> {
