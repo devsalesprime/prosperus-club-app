@@ -1,6 +1,7 @@
 // Service for managing user notifications
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export interface UserNotification {
     id: string;
@@ -47,7 +48,7 @@ class NotificationService {
         limit: number = 20
     ): Promise<NotificationResult> {
         try {
-            console.log('🔔 Fetching notifications for user:', userId, { page, limit });
+            logger.debug('🔔 Fetching notifications for user:', userId, { page, limit });
 
             const offset = (page - 1) * limit;
 
@@ -64,7 +65,7 @@ class NotificationService {
             const total = count || 0;
             const hasMore = offset + limit < total;
 
-            console.log(`✅ Found ${data?.length || 0} notifications (total: ${total})`);
+            logger.debug(`✅ Found ${data?.length || 0} notifications (total: ${total})`);
 
             return {
                 data: data || [],
@@ -204,7 +205,7 @@ class NotificationService {
                 throw updateError;
             }
 
-            console.log('✅ Notification soft-deleted successfully');
+            logger.info('✅ Notification soft-deleted successfully');
         } catch (error) {
             console.error('Error deleting notification:', error);
             throw error;
@@ -317,7 +318,7 @@ class NotificationService {
                 });
 
                 if (!rpcError) {
-                    console.log('✅ Individual notification sent via RPC');
+                    logger.info('✅ Individual notification sent via RPC');
                     return rpcData || 1;
                 }
 
@@ -343,7 +344,7 @@ class NotificationService {
                 throw error;
             }
 
-            console.log('✅ Individual notification sent via direct insert');
+            logger.info('✅ Individual notification sent via direct insert');
             return 1;
         } catch (error) {
             console.error('Error creating individual notification:', error);
@@ -373,12 +374,12 @@ class NotificationService {
                     filter: `user_id=eq.${userId}`
                 },
                 (payload) => {
-                    console.log('🔔 Realtime notification received:', payload.new);
+                    logger.debug('🔔 Realtime notification received:', payload.new);
                     callback(payload.new as UserNotification);
                 }
             )
             .subscribe((status) => {
-                console.log(`📡 Realtime channel [${channelName}] status:`, status);
+                logger.debug(`📡 Realtime channel [${channelName}] status:`, status);
                 if (status === 'CHANNEL_ERROR') {
                     console.error('❌ Realtime subscription failed. Check if Realtime is enabled for user_notifications table in Supabase Dashboard.');
                 }
@@ -474,7 +475,7 @@ class NotificationService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Push token registered successfully');
+            logger.info('✅ Push token registered successfully');
             return { success: true };
         } catch (error: any) {
             console.error('❌ Error in registerPushToken:', error);
@@ -542,7 +543,7 @@ class NotificationService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Push token removed successfully');
+            logger.info('✅ Push token removed successfully');
             return { success: true };
         } catch (error: any) {
             console.error('Error removing push token:', error);

@@ -3,6 +3,7 @@
 // Permite ADMIN/TEAM visualizar todas as conversas e moderar conteúdo
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // Types
 export interface ConversationWithParticipants {
@@ -76,7 +77,7 @@ class AdminChatService {
         limit: number = 20,
         search?: string
     ): Promise<PaginatedResult<ConversationWithParticipants>> {
-        console.log('📋 Admin: Fetching all conversations...');
+        logger.debug('📋 Admin: Fetching all conversations...');
 
         // Verificar permissão
         const isAdmin = await this.checkAdminRole();
@@ -164,7 +165,7 @@ class AdminChatService {
             // Remover nulls (conversas filtradas pelo search)
             const filteredConversations = enrichedConversations.filter(Boolean) as ConversationWithParticipants[];
 
-            console.log(`✅ Admin: Found ${filteredConversations.length} conversations`);
+            logger.debug(`✅ Admin: Found ${filteredConversations.length} conversations`);
 
             return {
                 data: filteredConversations,
@@ -183,7 +184,7 @@ class AdminChatService {
      * Busca todas as mensagens de uma conversa específica
      */
     async getConversationMessages(conversationId: string): Promise<MessageWithSender[]> {
-        console.log('💬 Admin: Fetching messages for conversation:', conversationId);
+        logger.debug('💬 Admin: Fetching messages for conversation:', conversationId);
 
         const isAdmin = await this.checkAdminRole();
         if (!isAdmin) {
@@ -232,7 +233,7 @@ class AdminChatService {
                 sender: msg.profiles || { id: msg.sender_id, name: 'Usuário', email: '', image_url: null }
             }));
 
-            console.log(`✅ Admin: Found ${mappedMessages.length} messages`);
+            logger.debug(`✅ Admin: Found ${mappedMessages.length} messages`);
             return mappedMessages;
         } catch (error) {
             console.error('Error in getConversationMessages:', error);
@@ -245,7 +246,7 @@ class AdminChatService {
      * Marca como deletada para mostrar placeholder
      */
     async deleteMessage(messageId: string, adminId: string): Promise<boolean> {
-        console.log('🗑️ Admin: Soft deleting message:', messageId);
+        logger.debug('🗑️ Admin: Soft deleting message:', messageId);
 
         const isAdmin = await this.checkAdminRole();
         if (!isAdmin) {
@@ -269,7 +270,7 @@ class AdminChatService {
             }
 
             // Log de auditoria
-            console.log(`📝 AUDIT: Admin ${adminId} soft deleted message ${messageId} at ${new Date().toISOString()}`);
+            logger.info(`📝 AUDIT: Admin ${adminId} soft deleted message ${messageId} at ${new Date().toISOString()}`);
 
             return true;
         } catch (error) {
@@ -282,7 +283,7 @@ class AdminChatService {
      * Restaurar uma mensagem deletada
      */
     async restoreMessage(messageId: string): Promise<boolean> {
-        console.log('♻️ Admin: Restoring message:', messageId);
+        logger.debug('♻️ Admin: Restoring message:', messageId);
 
         const isAdmin = await this.checkAdminRole();
         if (!isAdmin) {
@@ -301,7 +302,7 @@ class AdminChatService {
 
             if (error) throw error;
 
-            console.log(`✅ Admin: Message ${messageId} restored`);
+            logger.debug(`✅ Admin: Message ${messageId} restored`);
             return true;
         } catch (error) {
             console.error('Error restoring message:', error);
@@ -314,7 +315,7 @@ class AdminChatService {
      * Requer RLS policy que permite INSERT para admins
      */
     async sendAdminMessage(conversationId: string, adminId: string, content: string): Promise<MessageWithSender> {
-        console.log('💬 Admin: Sending message to conversation:', conversationId);
+        logger.debug('💬 Admin: Sending message to conversation:', conversationId);
 
         const isAdmin = await this.checkAdminRole();
         if (!isAdmin) {
@@ -358,7 +359,7 @@ class AdminChatService {
                 .eq('id', conversationId);
 
             // Log de auditoria
-            console.log(`📝 AUDIT: Admin ${adminId} sent message to conversation ${conversationId} at ${new Date().toISOString()}`);
+            logger.info(`📝 AUDIT: Admin ${adminId} sent message to conversation ${conversationId} at ${new Date().toISOString()}`);
 
             return {
                 id: message.id,

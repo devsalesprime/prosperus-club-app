@@ -5,6 +5,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '../utils/logger';
 
 interface ImageUploadProps {
     currentImageUrl?: string;
@@ -70,7 +71,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const handleSafeClose = useCallback(() => {
         // Don't close if file picker is active (prevents close on mobile return)
         if (filePickerActiveRef.current) {
-            console.log('📱 ImageUpload: Ignoring close while file picker is active');
+            logger.debug('📱 ImageUpload: Ignoring close while file picker is active');
             return;
         }
         onCancel();
@@ -116,7 +117,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                 .from('avatars')
                 .getPublicUrl(fileName);
 
-            console.log('✅ ImageUpload: Upload successful!', {
+            logger.info('✅ ImageUpload: Upload successful!', {
                 storagePath: data?.path,
                 publicUrl,
                 fileName

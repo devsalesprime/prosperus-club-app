@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 /**
  * Hook para gerenciar indicador de "digitando..." via Broadcast Channel
@@ -35,7 +36,7 @@ export const useTypingIndicator = (
     useEffect(() => {
         if (!conversationId || !userId) return;
 
-        console.log('⌨️ Setting up typing indicator for conversation:', conversationId);
+        logger.debug('⌨️ Setting up typing indicator for conversation:', conversationId);
 
         const typingChannel = supabase.channel(`typing:${conversationId}`);
 
@@ -47,7 +48,7 @@ export const useTypingIndicator = (
                 // Ignorar próprio evento
                 if (user_id === userId) return;
 
-                console.log('⌨️ Typing event received:', { user_id, is_typing });
+                logger.debug('⌨️ Typing event received:', { user_id, is_typing });
 
                 setTypingUsers(prev => {
                     if (is_typing) {
@@ -71,7 +72,7 @@ export const useTypingIndicator = (
         setChannel(typingChannel);
 
         return () => {
-            console.log('⌨️ Cleaning up typing indicator');
+            logger.debug('⌨️ Cleaning up typing indicator');
             supabase.removeChannel(typingChannel);
             setTypingUsers([]);
         };
@@ -81,7 +82,7 @@ export const useTypingIndicator = (
     const sendTypingEvent = useCallback((isTyping: boolean) => {
         if (!channel || !userId) return;
 
-        console.log('⌨️ Sending typing event:', isTyping);
+        logger.debug('⌨️ Sending typing event:', isTyping);
 
         channel.send({
             type: 'broadcast',

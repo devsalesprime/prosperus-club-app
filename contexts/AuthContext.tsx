@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { ProfileData, profileService } from '../services/profileService';
+import { logger } from '../utils/logger';
 
 interface AuthContextType {
     session: Session | null;
@@ -37,13 +38,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Fetch user profile from profiles table
     const fetchProfile = async (userId: string, isInitialLoad = false) => {
         try {
-            console.log('🔄 AuthContext: Fetching profile for user:', userId);
+            logger.debug('🔄 AuthContext: Fetching profile for user:', userId);
             const profile = await profileService.getProfile(userId);
 
             if (!mountedRef.current) return;
 
             if (profile) {
-                console.log('✅ AuthContext: Profile loaded:', profile.name);
+                logger.debug('✅ AuthContext: Profile loaded:', profile.name);
                 setUserProfile(profile);
                 profileCacheRef.current = profile;
             } else {
@@ -65,7 +66,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
             // If we already have a cached profile, keep using it
             if (profileCacheRef.current) {
-                console.log('♻️ AuthContext: Using cached profile after fetch error');
+                logger.debug('♻️ AuthContext: Using cached profile after fetch error');
                 setUserProfile(profileCacheRef.current);
                 return;
             }
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     };
                     setUserProfile(fallbackProfile);
                     profileCacheRef.current = fallbackProfile;
-                    console.log('✅ AuthContext: Fallback profile created:', fallbackProfile.name);
+                    logger.debug('✅ AuthContext: Fallback profile created:', fallbackProfile.name);
                 } else {
                     setUserProfile(null);
                 }
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Public method to refresh profile (called after profile updates)
     const refreshProfile = async () => {
         if (session?.user?.id) {
-            console.log('🔄 AuthContext: Refreshing profile...');
+            logger.debug('🔄 AuthContext: Refreshing profile...');
             await fetchProfile(session.user.id);
         }
     };
@@ -104,7 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Logout function
     const logout = async () => {
         try {
-            console.log('👋 AuthContext: Logging out...');
+            logger.debug('👋 AuthContext: Logging out...');
             await supabase.auth.signOut();
             setSession(null);
             setUserProfile(null);
@@ -118,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Password reset: send recovery email
     const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            console.log('🔑 AuthContext: Sending password reset email to:', email);
+            logger.debug('🔑 AuthContext: Sending password reset email to:', email);
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
             });
@@ -131,7 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 return { success: false, error: 'Erro ao enviar email de recuperação. Tente novamente.' };
             }
 
-            console.log('✅ AuthContext: Password reset email sent');
+            logger.debug('✅ AuthContext: Password reset email sent');
             return { success: true };
         } catch (err) {
             console.error('❌ AuthContext: Unexpected reset error:', err);
@@ -142,7 +143,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Update password (called after clicking email link)
     const updateUserPassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            console.log('🔑 AuthContext: Updating user password...');
+            logger.debug('🔑 AuthContext: Updating user password...');
             const { error } = await supabase.auth.updateUser({ password: newPassword });
 
             if (error) {
@@ -153,7 +154,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 return { success: false, error: 'Erro ao atualizar senha. Tente novamente.' };
             }
 
-            console.log('✅ AuthContext: Password updated successfully');
+            logger.debug('✅ AuthContext: Password updated successfully');
             setIsPasswordRecovery(false);
             return { success: true };
         } catch (err) {
@@ -164,7 +165,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Initialize auth state and listen for changes
     useEffect(() => {
-        console.log('🔌 AuthContext: Initializing...');
+        logger.debug('🔌 AuthContext: Initializing...');
         mountedRef.current = true;
 
         // Safety timeout to prevent infinite loading (20 seconds)
@@ -179,7 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (!mountedRef.current) return;
 
-            console.log('📡 AuthContext: Initial session check:', session ? 'Found' : 'None');
+            logger.debug('📡 AuthContext: Initial session check:', session ? 'Found' : 'None');
             setSession(session);
             sessionUserIdRef.current = session?.user?.id || null;
 
@@ -212,7 +213,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } = supabase.auth.onAuthStateChange(async (event, newSession) => {
             if (!mountedRef.current) return;
 
-            console.log('🔔 AuthContext: Auth state changed:', event);
+            logger.debug('🔔 AuthContext: Auth state changed:', event);
 
             // TOKEN_REFRESHED: only update session silently, don't trigger re-renders
             // if the user hasn't changed. This prevents unmounting modals (e.g., ImageUpload)
@@ -221,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const currentUserId = sessionUserIdRef.current;
                 const newUserId = newSession?.user?.id || null;
                 if (currentUserId === newUserId) {
-                    console.log('🔄 AuthContext: TOKEN_REFRESHED - skipping state update (same user)');
+                    logger.debug('🔄 AuthContext: TOKEN_REFRESHED - skipping state update (same user)');
                     return;
                 }
             }
@@ -237,7 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
                 }
             } else if (event === 'PASSWORD_RECOVERY') {
-                console.log('🔑 AuthContext: PASSWORD_RECOVERY event detected');
+                logger.debug('🔑 AuthContext: PASSWORD_RECOVERY event detected');
                 setIsPasswordRecovery(true);
             } else if (event === 'SIGNED_OUT') {
                 setUserProfile(null);
@@ -247,7 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
 
         return () => {
-            console.log('🧹 AuthContext: Cleaning up subscription');
+            logger.debug('🧹 AuthContext: Cleaning up subscription');
             mountedRef.current = false;
             clearTimeout(safetyTimeout);
             subscription.unsubscribe();

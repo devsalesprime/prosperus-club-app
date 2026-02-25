@@ -1,5 +1,6 @@
 
 import { Member, Video, ClubEvent, Article, Category, SupportConfig, Conversation, Message, PushNotification, UserNotification, Banner, ClubComment, GalleryConfig } from '../types';
+import { logger } from '../utils/logger';
 
 // --- INITIAL DATA ---
 
@@ -339,7 +340,7 @@ class DataService {
 
   // --- ANALYTICS ---
   trackEvent(eventName: string, metadata?: any) {
-    console.log(`[ANALYTICS] ${eventName}`, metadata);
+    logger.debug(`[ANALYTICS] ${eventName}`, metadata);
     // In production, save to DB. Here we just log.
   }
 
@@ -408,7 +409,7 @@ class DataService {
 
     // Mock sending process: Create UserNotification for logged user
     if (newNotification.status === 'SENT') {
-      console.log(`[PUSH SERVER] Sending to ${newNotification.segment}: ${newNotification.title}`);
+      logger.debug(`[PUSH SERVER] Sending to ${newNotification.segment}: ${newNotification.title}`);
       this.userNotifications.unshift({
         id: Math.random().toString(36).substr(2, 9),
         userId: '1', // Mock sending to current user

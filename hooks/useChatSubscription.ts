@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Message } from '../types/types';
+import { logger } from '../utils/logger';
 
 /**
  * Hook para escutar novas mensagens em uma conversa específica via Supabase Realtime
@@ -27,7 +28,7 @@ export const useChatSubscription = (
     useEffect(() => {
         if (!conversationId) return;
 
-        console.log('🔌 Subscribing to conversation:', conversationId);
+        logger.debug('🔌 Subscribing to conversation:', conversationId);
 
         const channel = supabase
             .channel(`messages:${conversationId}`)
@@ -40,7 +41,7 @@ export const useChatSubscription = (
                     filter: `conversation_id=eq.${conversationId}`
                 },
                 (payload) => {
-                    console.log('📨 New message received:', payload.new);
+                    logger.debug('📨 New message received:', payload.new);
                     onNewMessage(payload.new as Message);
                 }
             )
@@ -48,7 +49,7 @@ export const useChatSubscription = (
 
         // Cleanup: Unsubscribe ao desmontar ou trocar conversa
         return () => {
-            console.log('🔌 Unsubscribing from conversation:', conversationId);
+            logger.debug('🔌 Unsubscribing from conversation:', conversationId);
             supabase.removeChannel(channel);
         };
     }, [conversationId, onNewMessage]);

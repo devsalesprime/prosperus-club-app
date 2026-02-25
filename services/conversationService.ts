@@ -2,6 +2,7 @@
 
 import { supabase } from '../lib/supabase';
 import { fetchWithOfflineCache } from './offlineStorage';
+import { logger } from '../utils/logger';
 
 export interface Conversation {
     id: string;
@@ -100,7 +101,7 @@ class ConversationService {
         conversationId: string,
         onNewMessage: (message: Message) => void
     ): { unsubscribe: () => void } {
-        console.log('🔌 Realtime: Subscribing to conversation:', conversationId);
+        logger.debug('🔌 Realtime: Subscribing to conversation:', conversationId);
 
         const channelName = `messages:conversation:${conversationId}`;
 
@@ -115,7 +116,7 @@ class ConversationService {
                     filter: `conversation_id=eq.${conversationId}`
                 },
                 async (payload) => {
-                    console.log('📩 Realtime: New message received:', payload.new);
+                    logger.debug('📩 Realtime: New message received:', payload.new);
 
                     const rawMessage = payload.new as {
                         id: string;
@@ -164,7 +165,7 @@ class ConversationService {
                     filter: `conversation_id=eq.${conversationId}`
                 },
                 async (payload) => {
-                    console.log('🔄 Realtime: Message updated:', payload.new);
+                    logger.debug('🔄 Realtime: Message updated:', payload.new);
 
                     const rawMessage = payload.new as {
                         id: string;
@@ -205,14 +206,14 @@ class ConversationService {
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Realtime: Successfully subscribed to conversation:', conversationId);
+                    logger.debug('✅ Realtime: Successfully subscribed to conversation:', conversationId);
                 } else if (status === 'CHANNEL_ERROR') {
                     console.error('❌ Realtime: Channel error for conversation:', conversationId);
                     // Auto-retry with exponential backoff (max 3 retries)
                     const retryCount = (channel as any).__retryCount || 0;
                     if (retryCount < 3) {
                         const delay = Math.pow(2, retryCount + 1) * 1000; // 2s, 4s, 8s
-                        console.log(`🔄 Realtime: Retrying in ${delay / 1000}s (attempt ${retryCount + 1}/3)...`);
+                        logger.debug(`🔄 Realtime: Retrying in ${delay / 1000}s (attempt ${retryCount + 1}/3)...`);
                         (channel as any).__retryCount = retryCount + 1;
                         setTimeout(() => {
                             supabase.removeChannel(channel);
@@ -233,7 +234,7 @@ class ConversationService {
         // Return unsubscribe function for cleanup
         return {
             unsubscribe: () => {
-                console.log('🔌 Realtime: Unsubscribing from conversation:', conversationId);
+                logger.debug('🔌 Realtime: Unsubscribing from conversation:', conversationId);
                 supabase.removeChannel(channel);
             }
         };
@@ -251,7 +252,7 @@ class ConversationService {
             return { unsubscribe: () => { } };
         }
 
-        console.log('🔌 Realtime: Subscribing to user conversations, count:', conversationIds.length);
+        logger.debug('🔌 Realtime: Subscribing to user conversations, count:', conversationIds.length);
 
         const channelName = `messages:user:${userId}`;
 
@@ -269,20 +270,20 @@ class ConversationService {
 
                     // Only notify if message is in one of user's conversations and not from user
                     if (conversationIds.includes(newMsg.conversation_id) && newMsg.sender_id !== userId) {
-                        console.log('📩 Realtime: New message in conversation:', newMsg.conversation_id);
+                        logger.debug('📩 Realtime: New message in conversation:', newMsg.conversation_id);
                         onUpdate(newMsg.conversation_id);
                     }
                 }
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Realtime: Successfully subscribed to user conversations');
+                    logger.debug('✅ Realtime: Successfully subscribed to user conversations');
                 }
             });
 
         return {
             unsubscribe: () => {
-                console.log('🔌 Realtime: Unsubscribing from user conversations');
+                logger.debug('🔌 Realtime: Unsubscribing from user conversations');
                 supabase.removeChannel(channel);
             }
         };
@@ -300,7 +301,7 @@ class ConversationService {
             created_at: string;
         }) => void
     ): { unsubscribe: () => void } {
-        console.log('🔌 Realtime: Subscribing to all user messages');
+        logger.debug('🔌 Realtime: Subscribing to all user messages');
 
         const channelName = `all-messages:user:${userId}`;
 
@@ -322,7 +323,7 @@ class ConversationService {
                         created_at: string;
                     };
 
-                    console.log('📩 Realtime: Message received for list update:', newMsg.conversation_id);
+                    logger.debug('📩 Realtime: Message received for list update:', newMsg.conversation_id);
                     onNewMessage({
                         conversation_id: newMsg.conversation_id,
                         sender_id: newMsg.sender_id,
@@ -333,13 +334,13 @@ class ConversationService {
             )
             .subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('✅ Realtime: Successfully subscribed to all user messages');
+                    logger.debug('✅ Realtime: Successfully subscribed to all user messages');
                 }
             });
 
         return {
             unsubscribe: () => {
-                console.log('🔌 Realtime: Unsubscribing from all user messages');
+                logger.debug('🔌 Realtime: Unsubscribing from all user messages');
                 supabase.removeChannel(channel);
             }
         };
@@ -782,7 +783,7 @@ class ConversationService {
             if (error) throw error;
             if (!data) throw new Error('Failed to send media message');
 
-            console.log('✅ Chat Media: Sent successfully', {
+            logger.info('✅ Chat Media: Sent successfully', {
                 type: messageType,
                 filename: file.name,
                 size: `${(file.size / 1024).toFixed(0)}KB`
@@ -800,7 +801,7 @@ class ConversationService {
      */
     async markMessagesAsRead(conversationId: string, userId: string): Promise<void> {
         try {
-            console.log('📖 ConversationService: Marking messages as read', {
+            logger.debug('📖 ConversationService: Marking messages as read', {
                 conversationId,
                 userId
             });
@@ -815,7 +816,7 @@ class ConversationService {
 
             if (error) throw error;
 
-            console.log('✅ ConversationService: Marked messages as read', {
+            logger.debug('✅ ConversationService: Marked messages as read', {
                 count: data?.length || 0,
                 messageIds: data?.map(m => m.id) || []
             });

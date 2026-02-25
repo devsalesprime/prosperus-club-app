@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { badgeService } from '../services/badgeService';
+import { logger } from '../utils/logger';
 
 /**
  * Interface para notificações de usuário
@@ -31,7 +32,7 @@ export const useGlobalSubscription = (
     useEffect(() => {
         if (!session?.user?.id) return;
 
-        console.log('🔔 Subscribing to notifications for user:', session.user.id);
+        logger.debug('🔔 Subscribing to notifications for user:', session.user.id);
 
         // Update badge on mount
         badgeService.updateBadge(session.user.id);
@@ -47,7 +48,7 @@ export const useGlobalSubscription = (
                     filter: `user_id=eq.${session.user.id}`
                 },
                 (payload) => {
-                    console.log('🔔 New notification received:', payload.new);
+                    logger.debug('🔔 New notification received:', payload.new);
                     onNewNotification(payload.new as UserNotification);
                     // Increment badge on new notification
                     badgeService.increment();
@@ -56,7 +57,7 @@ export const useGlobalSubscription = (
             .subscribe();
 
         return () => {
-            console.log('🔔 Unsubscribing from notifications');
+            logger.debug('🔔 Unsubscribing from notifications');
             supabase.removeChannel(channel);
         };
     }, [session?.user?.id, onNewNotification]);

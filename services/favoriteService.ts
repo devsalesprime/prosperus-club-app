@@ -122,7 +122,7 @@ class FavoriteService {
 
             let query = supabase
                 .from('user_favorites')
-                .select('*')
+                .select('id, user_id, entity_type, entity_id, created_at')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false });
 

@@ -8,6 +8,7 @@ import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
 import { ProfilePreview } from '../ProfilePreview';
 import { profileService, ProfileData } from '../../services/profileService';
+import { logger } from '../../utils/logger';
 
 type TabType = 'sellers' | 'referrers';
 
@@ -42,14 +43,14 @@ export const RankingsScreen: React.FC = () => {
     const loadRankings = async () => {
         setLoading(true);
         try {
-            console.log('[Rankings] Fetching rankings for tab:', activeTab);
+            logger.debug('[Rankings] Fetching rankings for tab:', activeTab);
             const data = activeTab === 'sellers'
                 ? await businessService.getTopSellers()
                 : await businessService.getTopReferrers();
-            console.log('[Rankings] Received data:', data);
-            console.log('[Rankings] Data length:', data?.length || 0);
+            logger.debug('[Rankings] Received data:', data);
+            logger.debug('[Rankings] Data length:', data?.length || 0);
             if (data && data.length > 0) {
-                console.log('[Rankings] First entry:', JSON.stringify(data[0], null, 2));
+                logger.debug('[Rankings] First entry:', JSON.stringify(data[0], null, 2));
             }
             setRankings(data);
         } catch (error) {

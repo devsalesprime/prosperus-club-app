@@ -4,6 +4,7 @@
 
 import { supabase } from '../lib/supabase';
 import { fetchWithOfflineCache } from './offlineStorage';
+import { logger } from '../utils/logger';
 
 // ============================================
 // TYPES
@@ -75,11 +76,11 @@ class ArticleService {
         try {
             // Check cache first
             if (visibilityCache && Date.now() - visibilityCache.timestamp < CACHE_TTL) {
-                console.log('📰 hasPublishedArticles: using cache');
+                logger.debug('📰 hasPublishedArticles: using cache');
                 return visibilityCache.value;
             }
 
-            console.log('📰 hasPublishedArticles: querying...');
+            logger.debug('📰 hasPublishedArticles: querying...');
 
             const { count, error } = await supabase
                 .from('articles')
@@ -94,7 +95,7 @@ class ArticleService {
             // Update cache
             visibilityCache = { value: hasArticles, timestamp: Date.now() };
 
-            console.log(`📰 hasPublishedArticles: ${hasArticles}`);
+            logger.debug(`📰 hasPublishedArticles: ${hasArticles}`);
             return hasArticles;
         } catch (error) {
             console.error('Error checking published articles:', error);
@@ -107,7 +108,7 @@ class ArticleService {
      */
     invalidateVisibilityCache(): void {
         visibilityCache = null;
-        console.log('📰 Visibility cache invalidated');
+        logger.debug('📰 Visibility cache invalidated');
     }
 
     // ========================================

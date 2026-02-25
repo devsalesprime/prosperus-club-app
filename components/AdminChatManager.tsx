@@ -25,6 +25,7 @@ import { profileService } from '../services/profileService';
 import { conversationService } from '../services/conversationService';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { logger } from '../utils/logger';
 
 interface AdminChatManagerProps {
     currentAdminId: string;
@@ -108,12 +109,12 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
     useEffect(() => {
         if (!selectedConversation) return;
 
-        console.log('🔌 AdminChatManager: Subscribing to conversation:', selectedConversation.id);
+        logger.debug('🔌 AdminChatManager: Subscribing to conversation:', selectedConversation.id);
 
         const subscription = conversationService.subscribeToConversation(
             selectedConversation.id,
             (newMessage) => {
-                console.log('📩 AdminChatManager: Received message update:', newMessage);
+                logger.debug('📩 AdminChatManager: Received message update:', newMessage);
 
                 setMessages(prev => {
                     const exists = prev.some(m => m.id === newMessage.id);
@@ -141,7 +142,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
         );
 
         return () => {
-            console.log('🧹 AdminChatManager: Unsubscribing from conversation');
+            logger.debug('🧹 AdminChatManager: Unsubscribing from conversation');
             subscription.unsubscribe();
         };
     }, [selectedConversation?.id]);
@@ -211,7 +212,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
             await conversationService.deleteConversation(convToDelete.id);
 
             // Audit log
-            console.log('🗑️ [ADMIN AUDIT] Conversation deleted:', {
+            logger.debug('🗑️ [ADMIN AUDIT] Conversation deleted:', {
                 conversationId: convToDelete.id,
                 participants: convToDelete.participants.map(p => p.name).join(', '),
                 deletedBy: currentAdminId,

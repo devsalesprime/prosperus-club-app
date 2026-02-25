@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { videoService } from '../services/videoService';
+import { logger } from '../utils/logger';
 
 // CursEduca event types we might receive
 interface CursEducaEvent {
@@ -75,7 +76,7 @@ export function useCursEducaTracker({
         const lastRounded = Math.floor(lastSavedProgressRef.current / 10) * 10;
 
         if (roundedProgress > lastRounded) {
-            console.log(`📊 CursEduca: Saving progress ${roundedProgress}% for video ${videoId}`);
+            logger.debug(`📊 CursEduca: Saving progress ${roundedProgress}% for video ${videoId}`);
             try {
                 await videoService.updateProgress(videoId, roundedProgress);
                 lastSavedProgressRef.current = roundedProgress;
@@ -90,7 +91,7 @@ export function useCursEducaTracker({
         if (hasCalledCompleteRef.current) return;
         hasCalledCompleteRef.current = true;
 
-        console.log(`🎉 CursEduca: Video ${videoId} completed!`);
+        logger.debug(`🎉 CursEduca: Video ${videoId} completed!`);
         setIsCompleted(true);
         setProgress(100);
 
@@ -131,7 +132,7 @@ export function useCursEducaTracker({
     // Main message handler
     const handleMessage = useCallback((event: MessageEvent) => {
         // DEBUG: Log all messages to discover CursEduca event format
-        console.log('📨 CursEduca PostMessage received:', {
+        logger.debug('📨 CursEduca PostMessage received:', {
             origin: event.origin,
             data: event.data,
             type: typeof event.data
@@ -150,7 +151,7 @@ export function useCursEducaTracker({
                 eventData = JSON.parse(event.data);
             } catch {
                 // Not JSON, might be a simple string event
-                console.log('📨 CursEduca: Non-JSON message:', event.data);
+                logger.debug('📨 CursEduca: Non-JSON message:', event.data);
                 return;
             }
         }
@@ -170,7 +171,7 @@ export function useCursEducaTracker({
             const newProgress = extractProgress(eventData) ?? extractProgress(eventData?.data);
 
             if (newProgress !== null && newProgress >= 0 && newProgress <= 100) {
-                console.log(`⏱️ CursEduca: Progress ${newProgress.toFixed(1)}%`);
+                logger.debug(`⏱️ CursEduca: Progress ${newProgress.toFixed(1)}%`);
                 setProgress(newProgress);
 
                 // Auto-complete at threshold
@@ -197,14 +198,14 @@ export function useCursEducaTracker({
             return;
         }
 
-        console.log(`🎧 CursEduca: Starting listener for video ${videoId}`);
+        logger.debug(`🎧 CursEduca: Starting listener for video ${videoId}`);
         setIsListening(true);
 
         window.addEventListener('message', handleMessage);
 
         // Cleanup
         return () => {
-            console.log(`🔌 CursEduca: Removing listener for video ${videoId}`);
+            logger.debug(`🔌 CursEduca: Removing listener for video ${videoId}`);
             setIsListening(false);
             window.removeEventListener('message', handleMessage);
 

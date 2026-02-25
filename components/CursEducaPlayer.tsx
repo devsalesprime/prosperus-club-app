@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Video } from '../types';
 import { videoService } from '../services/videoService';
 import { X, CheckCircle, Circle, Loader2 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface CursEducaPlayerProps {
     video: Video;
@@ -65,7 +66,7 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
                     return;
                 }
 
-                console.log('🎬 CursEduca event:', data);
+                logger.debug('🎬 CursEduca event:', data);
 
                 // Handle various event formats from video players
                 if (data.event === 'timeupdate' || data.type === 'timeupdate' || data.action === 'progress') {
@@ -74,7 +75,7 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
 
                     if (currentTime !== undefined && duration && duration > 0) {
                         const progress = Math.round((currentTime / duration) * 100);
-                        console.log(`⏱️ CursEduca progress: ${progress}%`);
+                        logger.debug(`⏱️ CursEduca progress: ${progress}%`);
                         updateProgress(progress);
                     }
                 } else if (
@@ -85,10 +86,10 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
                     data.type === 'complete' ||
                     data.action === 'ended'
                 ) {
-                    console.log('🎉 CursEduca video ended');
+                    logger.debug('🎉 CursEduca video ended');
                     handleVideoEnd();
                 } else if (data.event === 'ready' || data.type === 'ready') {
-                    console.log('✅ CursEduca player ready');
+                    logger.debug('✅ CursEduca player ready');
                 }
             } catch (e) {
                 // Ignore non-JSON messages
@@ -113,7 +114,7 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
         if (roundedProgress > lastSavedProgress) {
             videoService.updateProgress(video.id, roundedProgress);
             setLastSavedProgress(roundedProgress);
-            console.log(`💾 Progress saved: ${roundedProgress}%`);
+            logger.debug(`💾 Progress saved: ${roundedProgress}%`);
         }
     };
 

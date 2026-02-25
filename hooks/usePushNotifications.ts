@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // Tipos
 type PermissionState = 'granted' | 'denied' | 'default' | 'unsupported';
@@ -100,13 +101,13 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
                     });
                 }
 
-                console.log('[Push] Service Worker registered:', registration.scope);
+                logger.debug('[Push] Service Worker registered:', registration.scope);
                 setIsRegistered(true);
 
                 // Verifica se já existe uma subscription
                 const existingSubscription = await registration.pushManager.getSubscription();
                 if (existingSubscription) {
-                    console.log('[Push] Existing subscription found');
+                    logger.debug('[Push] Existing subscription found');
                 }
 
                 // ========================================
@@ -126,7 +127,7 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
                     newWorker.addEventListener('statechange', () => {
                         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                             // Nova versão pronta — envia SKIP_WAITING para ativar imediatamente
-                            console.log('[SW Update] New version found, activating...');
+                            logger.debug('[SW Update] New version found, activating...');
                             newWorker.postMessage({ type: 'SKIP_WAITING' });
                         }
                     });
@@ -149,7 +150,7 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
         const onControllerChange = () => {
             if (refreshing) return;
             refreshing = true;
-            console.log('[SW Update] New version active — reloading...');
+            logger.debug('[SW Update] New version active — reloading...');
             window.location.reload();
         };
 
@@ -201,7 +202,7 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
                     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
                 });
 
-                console.log('[Push] New subscription created');
+                logger.info('[Push] New subscription created');
             }
 
             // 5. Salvar subscription no Supabase
@@ -234,7 +235,7 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
 
             if (subscription) {
                 await subscription.unsubscribe();
-                console.log('[Push] Unsubscribed successfully');
+                logger.info('[Push] Unsubscribed successfully');
 
                 // Remove do Supabase
                 if (userId) {
@@ -297,7 +298,7 @@ async function savePushSubscription(
             throw error;
         }
 
-        console.log('[Push] Subscription saved to Supabase');
+        logger.debug('[Push] Subscription saved to Supabase');
     } catch (err) {
         console.error('[Push] Failed to save subscription:', err);
         // Não propaga o erro - a notificação local ainda funciona
@@ -322,7 +323,7 @@ async function removePushSubscription(
             console.error('[Push] Error removing subscription:', error);
         }
 
-        console.log('[Push] Subscription removed from Supabase');
+        logger.debug('[Push] Subscription removed from Supabase');
     } catch (err) {
         console.error('[Push] Failed to remove subscription:', err);
     }

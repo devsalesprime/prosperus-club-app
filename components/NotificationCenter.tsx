@@ -6,6 +6,7 @@ import { Bell, X, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
 import { notificationService, UserNotification } from '../services/notificationService';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { logger } from '../utils/logger';
 
 interface NotificationCenterProps {
     currentUserId: string;
@@ -31,7 +32,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         const unsubscribe = notificationService.subscribeToNotifications(
             currentUserId,
             (newNotification) => {
-                console.log('🔔 New notification received:', newNotification);
+                logger.debug('🔔 New notification received:', newNotification);
                 setNotifications(prev => [newNotification, ...prev]);
                 setUnreadCount(prev => prev + 1);
                 // Trigger shake animation

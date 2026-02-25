@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Video, VideoProgress, VideoCategory } from '../types';
+import { logger } from '../utils/logger';
 
 /**
  * Video Service - Handles all video-related operations
@@ -11,7 +12,7 @@ export const videoService = {
     async listVideos(): Promise<Video[]> {
         const { data, error } = await supabase
             .from('videos')
-            .select('*')
+            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, created_at')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -52,7 +53,7 @@ export const videoService = {
     async createVideo(video: Partial<Video>): Promise<Video> {
         // DEBUG: Verificar sessão antes de inserir
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('🔍 DEBUG createVideo - Session:', {
+        logger.debug('🔍 createVideo - Session:', {
             email: session?.user?.email,
             id: session?.user?.id,
             hasSession: !!session
@@ -65,10 +66,10 @@ export const videoService = {
                 .select('id, email, role')
                 .eq('id', session.user.id)
                 .maybeSingle();
-            console.log('🔍 DEBUG createVideo - Profile:', profile);
+            logger.debug('🔍 createVideo - Profile:', profile);
         }
 
-        console.log('🔍 DEBUG createVideo - Tentando inserir:', {
+        logger.debug('🔍 createVideo - Tentando inserir:', {
             title: video.title,
             category: video.category
         });
@@ -90,11 +91,11 @@ export const videoService = {
             .single();
 
         if (error) {
-            console.log('❌ DEBUG createVideo - Erro:', error);
+            logger.debug('❌ createVideo - Erro:', error);
             throw error;
         }
 
-        console.log('✅ DEBUG createVideo - Sucesso:', data);
+        logger.info('✅ createVideo - Sucesso:', data);
         return mapVideoFromDB(data);
     },
 
@@ -218,7 +219,7 @@ export const videoService = {
             const isCompleted = percentage >= 100;
             const finalPercentage = isCompleted ? 100 : Math.min(percentage, 99);
 
-            console.log(`📊 Saving progress: ${finalPercentage}% for video ${videoId}`);
+            logger.debug(`📊 Saving progress: ${finalPercentage}% for video ${videoId}`);
 
             const { error } = await supabase
                 .from('video_progress')
@@ -235,7 +236,7 @@ export const videoService = {
                 console.error('❌ updateProgress error:', error);
                 // Silent fail - don't throw for auto-save
             } else {
-                console.log(`✅ Progress saved: ${finalPercentage}%${isCompleted ? ' (COMPLETED)' : ''}`);
+                logger.info(`✅ Progress saved: ${finalPercentage}%${isCompleted ? ' (COMPLETED)' : ''}`);
             }
         } catch (error) {
             console.error('❌ updateProgress exception:', error);
@@ -251,12 +252,12 @@ export const videoService = {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
         if (!uuidRegex.test(userId)) {
-            console.log('⚠️ MOCK MODE: Skipping video progress save for mock user:', userId);
+            logger.debug('⚠️ MOCK MODE: Skipping video progress save for mock user:', userId);
             return;
         }
 
         if (!uuidRegex.test(videoId)) {
-            console.log('⚠️ Invalid video ID format:', videoId);
+            logger.debug('⚠️ Invalid video ID format:', videoId);
             return;
         }
 
@@ -309,7 +310,7 @@ export const videoService = {
                 return false;
             }
 
-            console.log(`🎉 Marking video ${videoId} as completed for user ${effectiveUserId}`);
+            logger.debug(`🎉 Marking video ${videoId} as completed for user ${effectiveUserId}`);
 
             const { error } = await supabase
                 .from('video_progress')
@@ -327,7 +328,7 @@ export const videoService = {
                 return false;
             }
 
-            console.log('✅ Video marked as completed');
+            logger.info('✅ Video marked as completed');
             return true;
         } catch (error) {
             console.error('❌ markAsCompleted exception:', error);
@@ -436,7 +437,7 @@ export const videoService = {
     async getCategories(): Promise<VideoCategory[]> {
         const { data, error } = await supabase
             .from('video_categories')
-            .select('*')
+            .select('id, name, description, cover_image, created_at')
             .order('name', { ascending: true });
 
         if (error) throw error;
@@ -498,7 +499,7 @@ export const videoService = {
     async getVideosByCategoryId(categoryId: string): Promise<Video[]> {
         const { data, error } = await supabase
             .from('videos')
-            .select('*')
+            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, created_at')
             .eq('category_id', categoryId)
             .order('created_at', { ascending: false });
 

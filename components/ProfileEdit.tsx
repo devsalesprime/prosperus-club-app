@@ -44,6 +44,7 @@ import { Button } from './ui/Button';
 import { AvatarEditable } from './ui/Avatar';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { useAuth } from '../contexts/AuthContext';
+import { logger } from '../utils/logger';
 
 interface ProfileEditProps {
     currentUser: ProfileData;
@@ -183,7 +184,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
 
             // If in mock mode, skip Supabase save and just update locally
             if (isMockMode) {
-                console.log('⚠️ MOCK MODE: Skipping Supabase save, updating locally only');
+                logger.debug('⚠️ MOCK MODE: Skipping Supabase save, updating locally only');
                 const mockUpdatedProfile: ProfileData = {
                     ...currentUser,
                     ...formData
@@ -202,7 +203,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                 ...formData,
                 partnership_interests: (formData.partnership_interests || []).filter((s: string) => s !== 'Outros')
             };
-            console.log('📸 ProfileEdit: Saving profile with image_url:', cleanedFormData.image_url);
+            logger.debug('📸 ProfileEdit: Saving profile with image_url:', cleanedFormData.image_url);
             const updatedProfile = await profileService.updateProfile(currentUser.id, cleanedFormData);
 
             if (updatedProfile) {
@@ -210,11 +211,11 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                 if (profileService.isProfileComplete(updatedProfile) && !updatedProfile.has_completed_onboarding) {
                     await profileService.completeOnboarding(currentUser.id);
                     updatedProfile.has_completed_onboarding = true;
-                    console.log('✅ Onboarding marked as complete');
+                    logger.debug('✅ Onboarding marked as complete');
                 }
 
                 // 🔄 CRITICAL: Refresh global profile context
-                console.log('🔄 ProfileEdit: Refreshing global profile context...');
+                logger.debug('🔄 ProfileEdit: Refreshing global profile context...');
                 await refreshProfile();
 
                 // 🔄 Sync to HubSpot CRM (fire-and-forget, completely non-blocking)
@@ -225,7 +226,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     if (syncError) {
                         console.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
                     } else {
-                        console.log('✅ Profile synced to HubSpot');
+                        logger.debug('✅ Profile synced to HubSpot');
                     }
                 }).catch(syncErr => {
                     console.warn('⚠️ HubSpot sync error (non-blocking):', syncErr);
@@ -1033,15 +1034,15 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     userId={currentUser.id}
                     supabase={supabase}
                     onImageUploaded={async (url) => {
-                        console.log('📸 ProfileEdit: Image uploaded, URL:', url);
+                        logger.debug('📸 ProfileEdit: Image uploaded, URL:', url);
                         handleInputChange('image_url', url);
                         setShowImageUpload(false);
 
                         // Auto-save image_url directly to the database
                         try {
-                            console.log('📸 ProfileEdit: Auto-saving image_url to database...');
+                            logger.debug('📸 ProfileEdit: Auto-saving image_url to database...');
                             await profileService.updateProfile(currentUser.id, { image_url: url } as any);
-                            console.log('✅ ProfileEdit: image_url saved successfully');
+                            logger.debug('✅ ProfileEdit: image_url saved successfully');
 
                             // Refresh global profile context so the new photo shows everywhere
                             await refreshProfile();

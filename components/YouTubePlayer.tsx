@@ -3,6 +3,7 @@ import { Video } from '../types';
 import { VideoProgressTracker } from '../utils/videoProgress';
 import { videoService } from '../services/videoService';
 import { X } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface YouTubePlayerProps {
     video: Video;
@@ -170,7 +171,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
                 const roundedProgress = tracker.current.roundToThreshold(progress);
                 videoService.updateProgress(userId, video.id, roundedProgress);
                 tracker.current.updateLastSaved(progress);
-                console.log(`Progress saved: ${roundedProgress}%`);
+                logger.debug(`Progress saved: ${roundedProgress}%`);
             }
         }, 1000);
     };

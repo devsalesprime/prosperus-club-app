@@ -4,6 +4,7 @@
 // Serviço para gerenciar banners dinâmicos com agendamento
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // Tipos
 export interface Banner {
@@ -75,7 +76,7 @@ class BannerService {
                 return startOk && endOk;
             });
 
-            console.log(`✅ Found ${filteredBanners.length} active banners for ${placement}`);
+            logger.debug(`✅ Found ${filteredBanners.length} active banners for ${placement}`);
             return filteredBanners;
         } catch (error) {
             console.error('Error in getActiveBanners:', error);
@@ -170,7 +171,7 @@ class BannerService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Banner created:', data.id);
+            logger.info('✅ Banner created:', data.id);
             return { success: true, data };
         } catch (error: any) {
             console.error('Error in createBanner:', error);
@@ -214,7 +215,7 @@ class BannerService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Banner updated:', id);
+            logger.info('✅ Banner updated:', id);
             return { success: true, data };
         } catch (error: any) {
             console.error('Error in updateBanner:', error);
@@ -237,7 +238,7 @@ class BannerService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Banner deleted:', id);
+            logger.info('✅ Banner deleted:', id);
             return { success: true };
         } catch (error: any) {
             console.error('Error in deleteBanner:', error);
@@ -272,7 +273,7 @@ class BannerService {
 
             if (updateError) throw updateError;
 
-            console.log(`✅ Banner ${id} toggled to ${newStatus ? 'active' : 'inactive'}`);
+            logger.info(`✅ Banner ${id} toggled to ${newStatus ? 'active' : 'inactive'}`);
             return { success: true, isActive: newStatus };
         } catch (error: any) {
             console.error('Error toggling banner:', error);
@@ -302,7 +303,7 @@ class BannerService {
                 if (error) throw error;
             }
 
-            console.log('✅ Banners reordered');
+            logger.info('✅ Banners reordered');
             return { success: true };
         } catch (error: any) {
             console.error('Error reordering banners:', error);
@@ -369,7 +370,7 @@ class BannerService {
      */
     async getHomeCarouselItems(currentUserId: string): Promise<CarouselItem[]> {
         try {
-            console.log('🎠 Building home carousel for user:', currentUserId);
+            logger.debug('🎠 Building home carousel for user:', currentUserId);
 
             // Parallel fetch: banners + current user profile + potential suggestions
             const [banners, currentUserProfile, recentMembers] = await Promise.all([
@@ -388,7 +389,7 @@ class BannerService {
             // Merge: intercalate banners and suggestions
             const carouselItems = this.mergeCarouselItems(banners, suggestions);
 
-            console.log(`✅ Carousel built: ${carouselItems.length} items (${banners.length} banners, ${suggestions.length} suggestions)`);
+            logger.debug(`✅ Carousel built: ${carouselItems.length} items (${banners.length} banners, ${suggestions.length} suggestions)`);
             return carouselItems;
         } catch (error) {
             console.error('Error building home carousel:', error);

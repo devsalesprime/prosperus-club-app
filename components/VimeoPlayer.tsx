@@ -3,6 +3,7 @@ import { Video } from '../types';
 import { VideoProgressTracker } from '../utils/videoProgress';
 import { videoService } from '../services/videoService';
 import { X } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface VimeoPlayerProps {
     video: Video;
@@ -115,7 +116,7 @@ export const VimeoPlayer: React.FC<VimeoPlayerProps> = ({ video, userId, onClose
             const roundedProgress = tracker.current.roundToThreshold(progress);
             await videoService.updateProgress(userId, video.id, roundedProgress);
             tracker.current.updateLastSaved(progress);
-            console.log(`Progress saved: ${roundedProgress}%`);
+            logger.debug(`Progress saved: ${roundedProgress}%`);
         }
     };
 

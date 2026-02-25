@@ -4,6 +4,7 @@
 import React from 'react';
 import { GraduationCap, Wrench, TrendingUp, ArrowRight } from 'lucide-react';
 import { ViewState } from '../types';
+import { logger } from '../utils/logger';
 
 interface ProsperusToolsPageProps {
     setView: (view: ViewState) => void;
@@ -57,7 +58,7 @@ export const ProsperusToolsPage: React.FC<ProsperusToolsPageProps> = ({ setView 
                             <button
                                 key={section.id}
                                 onClick={() => {
-                                    console.log('[ProsperusTools] Clicked section:', section.id, 'navigating to:', section.view);
+                                    logger.debug('[ProsperusTools] Clicked section:', section.id, 'navigating to:', section.view);
                                     setView(section.view);
                                 }}
                                 className="w-full group relative overflow-hidden rounded-2xl h-80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"

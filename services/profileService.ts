@@ -2,6 +2,7 @@
 
 import { supabase } from '../lib/supabase';
 import { fetchWithOfflineCache, cacheData, getCachedData } from './offlineStorage';
+import { logger } from '../utils/logger';
 
 export interface ProfileData {
     id: string;
@@ -74,7 +75,7 @@ class ProfileService {
         const cacheKey = `profile:${userId}`;
 
         try {
-            console.log('🔍 profileService.getProfile: Starting query for userId:', userId);
+            logger.debug('🔍 profileService.getProfile: Starting query for userId:', userId);
 
             const startTime = Date.now();
 
@@ -96,7 +97,7 @@ class ProfileService {
             const result = await Promise.race([queryPromise, timeoutPromise]);
 
             const duration = Date.now() - startTime;
-            console.log(`⏱️ profileService.getProfile: Query completed in ${duration}ms`);
+            logger.debug(`⏱️ profileService.getProfile: Query completed in ${duration}ms`);
 
             // Type guard to check if result has error property
             if (result && typeof result === 'object' && 'error' in result) {
@@ -112,7 +113,7 @@ class ProfileService {
                     throw error;
                 }
 
-                console.log('✅ profileService.getProfile: Profile found:', data?.name);
+                logger.debug('✅ profileService.getProfile: Profile found:', data?.name);
 
                 // Cache for offline use (10 minutes)
                 if (data) {
@@ -134,7 +135,7 @@ class ProfileService {
             // Fallback to offline cache
             const cached = await getCachedData<ProfileData>(cacheKey);
             if (cached) {
-                console.log('📦 profileService.getProfile: Returning cached profile');
+                logger.debug('📦 profileService.getProfile: Returning cached profile');
                 return cached;
             }
 
@@ -294,12 +295,12 @@ class ProfileService {
      */
     async createProfile(userId: string, profileData: Partial<ProfileData>): Promise<ProfileData | null> {
         try {
-            console.log('🔍 createProfile called for userId:', userId);
+            logger.debug('🔍 createProfile called for userId:', userId);
 
             // Verify user is authenticated
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-            console.log('🔍 Session check:', {
+            logger.debug('🔍 Session check:', {
                 hasSession: !!session,
                 sessionUserId: session?.user?.id,
                 requestedUserId: userId,
@@ -347,7 +348,7 @@ class ProfileService {
                 throw error;
             }
 
-            console.log('✅ Profile created successfully:', data);
+            logger.info('✅ Profile created successfully:', data);
             return data;
         } catch (error) {
             console.error('Error creating profile:', error);

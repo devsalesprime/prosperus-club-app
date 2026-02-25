@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Download, X, ChevronRight } from 'lucide-react';
 import { detectPlatform, isStandaloneMode } from '../utils/platformDetect';
 import { INSTALL_INSTRUCTIONS } from '../utils/installInstructions';
+import { logger } from '../utils/logger';
 
 // Single dismiss key
 const DISMISS_KEY = 'pwa-install-dismissed';
@@ -74,7 +75,7 @@ export const InstallPrompt: React.FC = () => {
         const dismissed = isDismissed();
 
         // Diagnostic logging
-        console.log('📱 InstallPrompt init:', {
+        logger.debug('📱 InstallPrompt init:', {
             platform,
             type: instructions.type,
             standalone,
@@ -85,22 +86,22 @@ export const InstallPrompt: React.FC = () => {
         });
 
         if (standalone) {
-            console.log('📱 Skipping — standalone mode (PWA installed)');
+            logger.debug('📱 Skipping — standalone mode (PWA installed)');
             return;
         }
         if (instructions.type === 'none') {
-            console.log('📱 Skipping — no banner for', platform);
+            logger.debug('📱 Skipping — no banner for', platform);
             return;
         }
         if (dismissed) {
-            console.log('📱 Skipping — dismissed recently');
+            logger.debug('📱 Skipping — dismissed recently');
             return;
         }
 
         // FIX D: Check if beforeinstallprompt was already captured globally
         if ((window as any).__pwaInstallPrompt) {
             setDeferredPrompt((window as any).__pwaInstallPrompt);
-            console.log('📱 Loaded deferredPrompt from global capture');
+            logger.debug('📱 Loaded deferredPrompt from global capture');
         }
 
         // Also listen for future events (component may mount before event)
@@ -108,7 +109,7 @@ export const InstallPrompt: React.FC = () => {
             e.preventDefault();
             setDeferredPrompt(e);
             (window as any).__pwaInstallPrompt = e;
-            console.log('📱 beforeinstallprompt captured in listener');
+            logger.debug('📱 beforeinstallprompt captured in listener');
         };
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
@@ -120,9 +121,9 @@ export const InstallPrompt: React.FC = () => {
         // FIX E: Show banner after delay — independent of deferredPrompt
         // iOS never fires beforeinstallprompt, so we can't wait for it
         const delay = platform.startsWith('ios') ? 3000 : 2000;
-        console.log(`📱 Will show banner in ${delay}ms`);
+        logger.debug(`📱 Will show banner in ${delay}ms`);
         const showTimer = setTimeout(() => {
-            console.log('📱 setVisible(true)');
+            logger.debug('📱 setVisible(true)');
             setVisible(true);
         }, delay);
 

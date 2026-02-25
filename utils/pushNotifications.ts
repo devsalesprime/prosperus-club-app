@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { logger } from './logger';
 
 /**
  * Helper function para converter VAPID public key de base64 para Uint8Array
@@ -66,7 +67,7 @@ export async function registerPushNotifications(userId: string): Promise<boolean
             return false;
         }
 
-        console.log('✅ Permissão de notificações concedida');
+        logger.info('✅ Permissão de notificações concedida');
 
         // 3. Aguardar Service Worker estar pronto
         const registration = await navigator.serviceWorker.ready;
@@ -88,9 +89,9 @@ export async function registerPushNotifications(userId: string): Promise<boolean
                 applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
             });
 
-            console.log('✅ Nova subscription criada');
+            logger.debug('✅ Nova subscription criada');
         } else {
-            console.log('✅ Subscription já existe');
+            logger.debug('✅ Subscription já existe');
         }
 
         // 5. Salvar subscription no banco de dados
@@ -113,7 +114,7 @@ export async function registerPushNotifications(userId: string): Promise<boolean
             return false;
         }
 
-        console.log('✅ Dispositivo registrado para push notifications');
+        logger.info('✅ Dispositivo registrado para push notifications');
         return true;
 
     } catch (error) {
@@ -153,7 +154,7 @@ export async function unregisterPushNotifications(userId: string): Promise<boole
                 return false;
             }
 
-            console.log('✅ Push notifications desregistradas');
+            logger.info('✅ Push notifications desregistradas');
             return true;
         }
 

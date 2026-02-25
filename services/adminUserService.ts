@@ -2,6 +2,7 @@
 // Serviço de administração para gerenciamento de usuários (bloqueio/desbloqueio)
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export interface UserProfile {
     id: string;
@@ -72,7 +73,7 @@ class AdminUserService {
      * Bloqueia ou desbloqueia um usuário
      */
     async toggleUserBlock(userId: string, reason?: string): Promise<{ success: boolean; isBlocked: boolean; message: string }> {
-        console.log('🔒 Admin: Toggling block status for user:', userId);
+        logger.debug('🔒 Admin: Toggling block status for user:', userId);
 
         const { isAdmin, adminId } = await this.checkAdminRole();
         if (!isAdmin || !adminId) {
@@ -115,7 +116,7 @@ class AdminUserService {
             updateData.blocked_by = null;
         }
 
-        console.log('📤 Admin: Updating user with data:', updateData);
+        logger.debug('📤 Admin: Updating user with data:', updateData);
 
         const { data: updateResult, error: updateError } = await supabase
             .from('profiles')
@@ -123,8 +124,8 @@ class AdminUserService {
             .eq('id', userId)
             .select();
 
-        console.log('📥 Admin: Update result:', updateResult);
-        console.log('📥 Admin: Update error:', updateError);
+        logger.debug('📥 Admin: Update result:', updateResult);
+        logger.debug('📥 Admin: Update error:', updateError);
 
         if (updateError) {
             console.error('❌ Error updating block status:', updateError);
@@ -138,7 +139,7 @@ class AdminUserService {
 
         // Log de auditoria (console)
         const action = newBlockedStatus ? 'BLOCKED' : 'UNBLOCKED';
-        console.log(`📝 AUDIT: Admin ${adminId} ${action} user ${userId} (${currentProfile.name}) at ${new Date().toISOString()}${reason ? ` - Reason: ${reason}` : ''}`);
+        logger.info(`📝 AUDIT: Admin ${adminId} ${action} user ${userId} (${currentProfile.name}) at ${new Date().toISOString()}${reason ? ` - Reason: ${reason}` : ''}`);
 
         return {
             success: true,

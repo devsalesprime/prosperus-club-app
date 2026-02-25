@@ -13,6 +13,7 @@ import {
     Clock
 } from 'lucide-react';
 import { Article, articleService } from '../services/articleService';
+import { logger } from '../utils/logger';
 
 interface ArticleReaderProps {
     article: Article;
@@ -54,7 +55,7 @@ export const ArticleReader: React.FC<ArticleReaderProps> = ({ article, onBack })
                     url: window.location.href
                 });
             } catch (error) {
-                console.log('Share cancelled');
+                logger.debug('Share cancelled');
             }
         } else {
             // Fallback: copy to clipboard

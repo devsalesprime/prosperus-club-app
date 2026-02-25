@@ -6,6 +6,7 @@
 
 import { supabase } from '../lib/supabase';
 import { ClubEvent, EventCategory, EventMaterial, EventSession } from '../types';
+import { logger } from '../utils/logger';
 
 // ============================================
 // DB Row ↔ ClubEvent Mappers
@@ -93,7 +94,7 @@ class EventService {
         try {
             const { data, error } = await supabase
                 .from('club_events')
-                .select('*')
+                .select('id, title, description, date, end_date, type, category, target_member_id, target_member_name, location, map_link, link, meeting_password, video_url, cover_image, banner_url, materials, sessions, created_at, updated_at')
                 .order('date', { ascending: true });
 
             if (error) {
@@ -122,7 +123,7 @@ class EventService {
         try {
             const { data, error } = await supabase
                 .from('club_events')
-                .select('*')
+                .select('id, title, description, date, end_date, type, category, target_member_id, target_member_name, location, map_link, link, meeting_password, video_url, cover_image, banner_url, materials, sessions, created_at, updated_at')
                 .order('date', { ascending: false });
 
             if (error) {
@@ -154,7 +155,7 @@ class EventService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Event created:', data.title);
+            logger.info('✅ Event created:', data.title);
             return { success: true, data: rowToClubEvent(data) };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
@@ -183,7 +184,7 @@ class EventService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Event updated:', data.title);
+            logger.info('✅ Event updated:', data.title);
             return { success: true, data: rowToClubEvent(data) };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
@@ -207,7 +208,7 @@ class EventService {
                 return { success: false, error: error.message };
             }
 
-            console.log('✅ Event deleted:', id);
+            logger.info('✅ Event deleted:', id);
             return { success: true };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';

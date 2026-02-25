@@ -4,6 +4,7 @@
 // Gerencia configurações globais do app (Singleton pattern)
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // Tipos
 export interface AppSettings {
@@ -122,7 +123,7 @@ class SettingsService {
             // Invalidate cache
             this.cache = null;
 
-            console.log('✅ Settings updated');
+            logger.info('✅ Settings updated');
             return { success: true, data };
         } catch (error: any) {
             console.error('Error in updateSettings:', error);

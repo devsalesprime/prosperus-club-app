@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { unreadMessageService } from '../services/unreadMessageService';
 import { badgeService } from '../services/badgeService';
+import { logger } from '../utils/logger';
 
 export const useUnreadMessageCount = (userId: string | null) => {
     const [unreadCount, setUnreadCount] = useState(0);
@@ -65,7 +66,7 @@ export const useUnreadMessageCount = (userId: string | null) => {
                 async (payload) => {
                     const updatedMessage = payload.new as any;
 
-                    console.log('📝 Badge: Message UPDATE event', {
+                    logger.debug('📝 Badge: Message UPDATE event', {
                         messageId: updatedMessage.id,
                         isRead: updatedMessage.is_read,
                         senderId: updatedMessage.sender_id,
@@ -76,7 +77,7 @@ export const useUnreadMessageCount = (userId: string | null) => {
                     // Instead, just refresh the count whenever a message is updated
                     // This will recalculate the correct count from the database
                     if (updatedMessage.sender_id !== userId) {
-                        console.log('🔄 Badge: Refreshing count due to message update');
+                        logger.debug('🔄 Badge: Refreshing count due to message update');
 
                         // Small delay to ensure DB is updated
                         setTimeout(async () => {
