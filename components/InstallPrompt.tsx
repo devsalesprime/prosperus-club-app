@@ -1,94 +1,131 @@
-// InstallPrompt.tsx
+// InstallPrompt.tsx v2.1
 // Unified PWA install prompt — context-aware by platform and browser
 // Replaces both InstallPrompt.tsx and InstallPromptIOS.tsx
+//
+// FIXES APPLIED:
+// A — Legacy localStorage key cleanup in isDismissed()
+// B — JS-based banner positioning (no dependency on --nav-h CSS variable)
+// C — z-index 60 (above header/nav z-50, below modals z-100)
+// D — Reads global window.__pwaInstallPrompt (captured before React mounts)
+// E — setVisible independent of deferredPrompt for iOS
 
 import { useState, useEffect, useCallback } from 'react';
 import { Download, X, ChevronRight } from 'lucide-react';
 import { detectPlatform, isStandaloneMode } from '../utils/platformDetect';
 import { INSTALL_INSTRUCTIONS } from '../utils/installInstructions';
 
-// Single dismiss key — replaces 'pwa-install-dismissed' + 'prosperus_ios_prompt_dismissed'
+// Single dismiss key
 const DISMISS_KEY = 'pwa-install-dismissed';
+const OLD_IOS_KEY = 'prosperus_ios_prompt_dismissed';
 const DISMISS_COOLDOWN = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function isDismissed(): boolean {
+    // FIX A: Clean up legacy iOS key (migration — don't block, give fresh chance)
+    if (localStorage.getItem(OLD_IOS_KEY)) {
+        localStorage.removeItem(OLD_IOS_KEY);
+    }
+
     const ts = localStorage.getItem(DISMISS_KEY);
     if (!ts) return false;
-    return Date.now() - Number(ts) < DISMISS_COOLDOWN;
+
+    // Handle old format where value was 'true' instead of timestamp
+    const num = Number(ts);
+    if (isNaN(num)) {
+        localStorage.removeItem(DISMISS_KEY);
+        return false;
+    }
+
+    return Date.now() - num < DISMISS_COOLDOWN;
 }
 
 function saveDismiss() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    // Clean up old iOS-specific key if it exists
-    localStorage.removeItem('prosperus_ios_prompt_dismissed');
+    localStorage.removeItem(OLD_IOS_KEY);
+}
+
+// FIX B: Calculate banner bottom position via JS (--nav-h may not exist)
+function getBannerBottom(): number {
+    // Try to find the bottom nav element
+    const navEl = document.querySelector('nav.fixed.bottom-0') ||
+        document.querySelector('[class*="fixed"][class*="bottom-0"]nav') ||
+        document.querySelector('.safe-area-bottom');
+    if (navEl) {
+        return navEl.getBoundingClientRect().height + 12;
+    }
+    // Fallback: 80px (typical mobile nav) + 12px margin
+    return 92;
 }
 
 export const InstallPrompt: React.FC = () => {
     const [visible, setVisible] = useState(false);
     const [guideOpen, setGuideOpen] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [bannerBottom, setBannerBottom] = useState(92); // FIX B: default fallback
 
     const platform = detectPlatform();
     const instructions = INSTALL_INSTRUCTIONS[platform];
 
     useEffect(() => {
-        // Diagnostic logging — helps debug on real devices via Safari Web Inspector
         const standalone = isStandaloneMode();
         const dismissed = isDismissed();
+
+        // Diagnostic logging
         console.log('📱 InstallPrompt init:', {
             platform,
             type: instructions.type,
             standalone,
             dismissed,
             dismissKey: localStorage.getItem(DISMISS_KEY),
-            oldIosKey: localStorage.getItem('prosperus_ios_prompt_dismissed'),
-            ua: navigator.userAgent.substring(0, 100)
+            globalPrompt: !!(window as any).__pwaInstallPrompt,
+            ua: navigator.userAgent.substring(0, 80)
         });
 
-        // Clean up legacy iOS dismiss key on every mount
-        // This ensures old dismissals don't interfere
-        const oldIosValue = localStorage.getItem('prosperus_ios_prompt_dismissed');
-        if (oldIosValue) {
-            console.log('🧹 Removing old iOS dismiss key');
-            localStorage.removeItem('prosperus_ios_prompt_dismissed');
-        }
-
-        // Don't show if already installed as PWA
         if (standalone) {
-            console.log('📱 InstallPrompt: Skipping — standalone mode');
+            console.log('📱 Skipping — standalone mode (PWA installed)');
             return;
         }
-        // Don't show if no instructions for this platform
         if (instructions.type === 'none') {
-            console.log('📱 InstallPrompt: Skipping — no instructions for', platform);
+            console.log('📱 Skipping — no banner for', platform);
             return;
         }
-        // Don't show if dismissed recently
         if (dismissed) {
-            console.log('📱 InstallPrompt: Skipping — dismissed recently');
+            console.log('📱 Skipping — dismissed recently');
             return;
         }
 
-        // Capture native install event (Android/Desktop Chrome/Edge)
+        // FIX D: Check if beforeinstallprompt was already captured globally
+        if ((window as any).__pwaInstallPrompt) {
+            setDeferredPrompt((window as any).__pwaInstallPrompt);
+            console.log('📱 Loaded deferredPrompt from global capture');
+        }
+
+        // Also listen for future events (component may mount before event)
         const handleBeforeInstall = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            console.log('📱 InstallPrompt: beforeinstallprompt captured');
+            (window as any).__pwaInstallPrompt = e;
+            console.log('📱 beforeinstallprompt captured in listener');
         };
-
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-        // UX delay before showing banner
+        // FIX B: Calculate position after DOM settles
+        const posTimer = setTimeout(() => {
+            setBannerBottom(getBannerBottom());
+        }, 500);
+
+        // FIX E: Show banner after delay — independent of deferredPrompt
+        // iOS never fires beforeinstallprompt, so we can't wait for it
         const delay = platform.startsWith('ios') ? 3000 : 2000;
-        console.log(`📱 InstallPrompt: Will show banner in ${delay}ms`);
-        const timer = setTimeout(() => {
-            console.log('📱 InstallPrompt: Showing banner now');
+        console.log(`📱 Will show banner in ${delay}ms`);
+        const showTimer = setTimeout(() => {
+            console.log('📱 setVisible(true)');
             setVisible(true);
         }, delay);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-            clearTimeout(timer);
+            clearTimeout(posTimer);
+            clearTimeout(showTimer);
         };
     }, []);
 
@@ -100,17 +137,15 @@ export const InstallPrompt: React.FC = () => {
 
     const handleCTA = useCallback(async () => {
         if (instructions.type === 'native' && deferredPrompt) {
-            // Android / Desktop Chrome — native dialog
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             if (outcome === 'accepted') setVisible(false);
             else handleDismiss();
             setDeferredPrompt(null);
+            (window as any).__pwaInstallPrompt = null;
         } else if (instructions.type === 'guide') {
-            // iOS — open step-by-step modal
             setGuideOpen(true);
         } else if (instructions.type === 'info') {
-            // Desktop Safari — just close
             handleDismiss();
         }
     }, [instructions, deferredPrompt, handleDismiss]);
@@ -120,9 +155,12 @@ export const InstallPrompt: React.FC = () => {
     return (
         <>
             {/* ── BANNER ── */}
+            {/* FIX B: inline style for bottom position (CSS var --nav-h doesn't exist) */}
+            {/* FIX C: z-[60] above header/nav z-50, below modals z-[100] */}
             <div
+                style={{ bottom: `${bannerBottom}px` }}
                 className="
-                    fixed bottom-[calc(var(--nav-h,64px)+12px)] left-4 right-4 z-50
+                    fixed left-4 right-4 z-[60]
                     bg-slate-900 border border-slate-700/80 rounded-2xl
                     shadow-xl shadow-black/40
                     flex items-center gap-3 px-4 py-3
@@ -137,10 +175,11 @@ export const InstallPrompt: React.FC = () => {
                         alt="Prosperus Club"
                         className="w-7 h-7 object-contain"
                         onError={e => {
-                            // Fallback to text if icon not found
                             const el = e.target as HTMLImageElement;
                             el.style.display = 'none';
-                            el.parentElement!.innerHTML = '<span class="text-lg font-black text-yellow-500">P</span>';
+                            if (el.parentElement) {
+                                el.parentElement.innerHTML = '<span class="text-lg font-black text-yellow-500">P</span>';
+                            }
                         }}
                     />
                 </div>
@@ -193,7 +232,7 @@ export const InstallPrompt: React.FC = () => {
             {/* ── GUIDE MODAL (iOS) ── */}
             {guideOpen && instructions.steps && (
                 <div
-                    className="fixed inset-0 z-[60] flex items-end justify-center
+                    className="fixed inset-0 z-[70] flex items-end justify-center
                         bg-black/70 backdrop-blur-sm"
                     onClick={(e) => { if (e.target === e.currentTarget) { setGuideOpen(false); handleDismiss(); } }}
                 >

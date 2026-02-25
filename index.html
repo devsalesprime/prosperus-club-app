@@ -514,6 +514,17 @@
 
 <body>
   <div id="root"></div>
+
+  <!-- Capture beforeinstallprompt before React mounts (FIX D: event may fire before component) -->
+  <script>
+    window.__pwaInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__pwaInstallPrompt = e;
+      console.log('📱 beforeinstallprompt captured globally (before React)');
+    });
+  </script>
+
   <script type="module" src="/index.tsx"></script>
 
   <!-- Global Service Worker Registration (runs on every page load) -->
