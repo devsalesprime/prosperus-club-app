@@ -45,15 +45,19 @@ function saveDismiss() {
 
 // FIX B: Calculate banner bottom position via JS (--nav-h may not exist)
 function getBannerBottom(): number {
-    // Try to find the bottom nav element
-    const navEl = document.querySelector('nav.fixed.bottom-0') ||
-        document.querySelector('[class*="fixed"][class*="bottom-0"]nav') ||
-        document.querySelector('.safe-area-bottom');
-    if (navEl) {
-        return navEl.getBoundingClientRect().height + 12;
+    try {
+        // Look for the mobile bottom nav
+        const navEl = document.querySelector('nav.fixed.bottom-0') ||
+            document.querySelector('nav[class*="bottom-0"]') ||
+            document.querySelector('.safe-area-bottom');
+        if (navEl) {
+            return navEl.getBoundingClientRect().height + 12;
+        }
+    } catch (e) {
+        // Selector might fail in some browsers — use fallback
     }
-    // Fallback: 80px (typical mobile nav) + 12px margin
-    return 92;
+    // Fallback: 24px from bottom (no nav on login screen)
+    return 24;
 }
 
 export const InstallPrompt: React.FC = () => {
