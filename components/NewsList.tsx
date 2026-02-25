@@ -2,7 +2,7 @@
 // Grid de artigos publicados para leitura dos sócios
 // Design: Sharp Luxury (Dark mode, dourado)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Newspaper,
     Calendar,
@@ -12,78 +12,69 @@ import {
     RefreshCw,
     Tag
 } from 'lucide-react';
-import { articleService, Article, ArticleListParams } from '../services/articleService';
+import { Article } from '../services/articleService';
 import { FavoriteButton } from './FavoriteButton';
 import { favoriteService } from '../services/favoriteService';
+import { useArticlesQuery, useArticleCategoriesQuery } from '../hooks/queries/useArticlesQuery';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../utils/queryKeys';
 
 interface NewsListProps {
     onArticleSelect: (article: Article) => void;
 }
 
 export const NewsList: React.FC<NewsListProps> = ({ onArticleSelect }) => {
-    const [articles, setArticles] = useState<Article[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
+    const queryClient = useQueryClient();
+
+    // Pagination state (kept local — each page is a separate cached query)
     const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
-    const [categories, setCategories] = useState<string[]>([]);
+    const [allArticles, setAllArticles] = useState<Article[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [favoritedIds, setFavoritedIds] = useState<Set<string>>(new Set());
 
+    // React Query for current page of articles
+    const { data: articlesResult, isLoading: loading, isFetching } = useArticlesQuery(
+        selectedCategory || undefined,
+        page,
+        9
+    );
+
+    // React Query for categories (cached 30min)
+    const { data: categories = [] } = useArticleCategoriesQuery();
+
+    // Load favorites on mount
     useEffect(() => {
-        loadArticles(1, true);
-        loadCategories();
         favoriteService.getFavoritedIds('article').then(setFavoritedIds);
     }, []);
 
+    // Accumulate articles across pages, reset on category change
     useEffect(() => {
-        loadArticles(1, true);
+        if (!articlesResult) return;
+        if (page === 1) {
+            setAllArticles(articlesResult.data);
+        } else {
+            setAllArticles(prev => [...prev, ...articlesResult.data]);
+        }
+    }, [articlesResult, page]);
+
+    // Reset to page 1 when category changes
+    useEffect(() => {
+        setPage(1);
+        setAllArticles([]);
     }, [selectedCategory]);
 
-    const loadArticles = async (pageNum: number, reset: boolean = false) => {
-        try {
-            if (reset) {
-                setLoading(true);
-            } else {
-                setLoadingMore(true);
-            }
+    const hasMore = articlesResult?.hasMore ?? false;
+    const articles = allArticles;
 
-            const params: ArticleListParams = {
-                page: pageNum,
-                limit: 9,
-                category: selectedCategory || undefined
-            };
+    const handleLoadMore = useCallback(() => {
+        setPage(p => p + 1);
+    }, []);
 
-            const result = await articleService.getPublishedArticles(params);
-
-            if (reset) {
-                setArticles(result.data);
-            } else {
-                setArticles(prev => [...prev, ...result.data]);
-            }
-
-            setPage(pageNum);
-            setHasMore(result.hasMore);
-        } catch (error) {
-            console.error('Error loading articles:', error);
-        } finally {
-            setLoading(false);
-            setLoadingMore(false);
-        }
-    };
-
-    const loadCategories = async () => {
-        try {
-            const cats = await articleService.getCategories();
-            setCategories(cats);
-        } catch (error) {
-            console.error('Error loading categories:', error);
-        }
-    };
-
-    const handleLoadMore = () => {
-        loadArticles(page + 1, false);
-    };
+    const handleRefresh = useCallback(() => {
+        setPage(1);
+        setAllArticles([]);
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.articles(selectedCategory || undefined) });
+    }, [queryClient, selectedCategory]);
 
     const formatDate = (dateString?: string) => {
         if (!dateString) return '';
@@ -117,7 +108,7 @@ export const NewsList: React.FC<NewsListProps> = ({ onArticleSelect }) => {
                 </div>
 
                 <button
-                    onClick={() => loadArticles(1, true)}
+                    onClick={handleRefresh}
                     className="btn-sm p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
                 >
                     <RefreshCw size={20} />
@@ -246,11 +237,11 @@ export const NewsList: React.FC<NewsListProps> = ({ onArticleSelect }) => {
                         <div className="text-center mt-8">
                             <button
                                 onClick={handleLoadMore}
-                                disabled={loadingMore}
+                                disabled={isFetching}
                                 className="px-6 py-3 bg-slate-800 border border-slate-700 text-white 
                                          rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
                             >
-                                {loadingMore ? (
+                                {isFetching ? (
                                     <span className="flex items-center gap-2">
                                         <Loader2 className="animate-spin" size={16} />
                                         Carregando...

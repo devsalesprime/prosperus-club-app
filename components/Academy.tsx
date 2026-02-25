@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Video, VideoProgress, VideoCategory } from '../types';
-import { videoService } from '../services/videoService';
 import { VideoCard } from './VideoCard';
 import { VideoPlayer } from './VideoPlayer';
 import { YouTubePlayer } from './YouTubePlayer';
 import { VimeoPlayer } from './VimeoPlayer';
 import { CursEducaPlayer } from './CursEducaPlayer';
 import { Play, Loader2 } from 'lucide-react';
+import { useAcademyData } from '../hooks/queries/useAcademyData';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '../utils/queryKeys';
 
 interface AcademyProps {
     userId: string;
@@ -18,47 +20,16 @@ interface CategoryRow {
 }
 
 export const Academy: React.FC<AcademyProps> = ({ userId }) => {
-    const [categories, setCategories] = useState<VideoCategory[]>([]);
-    const [allVideos, setAllVideos] = useState<Video[]>([]);
-    const [continueWatching, setContinueWatching] = useState<Video[]>([]);
-    const [progressMap, setProgressMap] = useState<Map<string, VideoProgress>>(new Map());
+    const queryClient = useQueryClient();
+    const { data: academyData, isLoading: loading } = useAcademyData(userId);
+
+    const categories = academyData?.categories ?? [];
+    const allVideos = academyData?.allVideos ?? [];
+    const progressMap = academyData?.progressMap ?? new Map();
+    const continueWatching = academyData?.continueWatching ?? [];
+    const featuredVideo = academyData?.featuredVideo ?? null;
+
     const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-    const [featuredVideo, setFeaturedVideo] = useState<Video | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    // ============================================
-    // DATA LOADING
-    // ============================================
-
-    useEffect(() => {
-        loadAcademyData();
-    }, [userId]);
-
-    const loadAcademyData = async () => {
-        try {
-            setLoading(true);
-
-            const [cats, videos, progress, continueVideos] = await Promise.all([
-                videoService.getCategories(),
-                videoService.listVideos(),
-                videoService.getAllUserProgress(userId),
-                videoService.getContinueWatching(userId)
-            ]);
-
-            setCategories(cats);
-            setAllVideos(videos);
-            setProgressMap(progress);
-            setContinueWatching(continueVideos);
-
-            if (videos.length > 0) {
-                setFeaturedVideo(videos[0]);
-            }
-        } catch (error) {
-            console.error('Error loading academy data:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // ============================================
     // GROUP VIDEOS BY CATEGORY (Netflix rows)
@@ -123,7 +94,8 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
 
     const handleCloseVideo = () => {
         setSelectedVideo(null);
-        loadAcademyData();
+        // Invalidate cache so progress updates are reflected
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.academyData(userId) });
     };
 
     // ============================================
