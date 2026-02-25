@@ -29,7 +29,7 @@ export interface ProfileData {
     what_i_need?: string;              // ONB-FLD-002: O que precisa/compraria
     partnership_interests?: string[];   // ONB-FLD-003: Setores de interesse
     member_since?: string;             // HUB-SYNC-008: Data de entrada no clube
-    // phone?: string; // TODO: Uncomment after running migration 011_add_phone_to_profiles.sql
+    phone?: string;
 }
 
 // Exclusive Benefit type - cada sócio pode oferecer um benefício ao clube
@@ -61,7 +61,7 @@ export interface ProfileUpdateData {
     what_i_sell?: string;
     what_i_need?: string;
     partnership_interests?: string[];
-    // phone?: string; // TODO: Uncomment after running migration 011_add_phone_to_profiles.sql
+    phone?: string;
 }
 
 class ProfileService {

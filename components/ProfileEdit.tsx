@@ -62,7 +62,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
         image_url: currentUser.image_url || '',
         bio: currentUser.bio || '',
         pitch_video_url: currentUser.pitch_video_url || '',
-        // phone: currentUser.phone || '', // TODO: Uncomment after running migration 011
+        phone: currentUser.phone || '',
         socials: {
             linkedin: currentUser.socials?.linkedin || '',
             instagram: currentUser.socials?.instagram || '',
@@ -394,7 +394,6 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             </div>
                         </div>
 
-                        {/* TODO: Uncomment after running migration 011_add_phone_to_profiles.sql
                         <div>
                             <label className="block text-sm font-bold text-white mb-2">
                                 Telefone
@@ -410,7 +409,6 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                 />
                             </div>
                         </div>
-                        */}
                     </div>
 
                     {/* Bio */}

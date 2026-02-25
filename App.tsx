@@ -1573,23 +1573,7 @@ const App = () => {
                 />
             )}
 
-            {/* Profile Edit Modal */}
-            {isEditingProfile && currentUser && (
-                <Suspense fallback={null}>
-                    <ProfileEdit
-                        currentUser={memberToProfileData(currentUser)}
-                        supabase={supabase}
-                        isMockMode={isMockMode}
-                        onSave={(updatedProfile) => {
-                            // ⚠️ REMOVED: AuthContext.refreshProfile() handles this in ProfileEdit
-                            // Update current user with new data
-                            // setCurrentUser({ ... });
-                            setIsEditingProfile(false);
-                        }}
-                        onCancel={() => setIsEditingProfile(false)}
-                    />
-                </Suspense>
-            )}
+            {/* ProfileEdit duplicate removed — Sprint 1 cleanup. Single instance at L1521 */}
         </div>
     );
 };

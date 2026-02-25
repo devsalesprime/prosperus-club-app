@@ -272,10 +272,9 @@ export default defineConfig(({ mode }) => {
       // Stamps build timestamp into sw.js for automatic cache versioning
       swVersionStamp()
     ],
-    define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-    },
+    // SECURITY: Gemini API Key removed from client bundle (was exposed in define block)
+    // If Gemini calls are needed, use a Supabase Edge Function instead
+    define: {},
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
