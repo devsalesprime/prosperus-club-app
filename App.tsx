@@ -1553,7 +1553,7 @@ const App = () => {
 
                 {/* Mobile Bottom Nav — Explicit height sync with --nav-h */}
                 <nav
-                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-start px-2 pt-1.5"
+                    className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-center px-2 py-1"
                     style={{ height: 'var(--nav-h, 48px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
                 >
                     {navItems.slice(0, 5).map(item => {
