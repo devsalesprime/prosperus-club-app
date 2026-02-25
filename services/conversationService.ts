@@ -208,6 +208,23 @@ class ConversationService {
                     console.log('✅ Realtime: Successfully subscribed to conversation:', conversationId);
                 } else if (status === 'CHANNEL_ERROR') {
                     console.error('❌ Realtime: Channel error for conversation:', conversationId);
+                    // Auto-retry with exponential backoff (max 3 retries)
+                    const retryCount = (channel as any).__retryCount || 0;
+                    if (retryCount < 3) {
+                        const delay = Math.pow(2, retryCount + 1) * 1000; // 2s, 4s, 8s
+                        console.log(`🔄 Realtime: Retrying in ${delay / 1000}s (attempt ${retryCount + 1}/3)...`);
+                        (channel as any).__retryCount = retryCount + 1;
+                        setTimeout(() => {
+                            supabase.removeChannel(channel);
+                            // Re-subscribe by calling the method again
+                            const newSub = this.subscribeToConversation(conversationId, onNewMessage);
+                            // Transfer the new unsubscribe to the original reference
+                            (channel as any).__newSub = newSub;
+                        }, delay);
+                    } else {
+                        console.error('❌ Realtime: Max retries reached for conversation:', conversationId,
+                            '— Check Supabase Dashboard: Realtime must be enabled on "messages" table and RLS policies must allow SELECT.');
+                    }
                 } else if (status === 'TIMED_OUT') {
                     console.warn('⏱️ Realtime: Subscription timed out for conversation:', conversationId);
                 }
