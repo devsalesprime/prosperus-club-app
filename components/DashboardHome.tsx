@@ -533,11 +533,13 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 )}
 
                 {/* 2. Banners - Carrossel Híbrido */}
-                <HomeCarousel
-                    items={carouselItems}
-                    onViewProfile={onViewProfile}
-                    onBannerClick={onBannerClick}
-                />
+                <div data-tour-id="dashboard">
+                    <HomeCarousel
+                        items={carouselItems}
+                        onViewProfile={onViewProfile}
+                        onBannerClick={onBannerClick}
+                    />
+                </div>
 
                 {/* 3. Busca Global */}
                 <GlobalSearchBar
@@ -549,10 +551,12 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
                 {/* 4. ROI Widget - Business Value Showcase */}
                 {currentUser && (
-                    <ROIDashboardWidget
-                        onRegisterDeal={() => setView(ViewState.DEALS)}
-                        onNavigateToDeals={() => setView(ViewState.DEALS)}
-                    />
+                    <div data-tour-id="roi-widget">
+                        <ROIDashboardWidget
+                            onRegisterDeal={() => setView(ViewState.DEALS)}
+                            onNavigateToDeals={() => setView(ViewState.DEALS)}
+                        />
+                    </div>
                 )}
 
                 {/* 5. Ranking Preview */}

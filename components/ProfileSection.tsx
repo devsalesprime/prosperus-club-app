@@ -5,7 +5,7 @@
 import React from 'react';
 import {
     X, Settings, Eye, LogOut,
-    Linkedin, Instagram, Phone, Globe
+    Linkedin, Instagram, Phone, Globe, HelpCircle
 } from 'lucide-react';
 import { Member, ViewState } from '../types';
 import { BenefitStatsCard } from './BenefitStatsCard';
@@ -142,6 +142,24 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
 
                 {/* Benefit Analytics - Performance Stats */}
                 <BenefitStatsCard ownerId={currentUser.id} />
+                <div className="border-t border-slate-700 my-4"></div>
+
+                {/* Rever tour do app */}
+                <button
+                    onClick={() => {
+                        localStorage.removeItem('app-tour-completed');
+                        window.location.reload();
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition"
+                >
+                    <div className="w-8 h-8 rounded-lg bg-yellow-600/10 flex items-center justify-center">
+                        <HelpCircle size={16} className="text-yellow-500" />
+                    </div>
+                    <div className="text-left">
+                        <p className="text-sm font-medium text-slate-200">Rever tour do app</p>
+                        <p className="text-xs text-slate-500 mt-0.5">Reveja as funcionalidades principais</p>
+                    </div>
+                </button>
                 <div className="border-t border-slate-700 my-4"></div>
 
                 <button

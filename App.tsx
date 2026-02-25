@@ -79,6 +79,9 @@ import { BenefitStatsCard } from './components/BenefitStatsCard';
 import { OfflineBanner } from './components/OfflineBanner';
 import { InstallPrompt } from './components/InstallPrompt';
 import ProfileSection from './components/ProfileSection';
+import { useAppTour } from './hooks/useAppTour';
+import { AppTour } from './components/AppTour';
+import { buildTourSteps } from './components/AppTourSteps';
 
 // --- LAZY IMPORTS (Code Splitting — loaded on demand) ---
 const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default: m.AdminApp })));
@@ -168,6 +171,10 @@ const App = () => {
     const [showRoleSelector, setShowRoleSelector] = useState(false);
     const [pendingUser, setPendingUser] = useState<any>(null);
     const [showOnboarding, setShowOnboarding] = useState(true); // Onboarding wizard visibility
+
+    // App Tour state
+    const tour = useAppTour();
+    const tourSteps = React.useMemo(() => buildTourSteps(setView), []);
 
     // Responsive calendar default view: 'agenda' for mobile, 'month' for desktop
     const [calendarDefaultView, setCalendarDefaultView] = useState<View>(() => {
@@ -826,6 +833,8 @@ const App = () => {
                         onComplete={() => {
                             setShowOnboarding(false);
                             if (refreshProfile) refreshProfile();
+                            // Start App Tour after onboarding completes
+                            setTimeout(() => tour.startTour(), 500);
                         }}
                         onProfileUpdate={(updatedProfile) => {
                             if (refreshProfile) refreshProfile();
@@ -1027,6 +1036,7 @@ const App = () => {
                                     onClick={() => setView(ViewState.FAVORITES)}
                                     className="p-2 text-prosperus-grey hover:text-red-400 transition-colors"
                                     title="Meus Favoritos"
+                                    data-tour-id="favorites"
                                 >
                                     <Heart size={22} />
                                 </button>
@@ -1034,13 +1044,14 @@ const App = () => {
                                     onClick={() => setView(ViewState.MESSAGES)}
                                     className="p-2 text-prosperus-grey hover:text-prosperus-gold transition-colors"
                                     title="Chat"
+                                    data-tour-id="chat"
                                 >
                                     <MessageCircle size={22} />
                                 </button>
                                 <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
                             </>
                         )}
-                        <button onClick={() => setView(ViewState.PROFILE)} className="p-2 text-prosperus-grey">
+                        <button onClick={() => setView(ViewState.PROFILE)} className="p-2 text-prosperus-grey" data-tour-id="profile">
                             {currentUser ? <img src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`} className="w-8 h-8 rounded-full object-cover" /> : <User size={24} />}
                         </button>
                     </div>
@@ -1551,6 +1562,7 @@ const App = () => {
                             <button
                                 key={item.id}
                                 onClick={() => setView(targetView as ViewState)}
+                                data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
                                 className={`flex-1 min-w-0 flex flex-col items-center rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
                             >
                                 <span className="w-5 h-5 mb-0.5">{item.icon}</span>
@@ -1561,6 +1573,18 @@ const App = () => {
                 </nav>
 
                 {view !== ViewState.MESSAGES && <SupportWidget visible={!(view === ViewState.AGENDA && mobileView === 'MONTH' && isMobile)} />}
+
+                {/* App Tour Overlay — rendered on top of everything */}
+                {tour.isActive && (
+                    <AppTour
+                        steps={tourSteps}
+                        stepIndex={tour.stepIndex}
+                        onNext={() => tour.nextStep(tourSteps.length)}
+                        onPrev={tour.prevStep}
+                        onSkip={tour.skipTour}
+                        isActive={tour.isActive}
+                    />
+                )}
             </div>
 
             {/* Role Selector Modal - Shows when admin/team logs in */}
