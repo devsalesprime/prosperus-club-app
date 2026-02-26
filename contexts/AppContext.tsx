@@ -122,6 +122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             role: profile.role,
             company: profile.company || '',
             jobTitle: profile.job_title,
+            phone: profile.phone || '',
             image: profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
             description: profile.bio || '',
             socials: profile.socials || {},

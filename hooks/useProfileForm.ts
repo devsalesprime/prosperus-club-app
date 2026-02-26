@@ -79,7 +79,8 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
             what_i_need: currentUser.what_i_need || '',
             partnership_interests: currentUser.partnership_interests || []
         });
-    }, [currentUser.id, currentUser.image_url, currentUser.name, currentUser.bio]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser.id, currentUser.image_url, currentUser.name, currentUser.bio, currentUser.phone, currentUser.what_i_sell, currentUser.what_i_need]);
 
     const handleInputChange = useCallback((field: keyof ProfileUpdateData, value: string | { linkedin?: string; instagram?: string; whatsapp?: string; website?: string } | string[] | ExclusiveBenefit) => {
         setFormData(prev => ({
