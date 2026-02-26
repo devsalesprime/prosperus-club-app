@@ -75,6 +75,7 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, name, image_url, company')
+                .eq('role', 'MEMBER')
                 .neq('id', user?.id)
                 .order('name');
 

@@ -404,6 +404,18 @@ class ProfileService {
                 throw error;
             }
 
+            // 🔄 HubSpot sync (fire-and-forget — never blocks profile save)
+            if (data?.hubspot_contact_id) {
+                supabase.functions
+                    .invoke('sync-hubspot', { body: { profile: data } })
+                    .then(({ error: syncError }) => {
+                        if (syncError) {
+                            console.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
+                        }
+                    })
+                    .catch(err => console.warn('⚠️ HubSpot sync error (non-blocking):', err));
+            }
+
             return data;
         } catch (error) {
             console.error('Error updating profile:', error);

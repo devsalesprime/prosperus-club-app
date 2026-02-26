@@ -87,6 +87,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, name, image_url, company')
+                .eq('role', 'MEMBER')
                 .neq('id', user?.id)
                 .order('name');
 

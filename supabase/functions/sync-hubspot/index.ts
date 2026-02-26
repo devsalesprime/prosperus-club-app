@@ -43,11 +43,12 @@ function splitName(fullName: string): { firstname: string; lastname: string } {
 
 /**
  * Map Supabase profile to HubSpot contact properties
+ * Standard HubSpot fields + Prosperus custom properties
  */
 function mapProfileToHubSpot(profile: any) {
     const { firstname, lastname } = splitName(profile.name || '')
 
-    return {
+    const properties: Record<string, string> = {
         email: profile.email,
         firstname,
         lastname,
@@ -56,6 +57,17 @@ function mapProfileToHubSpot(profile: any) {
         phone: profile.phone || '',
         mobilephone: profile.phone || '' // Use same phone for both fields
     }
+
+    // Prosperus custom properties (only include if present)
+    if (profile.what_i_sell) properties.prosperus_what_i_sell = profile.what_i_sell
+    if (profile.what_i_need) properties.prosperus_what_i_need = profile.what_i_need
+    if (profile.member_since) properties.prosperus_member_since = profile.member_since
+
+    if (profile.partnership_interests?.length) {
+        properties.prosperus_partnership_interests = profile.partnership_interests.join(';')
+    }
+
+    return properties
 }
 
 /**
