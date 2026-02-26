@@ -85,6 +85,13 @@ function mapProfileToHubSpot(profile: any) {
     // Social media
     if (profile.socials?.linkedin) properties.hs_linkedin_url = profile.socials.linkedin
     if (profile.socials?.instagram) properties.redes_sociais = profile.socials.instagram
+    if (profile.socials?.whatsapp) {
+        const whatsappPhone = formatPhoneInternational(profile.socials.whatsapp)
+        if (whatsappPhone) properties.hs_whatsapp_phone_number = whatsappPhone
+    }
+
+    // Avatar — use twitterprofilephoto as writable photo property
+    if (profile.image_url) properties.twitterprofilephoto = profile.image_url
 
     if (profile.partnership_interests?.length) {
         properties.setores_de_interesse = profile.partnership_interests.join(';')
