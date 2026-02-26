@@ -298,21 +298,7 @@ Deno.serve(async (req: Request) => {
             await updateSupabaseContactId(profile.id, hubspotContactId)
         }
 
-        // AVATAR SYNC — upload image to HubSpot File Manager (non-blocking)
-        if (profile.image_url && hubspotContactId) {
-            console.log('📸 Syncing avatar to HubSpot...')
-            const avatarKey = await uploadAvatarToHubSpot(profile.image_url, profile.email)
-            if (avatarKey) {
-                try {
-                    await updateHubSpotContact(hubspotContactId, {
-                        hs_avatar_filemanager_key: avatarKey
-                    })
-                    console.log('✅ Avatar synced to HubSpot contact')
-                } catch (avatarErr) {
-                    console.warn('⚠️ Could not set avatar on contact (non-blocking):', avatarErr)
-                }
-            }
-        }
+
 
         return new Response(
             JSON.stringify({
