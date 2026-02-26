@@ -95,6 +95,53 @@ function mapProfileToHubSpot(profile: any) {
 
 
 /**
+ * Upload profile photo to HubSpot File Manager and return the file path (key)
+ * HubSpot requires uploading the image first, then setting hs_avatar_filemanager_key
+ */
+async function uploadAvatarToHubSpot(imageUrl: string, contactEmail: string): Promise<string | null> {
+    try {
+        // 1. Download the image from Supabase Storage
+        const imageResponse = await fetch(imageUrl)
+        if (!imageResponse.ok) {
+            console.warn('⚠️ Could not download avatar image:', imageResponse.status)
+            return null
+        }
+        const imageBlob = await imageResponse.blob()
+        const fileName = `prosperus-avatar-${contactEmail.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
+
+        // 2. Upload to HubSpot Files API v3
+        const formData = new FormData()
+        formData.append('file', imageBlob, fileName)
+        formData.append('options', JSON.stringify({
+            access: 'PUBLIC_NOT_INDEXABLE',
+            overwrite: true
+        }))
+        formData.append('folderPath', '/prosperus-avatars')
+
+        const uploadResponse = await fetch('https://api.hubapi.com/files/v3/files', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${HUBSPOT_API_KEY}`
+            },
+            body: formData
+        })
+
+        if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text()
+            console.warn('⚠️ HubSpot avatar upload failed:', errorText)
+            return null
+        }
+
+        const fileData = await uploadResponse.json()
+        console.log('✅ Avatar uploaded to HubSpot:', fileData.path)
+        return fileData.path  // This is the filemanager key
+    } catch (err) {
+        console.warn('⚠️ Avatar upload error (non-blocking):', err)
+        return null
+    }
+}
+
+/**
  * Search for contact in HubSpot by email
  */
 async function searchContactByEmail(email: string): Promise<any | null> {
@@ -249,6 +296,22 @@ Deno.serve(async (req: Request) => {
 
             // Save hubspot_contact_id back to Supabase
             await updateSupabaseContactId(profile.id, hubspotContactId)
+        }
+
+        // AVATAR SYNC — upload image to HubSpot File Manager (non-blocking)
+        if (profile.image_url && hubspotContactId) {
+            console.log('📸 Syncing avatar to HubSpot...')
+            const avatarKey = await uploadAvatarToHubSpot(profile.image_url, profile.email)
+            if (avatarKey) {
+                try {
+                    await updateHubSpotContact(hubspotContactId, {
+                        hs_avatar_filemanager_key: avatarKey
+                    })
+                    console.log('✅ Avatar synced to HubSpot contact')
+                } catch (avatarErr) {
+                    console.warn('⚠️ Could not set avatar on contact (non-blocking):', avatarErr)
+                }
+            }
         }
 
         return new Response(
