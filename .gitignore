@@ -1,40 +1,110 @@
-# Dependencies
-node_modules/
-backup/node_modules/
-
-# Build output
-dist/
-
-# Coverage reports
-coverage/
-
-# Environment variables
+# ─── Variáveis de Ambiente e Segredos ─────────────────────────────
 .env
 .env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
 .env.production
+.env.production.local
+.env.staging
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+*.jks
+*.keystore
 
-# OS files
-desktop.ini
-Thumbs.db
+# ─── Dependências ─────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# ─── Build e Output ───────────────────────────────────────────────
+dist/
+dist-ssr/
+build/
+out/
+.output/
+*.local
+
+# ─── Cache e Temporários ──────────────────────────────────────────
+.cache/
+.parcel-cache/
+.turbo/
+.vite/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# ─── Testes e Cobertura ───────────────────────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+playwright-report/
+test-results/
+
+# ─── Logs ─────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── Supabase ─────────────────────────────────────────────────────
+supabase/.temp/
+supabase/.branches/
+# Manter: supabase/migrations/, supabase/functions/, supabase/config.toml
+
+# ─── Sistema Operacional ──────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-# Editor / IDE
-.vscode/
+# ─── IDEs e Editores ──────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
 .idea/
 *.swp
 *.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
 
-# Old / backup files
+# ─── Package Managers ─────────────────────────────────────────────
+.npm/
+.yarn/
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# ─── Arquivos temporários do projeto ──────────────────────────────
+_*.bat
 backup/
 App.tsx-old
-
-# Temp / utility scripts
 fix_admin.js
 fix_adminapp.py
 setup-auth.bat
 test-gallery.html
 
-# Documentation (internal dev docs - not needed for deploy)
+# ─── Documentação interna (não necessária para deploy) ────────────
 docs/
 PRD - App para sócios Prosperus.pdf
 PRD_Complementar_Prosperus_v2.1.docx
@@ -42,9 +112,18 @@ PROSPERUS_MASTER_PROMPT.md
 PROSPERUS_PROMPT_LIBRARY.md
 PROSPERUS_QUICK_REFERENCE.md
 
-# Test artifacts
-coverage/
+# ─── Uploads e Assets Locais ──────────────────────────────────────
+uploads/
+tmp/
+temp/
 
-# Misc
+# ─── Relatórios e Análises ────────────────────────────────────────
+bundle-analyzer-report.html
+stats.json
+
+# ─── Outros ───────────────────────────────────────────────────────
 metadata.json
 *.zip
+*.orig
+*.rej
+.history/
