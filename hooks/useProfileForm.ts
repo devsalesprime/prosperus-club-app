@@ -59,6 +59,7 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
             image_url: currentUser.image_url || '',
             bio: currentUser.bio || '',
             pitch_video_url: currentUser.pitch_video_url || '',
+            phone: currentUser.phone || '',
             socials: {
                 linkedin: currentUser.socials?.linkedin || '',
                 instagram: currentUser.socials?.instagram || '',

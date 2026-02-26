@@ -83,7 +83,7 @@ export const ProfileBasicFields: React.FC<ProfileBasicFieldsProps> = ({
                             type="tel"
                             value={formData.phone}
                             onChange={(e) => onChange('phone', e.target.value)}
-                            placeholder="(11) 99999-9999"
+                            placeholder="+55 11 99999-9999"
                             className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
                         />
                     </div>
