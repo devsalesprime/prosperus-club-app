@@ -90,8 +90,8 @@ function mapProfileToHubSpot(profile: any) {
         if (whatsappPhone) properties.hs_whatsapp_phone_number = whatsappPhone
     }
 
-    // Avatar — use twitterprofilephoto as writable photo property
-    if (profile.image_url) properties.twitterprofilephoto = profile.image_url
+    // Avatar — custom property with public Supabase Storage URL
+    if (profile.image_url) properties.avatar_url = profile.image_url
 
     if (profile.partnership_interests?.length) {
         properties.setores_de_interesse = profile.partnership_interests.join(';')
