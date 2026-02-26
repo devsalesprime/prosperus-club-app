@@ -1,255 +1,70 @@
-// ProfileEdit.tsx
-// Component for editing user profile
+// ProfileEdit.tsx — Orchestrator
+// Decomposed from 1.078 lines → ~150 lines
+// Sub-components in ./profile/, hook in ../hooks/useProfileForm.ts
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-    User,
-    Briefcase,
-    Building2,
-    Phone,
-    FileText,
-    Linkedin,
-    Instagram,
-    Globe,
-    MessageCircle,
-    X,
-    Plus,
     Save,
     AlertCircle,
     CheckCircle,
-    Tag,
-    Upload,
     Eye,
     History,
-    Gift,
-    Link2,
-    ToggleLeft,
-    ToggleRight,
-    Sparkles,
-    Ticket,
-    Search,
-    Users,
-    Video,
-    PlayCircle
 } from 'lucide-react';
-import { profileService, ProfileData, ProfileUpdateData, ExclusiveBenefit } from '../services/profileService';
+import { profileService, ProfileData, ExclusiveBenefit } from '../services/profileService';
 import { ImageUpload } from './ImageUpload';
 import { ProfilePreview } from './ProfilePreview';
-import { TagSuggestions } from './TagSuggestions';
-import { BenefitStatsCard } from './BenefitStatsCard';
 import { ModalWrapper, ModalBody } from './ui/ModalWrapper';
 import { ModalHeader, ModalHeaderIconButton } from './ModalHeader';
 import { ProfileHistory } from './ProfileHistory';
 import { Button } from './ui/Button';
-import { AvatarEditable } from './ui/Avatar';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { useAuth } from '../contexts/AuthContext';
 import { logger } from '../utils/logger';
 
+// Sub-components
+import { ProfileAvatarSection } from './profile/ProfileAvatarSection';
+import { ProfileBasicFields } from './profile/ProfileBasicFields';
+import { ProfileSocialsEditor } from './profile/ProfileSocialsEditor';
+import { ProfileTagsEditor } from './profile/ProfileTagsEditor';
+import { ProfileStrategicFields } from './profile/ProfileStrategicFields';
+import { ProfileBenefitEditor } from './profile/ProfileBenefitEditor';
+
+// Hook
+import { useProfileForm } from '../hooks/useProfileForm';
+
 interface ProfileEditProps {
     currentUser: ProfileData;
-    supabase: SupabaseClient; // Add supabase client
-    isMockMode?: boolean; // Flag to indicate if we're in mock/demo mode
+    supabase: SupabaseClient;
+    isMockMode?: boolean;
     onSave: (updatedProfile: ProfileData) => void;
     onCancel: () => void;
 }
 
 export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase, isMockMode = false, onSave, onCancel }) => {
     const { refreshProfile } = useAuth();
-    const [formData, setFormData] = useState<ProfileUpdateData>({
-        name: currentUser.name || '',
-        company: currentUser.company || '',
-        job_title: currentUser.job_title || '',
-        image_url: currentUser.image_url || '',
-        bio: currentUser.bio || '',
-        pitch_video_url: currentUser.pitch_video_url || '',
-        phone: currentUser.phone || '',
-        socials: {
-            linkedin: currentUser.socials?.linkedin || '',
-            instagram: currentUser.socials?.instagram || '',
-            whatsapp: currentUser.socials?.whatsapp || '',
-            website: currentUser.socials?.website || ''
-        },
-        tags: currentUser.tags || [],
-        exclusive_benefit: currentUser.exclusive_benefit || {
-            title: '',
-            description: '',
-            ctaLabel: '',
-            ctaUrl: '',
-            code: '',
-            active: false
-        },
-        // Strategic Profile Fields (PRD v2.1)
-        what_i_sell: currentUser.what_i_sell || '',
-        what_i_need: currentUser.what_i_need || '',
-        partnership_interests: currentUser.partnership_interests || []
-    });
 
-    const [newTag, setNewTag] = useState('');
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
+    const {
+        formData,
+        setFormData,
+        newTag,
+        setNewTag,
+        saving,
+        error,
+        setError,
+        success,
+        setSuccess,
+        handleInputChange,
+        handleSocialChange,
+        handleAddTag,
+        handleRemoveTag,
+        handleSubmit,
+        completionPercentage,
+    } = useProfileForm({ currentUser, supabase, isMockMode, onSave });
 
     // Advanced features states
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
-
-    // Sync formData when currentUser changes (e.g., after profile fetch)
-    useEffect(() => {
-        setFormData({
-            name: currentUser.name || '',
-            company: currentUser.company || '',
-            job_title: currentUser.job_title || '',
-            image_url: currentUser.image_url || '',
-            bio: currentUser.bio || '',
-            pitch_video_url: currentUser.pitch_video_url || '',
-            socials: {
-                linkedin: currentUser.socials?.linkedin || '',
-                instagram: currentUser.socials?.instagram || '',
-                whatsapp: currentUser.socials?.whatsapp || '',
-                website: currentUser.socials?.website || ''
-            },
-            tags: currentUser.tags || [],
-            exclusive_benefit: currentUser.exclusive_benefit || {
-                title: '',
-                description: '',
-                ctaLabel: '',
-                ctaUrl: '',
-                code: '',
-                active: false
-            },
-            // Strategic Profile Fields
-            what_i_sell: currentUser.what_i_sell || '',
-            what_i_need: currentUser.what_i_need || '',
-            partnership_interests: currentUser.partnership_interests || []
-        });
-    }, [currentUser.id, currentUser.image_url, currentUser.name, currentUser.bio]);
-
-    const handleInputChange = (field: keyof ProfileUpdateData, value: string | { linkedin?: string; instagram?: string; whatsapp?: string; website?: string } | string[] | ExclusiveBenefit) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const handleSocialChange = (platform: string, value: string) => {
-        setFormData(prev => ({
-            ...prev,
-            socials: {
-                ...prev.socials,
-                [platform]: value
-            }
-        }));
-    };
-
-    const handleAddTag = () => {
-        const trimmedTag = newTag.trim();
-        if (trimmedTag && !formData.tags?.includes(trimmedTag)) {
-            setFormData(prev => ({
-                ...prev,
-                tags: [...(prev.tags || []), trimmedTag]
-            }));
-            setNewTag('');
-        }
-    };
-
-    const handleRemoveTag = (tagToRemove: string) => {
-        setFormData(prev => ({
-            ...prev,
-            tags: prev.tags?.filter(tag => tag !== tagToRemove) || []
-        }));
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setSuccess(false);
-
-        // Validation
-        if (!formData.name?.trim()) {
-            setError('Nome é obrigatório');
-            return;
-        }
-
-        // Validate socials
-        const socialsValidation = profileService.validateSocials(formData.socials);
-        if (!socialsValidation.valid) {
-            setError(socialsValidation.errors.join(', '));
-            return;
-        }
-
-        try {
-            setSaving(true);
-
-            // If in mock mode, skip Supabase save and just update locally
-            if (isMockMode) {
-                logger.debug('⚠️ MOCK MODE: Skipping Supabase save, updating locally only');
-                const mockUpdatedProfile: ProfileData = {
-                    ...currentUser,
-                    ...formData
-                };
-
-                setSuccess(true);
-                setTimeout(() => {
-                    onSave(mockUpdatedProfile);
-                }, 1000);
-                return;
-            }
-
-            // Normal flow: save to Supabase
-            // Strip 'Outros' toggle marker before persisting — only real sector values go to DB
-            const cleanedFormData = {
-                ...formData,
-                partnership_interests: (formData.partnership_interests || []).filter((s: string) => s !== 'Outros')
-            };
-            logger.debug('📸 ProfileEdit: Saving profile with image_url:', cleanedFormData.image_url);
-            const updatedProfile = await profileService.updateProfile(currentUser.id, cleanedFormData);
-
-            if (updatedProfile) {
-                // Check if profile is now complete and mark onboarding as done
-                if (profileService.isProfileComplete(updatedProfile) && !updatedProfile.has_completed_onboarding) {
-                    await profileService.completeOnboarding(currentUser.id);
-                    updatedProfile.has_completed_onboarding = true;
-                    logger.debug('✅ Onboarding marked as complete');
-                }
-
-                // 🔄 CRITICAL: Refresh global profile context
-                logger.debug('🔄 ProfileEdit: Refreshing global profile context...');
-                await refreshProfile();
-
-                // 🔄 Sync to HubSpot CRM (fire-and-forget, completely non-blocking)
-                // This prevents CORS errors from blocking the UI update
-                supabase.functions.invoke('sync-hubspot', {
-                    body: { profile: updatedProfile }
-                }).then(({ error: syncError }) => {
-                    if (syncError) {
-                        console.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
-                    } else {
-                        logger.debug('✅ Profile synced to HubSpot');
-                    }
-                }).catch(syncErr => {
-                    console.warn('⚠️ HubSpot sync error (non-blocking):', syncErr);
-                });
-
-
-                setSuccess(true);
-                setTimeout(() => {
-                    onSave(updatedProfile);
-                }, 1000);
-            }
-        } catch (err) {
-            console.error('Error saving profile:', err);
-            setError('Erro ao salvar perfil. Tente novamente.');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const completionPercentage = profileService.getProfileCompletionPercentage({
-        ...currentUser,
-        ...formData
-    } as ProfileData);
 
     return (
         <ModalWrapper isOpen={true} onClose={onCancel} maxWidth="3xl">
@@ -275,7 +90,6 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             />
 
             <ModalBody>
-
                 {/* Completion Bar */}
                 <div className="px-6 pt-4">
                     <div className="flex items-center justify-between mb-2">
@@ -297,696 +111,62 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-1 space-y-6">
                     {/* Profile Image */}
-                    <div>
-                        <label className="block text-sm font-bold text-white mb-2">
-                            Foto de Perfil
-                        </label>
-                        {/* Layout responsivo: empilha no mobile, inline no desktop */}
-                        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                            {/* Clickable avatar with camera overlay */}
-                            <button
-                                type="button"
-                                onClick={() => setShowImageUpload(true)}
-                                className="relative shrink-0 group"
-                                title="Trocar foto de perfil"
-                            >
-                                <AvatarEditable
-                                    src={formData.image_url}
-                                    alt="Preview"
-                                    size="xl"
-                                />
-                                {/* Camera overlay */}
-                                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
-                                    <Upload size={24} className="text-white" />
-                                </div>
-                            </button>
-                            <div className="flex flex-col sm:flex-row gap-3 w-full">
-                                <input
-                                    type="url"
-                                    value={formData.image_url}
-                                    onChange={(e) => handleInputChange('image_url', e.target.value)}
-                                    placeholder="https://exemplo.com/foto.jpg"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                                />
-                                <Button
-                                    variant="primary"
-                                    size="md"
-                                    onClick={() => setShowImageUpload(true)}
-                                    className="w-full sm:w-auto shrink-0"
-                                >
-                                    <Upload size={18} />
-                                    Upload
-                                </Button>
-                            </div>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2 text-center sm:text-left">
-                            Toque na foto ou clique em Upload para alterar
-                        </p>
-                    </div>
+                    <ProfileAvatarSection
+                        imageUrl={formData.image_url || ''}
+                        onImageUrlChange={(url) => handleInputChange('image_url', url)}
+                        onOpenUpload={() => setShowImageUpload(true)}
+                    />
 
-                    {/* Basic Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-bold text-white mb-2">
-                                Nome Completo *
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => handleInputChange('name', e.target.value)}
-                                    placeholder="Seu nome"
-                                    required
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-white mb-2">
-                                Cargo
-                            </label>
-                            <div className="relative">
-                                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="text"
-                                    value={formData.job_title}
-                                    onChange={(e) => handleInputChange('job_title', e.target.value)}
-                                    placeholder="Ex: CEO, Diretor Comercial"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-white mb-2">
-                                Empresa
-                            </label>
-                            <div className="relative">
-                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="text"
-                                    value={formData.company}
-                                    onChange={(e) => handleInputChange('company', e.target.value)}
-                                    placeholder="Nome da empresa"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-bold text-white mb-2">
-                                Telefone
-                            </label>
-                            <div className="relative">
-                                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                                    placeholder="(11) 99999-9999"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bio */}
-                    <div>
-                        <label className="block text-sm font-bold text-white mb-2">
-                            Sobre Você
-                        </label>
-                        <div className="relative">
-                            <FileText className="absolute left-3 top-3 text-slate-500" size={18} />
-                            <textarea
-                                value={formData.bio}
-                                onChange={(e) => handleInputChange('bio', e.target.value)}
-                                placeholder="Conte um pouco sobre você, sua experiência e interesses..."
-                                rows={4}
-                                maxLength={500}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition resize-none"
-                            />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                            {formData.bio?.length || 0}/500 caracteres
-                        </p>
-                    </div>
+                    {/* Basic Fields: Name, Job, Company, Phone, Bio */}
+                    <ProfileBasicFields
+                        formData={formData}
+                        onChange={handleInputChange}
+                    />
 
                     {/* Social Media */}
-                    <div>
-                        <h3 className="text-sm font-bold text-white mb-3">Redes Sociais</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">LinkedIn</label>
-                                <div className="relative">
-                                    <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="url"
-                                        value={formData.socials?.linkedin}
-                                        onChange={(e) => handleSocialChange('linkedin', e.target.value)}
-                                        placeholder="https://linkedin.com/in/..."
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
-                                    />
-                                </div>
-                            </div>
+                    <ProfileSocialsEditor
+                        socials={formData.socials || {}}
+                        onChange={handleSocialChange}
+                    />
 
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">Instagram</label>
-                                <div className="relative">
-                                    <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="url"
-                                        value={formData.socials?.instagram}
-                                        onChange={(e) => handleSocialChange('instagram', e.target.value)}
-                                        placeholder="https://instagram.com/..."
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
-                                    />
-                                </div>
-                            </div>
+                    {/* Tags + Pitch Video */}
+                    <ProfileTagsEditor
+                        tags={formData.tags || []}
+                        newTag={newTag}
+                        pitchVideoUrl={formData.pitch_video_url || ''}
+                        onSetNewTag={setNewTag}
+                        onAddTag={handleAddTag}
+                        onRemoveTag={handleRemoveTag}
+                        onTagSelect={(tag) => {
+                            setFormData(prev => ({
+                                ...prev,
+                                tags: [...(prev.tags || []), tag]
+                            }));
+                        }}
+                        onPitchVideoChange={(url) => handleInputChange('pitch_video_url', url)}
+                    />
 
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">WhatsApp</label>
-                                <div className="relative">
-                                    <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="tel"
-                                        value={formData.socials?.whatsapp}
-                                        onChange={(e) => handleSocialChange('whatsapp', e.target.value)}
-                                        placeholder="5511999999999"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
-                                    />
-                                </div>
-                            </div>
+                    {/* Strategic Profile: what_i_sell, what_i_need, Sectors */}
+                    <ProfileStrategicFields
+                        whatISell={formData.what_i_sell || ''}
+                        whatINeed={formData.what_i_need || ''}
+                        partnershipInterests={formData.partnership_interests || []}
+                        onChange={handleInputChange}
+                    />
 
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">Website</label>
-                                <div className="relative">
-                                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="url"
-                                        value={formData.socials?.website}
-                                        onChange={(e) => handleSocialChange('website', e.target.value)}
-                                        placeholder="https://seusite.com"
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div>
-                        <h3 className="text-sm font-bold text-white mb-3">Tags de Interesse</h3>
-                        <div className="flex gap-2 mb-3">
-                            <div className="relative flex-1">
-                                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="text"
-                                    value={newTag}
-                                    onChange={(e) => setNewTag(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                                    placeholder="Ex: Vendas, Marketing, Tecnologia"
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition"
-                                />
-                            </div>
-                            <Button
-                                variant="primary"
-                                size="md"
-                                onClick={handleAddTag}
-                            >
-                                <Plus size={18} />
-                                Adicionar
-                            </Button>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {formData.tags?.map((tag, index) => (
-                                <span
-                                    key={index}
-                                    className="inline-flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm"
-                                >
-                                    {tag}
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRemoveTag(tag)}
-                                        className="hover:text-red-400 transition"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </span>
-                            ))}
-                            {(!formData.tags || formData.tags.length === 0) && (
-                                <p className="text-sm text-slate-500">Nenhuma tag adicionada</p>
-                            )}
-                        </div>
-
-                        {/* Tag Suggestions */}
-                        <TagSuggestions
-                            currentTags={formData.tags || []}
-                            onTagSelect={(tag) => {
-                                setFormData(prev => ({
-                                    ...prev,
-                                    tags: [...(prev.tags || []), tag]
-                                }));
-                            }}
-                        />
-                    </div>
-
-                    {/* ========================================= */}
-                    {/* VIDEO DE APRESENTAÇÃO SECTION              */}
-                    {/* ========================================= */}
-                    <div className="border border-purple-600/30 rounded-xl p-6 bg-gradient-to-br from-purple-900/10 to-transparent">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-purple-600/20 rounded-lg">
-                                <Video className="text-purple-400" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-white">Vídeo de Apresentação</h3>
-                                <p className="text-xs text-slate-400">Destaque seu perfil com um pitch em vídeo</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    <Link2 size={12} className="inline mr-1 text-purple-400" />
-                                    Link do vídeo (YouTube, Vimeo, Google Drive ou Loom)
-                                </label>
-                                <div className="relative">
-                                    <PlayCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="url"
-                                        value={formData.pitch_video_url || ''}
-                                        onChange={(e) => handleInputChange('pitch_video_url', e.target.value)}
-                                        placeholder="https://www.youtube.com/watch?v=... ou https://drive.google.com/file/d/..."
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-purple-500 transition"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-start gap-2 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                                <Sparkles className="text-purple-400 shrink-0 mt-0.5" size={14} />
-                                <p className="text-xs text-slate-400 leading-relaxed">
-                                    <span className="text-purple-400 font-medium">Dica:</span> Grave um vídeo de até 3 minutos se apresentando.
-                                    Suba no <strong className="text-slate-300">YouTube</strong> (não listado) ou <strong className="text-slate-300">Google Drive</strong> (modo público) e cole o link acima.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ========================================= */}
-                    {/* STRATEGIC PROFILE SECTION (PRD v2.1)      */}
-                    {/* ========================================= */}
-                    <div className="border border-emerald-600/30 rounded-xl p-6 bg-gradient-to-br from-emerald-900/10 to-transparent">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-emerald-600/20 rounded-lg">
-                                <Users className="text-emerald-400" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-white">Perfil Estratégico</h3>
-                                <p className="text-xs text-slate-400">Dados para conexões inteligentes entre sócios</p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            {/* What I Sell */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    <Briefcase size={12} className="inline mr-1 text-yellow-500" />
-                                    O que você vende/faz?
-                                </label>
-                                <textarea
-                                    value={formData.what_i_sell || ''}
-                                    onChange={(e) => handleInputChange('what_i_sell', e.target.value)}
-                                    rows={2}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-yellow-600 transition resize-none"
-                                    placeholder="Ex: Consultoria em gestão, software de CRM, serviços jurídicos..."
-                                />
-                            </div>
-
-                            {/* What I Need */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    <Search size={12} className="inline mr-1 text-blue-400" />
-                                    O que você precisa/compraria agora?
-                                </label>
-                                <textarea
-                                    value={formData.what_i_need || ''}
-                                    onChange={(e) => handleInputChange('what_i_need', e.target.value)}
-                                    rows={2}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition resize-none"
-                                    placeholder="Ex: Automação de marketing, parceiro logístico, assessoria contábil..."
-                                />
-                            </div>
-
-                            {/* Partnership Interests — SectorSelector v2.0 */}
-                            {(() => {
-                                const SECTOR_OPTIONS = [
-                                    'Tecnologia & Inovação', 'Saúde & Bem-estar',
-                                    'Finanças & Investimentos', 'Consultoria & Gestão',
-                                    'Jurídico & Compliance', 'Agronegócio',
-                                    'Logística & Supply Chain', 'E-commerce & Digital',
-                                    'Energia & Sustentabilidade', 'Food & Beverage',
-                                    'Educação', 'Imóveis & Construção',
-                                    'Marketing & Publicidade', 'Indústria & Manufatura',
-                                    'Comércio & Varejo',
-                                    'Outros'
-                                ];
-                                const interests = formData.partnership_interests || [];
-                                const hasOthers = interests.includes('Outros');
-                                const customTags = interests.filter((s: string) => !SECTOR_OPTIONS.includes(s));
-
-                                const toggleSector = (sector: string) => {
-                                    if (interests.includes(sector)) {
-                                        // Deselecting "Outros" also removes all custom tags
-                                        if (sector === 'Outros') {
-                                            handleInputChange('partnership_interests',
-                                                interests.filter((s: string) => s !== 'Outros' && SECTOR_OPTIONS.includes(s)) as any
-                                            );
-                                        } else {
-                                            handleInputChange('partnership_interests',
-                                                interests.filter((s: string) => s !== sector) as any
-                                            );
-                                        }
-                                    } else {
-                                        handleInputChange('partnership_interests',
-                                            [...interests, sector] as any
-                                        );
-                                    }
-                                };
-
-                                const addCustomTag = (value: string) => {
-                                    const val = value.trim();
-                                    if (!val || interests.includes(val)) return;
-                                    handleInputChange('partnership_interests', [...interests, val] as any);
-                                };
-
-                                const removeCustomTag = (tag: string) => {
-                                    const updated = interests.filter((s: string) => s !== tag);
-                                    // If no custom tags remain, also deselect "Outros"
-                                    const remainingCustom = updated.filter((s: string) => !SECTOR_OPTIONS.includes(s));
-                                    if (remainingCustom.length === 0) {
-                                        handleInputChange('partnership_interests',
-                                            updated.filter((s: string) => s !== 'Outros') as any
-                                        );
-                                    } else {
-                                        handleInputChange('partnership_interests', updated as any);
-                                    }
-                                };
-
-                                return (
-                                    <div className="space-y-3">
-                                        {/* Label */}
-                                        <div>
-                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                                                <Users size={12} className="inline mr-1.5 text-yellow-500" />
-                                                Setor de Interesse
-                                            </label>
-                                            <p className="text-xs text-slate-600 mt-0.5">
-                                                Selecione os setores para parcerias
-                                            </p>
-                                        </div>
-
-                                        {/* Tag grid — flex-wrap with stretch override */}
-                                        <div className="w-full">
-                                            <div className="flex flex-wrap gap-2 items-start content-start">
-                                                {SECTOR_OPTIONS.map(sector => {
-                                                    const isSelected = interests.includes(sector);
-                                                    return (
-                                                        <button
-                                                            key={sector}
-                                                            type="button"
-                                                            onClick={() => toggleSector(sector)}
-                                                            className={`whitespace-nowrap flex-shrink-0 self-start w-auto px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 active:scale-95 ${isSelected
-                                                                ? 'bg-yellow-600 border-yellow-500 text-white shadow-sm shadow-yellow-900/30'
-                                                                : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white'
-                                                                }`}
-                                                        >
-                                                            {isSelected && sector !== 'Outros' && (
-                                                                <span className="mr-1 text-yellow-200">✓</span>
-                                                            )}
-                                                            {sector}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Custom input — only when "Outros" selected */}
-                                        {hasOthers && (
-                                            <div style={{ animation: 'sectorFadeIn 250ms ease-out' }} className="space-y-2">
-                                                <div className="flex gap-2 w-full">
-                                                    <input
-                                                        type="text"
-                                                        id="sector-custom-input"
-                                                        placeholder="Digite o setor personalizado..."
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                                addCustomTag(e.currentTarget.value);
-                                                                e.currentTarget.value = '';
-                                                            }
-                                                        }}
-                                                        className="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:border-yellow-600/60 focus:ring-1 focus:ring-yellow-600/20 outline-none transition-all"
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const input = document.getElementById('sector-custom-input') as HTMLInputElement;
-                                                            if (input) {
-                                                                addCustomTag(input.value);
-                                                                input.value = '';
-                                                                input.focus();
-                                                            }
-                                                        }}
-                                                        className="flex-shrink-0 flex-none px-4 py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-all active:scale-95 whitespace-nowrap"
-                                                    >
-                                                        + Add
-                                                    </button>
-                                                </div>
-
-                                                {/* Custom tag chips */}
-                                                {customTags.length > 0 && (
-                                                    <div className="flex flex-wrap gap-2 pt-1">
-                                                        {customTags.map(tag => (
-                                                            <span
-                                                                key={tag}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-600/15 border border-yellow-600/30 text-yellow-400"
-                                                                style={{ animation: 'sectorFadeIn 200ms ease-out' }}
-                                                            >
-                                                                {tag}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeCustomTag(tag)}
-                                                                    className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-yellow-600/30 transition-colors text-yellow-500"
-                                                                >
-                                                                    <X size={10} />
-                                                                </button>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <style>{`
-                                            @keyframes sectorFadeIn {
-                                                from { opacity: 0; transform: translateY(-4px); }
-                                                to { opacity: 1; transform: translateY(0); }
-                                            }
-                                        `}</style>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    </div>
-
-                    {/* ========================================= */}
-                    {/* EXCLUSIVE BENEFIT SECTION (PREMIUM) */}
-                    {/* ========================================= */}
-                    <div className="border border-yellow-600/30 rounded-xl p-6 bg-gradient-to-br from-yellow-900/10 to-transparent">
-                        <div className="flex items-center justify-between gap-4 mb-4">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="p-2 bg-yellow-600/20 rounded-lg shrink-0">
-                                    <Gift className="text-yellow-500" size={20} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-sm font-bold text-white">Oferta para o Clube</h3>
-                                    <p className="text-xs text-slate-400 truncate">Ofereça algo exclusivo para os membros</p>
-                                </div>
-                            </div>
-                            {/* Toggle Switch */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setFormData(prev => ({
-                                        ...prev,
-                                        exclusive_benefit: {
-                                            ...prev.exclusive_benefit!,
-                                            active: !prev.exclusive_benefit?.active
-                                        }
-                                    }));
-                                }}
-                                className={`relative shrink-0 w-14 h-8 !min-h-0 !min-w-0 rounded-full transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-yellow-500/50 ${formData.exclusive_benefit?.active
-                                    ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 shadow-[0_0_12px_rgba(234,179,8,0.4)]'
-                                    : 'bg-slate-700 hover:bg-slate-600'
-                                    }`}
-                                aria-label={formData.exclusive_benefit?.active ? 'Desativar oferta' : 'Ativar oferta'}
-                                role="switch"
-                                aria-checked={formData.exclusive_benefit?.active}
-                            >
-                                {/* Slider Knob */}
-                                <span
-                                    className={`absolute top-[4px] left-[4px] w-6 h-6 bg-white rounded-full shadow-md transition-all duration-300 ease-in-out ${formData.exclusive_benefit?.active
-                                        ? 'translate-x-6 shadow-lg'
-                                        : 'translate-x-0'
-                                        }`}
-                                />
-                            </button>
-                        </div>
-
-                        {/* Gamification Tip */}
-                        <div className="flex items-center gap-2 mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-                            <Sparkles className="text-yellow-500 shrink-0" size={16} />
-                            <p className="text-xs text-slate-400">
-                                <span className="text-yellow-500 font-medium">Dica:</span> Sócios com benefícios ativos ganham destaque no diretório!
-                            </p>
-                        </div>
-
-                        {/* Benefit Form Fields */}
-                        <div className={`space-y-4 transition-opacity duration-200 ${formData.exclusive_benefit?.active ? 'opacity-100' : 'opacity-50 pointer-events-none'
-                            }`}>
-                            {/* Title */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    Título da Oferta <span className="text-red-400">*</span>
-                                </label>
-                                <div className="relative">
-                                    <Gift className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="text"
-                                        value={formData.exclusive_benefit?.title || ''}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            exclusive_benefit: {
-                                                ...prev.exclusive_benefit!,
-                                                title: e.target.value
-                                            }
-                                        }))}
-                                        placeholder="Ex: 15% de desconto em Consultoria"
-                                        maxLength={100}
-                                        disabled={!formData.exclusive_benefit?.active}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition disabled:bg-slate-900 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Description */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    Como Funciona / Regras <span className="text-red-400">*</span>
-                                </label>
-                                <div className="relative">
-                                    <textarea
-                                        value={formData.exclusive_benefit?.description || ''}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            exclusive_benefit: {
-                                                ...prev.exclusive_benefit!,
-                                                description: e.target.value
-                                            }
-                                        }))}
-                                        placeholder="Descreva as condições e como o membro pode aproveitar..."
-                                        maxLength={200}
-                                        rows={3}
-                                        disabled={!formData.exclusive_benefit?.active}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition resize-none disabled:bg-slate-900 disabled:cursor-not-allowed"
-                                    />
-                                    <span className="absolute bottom-2 right-2 text-xs text-slate-500">
-                                        {formData.exclusive_benefit?.description?.length || 0}/200
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Two columns: CTA URL + CTA Label */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-2">Link para Resgate</label>
-                                    <div className="relative">
-                                        <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                        <input
-                                            type="url"
-                                            value={formData.exclusive_benefit?.ctaUrl || ''}
-                                            onChange={(e) => setFormData(prev => ({
-                                                ...prev,
-                                                exclusive_benefit: {
-                                                    ...prev.exclusive_benefit!,
-                                                    ctaUrl: e.target.value
-                                                }
-                                            }))}
-                                            placeholder="https://seusite.com/oferta"
-                                            disabled={!formData.exclusive_benefit?.active}
-                                            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition disabled:bg-slate-900 disabled:cursor-not-allowed"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-2">Texto do Botão</label>
-                                    <input
-                                        type="text"
-                                        value={formData.exclusive_benefit?.ctaLabel || ''}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            exclusive_benefit: {
-                                                ...prev.exclusive_benefit!,
-                                                ctaLabel: e.target.value
-                                            }
-                                        }))}
-                                        placeholder="Ex: Acessar Site, Chamar no Zap"
-                                        maxLength={30}
-                                        disabled={!formData.exclusive_benefit?.active}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-yellow-600 transition disabled:bg-slate-900 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Promo Code */}
-                            <div>
-                                <label className="block text-xs text-slate-400 mb-2">
-                                    Código Promocional <span className="text-slate-500">(opcional)</span>
-                                </label>
-                                <div className="relative">
-                                    <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                    <input
-                                        type="text"
-                                        value={formData.exclusive_benefit?.code || ''}
-                                        onChange={(e) => setFormData(prev => ({
-                                            ...prev,
-                                            exclusive_benefit: {
-                                                ...prev.exclusive_benefit!,
-                                                code: e.target.value.toUpperCase()
-                                            }
-                                        }))}
-                                        placeholder="PROSPERUS15"
-                                        maxLength={20}
-                                        disabled={!formData.exclusive_benefit?.active}
-                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white text-sm uppercase tracking-wider focus:outline-none focus:border-yellow-600 transition disabled:bg-slate-900 disabled:cursor-not-allowed"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ========================================= */}
-                    {/* BENEFIT ANALYTICS - Performance Stats */}
-                    {/* ========================================= */}
-                    {formData.exclusive_benefit?.active && (
-                        <div className="mt-6">
-                            <BenefitStatsCard ownerId={currentUser.id} />
-                        </div>
-                    )}
+                    {/* Exclusive Benefit */}
+                    <ProfileBenefitEditor
+                        benefit={formData.exclusive_benefit || {
+                            title: '',
+                            description: '',
+                            ctaLabel: '',
+                            ctaUrl: '',
+                            code: '',
+                            active: false,
+                        }}
+                        ownerId={currentUser.id}
+                        onBenefitChange={(benefit) => handleInputChange('exclusive_benefit', benefit)}
+                    />
 
                     {/* Error/Success Messages */}
                     {error && (
