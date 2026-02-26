@@ -42,26 +42,45 @@ function splitName(fullName: string): { firstname: string; lastname: string } {
 }
 
 /**
+ * Format phone to international format required by HubSpot
+ * "11984330202" → "+5511984330202"
+ * "+5511984330202" → "+5511984330202" (already formatted)
+ */
+function formatPhoneInternational(phone: string): string {
+    if (!phone) return ''
+    const digits = phone.replace(/\D/g, '')
+    if (digits.startsWith('55') && digits.length >= 12) return `+${digits}`
+    if (digits.length === 10 || digits.length === 11) return `+55${digits}`
+    return `+${digits}`
+}
+
+/**
  * Map Supabase profile to HubSpot contact properties
  * Standard HubSpot fields + Prosperus custom properties
  */
 function mapProfileToHubSpot(profile: any) {
     const { firstname, lastname } = splitName(profile.name || '')
+    const phone = formatPhoneInternational(profile.phone || '')
 
+    // Core HubSpot properties (always exist)
     const properties: Record<string, string> = {
         email: profile.email,
         firstname,
         lastname,
         jobtitle: profile.job_title || '',
         company: profile.company || '',
-        phone: profile.phone || '',
-        mobilephone: profile.phone || '' // Use same phone for both fields
     }
 
-    // Prosperus custom properties → HubSpot internal names
+    // Phone in international format
+    if (phone) {
+        properties.phone = phone
+        properties.mobilephone = phone
+    }
+
+    // Custom Prosperus properties → HubSpot internal names
+    // These are optional — only sent if properties exist in HubSpot
     if (profile.what_i_sell) properties.produto_servico = profile.what_i_sell
     if (profile.what_i_need) properties.o_que_precisa = profile.what_i_need
-    if (profile.member_since) properties.prosperus_member_since = profile.member_since
 
     if (profile.partnership_interests?.length) {
         properties.setores_de_interesse = profile.partnership_interests.join(';')
@@ -69,6 +88,7 @@ function mapProfileToHubSpot(profile: any) {
 
     return properties
 }
+
 
 /**
  * Search for contact in HubSpot by email
