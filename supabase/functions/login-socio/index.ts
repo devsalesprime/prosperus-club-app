@@ -3,9 +3,8 @@
 // Mocking Deno/Edge Function environment for documentation/deployment purposes
 // Deployment: supabase functions deploy login-socio
 
-// Get API Key from Environment Variables (set via supabase secrets set HUBSPOT_API_KEY=...)
-// Using VITE_HUBSPOT_WEBHOOK_SECRET as per .env configuration
-const HUBSPOT_API_KEY = Deno.env.get('VITE_HUBSPOT_WEBHOOK_SECRET') || Deno.env.get('HUBSPOT_API_KEY')
+// Get API Key from Environment Variables (set via supabase secrets set HUBSPOT_ACCESS_TOKEN=...)
+const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
