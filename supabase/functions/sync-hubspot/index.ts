@@ -58,13 +58,13 @@ function mapProfileToHubSpot(profile: any) {
         mobilephone: profile.phone || '' // Use same phone for both fields
     }
 
-    // Prosperus custom properties (only include if present)
-    if (profile.what_i_sell) properties.prosperus_what_i_sell = profile.what_i_sell
-    if (profile.what_i_need) properties.prosperus_what_i_need = profile.what_i_need
+    // Prosperus custom properties → HubSpot internal names
+    if (profile.what_i_sell) properties.produto_servico = profile.what_i_sell
+    if (profile.what_i_need) properties.o_que_precisa = profile.what_i_need
     if (profile.member_since) properties.prosperus_member_since = profile.member_since
 
     if (profile.partnership_interests?.length) {
-        properties.prosperus_partnership_interests = profile.partnership_interests.join(';')
+        properties.setores_de_interesse = profile.partnership_interests.join(';')
     }
 
     return properties
