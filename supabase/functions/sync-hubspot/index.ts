@@ -82,6 +82,10 @@ function mapProfileToHubSpot(profile: any) {
     if (profile.what_i_sell) properties.produto_servico = profile.what_i_sell
     if (profile.what_i_need) properties.o_que_precisa = profile.what_i_need
 
+    // Social media
+    if (profile.socials?.linkedin) properties.hs_linkedin_url = profile.socials.linkedin
+    if (profile.socials?.instagram) properties.redes_sociais = profile.socials.instagram
+
     if (profile.partnership_interests?.length) {
         properties.setores_de_interesse = profile.partnership_interests.join(';')
     }
