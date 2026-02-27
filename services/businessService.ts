@@ -451,7 +451,7 @@ class BusinessService {
      */
     private async sendPushToUser(userId: string, title: string, message: string, url?: string): Promise<void> {
         try {
-            await supabase.functions.invoke('send-push-notification', {
+            await supabase.functions.invoke('send-push', {
                 body: { user_id: userId, title, message, url }
             });
         } catch (error) {

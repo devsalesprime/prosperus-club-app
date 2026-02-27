@@ -9,7 +9,7 @@
 //     ├── Loading/Login/Recovery/Onboarding screens (guards)
 //     └── AppLayout > ViewSwitcher (main app)
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -18,6 +18,7 @@ import { LoginModal } from './components/LoginModal';
 import { UpdatePasswordModal } from './components/UpdatePasswordModal';
 import { RoleSelector } from './components/RoleSelector';
 import { InstallPrompt } from './components/InstallPrompt';
+import { PushPermissionPrompt } from './components/PushPermissionPrompt';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
 const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
@@ -61,6 +62,16 @@ const AppShell: React.FC = () => {
         tour,
         refreshProfile
     } = useApp();
+
+    // ─── Push notification prompt (shows 5s after onboarding) ────
+    const [showPushPrompt, setShowPushPrompt] = useState(false);
+
+    useEffect(() => {
+        if (currentUser && currentUser.role === 'MEMBER' && userProfile?.has_completed_onboarding && !showOnboarding && !authContextLoading) {
+            const timer = setTimeout(() => setShowPushPrompt(true), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [currentUser, userProfile?.has_completed_onboarding, showOnboarding, authContextLoading]);
 
     // ─── Auto-start tour if replay was requested (MEMBER only) ────
     useEffect(() => {
@@ -171,6 +182,12 @@ const AppShell: React.FC = () => {
     return (
         <AppLayout>
             <ViewSwitcher />
+            {showPushPrompt && currentUser && (
+                <PushPermissionPrompt
+                    userId={currentUser.id}
+                    onDismiss={() => setShowPushPrompt(false)}
+                />
+            )}
         </AppLayout>
     );
 };

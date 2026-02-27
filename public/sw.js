@@ -256,7 +256,9 @@ self.addEventListener('push', (event) => {
         body: 'Você tem uma nova notificação!',
         icon: '/app/default-avatar.png',
         badge: '/app/default-avatar.png',
-        url: '/app/'
+        url: '/app/',
+        tag: 'prosperus-default',
+        type: 'notification'
     };
     
     // Tenta extrair dados do payload
@@ -270,12 +272,34 @@ self.addEventListener('push', (event) => {
                 badge: payload.badge || data.badge,
                 url: payload.url || payload.target_url || data.url,
                 tag: payload.tag || 'prosperus-notification',
-                data: payload.data || {}
+                type: payload.type || 'notification'
             };
         } catch (e) {
             // Se não for JSON, usa o texto diretamente
             data.body = event.data.text() || data.body;
         }
+    }
+
+    // Ações condicionais por tipo de notificação
+    let actions = [];
+    let requireInteraction = false;
+
+    if (data.type === 'message') {
+        actions = [
+            { action: 'open', title: '💬 Responder' },
+            { action: 'close', title: 'Dispensar' }
+        ];
+        requireInteraction = true; // Mantém visível até interação
+    } else if (data.type === 'event') {
+        actions = [
+            { action: 'open', title: '✅ Confirmar presença' },
+            { action: 'close', title: 'Agora não' }
+        ];
+    } else {
+        actions = [
+            { action: 'open', title: 'Abrir' },
+            { action: 'close', title: 'Fechar' }
+        ];
     }
     
     const options = {
@@ -284,22 +308,12 @@ self.addEventListener('push', (event) => {
         badge: data.badge,
         tag: data.tag,
         vibrate: [200, 100, 200],
-        requireInteraction: false,
+        requireInteraction: requireInteraction,
         data: {
             url: data.url,
-            ...data.data
+            type: data.type
         },
-        actions: [
-            {
-                action: 'open',
-                title: 'Abrir',
-                icon: '/app/pwa-192x192.png'
-            },
-            {
-                action: 'close',
-                title: 'Fechar'
-            }
-        ]
+        actions: actions
     };
     
     event.waitUntil(

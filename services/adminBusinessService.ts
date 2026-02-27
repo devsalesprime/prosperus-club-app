@@ -172,7 +172,7 @@ class AdminBusinessService {
                 action_url: '/deals?tab=sales'
             });
             try {
-                await supabase.functions.invoke('send-push-notification', {
+                await supabase.functions.invoke('send-push', {
                     body: { user_id: deal.seller_id, title, message: sellerMsg, url: '/deals?tab=sales' }
                 });
             } catch { /* push best-effort */ }
@@ -185,7 +185,7 @@ class AdminBusinessService {
                 action_url: '/deals?tab=purchases'
             });
             try {
-                await supabase.functions.invoke('send-push-notification', {
+                await supabase.functions.invoke('send-push', {
                     body: { user_id: deal.buyer_id, title, message: buyerMsg, url: '/deals?tab=purchases' }
                 });
             } catch { /* push best-effort */ }
@@ -503,10 +503,10 @@ class AdminBusinessService {
 
                 // Push notifications (best-effort)
                 try {
-                    await supabase.functions.invoke('send-push-notification', {
+                    await supabase.functions.invoke('send-push', {
                         body: { user_id: referral.referrer_id, title, message: referrerMsg, url: '/referrals?tab=sent' }
                     });
-                    await supabase.functions.invoke('send-push-notification', {
+                    await supabase.functions.invoke('send-push', {
                         body: { user_id: referral.receiver_id, title, message: receiverMsg, url: '/referrals?tab=received' }
                     });
                 } catch { /* push best-effort */ }
