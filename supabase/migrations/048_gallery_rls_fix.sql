@@ -1,7 +1,9 @@
--- Fix RLS for gallery_albums
--- Problema: Policy de INSERT usa subquery em profiles que pode causar recursão RLS
+-- Migration 048: Gallery RLS Fix
+-- Origem: sql/fix_gallery_rls.sql
+-- Data: 27/02/2026
+-- Uses SECURITY DEFINER function to avoid RLS recursion on admin check
 
--- 1. Criar função auxiliar SECURITY DEFINER para verificar role
+-- 1. Helper function for admin role check (avoids RLS recursion)
 CREATE OR REPLACE FUNCTION public.user_has_admin_role(user_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -15,12 +17,12 @@ AS $$
     );
 $$;
 
--- 2. Drop policies antigas
+-- 2. Drop old policies
 DROP POLICY IF EXISTS "Allow admins to insert gallery albums" ON public.gallery_albums;
 DROP POLICY IF EXISTS "Allow admins to update gallery albums" ON public.gallery_albums;
 DROP POLICY IF EXISTS "Allow admins to delete gallery albums" ON public.gallery_albums;
 
--- 3. Recriar policies usando a função helper
+-- 3. Recreate using helper function
 CREATE POLICY "Allow admins to insert gallery albums"
 ON public.gallery_albums
 FOR INSERT
@@ -38,8 +40,3 @@ ON public.gallery_albums
 FOR DELETE
 TO authenticated
 USING (public.user_has_admin_role(auth.uid()));
-
--- 4. Verificar policies criadas
-SELECT schemaname, tablename, policyname, cmd 
-FROM pg_policies 
-WHERE tablename = 'gallery_albums';

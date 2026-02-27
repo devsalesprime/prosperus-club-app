@@ -1,5 +1,7 @@
--- RPC para incrementar views de artigo de forma atômica
--- Evita race conditions em acessos simultâneos
+-- Migration 049: Increment Article Views RPC
+-- Origem: sql/increment_article_views.sql
+-- Data: 27/02/2026
+-- Atomic view counter to avoid race conditions
 
 CREATE OR REPLACE FUNCTION public.increment_article_views(article_id UUID)
 RETURNS void
@@ -12,5 +14,4 @@ AS $$
     WHERE id = article_id;
 $$;
 
--- Conceder permissão para usuários autenticados
 GRANT EXECUTE ON FUNCTION public.increment_article_views(UUID) TO authenticated;

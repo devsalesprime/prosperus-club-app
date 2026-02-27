@@ -1,11 +1,10 @@
--- ============================================
--- RLS COMPLETO: Admin Bypass + Fix INSERT para Chat
--- ============================================
--- Execute este script COMPLETO no Supabase SQL Editor
--- ============================================
+-- Migration 047: Chat RLS Definitive
+-- Origem: sql/fix_rls_definitive.sql (consolidates 8+ iterative fix scripts)
+-- Data: 27/02/2026
+-- Complete chat RLS: conversations, participants, messages
+-- With admin bypass, block check, helper functions, soft-delete columns, grants
 
--- 1. ADICIONAR COLUNAS DE SOFT DELETE NA TABELA MESSAGES
--- (Só adiciona se não existirem)
+-- 1. Add soft-delete columns to messages
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -24,7 +23,7 @@ BEGIN
     END IF;
 END $$;
 
--- 2. CRIAR FUNÇÃO PARA VERIFICAR SE USUÁRIO É ADMIN/TEAM
+-- 2. Helper: check if user is admin or team
 CREATE OR REPLACE FUNCTION is_admin_or_team()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -39,7 +38,7 @@ AS $$
     );
 $$;
 
--- 3. CRIAR/ATUALIZAR FUNÇÃO PARA OBTER IDs DE CONVERSAS DO USUÁRIO
+-- 3. Helper: get conversation IDs for current user
 CREATE OR REPLACE FUNCTION get_my_conversation_ids()
 RETURNS SETOF uuid
 LANGUAGE sql
@@ -52,7 +51,7 @@ AS $$
     WHERE user_id = auth.uid();
 $$;
 
--- 4. LIMPAR POLICIES ANTIGAS
+-- 4. Drop ALL existing chat policies (clean slate)
 DO $$ 
 DECLARE 
     pol RECORD;
@@ -73,101 +72,80 @@ BEGIN
     END LOOP;
 END $$;
 
--- 5. GARANTIR RLS ATIVO
+-- 5. Ensure RLS enabled
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 
--- ============================================
--- POLICIES PARA conversations
--- ============================================
+-- ── CONVERSATIONS ──
 
--- SELECT: Usuário vê suas conversas OU admin vê todas
-CREATE POLICY "conv_select" ON conversations
+CREATE POLICY "conversations_select" ON conversations
 FOR SELECT USING (
     id IN (SELECT get_my_conversation_ids())
     OR is_admin_or_team()
 );
 
--- INSERT: Qualquer usuário autenticado pode criar
-CREATE POLICY "conv_insert" ON conversations
+CREATE POLICY "conversations_insert" ON conversations
 FOR INSERT TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+    COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
+);
 
--- UPDATE: Participante ou admin pode atualizar
-CREATE POLICY "conv_update" ON conversations
+CREATE POLICY "conversations_update" ON conversations
 FOR UPDATE USING (
     id IN (SELECT get_my_conversation_ids())
     OR is_admin_or_team()
 );
 
--- DELETE: Apenas admin pode deletar conversas
-CREATE POLICY "conv_delete" ON conversations
+CREATE POLICY "conversations_delete" ON conversations
 FOR DELETE USING (is_admin_or_team());
 
--- ============================================
--- POLICIES PARA conversation_participants
--- ============================================
+-- ── CONVERSATION_PARTICIPANTS ──
 
--- SELECT: Usuário vê suas participações OU admin vê todas
 CREATE POLICY "cp_select" ON conversation_participants
 FOR SELECT USING (
-    user_id = auth.uid()
+    conversation_id IN (SELECT get_my_conversation_ids())
     OR is_admin_or_team()
 );
 
--- INSERT: Usuário autenticado pode inserir
 CREATE POLICY "cp_insert" ON conversation_participants
 FOR INSERT TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+    COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
+);
 
--- DELETE: Usuário pode sair da conversa OU admin pode remover
 CREATE POLICY "cp_delete" ON conversation_participants
 FOR DELETE USING (
     user_id = auth.uid()
     OR is_admin_or_team()
 );
 
--- ============================================
--- POLICIES PARA messages
--- ============================================
+-- ── MESSAGES ──
 
--- SELECT: Participante vê mensagens OU admin vê todas
-CREATE POLICY "msg_select" ON messages
+CREATE POLICY "messages_select" ON messages
 FOR SELECT USING (
     conversation_id IN (SELECT get_my_conversation_ids())
     OR is_admin_or_team()
 );
 
--- INSERT: Participante pode enviar mensagens
-CREATE POLICY "msg_insert" ON messages
+CREATE POLICY "messages_insert" ON messages
 FOR INSERT WITH CHECK (
     conversation_id IN (SELECT get_my_conversation_ids())
     AND sender_id = auth.uid()
+    AND COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
 );
 
--- UPDATE: Participante pode atualizar (marcar lida) OU admin pode moderar
-CREATE POLICY "msg_update" ON messages
-FOR UPDATE USING (
-    conversation_id IN (SELECT get_my_conversation_ids())
-    OR is_admin_or_team()
-);
+CREATE POLICY "messages_update" ON messages
+FOR UPDATE USING (is_admin_or_team());
 
--- DELETE: Apenas admin pode hard delete
-CREATE POLICY "msg_delete" ON messages
+CREATE POLICY "messages_delete" ON messages
 FOR DELETE USING (is_admin_or_team());
 
--- ============================================
--- GRANTS
--- ============================================
+-- ── GRANTS ──
+
 GRANT EXECUTE ON FUNCTION is_admin_or_team() TO authenticated;
 GRANT EXECUTE ON FUNCTION get_my_conversation_ids() TO authenticated;
 
 GRANT ALL ON conversations TO authenticated;
 GRANT ALL ON conversation_participants TO authenticated;
 GRANT ALL ON messages TO authenticated;
-
--- ============================================
--- VERIFICAÇÃO
--- ============================================
-SELECT 'RLS policies criadas com sucesso!' as status;
