@@ -1,11 +1,12 @@
 -- Migration 050: RSVP System for Events
 -- Data: 27/02/2026
 -- Creates event_rsvps table, summary view, RLS policies, and event capacity columns
+-- NOTE: App uses club_events table (not events)
 
 -- ═══ TABLE ═══
 CREATE TABLE IF NOT EXISTS event_rsvps (
   id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  event_id     uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  event_id     uuid NOT NULL REFERENCES club_events(id) ON DELETE CASCADE,
   user_id      uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   status       text NOT NULL DEFAULT 'CONFIRMED'
                CHECK (status IN ('CONFIRMED', 'PENDING', 'CANCELLED', 'WAITLIST', 'REJECTED')),
@@ -30,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_event_rsvps_confirmed
   WHERE status = 'CONFIRMED';
 
 -- ═══ EVENT CAPACITY COLUMNS ═══
-ALTER TABLE events
+ALTER TABLE club_events
   ADD COLUMN IF NOT EXISTS max_rsvps integer,
   ADD COLUMN IF NOT EXISTS rsvp_deadline timestamptz;
 
@@ -39,7 +40,7 @@ CREATE OR REPLACE VIEW event_rsvp_summary AS
 SELECT
   e.id          AS event_id,
   e.title       AS event_title,
-  e.start_date  AS event_date,
+  e.date        AS event_date,
   e.max_rsvps,
   COUNT(r.id) FILTER (WHERE r.status = 'CONFIRMED') AS confirmed_count,
   COUNT(r.id) FILTER (WHERE r.status = 'WAITLIST')  AS waitlist_count,
@@ -48,9 +49,9 @@ SELECT
     WHEN COUNT(r.id) FILTER (WHERE r.status = 'CONFIRMED') >= e.max_rsvps THEN true
     ELSE false
   END AS is_full
-FROM events e
+FROM club_events e
 LEFT JOIN event_rsvps r ON r.event_id = e.id
-GROUP BY e.id, e.title, e.start_date, e.max_rsvps;
+GROUP BY e.id, e.title, e.date, e.max_rsvps;
 
 -- ═══ RLS ═══
 ALTER TABLE event_rsvps ENABLE ROW LEVEL SECURITY;
