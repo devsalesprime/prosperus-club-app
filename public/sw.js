@@ -12,10 +12,6 @@
 // skipWaiting()  → ativa novo SW imediatamente
 // clients.claim() → assume controle sem reload
 
-// Workbox precache manifest (injected by VitePWA injectManifest)
-// eslint-disable-next-line no-unused-vars
-const __WB_MANIFEST = self.__WB_MANIFEST || [];
-
 // ⚡ VERSÃO AUTOMÁTICA - Atualizada a cada build pelo Vite plugin
 const CACHE_VERSION = '__BUILD_TIMESTAMP__';
 const STATIC_CACHE_NAME = `prosperus-static-${CACHE_VERSION}`;
