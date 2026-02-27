@@ -33,6 +33,7 @@ import { ClubEvent, EventSession } from '../types';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import ConfirmedAttendeesSection from './ConfirmedAttendeesSection';
 
 type RsvpStatus = 'NONE' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'WAITLIST' | 'CANCELLED';
 
@@ -362,8 +363,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                         />
                     ) : (
                         <div className={`w-full h-full flex items-center justify-center ${event.category === 'PRESENTIAL'
-                                ? 'bg-gradient-to-br from-purple-900/60 to-slate-900'
-                                : 'bg-gradient-to-br from-emerald-900/60 to-slate-900'
+                            ? 'bg-gradient-to-br from-purple-900/60 to-slate-900'
+                            : 'bg-gradient-to-br from-emerald-900/60 to-slate-900'
                             }`}>
                             <CalendarDays size={48} className="text-slate-600" />
                         </div>
@@ -411,8 +412,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     <div className="px-4 pt-4 pb-3">
                         {/* Category badge */}
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-3 ${event.category === 'PRESENTIAL'
-                                ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                            : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             }`}>
                             {event.category === 'PRESENTIAL'
                                 ? <MapPin size={11} />
@@ -576,9 +577,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className={`p-2 rounded-lg ${color === 'red' ? 'bg-red-500/10 text-red-400' :
-                                                            color === 'purple' ? 'bg-purple-500/10 text-purple-400' :
-                                                                color === 'blue' ? 'bg-blue-500/10 text-blue-400' :
-                                                                    'bg-green-500/10 text-green-400'
+                                                        color === 'purple' ? 'bg-purple-500/10 text-purple-400' :
+                                                            color === 'blue' ? 'bg-blue-500/10 text-blue-400' :
+                                                                'bg-green-500/10 text-green-400'
                                                         }`}>
                                                         <Icon size={18} />
                                                     </div>
@@ -595,6 +596,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                         </>
                     )}
                 </div>
+
+                {/* ═══ CONFIRMED ATTENDEES ═══ */}
+                <ConfirmedAttendeesSection eventId={event.id} />
 
                 {/* ═══ RSVP STICKY FOOTER ═══ */}
                 {userId && (

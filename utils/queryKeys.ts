@@ -40,4 +40,7 @@ export const QUERY_KEYS = {
 
     // Banners
     banners: () => ['banners'] as const,
+
+    // RSVPs
+    rsvps: (eventId: string) => ['events', eventId, 'rsvps'] as const,
 } as const;
