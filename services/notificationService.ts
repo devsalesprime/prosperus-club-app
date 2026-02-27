@@ -270,6 +270,10 @@ class NotificationService {
             });
 
             if (error) throw error;
+
+            // Push notifications (fire-and-forget, best-effort)
+            this._sendSegmentPush(title, message, segment, actionUrl).catch(() => { });
+
             return data || 0;
         } catch (error) {
             console.error('Error creating notification:', error);
@@ -345,6 +349,12 @@ class NotificationService {
             }
 
             logger.info('✅ Individual notification sent via direct insert');
+
+            // Push notification (fire-and-forget)
+            supabase.functions.invoke('send-push', {
+                body: { user_id: userId, title, message, url: actionUrl || '/notificacoes', type: 'notification' }
+            }).catch(() => { });
+
             return 1;
         } catch (error) {
             console.error('Error creating individual notification:', error);
@@ -581,6 +591,62 @@ class NotificationService {
         if (/macintosh|mac os/i.test(ua)) return 'macos';
         if (/linux/i.test(ua)) return 'linux';
         return 'web';
+    }
+
+    /**
+     * Send push notifications for segment-based admin notifications (fire-and-forget)
+     * Queries push_subscriptions for all active users and sends push to each
+     */
+    private async _sendSegmentPush(title: string, message: string, segment: NotificationSegment, actionUrl?: string): Promise<void> {
+        try {
+            // Get all users with active push subscriptions
+            let query = supabase
+                .from('push_subscriptions')
+                .select('user_id')
+                .eq('is_active', true);
+
+            // For role-based segments, filter by role via profiles join
+            if (segment !== 'ALL') {
+                const roleMap: Record<string, string> = { MEMBERS: 'MEMBER', TEAM: 'TEAM', ADMIN: 'ADMIN' };
+                const role = roleMap[segment];
+                if (role) {
+                    const { data: profiles } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('role', role);
+
+                    if (!profiles?.length) return;
+                    const userIds = profiles.map(p => p.id);
+                    query = query.in('user_id', userIds);
+                }
+            }
+
+            const { data: subs } = await query;
+            if (!subs?.length) return;
+
+            // Get unique user_ids
+            const uniqueUserIds = [...new Set(subs.map(s => s.user_id))];
+
+            // Send push to each user (parallel, best-effort)
+            await Promise.allSettled(
+                uniqueUserIds.map(userId =>
+                    supabase.functions.invoke('send-push', {
+                        body: {
+                            user_id: userId,
+                            title,
+                            body: message,
+                            url: actionUrl || '/notificacoes',
+                            type: 'notification'
+                        }
+                    })
+                )
+            );
+
+            logger.debug(`[Push] Sent segment push to ${uniqueUserIds.length} user(s)`);
+        } catch (err) {
+            // Never block notifications for push failures
+            logger.debug('[Push] Segment push skipped');
+        }
     }
 }
 
