@@ -701,10 +701,50 @@ class ConversationService {
             if (error) throw error;
             if (!data) throw new Error('Failed to send message');
 
+            // ─── Push notification (fire-and-forget) ───
+            // Finds the other participant and sends native push
+            this._sendChatPush(conversationId, senderId, content.trim())
+                .catch(() => { }); // Never block message delivery
+
             return data;
         } catch (error) {
             console.error('Error sending message:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Send push notification for a chat message (internal, fire-and-forget)
+     */
+    private async _sendChatPush(conversationId: string, senderId: string, content: string): Promise<void> {
+        try {
+            // Find the other participant
+            const { data: participants } = await supabase
+                .from('conversation_participants')
+                .select('user_id')
+                .eq('conversation_id', conversationId)
+                .neq('user_id', senderId);
+
+            if (!participants?.length) return;
+
+            // Get sender name
+            const senderProfile = await this.getSenderProfile(senderId);
+            const senderName = senderProfile?.name || 'Nova mensagem';
+
+            // Call send-push edge function
+            await supabase.functions.invoke('send-push', {
+                body: {
+                    user_id: participants[0].user_id,
+                    title: senderName,
+                    body: content.length > 80 ? content.slice(0, 80) + '...' : content,
+                    url: `/chat?conversation=${conversationId}`,
+                    tag: `chat-${conversationId}`,
+                    type: 'message'
+                }
+            });
+        } catch (err) {
+            // Best-effort — never log sensitive content
+            logger.debug('[Push] Chat push skipped');
         }
     }
 

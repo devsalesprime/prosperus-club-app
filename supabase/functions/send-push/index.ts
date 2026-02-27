@@ -51,15 +51,14 @@ serve(async (req) => {
         let tag: string;
         let pushType: string = 'notification';
 
-        // ─── Mode 1: Direct call (user_id + title + body) ───
+        // ─── Mode 1: Direct call (user_id + title + body/message) ───
         if (payload.user_id && payload.title) {
-            const p = payload as DirectPayload;
-            recipientId = p.user_id;
-            title = p.title;
-            body = p.body;
-            url = p.url || '/';
-            tag = p.tag || 'prosperus';
-            pushType = p.type || 'notification';
+            recipientId = payload.user_id;
+            title = payload.title;
+            body = payload.body || payload.message || '';
+            url = payload.url || '/';
+            tag = payload.tag || 'prosperus';
+            pushType = payload.type || 'notification';
 
             console.log('📲 Direct push to:', recipientId, title);
 
