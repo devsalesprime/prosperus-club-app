@@ -45,13 +45,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        // Use injectManifest so our custom sw.js (with push handler) is used
-        strategies: 'injectManifest',
-        srcDir: 'public',
-        filename: 'sw.js',
+        // generateSW creates a Workbox SW, but we DON'T register it
+        // Our custom public/sw.js (with push handler) is registered by index.html
         registerType: 'autoUpdate',
         selfDestroying: false,
-        injectRegister: false, // We register SW ourselves in index.html
+        injectRegister: false, // We register our own sw.js in index.html
+        filename: 'vite-sw.js', // Different name — won't overwrite our public/sw.js
         includeAssets: [
           'default-avatar.png',
           'default-avatar.svg',
