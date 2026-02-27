@@ -55,14 +55,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 }
             }
         } catch (error: any) {
+            if (!mountedRef.current) return;
+
+            // AbortError happens during Supabase token refresh — silently use cache
+            const isAbortError = error?.message?.includes('AbortError') ||
+                error?.message?.includes('signal is aborted') ||
+                error?.name === 'AbortError';
+            if (isAbortError) {
+                logger.debug('🔄 AuthContext: Request aborted (token refresh) — using cached profile');
+                if (profileCacheRef.current) {
+                    setUserProfile(profileCacheRef.current);
+                }
+                return;
+            }
+
             console.error('❌ AuthContext: Error fetching profile:', {
                 name: error?.name,
                 message: error?.message,
                 code: error?.code,
                 userId
             });
-
-            if (!mountedRef.current) return;
 
             // If we already have a cached profile, keep using it
             if (profileCacheRef.current) {
