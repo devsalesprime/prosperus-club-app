@@ -204,8 +204,8 @@ describe('profileService', () => {
             expect(profileService.validateUrl('example.com')).toBe(false);
         });
 
-        it('rejeita string vazia', () => {
-            expect(profileService.validateUrl('')).toBe(false);
+        it('aceita string vazia (campo opcional)', () => {
+            expect(profileService.validateUrl('')).toBe(true);
         });
     });
 
