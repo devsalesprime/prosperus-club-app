@@ -45,9 +45,13 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       VitePWA({
-        // VitePWA generates manifest.json — we use our own custom sw.js
+        // Use injectManifest so our custom sw.js (with push handler) is used
+        strategies: 'injectManifest',
+        srcDir: 'public',
+        filename: 'sw.js',
         registerType: 'autoUpdate',
         selfDestroying: false,
+        injectRegister: false, // We register SW ourselves in index.html
         includeAssets: [
           'default-avatar.png',
           'default-avatar.svg',
