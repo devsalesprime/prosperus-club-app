@@ -126,7 +126,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             image: profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
             description: profile.bio || '',
             socials: profile.socials || {},
-            tags: profile.tags || []
+            tags: profile.tags || [],
+            what_i_sell: profile.what_i_sell,
+            what_i_need: profile.what_i_need,
+            partnership_interests: profile.partnership_interests,
+            pitch_video_url: profile.pitch_video_url,
+            exclusiveBenefit: profile.exclusive_benefit || undefined,
         };
     };
 
@@ -444,11 +449,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             socials: member.socials || {},
             tags: member.tags || [],
             has_completed_onboarding: hasRequiredFields,
-            exclusive_benefit: (member as any).exclusive_benefit || (member as any).exclusiveBenefit || undefined,
-            pitch_video_url: (member as any).pitch_video_url || undefined,
-            what_i_sell: (member as any).what_i_sell || undefined,
-            what_i_need: (member as any).what_i_need || undefined,
-            partnership_interests: (member as any).partnership_interests || undefined
+            exclusive_benefit: member.exclusiveBenefit ? { ...member.exclusiveBenefit, active: member.exclusiveBenefit.active ?? false } : undefined,
+            pitch_video_url: member.pitch_video_url || undefined,
+            what_i_sell: member.what_i_sell || undefined,
+            what_i_need: member.what_i_need || undefined,
+            partnership_interests: member.partnership_interests || undefined
         };
     };
 

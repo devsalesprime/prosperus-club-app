@@ -56,12 +56,20 @@ export interface Member {
   tags: string[];
   isFeatured?: boolean;
 
+  // Strategic Profile Fields (PRD v2.1)
+  what_i_sell?: string;
+  what_i_need?: string;
+  partnership_interests?: string[];
+  pitch_video_url?: string;
+
   // PRD v2.0 - Gap 5: Benefício Exclusivo
   exclusiveBenefit?: {
     title: string;
     description: string; // máx 200 caracteres
     ctaUrl?: string;
     ctaLabel?: string;
+    code?: string;
+    active?: boolean;
   };
 }
 
