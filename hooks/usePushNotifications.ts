@@ -84,7 +84,7 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
     }, []);
 
     // ========================================
-    // Registrar Service Worker + Auto-Update
+    // Registrar Service Worker + Auto-Subscribe
     // ========================================
     useEffect(() => {
         const registerServiceWorker = async () => {
@@ -104,15 +104,32 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
                 logger.debug('[Push] Service Worker registered:', registration.scope);
                 setIsRegistered(true);
 
-                // Verifica se já existe uma subscription
-                const existingSubscription = await registration.pushManager.getSubscription();
-                if (existingSubscription) {
-                    logger.debug('[Push] Existing subscription found');
-                }
+                // ========================================
+                // AUTO-SUBSCRIBE: if permission is already granted,
+                // ensure subscription exists in browser AND database
+                // ========================================
+                if (Notification.permission === 'granted' && userId && VAPID_PUBLIC_KEY) {
+                    let subscription = await registration.pushManager.getSubscription();
 
-                // ========================================
-                // AUTO-UPDATE: verifica a cada 60s
-                // ========================================
+                    if (!subscription) {
+                        // Permission granted but no browser subscription — create one
+                        try {
+                            subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                            });
+                            logger.info('[Push] Auto-created browser subscription');
+                        } catch (subErr) {
+                            logger.warn('[Push] Auto-subscribe failed:', subErr);
+                        }
+                    }
+
+                    // Save/refresh subscription in database
+                    if (subscription) {
+                        logger.debug('[Push] Auto-saving subscription to database');
+                        await savePushSubscription(userId, subscription);
+                    }
+                }
                 const updateInterval = setInterval(() => {
                     registration.update().catch(() => {
                         // Network error — silently ignore
