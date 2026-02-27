@@ -80,16 +80,12 @@ ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 -- ── CONVERSATIONS ──
 
 CREATE POLICY "conversations_select" ON conversations
-FOR SELECT USING (
-    id IN (SELECT get_my_conversation_ids())
-    OR is_admin_or_team()
-);
+FOR SELECT TO authenticated
+USING (true);
 
 CREATE POLICY "conversations_insert" ON conversations
 FOR INSERT TO authenticated
-WITH CHECK (
-    COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
-);
+WITH CHECK (NOT am_i_blocked());
 
 CREATE POLICY "conversations_update" ON conversations
 FOR UPDATE USING (
@@ -110,9 +106,7 @@ FOR SELECT USING (
 
 CREATE POLICY "cp_insert" ON conversation_participants
 FOR INSERT TO authenticated
-WITH CHECK (
-    COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
-);
+WITH CHECK (NOT am_i_blocked());
 
 CREATE POLICY "cp_delete" ON conversation_participants
 FOR DELETE USING (
@@ -132,7 +126,7 @@ CREATE POLICY "messages_insert" ON messages
 FOR INSERT WITH CHECK (
     conversation_id IN (SELECT get_my_conversation_ids())
     AND sender_id = auth.uid()
-    AND COALESCE((SELECT is_blocked FROM profiles WHERE id = auth.uid()), FALSE) = FALSE
+    AND NOT am_i_blocked()
 );
 
 CREATE POLICY "messages_update" ON messages
