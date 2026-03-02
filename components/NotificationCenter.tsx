@@ -8,6 +8,18 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '../utils/logger';
 
+/** Clear ALL OS-level push notifications via Service Worker API */
+async function clearAllPushNotifications(): Promise<void> {
+    try {
+        if (!('serviceWorker' in navigator)) return;
+        const registration = await navigator.serviceWorker.ready;
+        const notifications = await registration.getNotifications();
+        notifications.forEach(n => n.close());
+    } catch {
+        // Best-effort
+    }
+}
+
 interface NotificationCenterProps {
     currentUserId: string;
     onNavigate?: (url: string) => void;
@@ -59,6 +71,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             // Refresh data every time dropdown opens
             loadNotifications();
             loadUnreadCount();
+            // Clear OS-level push notifications for admin/notification type
+            clearAllPushNotifications();
         }
 
         return () => {
@@ -116,6 +130,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             await notificationService.markAllAsRead(currentUserId);
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
+            clearAllPushNotifications();
         } catch (error) {
             console.error('Error marking all as read:', error);
         }

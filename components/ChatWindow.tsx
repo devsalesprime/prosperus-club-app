@@ -11,6 +11,21 @@ import { ptBR } from 'date-fns/locale';
 import { useUnreadCountContext } from '../contexts/UnreadCountContext';
 import { ImageLightbox } from './ImageLightbox';
 
+/**
+ * Clear OS-level push notifications for a specific conversation tag.
+ * Uses SW getNotifications() to find and close matching notifications.
+ */
+async function clearPushNotifications(tag?: string): Promise<void> {
+    try {
+        if (!('serviceWorker' in navigator)) return;
+        const registration = await navigator.serviceWorker.ready;
+        const notifications = await registration.getNotifications(tag ? { tag } : undefined);
+        notifications.forEach(n => n.close());
+    } catch {
+        // Best-effort — never block UI
+    }
+}
+
 interface ChatWindowProps {
     conversationId: string;
     currentUserId: string;
@@ -87,7 +102,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 // 2. Mark as read
                 await conversationService.markMessagesAsRead(conversationId, currentUserId);
 
-                // 3. Refresh badge count immediately
+                // 3. Clear OS-level push notifications for this chat
+                await clearPushNotifications(`chat-${conversationId}`);
+
+                // 4. Refresh badge count immediately
                 refreshUnreadCount();
 
                 // 4. Subscribe to new messages (Realtime)
@@ -118,6 +136,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         // Mark as read if from other user
                         if (newMsg.sender_id !== currentUserId) {
                             conversationService.markMessagesAsRead(conversationId, currentUserId);
+                            clearPushNotifications(`chat-${conversationId}`);
                         }
                     }
                 );
