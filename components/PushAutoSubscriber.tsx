@@ -14,14 +14,14 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
- * Componente invisível que garante subscription salva no banco.
- * Montado SEMPRE no App.tsx — independente do PushPermissionPrompt.
+ * Componente invisível — monta SEMPRE no App.tsx.
  * 
- * Fluxo:
- * 1. Verifica se browser suporta + permissão === 'granted'
- * 2. Obtém ou cria subscription no browser via PushManager
- * 3. Upsert na tabela push_subscriptions
- * 4. Roda UMA VEZ por sessão (useRef guard)
+ * Responsabilidades (nesta ordem):
+ * 1. REGISTRA o Service Worker (se ainda não registrado)
+ * 2. Se permissão === 'granted', cria/obtém subscription
+ * 3. Salva subscription no banco (upsert por endpoint)
+ * 
+ * Roda UMA VEZ por sessão (useRef guard).
  */
 export function PushAutoSubscriber({ userId }: { userId: string }) {
     const hasRun = useRef(false);
@@ -30,25 +30,52 @@ export function PushAutoSubscriber({ userId }: { userId: string }) {
         if (hasRun.current) return;
         if (!userId || !VAPID_PUBLIC_KEY) return;
         if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
-        if (Notification.permission !== 'granted') return;
 
         hasRun.current = true;
 
         (async () => {
             try {
-                const registration = await navigator.serviceWorker.ready;
+                // ═══ STEP 1: Register SW (always — regardless of permission) ═══
+                let registration = await navigator.serviceWorker.getRegistration('/app/');
+                if (!registration) {
+                    registration = await navigator.serviceWorker.register('/app/sw.js', {
+                        scope: '/app/'
+                    });
+                    logger.info('[PushAuto] SW registered');
+                } else {
+                    logger.debug('[PushAuto] SW already registered');
+                }
+
+                // Wait for SW to be active
+                if (registration.installing || registration.waiting) {
+                    await new Promise<void>((resolve) => {
+                        const sw = registration!.installing || registration!.waiting;
+                        if (!sw) { resolve(); return; }
+                        sw.addEventListener('statechange', () => {
+                            if (sw.state === 'activated') resolve();
+                        });
+                        // Timeout after 5s
+                        setTimeout(resolve, 5000);
+                    });
+                }
+
+                // ═══ STEP 2: If permission granted, subscribe + save ═══
+                if (Notification.permission !== 'granted') {
+                    logger.debug('[PushAuto] Permission not granted yet, SW registered only');
+                    return;
+                }
 
                 // Get or create browser subscription
                 let subscription = await registration.pushManager.getSubscription();
                 if (!subscription) {
                     subscription = await registration.pushManager.subscribe({
                         userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource
                     });
                     logger.info('[PushAuto] Created browser subscription');
                 }
 
-                // Upsert to database
+                // ═══ STEP 3: Upsert to database ═══
                 const json = subscription.toJSON();
                 const { error } = await supabase
                     .from('push_subscriptions')
@@ -63,7 +90,8 @@ export function PushAutoSubscriber({ userId }: { userId: string }) {
                             : /iphone|ipad/i.test(navigator.userAgent) ? 'ios'
                                 : 'desktop',
                         is_active: true,
-                        error_count: 0
+                        error_count: 0,
+                        updated_at: new Date().toISOString()
                     }, { onConflict: 'endpoint' });
 
                 if (error) {
@@ -72,10 +100,11 @@ export function PushAutoSubscriber({ userId }: { userId: string }) {
                     logger.info('[PushAuto] ✅ Subscription saved to database');
                 }
             } catch (err) {
-                console.warn('[PushAuto] Skipped:', err);
+                console.warn('[PushAuto] Error:', err);
             }
         })();
     }, [userId]);
 
     return null; // Invisible
 }
+
