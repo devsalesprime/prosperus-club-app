@@ -8,16 +8,16 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '../utils/logger';
 
-/** Clear ALL OS-level push notifications via Service Worker API */
-async function clearAllPushNotifications(): Promise<void> {
-    try {
-        if (!('serviceWorker' in navigator)) return;
-        const registration = await navigator.serviceWorker.ready;
-        const notifications = await registration.getNotifications();
-        notifications.forEach(n => n.close());
-    } catch {
-        // Best-effort
-    }
+/** Clear ALL OS-level push notifications (fire-and-forget, 2s timeout) */
+function clearAllPushNotifications(): void {
+    if (!('serviceWorker' in navigator)) return;
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject('timeout'), 2000));
+    Promise.race([
+        navigator.serviceWorker.ready.then(reg => reg.getNotifications()),
+        timeout
+    ])
+        .then((notifications: Notification[]) => notifications.forEach(n => n.close()))
+        .catch(() => { });
 }
 
 interface NotificationCenterProps {

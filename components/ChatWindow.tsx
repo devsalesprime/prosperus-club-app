@@ -13,17 +13,20 @@ import { ImageLightbox } from './ImageLightbox';
 
 /**
  * Clear OS-level push notifications for a specific conversation tag.
- * Uses SW getNotifications() to find and close matching notifications.
+ * MUST be fire-and-forget — never await in main flow.
+ * Has 2s timeout to prevent hanging if SW isn't ready.
  */
-async function clearPushNotifications(tag?: string): Promise<void> {
-    try {
-        if (!('serviceWorker' in navigator)) return;
-        const registration = await navigator.serviceWorker.ready;
-        const notifications = await registration.getNotifications(tag ? { tag } : undefined);
-        notifications.forEach(n => n.close());
-    } catch {
-        // Best-effort — never block UI
-    }
+function clearPushNotifications(tag?: string): void {
+    if (!('serviceWorker' in navigator)) return;
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject('timeout'), 2000));
+    Promise.race([
+        navigator.serviceWorker.ready.then(reg =>
+            reg.getNotifications(tag ? { tag } : undefined)
+        ),
+        timeout
+    ])
+        .then((notifications: Notification[]) => notifications.forEach(n => n.close()))
+        .catch(() => { }); // Silent — never block UI
 }
 
 interface ChatWindowProps {
@@ -102,11 +105,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 // 2. Mark as read
                 await conversationService.markMessagesAsRead(conversationId, currentUserId);
 
-                // 3. Clear OS-level push notifications for this chat
-                await clearPushNotifications(`chat-${conversationId}`);
-
-                // 4. Refresh badge count immediately
+                // 3. Refresh badge count immediately
                 refreshUnreadCount();
+
+                // 4. Clear OS push (fire-and-forget — never await)
+                clearPushNotifications(`chat-${conversationId}`);
 
                 // 4. Subscribe to new messages (Realtime)
                 subscription = conversationService.subscribeToConversation(
