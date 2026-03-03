@@ -10,6 +10,7 @@ import {
 import { Member, ViewState } from '../types';
 import { useApp } from '../contexts/AppContext';
 import { BenefitStatsCard } from './BenefitStatsCard';
+import { PushSettingsButton } from './PushSettingsButton';
 
 interface ProfileSectionProps {
     currentUser: Member;
@@ -135,10 +136,7 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
             {/* Settings & Logout */}
             <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 space-y-4">
                 <h3 className="text-sm font-bold text-slate-400 uppercase mb-4">Configurações</h3>
-                <button className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-slate-800 transition">
-                    <span className="text-slate-300">Notificações</span>
-                    <div className="w-10 h-6 bg-yellow-600 rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div></div>
-                </button>
+                <PushSettingsButton userId={currentUser.id} />
 
                 <div className="border-t border-slate-700 my-4"></div>
 
