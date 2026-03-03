@@ -21,7 +21,7 @@ interface NotificationParams {
 
 async function dispatchNotification(params: NotificationParams): Promise<void> {
     // 1. Save to DB (in-app notification center)
-    const { error } = await supabase.from('notifications').insert({
+    const { error } = await supabase.from('user_notifications').insert({
         user_id: params.userId,
         type: params.type,
         title: params.title,

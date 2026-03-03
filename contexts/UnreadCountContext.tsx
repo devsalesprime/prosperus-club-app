@@ -29,7 +29,7 @@ export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (!userProfile?.id) return;
         try {
             const { count } = await supabase
-                .from('notifications')
+                .from('user_notifications')
                 .select('*', { count: 'exact', head: true })
                 .eq('user_id', userProfile.id)
                 .eq('is_read', false);
@@ -46,7 +46,7 @@ export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ childre
         if (!userProfile?.id) return;
         try {
             await supabase
-                .from('notifications')
+                .from('user_notifications')
                 .update({ is_read: true })
                 .eq('user_id', userProfile.id)
                 .eq('is_read', false);
@@ -69,13 +69,13 @@ export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ childre
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
-                table: 'notifications',
+                table: 'user_notifications',
                 filter: `user_id=eq.${userProfile.id}`,
             }, () => refreshUnreadCount())
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',
-                table: 'notifications',
+                table: 'user_notifications',
                 filter: `user_id=eq.${userProfile.id}`,
             }, () => refreshUnreadCount())
             .subscribe();

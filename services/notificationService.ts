@@ -55,7 +55,7 @@ class NotificationService {
 
             const { data, error, count } = await supabase
                 .from('user_notifications')
-                .select('id, user_id, title, message, action_url, is_read, created_at', { count: 'exact' })
+                .select('id, user_id, type, title, message, action_url, is_read, created_at', { count: 'exact' })
                 .eq('user_id', userId)
                 .neq('title', '[Excluída]')
                 .order('created_at', { ascending: false })
