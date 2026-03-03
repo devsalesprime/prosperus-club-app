@@ -1,196 +1,126 @@
 // ============================================
 // Edge Function: send-push
 // Envia push notifications para dispositivos registrados
-// Suporta: DB trigger (type+record) e chamada direta (user_id+title+body)
+// Suporta: chamada direta (user_id+title+body)
 // Tabela: push_subscriptions (migration 025)
+// FIX: esm.sh import (npm: causa 403 no Deno runtime)
 // ============================================
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import webpush from 'npm:web-push@3.6.7';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import webpush from 'https://esm.sh/web-push@3.6.7'
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? '';
-const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') ?? '';
-const vapidMailto = Deno.env.get('VAPID_MAILTO') ?? 'mailto:contato@prosperusclub.com';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY')!
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
+const VAPID_MAILTO = Deno.env.get('VAPID_MAILTO')
+    ?? 'mailto:contato@prosperusclub.com.br'
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-webpush.setVapidDetails(vapidMailto, vapidPublicKey, vapidPrivateKey);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+webpush.setVapidDetails(VAPID_MAILTO, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
     'Content-Type': 'application/json',
-};
-
-interface DirectPayload {
-    user_id: string;
-    title: string;
-    body: string;
-    url?: string;
-    tag?: string;
-    type?: 'message' | 'event' | 'notification';
-    icon?: string;
 }
 
 serve(async (req) => {
-    // CORS preflight
     if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders });
+        return new Response('ok', { headers: corsHeaders })
     }
 
     try {
-        const payload = await req.json();
+        const body = await req.json()
 
-        let recipientId: string;
-        let title: string;
-        let body: string;
-        let url: string;
-        let tag: string;
-        let pushType: string = 'notification';
-
-        // ─── Mode 1: Direct call (user_id + title + body/message) ───
-        if (payload.user_id && payload.title) {
-            recipientId = payload.user_id;
-            title = payload.title;
-            body = payload.body || payload.message || '';
-            url = payload.url || '/';
-            tag = payload.tag || 'prosperus';
-            pushType = payload.type || 'notification';
-
-            console.log('📲 Direct push to:', recipientId, title);
-
-            // ─── Mode 2: DB trigger (type + record) ───
-        } else if (payload.type === 'message' && payload.record) {
-            const record = payload.record;
-
-            // Buscar destinatário da conversa
-            const { data: participants } = await supabase
-                .from('conversation_participants')
-                .select('user_id')
-                .eq('conversation_id', record.conversation_id)
-                .neq('user_id', record.sender_id);
-
-            if (!participants?.length) {
-                return new Response(JSON.stringify({ sent: 0, reason: 'no_recipient' }), {
-                    status: 200, headers: corsHeaders
-                });
-            }
-
-            // Buscar nome do remetente
-            const { data: sender } = await supabase
-                .from('profiles')
-                .select('name')
-                .eq('id', record.sender_id)
-                .single();
-
-            recipientId = participants[0].user_id;
-            title = sender?.name || 'Nova mensagem';
-            body = (record.content || '').substring(0, 100);
-            url = `/chat?conversation=${record.conversation_id}`;
-            tag = `chat-${record.conversation_id}`;
-            pushType = 'message';
-
-        } else if (payload.type === 'notification' && payload.record) {
-            const record = payload.record;
-
-            const { data: notification } = await supabase
-                .from('notifications')
-                .select('title, message')
-                .eq('id', record.notification_id || record.id)
-                .single();
-
-            recipientId = record.user_id;
-            title = notification?.title || 'Nova Notificação';
-            body = notification?.message || '';
-            url = '/notificacoes';
-            tag = `notif-${record.notification_id || record.id}`;
-
-        } else {
-            return new Response(JSON.stringify({ error: 'Invalid payload' }), {
-                status: 400, headers: corsHeaders
-            });
+        // ─── Validar payload ───────────────────────────────────────
+        if (!body.user_id || !body.title) {
+            return new Response(
+                JSON.stringify({ error: 'user_id e title obrigatórios' }),
+                { status: 400, headers: corsHeaders }
+            )
         }
 
-        // ─── Buscar subscriptions ativas em push_subscriptions ───
+        const recipientId = body.user_id
+        const title = body.title
+        const message = body.body || body.message || ''
+        const url = body.url || '/'
+        const tag = body.tag || 'prosperus'
+        const pushType = body.type || 'notification'
+
+        console.log(`📲 Push → ${recipientId} | ${title}`)
+
+        // ─── Buscar subscriptions ativas ───────────────────────────
         const { data: subs, error: subsError } = await supabase
             .from('push_subscriptions')
-            .select('id, endpoint, p256dh, auth, user_agent')
+            .select('id, endpoint, p256dh, auth')
             .eq('user_id', recipientId)
-            .eq('is_active', true);
+            .eq('is_active', true)
 
         if (subsError || !subs?.length) {
-            console.log('⚠️ No active subscriptions for:', recipientId);
-            return new Response(JSON.stringify({ sent: 0, reason: 'no_subscriptions' }), {
-                status: 200, headers: corsHeaders
-            });
+            console.log('⚠️ Sem subscriptions para:', recipientId)
+            return new Response(
+                JSON.stringify({ sent: 0, reason: 'no_subscriptions' }),
+                { headers: corsHeaders }
+            )
         }
 
-        console.log(`📲 Sending to ${subs.length} device(s)`);
-
-        const pushPayload = JSON.stringify({
+        // ─── Preparar payload da notificação ───────────────────────
+        const payload = JSON.stringify({
             title,
-            body,
+            body: message,
             url,
             tag,
             type: pushType,
             icon: '/app/default-avatar.png',
             badge: '/app/default-avatar.png',
-        });
+        })
 
-        // ─── Enviar para todos os dispositivos ───
-        const results = await Promise.allSettled(
-            subs.map(async (sub) => {
-                try {
-                    await webpush.sendNotification(
-                        {
-                            endpoint: sub.endpoint,
-                            keys: { p256dh: sub.p256dh, auth: sub.auth },
-                        },
-                        pushPayload
-                    );
+        // ─── Enviar para todos os dispositivos ─────────────────────
+        let sent = 0, failed = 0
+        const errors: string[] = []
 
-                    // Atualizar last_used_at
+        for (const sub of subs) {
+            try {
+                await webpush.sendNotification(
+                    { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                    payload
+                )
+                sent++
+                console.log('✅ Enviado:', sub.id)
+            } catch (err: any) {
+                failed++
+                const msg = `${sub.id}: HTTP ${err.statusCode} ${err.message}`
+                console.error('❌', msg)
+                errors.push(msg)
+
+                // 410/404 = subscription expirada → desativar
+                if (err.statusCode === 410 || err.statusCode === 404) {
                     await supabase
                         .from('push_subscriptions')
-                        .update({ last_used_at: new Date().toISOString() })
-                        .eq('id', sub.id);
-
-                    console.log('✅ Push sent:', sub.id);
-                    return { success: true, id: sub.id };
-
-                } catch (err: any) {
-                    console.error('❌ Push failed:', sub.id, err.statusCode, err.message);
-
-                    // 410 Gone ou 404 = subscription expirada → desativar
-                    if (err.statusCode === 410 || err.statusCode === 404) {
-                        await supabase
-                            .from('push_subscriptions')
-                            .update({ is_active: false })
-                            .eq('id', sub.id);
-                        console.log('⚠️ Expired subscription deactivated:', sub.id);
-                    }
-
-                    return { success: false, id: sub.id, error: err.message };
+                        .update({ is_active: false })
+                        .eq('id', sub.id)
+                    console.log('⚠️ Subscription desativada:', sub.id)
                 }
-            })
-        );
+            }
+        }
 
-        const sent = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length;
-        const failed = results.length - sent;
+        console.log(`📊 ${sent} sent, ${failed} failed`)
 
-        console.log(`📊 Push batch: ${sent} sent, ${failed} failed`);
+        return new Response(
+            JSON.stringify({
+                sent, failed, total: subs.length,
+                errors: errors.length ? errors : undefined,
+            }),
+            { headers: corsHeaders }
+        )
 
-        return new Response(JSON.stringify({ sent, failed, total: subs.length }), {
-            status: 200, headers: corsHeaders
-        });
-
-    } catch (error: any) {
-        console.error('❌ send-push error:', error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500, headers: corsHeaders
-        });
+    } catch (err: any) {
+        console.error('❌ send-push fatal:', err.message)
+        return new Response(
+            JSON.stringify({ error: err.message }),
+            { status: 500, headers: corsHeaders }
+        )
     }
-});
+})
