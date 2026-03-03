@@ -27,6 +27,8 @@ interface SwipeableItemProps {
     autoTriggerAt?: number;        // % da largura (default 0.5)
     disabled?: boolean;
     className?: string;
+    /** Solid background for the sliding panel (must be opaque to cover actions) */
+    contentBg?: string;            // CSS color, default '#0f172a'
     /** ID for managing open state externally */
     itemId?: string;
     /** Currently open item ID — close this if different */
@@ -43,6 +45,7 @@ export function SwipeableItem({
     autoTriggerAt = 0.5,
     disabled = false,
     className = '',
+    contentBg = '#0f172a',
     itemId,
     openItemId,
     onOpen,
@@ -252,8 +255,9 @@ export function SwipeableItem({
 
             {/* ── Main content ── */}
             <div
-                className="relative z-10 bg-inherit"
+                className="relative z-10"
                 style={{
+                    background: contentBg,
                     transform: `translateX(${translateX}px)`,
                     transition: transitionStyle,
                 }}
