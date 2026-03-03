@@ -1,215 +1,270 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Push Diagnostic</title>
-<style>
-  body { font-family: monospace; background: #0f172a; color: #e2e8f0; padding: 16px; font-size: 14px; }
-  h1 { color: #fbbf24; font-size: 18px; }
-  .ok { color: #22c55e; }
-  .fail { color: #ef4444; }
-  .warn { color: #f59e0b; }
-  .info { color: #60a5fa; }
-  pre { background: #1e293b; padding: 8px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
-  button { background: #fbbf24; color: #0f172a; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin: 8px 4px; }
-  button:active { opacity: 0.7; }
-  #log { margin-top: 16px; }
-  .step { margin: 8px 0; padding: 8px; border-left: 3px solid #334155; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Push Diagnostic</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      font-size: 14px;
+    }
+
+    h1 {
+      color: #fbbf24;
+      font-size: 18px;
+    }
+
+    .ok {
+      color: #22c55e;
+    }
+
+    .fail {
+      color: #ef4444;
+    }
+
+    .warn {
+      color: #f59e0b;
+    }
+
+    .info {
+      color: #60a5fa;
+    }
+
+    pre {
+      background: #1e293b;
+      padding: 8px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    button {
+      background: #fbbf24;
+      color: #0f172a;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 8px 4px;
+    }
+
+    button:active {
+      opacity: 0.7;
+    }
+
+    #log {
+      margin-top: 16px;
+    }
+
+    .step {
+      margin: 8px 0;
+      padding: 8px;
+      border-left: 3px solid #334155;
+    }
+  </style>
 </head>
+
 <body>
-<h1>🔔 Push Notification Diagnostic</h1>
-<p class="info">User Agent: <span id="ua"></span></p>
-<p>Platform: <span id="plat"></span></p>
-<p>PWA Standalone: <span id="standalone"></span></p>
-<hr>
-<button onclick="runDiagnostic()">▶ Run Full Diagnostic</button>
-<button onclick="requestPerm()">🔔 Request Permission</button>
-<button onclick="testSubscribe()">📲 Force Subscribe + Save</button>
-<div id="log"></div>
+  <h1>🔔 Push Notification Diagnostic</h1>
+  <p class="info">User Agent: <span id="ua"></span></p>
+  <p>Platform: <span id="plat"></span></p>
+  <p>PWA Standalone: <span id="standalone"></span></p>
+  <hr>
+  <button onclick="runDiagnostic()">▶ Run Full Diagnostic</button>
+  <button onclick="requestPerm()">🔔 Request Permission</button>
+  <button onclick="testSubscribe()">📲 Force Subscribe + Save</button>
+  <div id="log"></div>
 
-<script>
-const VAPID = 'BOfUWkThTa7E83OLcSPJ84fKb7ijZQg21om6v7pEi6n0rxvz34F0a_amdD9GXRyUFTw1MRUnsG3dVgNteoLW9EE';
-const SUPABASE_URL = 'https://ptvsctwwonvirdwprugv.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0dnNjdHd3b252aXJkd3BydWd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNTc3OTMsImV4cCI6MjA4MDkzMzc5M30.dGTkKZ0P4GOlxJn6i0DkFMlgHvLLMBuuG-LI7eMWhWU';
-const USER_ID = 'b636a36b-4fbc-48c8-9357-8c9f8df16b08';
+  <script>
+    const VAPID = 'BOfUWkThTa7E83OLcSPJ84fKb7ijZQg21om6v7pEi6n0rxvz34F0a_amdD9GXRyUFTw1MRUnsG3dVgNteoLW9EE';
+    const SUPABASE_URL = 'https://ptvsctwwonvirdwprugv.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0dnNjdHd3b252aXJkd3BydWd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNTc3OTMsImV4cCI6MjA4MDkzMzc5M30.cLcOdaD7WdC4_WyTQwP5eTDO52YJ2LyZZUgVcRj5AwE';
+    const USER_ID = 'b636a36b-4fbc-48c8-9357-8c9f8df16b08';
 
-document.getElementById('ua').textContent = navigator.userAgent;
-document.getElementById('plat').textContent = 
-  /android/i.test(navigator.userAgent) ? '📱 Android' :
-  /iphone|ipad/i.test(navigator.userAgent) ? '📱 iOS' : '💻 Desktop';
-document.getElementById('standalone').textContent = 
-  window.matchMedia('(display-mode: standalone)').matches ? '✅ Yes' : '❌ No (browser)';
+    document.getElementById('ua').textContent = navigator.userAgent;
+    document.getElementById('plat').textContent =
+      /android/i.test(navigator.userAgent) ? '📱 Android' :
+        /iphone|ipad/i.test(navigator.userAgent) ? '📱 iOS' : '💻 Desktop';
+    document.getElementById('standalone').textContent =
+      window.matchMedia('(display-mode: standalone)').matches ? '✅ Yes' : '❌ No (browser)';
 
-function log(msg, cls = '') {
-  const d = document.getElementById('log');
-  const div = document.createElement('div');
-  div.className = 'step ' + cls;
-  div.innerHTML = msg;
-  d.appendChild(div);
-  window.scrollTo(0, document.body.scrollHeight);
-}
+    function log(msg, cls = '') {
+      const d = document.getElementById('log');
+      const div = document.createElement('div');
+      div.className = 'step ' + cls;
+      div.innerHTML = msg;
+      d.appendChild(div);
+      window.scrollTo(0, document.body.scrollHeight);
+    }
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = window.atob(base64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-  return arr;
-}
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = window.atob(base64);
+      const arr = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+      return arr;
+    }
 
-async function runDiagnostic() {
-  document.getElementById('log').innerHTML = '';
-  
-  // 1. APIs
-  log('1️⃣ <b>Checking Browser APIs...</b>');
-  const hasSW = 'serviceWorker' in navigator;
-  const hasPush = 'PushManager' in window;
-  const hasNotif = 'Notification' in window;
-  log(`serviceWorker: ${hasSW ? '✅' : '❌'}`, hasSW ? 'ok' : 'fail');
-  log(`PushManager: ${hasPush ? '✅' : '❌'}`, hasPush ? 'ok' : 'fail');
-  log(`Notification: ${hasNotif ? '✅' : '❌'}`, hasNotif ? 'ok' : 'fail');
-  
-  if (!hasSW || !hasPush || !hasNotif) {
-    log('❌ <b>STOP: Browser missing required APIs</b>', 'fail');
-    return;
-  }
+    async function runDiagnostic() {
+      document.getElementById('log').innerHTML = '';
 
-  // 2. Permission
-  log('2️⃣ <b>Notification Permission:</b> ' + Notification.permission,
-    Notification.permission === 'granted' ? 'ok' : 
-    Notification.permission === 'denied' ? 'fail' : 'warn');
-  
-  // 3. SW Registration
-  log('3️⃣ <b>Checking Service Worker...</b>');
-  try {
-    const reg = await navigator.serviceWorker.getRegistration('/app/');
-    if (reg) {
-      log(`✅ SW registered, scope: ${reg.scope}`, 'ok');
-      log(`SW state: installing=${!!reg.installing} waiting=${!!reg.waiting} active=${!!reg.active}`);
-    } else {
-      log('⚠️ No SW found at /app/ scope', 'warn');
-      log('Trying to register...');
+      // 1. APIs
+      log('1️⃣ <b>Checking Browser APIs...</b>');
+      const hasSW = 'serviceWorker' in navigator;
+      const hasPush = 'PushManager' in window;
+      const hasNotif = 'Notification' in window;
+      log(`serviceWorker: ${hasSW ? '✅' : '❌'}`, hasSW ? 'ok' : 'fail');
+      log(`PushManager: ${hasPush ? '✅' : '❌'}`, hasPush ? 'ok' : 'fail');
+      log(`Notification: ${hasNotif ? '✅' : '❌'}`, hasNotif ? 'ok' : 'fail');
+
+      if (!hasSW || !hasPush || !hasNotif) {
+        log('❌ <b>STOP: Browser missing required APIs</b>', 'fail');
+        return;
+      }
+
+      // 2. Permission
+      log('2️⃣ <b>Notification Permission:</b> ' + Notification.permission,
+        Notification.permission === 'granted' ? 'ok' :
+          Notification.permission === 'denied' ? 'fail' : 'warn');
+
+      // 3. SW Registration
+      log('3️⃣ <b>Checking Service Worker...</b>');
       try {
-        const newReg = await navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' });
-        log('✅ SW registered successfully!', 'ok');
+        const reg = await navigator.serviceWorker.getRegistration('/app/');
+        if (reg) {
+          log(`✅ SW registered, scope: ${reg.scope}`, 'ok');
+          log(`SW state: installing=${!!reg.installing} waiting=${!!reg.waiting} active=${!!reg.active}`);
+        } else {
+          log('⚠️ No SW found at /app/ scope', 'warn');
+          log('Trying to register...');
+          try {
+            const newReg = await navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' });
+            log('✅ SW registered successfully!', 'ok');
+          } catch (e) {
+            log('❌ SW register failed: ' + e.message, 'fail');
+          }
+        }
       } catch (e) {
-        log('❌ SW register failed: ' + e.message, 'fail');
+        log('❌ SW check failed: ' + e.message, 'fail');
+      }
+
+      // 4. Push Subscription
+      log('4️⃣ <b>Checking Push Subscription...</b>');
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          log('✅ Push subscription exists', 'ok');
+          log('<pre>' + JSON.stringify(sub.toJSON(), null, 2) + '</pre>');
+        } else {
+          log('⚠️ No push subscription yet', 'warn');
+        }
+      } catch (e) {
+        log('❌ Push check failed: ' + e.message, 'fail');
+      }
+
+      // 5. VAPID Key
+      log('5️⃣ <b>VAPID Key:</b>');
+      log(VAPID ? '✅ Set (length: ' + VAPID.length + ')' : '❌ MISSING', VAPID ? 'ok' : 'fail');
+
+      log('<br><b>Done!</b> Use buttons above to request permission or force subscribe.', 'info');
+    }
+
+    async function requestPerm() {
+      log('🔔 <b>Requesting notification permission...</b>');
+      try {
+        const result = await Notification.requestPermission();
+        log('Result: ' + result, result === 'granted' ? 'ok' : 'fail');
+      } catch (e) {
+        log('❌ Permission request failed: ' + e.message, 'fail');
       }
     }
-  } catch (e) {
-    log('❌ SW check failed: ' + e.message, 'fail');
-  }
 
-  // 4. Push Subscription
-  log('4️⃣ <b>Checking Push Subscription...</b>');
-  try {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) {
-      log('✅ Push subscription exists', 'ok');
-      log('<pre>' + JSON.stringify(sub.toJSON(), null, 2) + '</pre>');
-    } else {
-      log('⚠️ No push subscription yet', 'warn');
+    async function testSubscribe() {
+      log('📲 <b>Force Subscribe + Save to DB...</b>');
+
+      try {
+        // Get SW
+        log('Getting SW...');
+        const reg = await navigator.serviceWorker.ready;
+        log('✅ SW ready: ' + reg.scope, 'ok');
+
+        // Check permission
+        if (Notification.permission !== 'granted') {
+          log('❌ Permission not granted: ' + Notification.permission, 'fail');
+          log('Press "Request Permission" first!', 'warn');
+          return;
+        }
+
+        // Subscribe
+        log('Creating push subscription...');
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID)
+          });
+          log('✅ NEW subscription created', 'ok');
+        } else {
+          log('✅ Using existing subscription', 'ok');
+        }
+
+        const json = sub.toJSON();
+        log('<pre>endpoint: ...' + sub.endpoint.slice(-40) + '\np256dh: ' + (json.keys?.p256dh || 'NULL') + '\nauth: ' + (json.keys?.auth || 'NULL') + '</pre>');
+
+        // Save to DB
+        log('Saving to Supabase...');
+        const platform = /android/i.test(navigator.userAgent) ? 'android'
+          : /iphone|ipad/i.test(navigator.userAgent) ? 'ios' : 'desktop';
+
+        const body = {
+          user_id: USER_ID,
+          endpoint: sub.endpoint,
+          p256dh: json.keys?.p256dh || null,
+          auth: json.keys?.auth || null,
+          subscription_json: json,
+          user_agent: navigator.userAgent,
+          platform: platform,
+          is_active: true,
+          error_count: 0,
+          updated_at: new Date().toISOString()
+        };
+
+        const resp = await fetch(SUPABASE_URL + '/rest/v1/push_subscriptions?on_conflict=endpoint', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON,
+            'Authorization': 'Bearer ' + SUPABASE_ANON,
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(body)
+        });
+
+        const status = resp.status;
+        const text = await resp.text();
+
+        if (status >= 200 && status < 300) {
+          log('✅✅ SAVED! Status: ' + status + ' Platform: ' + platform, 'ok');
+        } else {
+          log('❌ Save failed: HTTP ' + status + ' → ' + text, 'fail');
+        }
+
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'fail');
+        log('<pre>' + e.stack + '</pre>');
+      }
     }
-  } catch (e) {
-    log('❌ Push check failed: ' + e.message, 'fail');
-  }
-
-  // 5. VAPID Key
-  log('5️⃣ <b>VAPID Key:</b>');
-  log(VAPID ? '✅ Set (length: ' + VAPID.length + ')' : '❌ MISSING', VAPID ? 'ok' : 'fail');
-
-  log('<br><b>Done!</b> Use buttons above to request permission or force subscribe.', 'info');
-}
-
-async function requestPerm() {
-  log('🔔 <b>Requesting notification permission...</b>');
-  try {
-    const result = await Notification.requestPermission();
-    log('Result: ' + result, result === 'granted' ? 'ok' : 'fail');
-  } catch (e) {
-    log('❌ Permission request failed: ' + e.message, 'fail');
-  }
-}
-
-async function testSubscribe() {
-  log('📲 <b>Force Subscribe + Save to DB...</b>');
-  
-  try {
-    // Get SW
-    log('Getting SW...');
-    const reg = await navigator.serviceWorker.ready;
-    log('✅ SW ready: ' + reg.scope, 'ok');
-
-    // Check permission
-    if (Notification.permission !== 'granted') {
-      log('❌ Permission not granted: ' + Notification.permission, 'fail');
-      log('Press "Request Permission" first!', 'warn');
-      return;
-    }
-
-    // Subscribe
-    log('Creating push subscription...');
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID)
-      });
-      log('✅ NEW subscription created', 'ok');
-    } else {
-      log('✅ Using existing subscription', 'ok');
-    }
-    
-    const json = sub.toJSON();
-    log('<pre>endpoint: ...' + sub.endpoint.slice(-40) + '\np256dh: ' + (json.keys?.p256dh || 'NULL') + '\nauth: ' + (json.keys?.auth || 'NULL') + '</pre>');
-
-    // Save to DB
-    log('Saving to Supabase...');
-    const platform = /android/i.test(navigator.userAgent) ? 'android'
-      : /iphone|ipad/i.test(navigator.userAgent) ? 'ios' : 'desktop';
-
-    const body = {
-      user_id: USER_ID,
-      endpoint: sub.endpoint,
-      p256dh: json.keys?.p256dh || null,
-      auth: json.keys?.auth || null,
-      subscription_json: json,
-      user_agent: navigator.userAgent,
-      platform: platform,
-      is_active: true,
-      error_count: 0,
-      updated_at: new Date().toISOString()
-    };
-
-    const resp = await fetch(SUPABASE_URL + '/rest/v1/push_subscriptions?on_conflict=endpoint', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON,
-        'Authorization': 'Bearer ' + SUPABASE_ANON,
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(body)
-    });
-
-    const status = resp.status;
-    const text = await resp.text();
-    
-    if (status >= 200 && status < 300) {
-      log('✅✅ SAVED! Status: ' + status + ' Platform: ' + platform, 'ok');
-    } else {
-      log('❌ Save failed: HTTP ' + status + ' → ' + text, 'fail');
-    }
-
-  } catch (e) {
-    log('❌ Error: ' + e.message, 'fail');
-    log('<pre>' + e.stack + '</pre>');
-  }
-}
-</script>
+  </script>
 </body>
+
 </html>
