@@ -2,14 +2,18 @@
 // Card de negócio individual - Prosperus Club App v2.5
 
 import React, { useState } from 'react';
-import { Check, X, Clock, AlertCircle, Calendar, Loader2, LucideIcon } from 'lucide-react';
+import { Check, X, Clock, AlertCircle, Calendar, Loader2, Trash2, LucideIcon } from 'lucide-react';
 import { Deal, DealStatus } from '../../types';
 import { businessService } from '../../services/businessService';
+import { SwipeableItem } from '../ui/SwipeableItem';
+import { DeleteConfirmSheet } from '../ui/DeleteConfirmSheet';
 
 interface DealCardProps {
     deal: Deal;
     viewType: 'sales' | 'purchases';
     onStatusChange: () => void;
+    /** Called when swipe-to-delete is confirmed */
+    onDelete?: (dealId: string) => void;
 }
 
 const statusConfig: Record<DealStatus, { label: string; color: string; bg: string; icon: LucideIcon }> = {
@@ -26,13 +30,15 @@ const formatCurrency = (value: number) =>
 const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 
-export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChange }) => {
+export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChange, onDelete }) => {
     const [loading, setLoading] = useState<'confirm' | 'contest' | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const partner = viewType === 'sales' ? deal.buyer : deal.seller;
     const config = statusConfig[deal.status];
     const StatusIcon = config.icon;
     const showActions = viewType === 'purchases' && deal.status === 'PENDING';
+    const canDelete = !!onDelete && viewType === 'sales';
 
     const handleConfirm = async () => {
         setLoading('confirm');
@@ -58,7 +64,7 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
         }
     };
 
-    return (
+    const cardContent = (
         <div className="deal-card">
             <div className="deal-header">
                 <img
@@ -236,6 +242,38 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
             `}</style>
         </div>
     );
+
+    // If deletable: wrap with SwipeableItem
+    if (canDelete) {
+        return (
+            <>
+                <SwipeableItem
+                    rightActions={[{
+                        label: 'Deletar',
+                        icon: <Trash2 size={18} />,
+                        color: 'bg-red-500',
+                        width: 80,
+                        onTrigger: () => setShowDeleteConfirm(true),
+                    }]}
+                >
+                    {cardContent}
+                </SwipeableItem>
+                <DeleteConfirmSheet
+                    isOpen={showDeleteConfirm}
+                    title="Deletar negócio?"
+                    message={`O registro de ${formatCurrency(deal.amount)} será removido permanentemente.`}
+                    confirmLabel="Deletar"
+                    onConfirm={() => {
+                        setShowDeleteConfirm(false);
+                        onDelete!(deal.id);
+                    }}
+                    onCancel={() => setShowDeleteConfirm(false)}
+                />
+            </>
+        );
+    }
+
+    return cardContent;
 };
 
 export default DealCard;

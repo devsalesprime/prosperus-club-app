@@ -2,9 +2,11 @@
 // Card de indicação individual - Prosperus Club App v2.5
 
 import React, { useState } from 'react';
-import { Mail, Phone, FileText, ChevronDown, Loader2, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Mail, Phone, FileText, ChevronDown, Loader2, MessageSquare, AlertTriangle, Trash2 } from 'lucide-react';
 import { Referral, ReferralStatus } from '../../types';
 import { businessService } from '../../services/businessService';
+import { SwipeableItem } from '../ui/SwipeableItem';
+import { DeleteConfirmSheet } from '../ui/DeleteConfirmSheet';
 
 /** Formats a phone string: removes junk chars (commas, dots, spaces) and formats as (XX) XXXXX-XXXX */
 const formatPhone = (raw: string): string => {
@@ -24,6 +26,8 @@ interface ReferralCardProps {
     referral: Referral;
     viewType: 'sent' | 'received';
     onStatusChange: () => void;
+    /** Called when swipe-to-cancel is confirmed */
+    onCancel?: (referralId: string) => void;
 }
 
 const statusConfig: Record<ReferralStatus, { label: string; color: string; bg: string }> = {
@@ -40,7 +44,8 @@ const formatCurrency = (value: number) =>
 export const ReferralCard: React.FC<ReferralCardProps> = ({
     referral,
     viewType,
-    onStatusChange
+    onStatusChange,
+    onCancel
 }) => {
     const [showStatusMenu, setShowStatusMenu] = useState(false);
     const [showConvertInput, setShowConvertInput] = useState(false);
@@ -51,11 +56,13 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
     const [contestReason, setContestReason] = useState('');
     const [loading, setLoading] = useState(false);
     const [expanded, setExpanded] = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
     const partner = viewType === 'sent' ? referral.receiver : referral.referrer;
     const config = statusConfig[referral.status];
     const canChangeStatus = viewType === 'received' && referral.status !== 'CONVERTED' && referral.status !== 'CONTESTED';
     const canContest = viewType === 'received' && (referral.status === 'NEW' || referral.status === 'IN_PROGRESS');
+    const canCancel = !!onCancel && viewType === 'sent' && referral.status === 'NEW';
 
     const formatAmount = (value: string) => {
         const numbers = value.replace(/\D/g, '');
@@ -145,7 +152,7 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
         }
     };
 
-    return (
+    const cardContent = (
         <div className="referral-card">
             <div className="card-header">
                 <div className="lead-info">
@@ -648,6 +655,38 @@ export const ReferralCard: React.FC<ReferralCardProps> = ({
             `}</style>
         </div>
     );
+
+    // If cancellable: wrap with SwipeableItem
+    if (canCancel) {
+        return (
+            <>
+                <SwipeableItem
+                    rightActions={[{
+                        label: 'Cancelar',
+                        icon: <Trash2 size={18} />,
+                        color: 'bg-red-500',
+                        width: 80,
+                        onTrigger: () => setShowCancelConfirm(true),
+                    }]}
+                >
+                    {cardContent}
+                </SwipeableItem>
+                <DeleteConfirmSheet
+                    isOpen={showCancelConfirm}
+                    title="Cancelar indicação?"
+                    message={`A indicação para ${referral.lead_name} será cancelada.`}
+                    confirmLabel="Cancelar Indicação"
+                    onConfirm={() => {
+                        setShowCancelConfirm(false);
+                        onCancel!(referral.id);
+                    }}
+                    onCancel={() => setShowCancelConfirm(false)}
+                />
+            </>
+        );
+    }
+
+    return cardContent;
 };
 
 export default ReferralCard;

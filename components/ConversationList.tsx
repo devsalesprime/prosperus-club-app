@@ -3,11 +3,13 @@
 // With Supabase Realtime for live updates
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageCircle, Search, Plus, Loader2, Users, Trash2, CheckCircle } from 'lucide-react';
+import { MessageCircle, Search, Plus, Users, Trash2, Archive, CheckCircle } from 'lucide-react';
 import { conversationService, ConversationWithDetails } from '../services/conversationService';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { COPY } from '../utils/copy';
+import { SwipeableItem } from './ui/SwipeableItem';
+import { DeleteConfirmSheet } from './ui/DeleteConfirmSheet';
 
 interface ConversationListProps {
     currentUserId: string;
@@ -40,13 +42,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const [searchFocused, setSearchFocused] = useState(false);
     const isSubscribedRef = useRef(false);
 
-    // Swipe-to-delete state
-    const [swipedConvId, setSwipedConvId] = useState<string | null>(null);
-    const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
-    const [isSwiping, setIsSwiping] = useState(false);
-    const touchStartX = useRef(0);
-    const touchStartY = useRef(0);
-    const SWIPE_THRESHOLD = 72;
+    // SwipeableItem: track which item is open
+    const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
 
     // Delete modal state
     const [deleteTarget, setDeleteTarget] = useState<ConversationWithDetails | null>(null);
@@ -167,56 +164,28 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         return otherName.includes(searchQuery.toLowerCase());
     });
 
-    // ─── Swipe handlers ──────────────────────────────────────
-    const handleTouchStart = (convId: string, e: React.TouchEvent) => {
-        touchStartX.current = e.touches[0].clientX;
-        touchStartY.current = e.touches[0].clientY;
-        setIsSwiping(true);
-    };
+    // ─── Swipe actions ───────────────────────────────────────────
+    const handleArchiveSwipe = useCallback((conv: ConversationWithDetails) => {
+        const convId = conv.id;
+        setRemovingId(convId);
+        setTimeout(() => {
+            conversationService.archiveConversation(convId, currentUserId);
+            setConversations(prev => prev.filter(c => c.id !== convId));
+            setRemovingId(null);
+            setToast('Conversa arquivada');
+            setTimeout(() => setToast(null), 2500);
+        }, 300);
+    }, [currentUserId]);
 
-    const handleTouchMove = (convId: string, e: React.TouchEvent) => {
-        const dx = e.touches[0].clientX - touchStartX.current;
-        const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
-
-        // If vertical movement is dominant, let the browser scroll
-        if (dy > Math.abs(dx)) { setIsSwiping(false); return; }
-
-        // Only allow left swipe (negative dx)
-        if (dx < 0) {
-            setSwipeOffsets(prev => ({ ...prev, [convId]: Math.max(dx, -SWIPE_THRESHOLD) }));
-        }
-    };
-
-    const handleTouchEnd = (convId: string) => {
-        setIsSwiping(false);
-        const offset = swipeOffsets[convId] || 0;
-        if (offset < -SWIPE_THRESHOLD / 2) {
-            setSwipeOffsets(prev => ({ ...prev, [convId]: -SWIPE_THRESHOLD }));
-            setSwipedConvId(convId);
-        } else {
-            setSwipeOffsets(prev => ({ ...prev, [convId]: 0 }));
-            setSwipedConvId(null);
-        }
-    };
-
-    const closeSwipe = (convId: string) => {
-        setSwipeOffsets(prev => ({ ...prev, [convId]: 0 }));
-        setSwipedConvId(null);
-    };
-
-    const handleArchiveConversation = (conv: ConversationWithDetails) => {
+    const handleDeleteConversation = useCallback((conv: ConversationWithDetails) => {
         setDeleteTarget(conv);
-    };
+    }, []);
 
-    const confirmArchive = () => {
+    const confirmDelete = useCallback(() => {
         if (!deleteTarget) return;
         const convId = deleteTarget.id;
-
-        // Optimistic removal with animation
         setRemovingId(convId);
         setDeleteTarget(null);
-        closeSwipe(convId);
-
         setTimeout(() => {
             conversationService.archiveConversation(convId, currentUserId);
             setConversations(prev => prev.filter(c => c.id !== convId));
@@ -224,7 +193,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             setToast('Conversa apagada');
             setTimeout(() => setToast(null), 2500);
         }, 300);
-    };
+    }, [deleteTarget, currentUserId]);
 
     if (loading) {
         return (
@@ -373,42 +342,37 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                             const lastMsg = conversation.lastMessage;
                             const unread = conversation.unreadCount || 0;
                             const isSelected = selectedConversationId === conversation.id;
-                            const offset = swipeOffsets[conversation.id] || 0;
-                            const isRevealed = swipedConvId === conversation.id;
                             const isRemoving = removingId === conversation.id;
 
                             return (
                                 <div
                                     key={conversation.id}
-                                    className={`relative overflow-hidden transition-all duration-300 ${isRemoving ? 'max-h-0 opacity-0 -translate-x-full' : 'max-h-32 opacity-100'
-                                        }`}
+                                    className={`transition-all duration-300 ${isRemoving ? 'max-h-0 opacity-0 -translate-x-full overflow-hidden' : 'max-h-32 opacity-100'}`}
                                 >
-                                    {/* Delete button — behind the item */}
-                                    <div className="absolute inset-y-0 right-0 flex items-center
-                                        bg-red-500/90 px-5 rounded-r-xl z-0">
-                                        <button
-                                            onClick={() => handleArchiveConversation(conversation)}
-                                            className="flex flex-col items-center gap-1"
-                                        >
-                                            <Trash2 size={18} className="text-white" />
-                                            <span className="text-[10px] text-white font-medium">Apagar</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Conversation item — slides */}
-                                    <div
-                                        className="relative z-10"
-                                        style={{
-                                            transform: `translateX(${offset}px)`,
-                                            transition: isSwiping ? 'none' : 'transform 0.25s ease-out',
-                                            background: '#0f172a',
-                                        }}
-                                        onTouchStart={(e) => handleTouchStart(conversation.id, e)}
-                                        onTouchMove={(e) => handleTouchMove(conversation.id, e)}
-                                        onTouchEnd={() => handleTouchEnd(conversation.id)}
+                                    <SwipeableItem
+                                        itemId={conversation.id}
+                                        openItemId={openSwipeId}
+                                        onOpen={setOpenSwipeId}
+                                        rightActions={[
+                                            {
+                                                label: 'Arquivar',
+                                                icon: <Archive size={18} />,
+                                                color: 'bg-slate-600',
+                                                width: 80,
+                                                onTrigger: () => handleArchiveSwipe(conversation),
+                                            },
+                                            {
+                                                label: 'Apagar',
+                                                icon: <Trash2 size={18} />,
+                                                color: 'bg-red-500',
+                                                width: 80,
+                                                destructive: true,
+                                                onTrigger: () => handleDeleteConversation(conversation),
+                                            },
+                                        ]}
                                     >
                                         <button
-                                            onClick={() => isRevealed ? closeSwipe(conversation.id) : onSelectConversation(conversation.id)}
+                                            onClick={() => onSelectConversation(conversation.id)}
                                             className="w-full px-3 py-3 transition-all duration-200 text-left flex items-center gap-3 group relative"
                                             style={{
                                                 background: isSelected
@@ -497,7 +461,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                                                 )}
                                             </div>
                                         </button>
-                                    </div>
+                                    </SwipeableItem>
                                 </div>
                             );
                         })}
@@ -505,52 +469,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 )}
             </div>
 
-            {/* ── Delete Confirmation Modal (Bottom Sheet) ── */}
-            {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-20
-                    bg-black/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
-                    <div
-                        className="w-full max-w-sm bg-slate-900 border border-slate-800
-                            rounded-2xl p-5"
-                        onClick={e => e.stopPropagation()}
-                        style={{ animation: 'slideUp 0.3s ease-out' }}
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center
-                            justify-center mb-4">
-                            <Trash2 size={18} className="text-red-400" />
-                        </div>
-
-                        <h3 className="text-base font-bold text-white mb-1">
-                            Apagar conversa?
-                        </h3>
-                        <p className="text-sm text-slate-400 mb-1">
-                            A conversa com <span className="text-white font-medium">
-                                {deleteTarget.otherParticipant?.name || 'este membro'}
-                            </span> será removida da sua lista.
-                        </p>
-                        <p className="text-xs text-slate-600 mb-5">
-                            O outro participante não será afetado.
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setDeleteTarget(null)}
-                                className="flex-1 py-3 rounded-xl border border-slate-700
-                                    text-sm text-slate-400 hover:text-white transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={confirmArchive}
-                                className="flex-1 py-3 rounded-xl bg-red-500/15 border border-red-500/30
-                                    text-sm font-semibold text-red-400 hover:bg-red-500/25 transition-colors"
-                            >
-                                Apagar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* ── Delete Confirmation (premium bottom sheet) ── */}
+            <DeleteConfirmSheet
+                isOpen={!!deleteTarget}
+                title="Apagar conversa?"
+                message={`A conversa com ${deleteTarget?.otherParticipant?.name || 'este membro'} será removida da sua lista. O outro participante não será afetado.`}
+                confirmLabel="Apagar"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
 
             {/* ── Toast ── */}
             {toast && (

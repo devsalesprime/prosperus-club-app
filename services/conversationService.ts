@@ -844,6 +844,25 @@ class ConversationService {
         }
     }
 
+    /**
+     * Soft-delete a message (set is_deleted = true).
+     * Only the sender should call this on their own messages.
+     */
+    async deleteMessage(messageId: string): Promise<void> {
+        try {
+            const { error } = await supabase
+                .from('messages')
+                .update({ is_deleted: true })
+                .eq('id', messageId);
+
+            if (error) throw error;
+            logger.debug('🗑️ ConversationService: Soft-deleted message', { messageId });
+        } catch (error) {
+            console.error('Error deleting message:', error);
+            throw error;
+        }
+    }
+
     // ─── Local Archive (Member soft-delete) ──────────────────────
 
     /**

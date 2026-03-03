@@ -4,12 +4,14 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download, Reply, Trash2 } from 'lucide-react';
 import { conversationService, Message, MessageType } from '../services/conversationService';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useUnreadCountContext } from '../contexts/UnreadCountContext';
 import { ImageLightbox } from './ImageLightbox';
+import { SwipeableItem } from './ui/SwipeableItem';
+import { MessageContextMenu } from './ui/MessageContextMenu';
 
 /**
  * Clear OS-level push notifications for a specific conversation tag.
@@ -82,6 +84,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     const [filePreview, setFilePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [replyTo, setReplyTo] = useState<OptimisticMessage | null>(null);
+    const [contextMenuMsg, setContextMenuMsg] = useState<OptimisticMessage | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -290,11 +295,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         setFailedMessage(null);
     };
 
-    // Dismiss failed message
     const handleDismissFailed = (failedId: string) => {
         setMessages(prev => prev.filter(m => m.id !== failedId));
         setFailedMessage(null);
     };
+
+    // ─── Swipe + long press for messages ─────────────────────────
+    const handleReplyTo = useCallback((msg: OptimisticMessage) => {
+        setReplyTo(msg);
+        textareaRef.current?.focus();
+    }, []);
+
+    const handleDeleteMessage = useCallback(async (msg: OptimisticMessage) => {
+        try {
+            await conversationService.deleteMessage(msg.id);
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+        } catch {
+            console.error('Failed to delete message');
+        }
+    }, []);
+
+    const handleLongPress = useCallback((msg: OptimisticMessage) => {
+        setContextMenuMsg(msg);
+    }, []);
+
+    const handleCopyMessage = useCallback(() => {
+        // Toast-like feedback could go here
+    }, []);
 
     // --- MEDIA HANDLING ---
 
@@ -519,147 +546,180 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                             const isFailed = message._failed;
                             const isOptimistic = message._isOptimistic && !isFailed;
 
+                            // Long press handlers
+                            const onMsgTouchStart = () => {
+                                longPressTimerRef.current = setTimeout(() => handleLongPress(message), 500);
+                            };
+                            const onMsgTouchEnd = () => {
+                                if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                            };
+
                             return (
-                                <div
+                                <SwipeableItem
                                     key={message.id}
-                                    className={`flex gap-2 mb-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}
-                                    style={{
-                                        animation: isOptimistic ? 'none' : index === messagesWithSeparators.length - 1 ? 'slideInUp 0.3s ease-out' : 'none',
-                                    }}
+                                    rightActions={isOwn ? [
+                                        {
+                                            label: 'Deletar',
+                                            icon: <Trash2 size={16} />,
+                                            color: 'bg-red-500',
+                                            width: 72,
+                                            destructive: true,
+                                            onTrigger: () => handleDeleteMessage(message),
+                                        },
+                                    ] : []}
+                                    leftActions={[{
+                                        label: 'Responder',
+                                        icon: <Reply size={16} />,
+                                        color: 'bg-yellow-600',
+                                        width: 72,
+                                        destructive: true,
+                                        onTrigger: () => handleReplyTo(message),
+                                    }]}
+                                    disabled={isFailed || isOptimistic}
                                 >
-                                    {/* Avatar */}
-                                    <div className="w-7 shrink-0">
-                                        {!isOwn && showAvatar && (
-                                            <img
-                                                src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                                alt={otherUserName}
-                                                className="w-7 h-7 rounded-full object-cover border border-slate-700/50"
-                                            />
-                                        )}
-                                    </div>
-
-                                    {/* Message Bubble */}
-                                    <div className={`max-w-[75%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-                                        <div
-                                            className={`px-3 py-2 relative ${isFailed
-                                                ? 'bg-red-900/40 border border-red-500/30'
-                                                : isOwn
-                                                    ? ''
-                                                    : ''
-                                                } ${isOptimistic ? 'opacity-60' : ''}`}
-                                            style={{
-                                                ...(isFailed ? {} : isOwn
-                                                    ? {
-                                                        background: 'linear-gradient(135deg, #b45309, #d97706)',
-                                                        borderRadius: showAvatar ? '16px 16px 4px 16px' : '16px 4px 4px 16px',
-                                                        boxShadow: '0 2px 8px rgba(217,119,6,0.2)',
-                                                    }
-                                                    : {
-                                                        background: 'rgba(30,41,59,0.7)',
-                                                        backdropFilter: 'blur(8px)',
-                                                        border: '1px solid rgba(51,65,85,0.4)',
-                                                        borderRadius: showAvatar ? '16px 16px 16px 4px' : '4px 16px 16px 4px',
-                                                    }
-                                                ),
-                                                ...(isFailed ? { borderRadius: '16px' } : {}),
-                                            }}
-                                        >
-                                            {/* Deleted message */}
-                                            {(message as OptimisticMessage).is_deleted ? (
-                                                <p className="text-[14px] leading-relaxed italic opacity-60 text-white">
-                                                    [Mensagem removida pelo moderador]
-                                                </p>
-                                            ) : message.message_type === 'image' && message.media_url ? (
-                                                /* Image message */
-                                                <div className="space-y-1">
-                                                    <img
-                                                        src={message.media_url}
-                                                        alt={message.media_filename || 'Imagem'}
-                                                        className="max-w-[240px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setLightboxSrc(message.media_url!);
-                                                        }}
-                                                        loading="lazy"
-                                                    />
-                                                    {message.content && message.content !== '📷 Imagem' && (
-                                                        <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
-                                                            {message.content}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ) : message.message_type === 'file' && message.media_url ? (
-                                                /* File message */
-                                                <div className="space-y-1">
-                                                    <a
-                                                        href={message.media_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition hover:opacity-80 ${isOwn ? 'bg-amber-800/30' : 'bg-slate-700/40'}`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <FileText size={20} className={isOwn ? 'text-amber-200' : 'text-slate-300'} />
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className={`text-[13px] font-medium truncate ${isOwn ? 'text-amber-100' : 'text-white'}`}>
-                                                                {message.media_filename || 'Arquivo'}
-                                                            </p>
-                                                        </div>
-                                                        <Download size={16} className={isOwn ? 'text-amber-200/70' : 'text-slate-400'} />
-                                                    </a>
-                                                    {message.content && !message.content.startsWith('📎') && (
-                                                        <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
-                                                            {message.content}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                /* Text message */
-                                                <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
-                                                    {message.content}
-                                                </p>
-                                            )}
-
-                                            {/* Inline timestamp + status */}
-                                            <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                                <span className={`text-[10px] ${isOwn ? 'text-amber-200/60' : 'text-slate-500'}`}>
-                                                    {formatMessageTime(message.created_at)}
-                                                </span>
-                                                {isOwn && !isFailed && (
-                                                    <span className="text-amber-200/60">
-                                                        {isOptimistic ? (
-                                                            <Loader2 size={10} className="animate-spin" />
-                                                        ) : message.is_read ? (
-                                                            <CheckCheck size={12} className="text-sky-400" />
-                                                        ) : (
-                                                            <Check size={12} />
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Failed indicator */}
-                                            {isFailed && (
-                                                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-red-500/20">
-                                                    <AlertCircle size={12} className="text-red-400" />
-                                                    <span className="text-[11px] text-red-400">Falha</span>
-                                                    <button
-                                                        onClick={() => handleRetry(message)}
-                                                        className="text-[11px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1 ml-auto"
-                                                    >
-                                                        <RefreshCw size={10} />
-                                                        Reenviar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDismissFailed(message.id)}
-                                                        className="text-[11px] text-slate-500 hover:text-slate-400"
-                                                    >
-                                                        ✕
-                                                    </button>
-                                                </div>
+                                    <div
+                                        className={`flex gap-2 mb-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}
+                                        style={{
+                                            animation: isOptimistic ? 'none' : index === messagesWithSeparators.length - 1 ? 'slideInUp 0.3s ease-out' : 'none',
+                                        }}
+                                        onTouchStart={onMsgTouchStart}
+                                        onTouchEnd={onMsgTouchEnd}
+                                        onTouchMove={onMsgTouchEnd}
+                                    >
+                                        {/* Avatar */}
+                                        <div className="w-7 shrink-0">
+                                            {!isOwn && showAvatar && (
+                                                <img
+                                                    src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                    alt={otherUserName}
+                                                    className="w-7 h-7 rounded-full object-cover border border-slate-700/50"
+                                                />
                                             )}
                                         </div>
+
+                                        {/* Message Bubble */}
+                                        <div className={`max-w-[75%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                                            <div
+                                                className={`px-3 py-2 relative ${isFailed
+                                                    ? 'bg-red-900/40 border border-red-500/30'
+                                                    : isOwn
+                                                        ? ''
+                                                        : ''
+                                                    } ${isOptimistic ? 'opacity-60' : ''}`}
+                                                style={{
+                                                    ...(isFailed ? {} : isOwn
+                                                        ? {
+                                                            background: 'linear-gradient(135deg, #b45309, #d97706)',
+                                                            borderRadius: showAvatar ? '16px 16px 4px 16px' : '16px 4px 4px 16px',
+                                                            boxShadow: '0 2px 8px rgba(217,119,6,0.2)',
+                                                        }
+                                                        : {
+                                                            background: 'rgba(30,41,59,0.7)',
+                                                            backdropFilter: 'blur(8px)',
+                                                            border: '1px solid rgba(51,65,85,0.4)',
+                                                            borderRadius: showAvatar ? '16px 16px 16px 4px' : '4px 16px 16px 4px',
+                                                        }
+                                                    ),
+                                                    ...(isFailed ? { borderRadius: '16px' } : {}),
+                                                }}
+                                            >
+                                                {/* Deleted message */}
+                                                {(message as OptimisticMessage).is_deleted ? (
+                                                    <p className="text-[14px] leading-relaxed italic opacity-60 text-white">
+                                                        [Mensagem removida pelo moderador]
+                                                    </p>
+                                                ) : message.message_type === 'image' && message.media_url ? (
+                                                    /* Image message */
+                                                    <div className="space-y-1">
+                                                        <img
+                                                            src={message.media_url}
+                                                            alt={message.media_filename || 'Imagem'}
+                                                            className="max-w-[240px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setLightboxSrc(message.media_url!);
+                                                            }}
+                                                            loading="lazy"
+                                                        />
+                                                        {message.content && message.content !== '📷 Imagem' && (
+                                                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                                {message.content}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : message.message_type === 'file' && message.media_url ? (
+                                                    /* File message */
+                                                    <div className="space-y-1">
+                                                        <a
+                                                            href={message.media_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition hover:opacity-80 ${isOwn ? 'bg-amber-800/30' : 'bg-slate-700/40'}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <FileText size={20} className={isOwn ? 'text-amber-200' : 'text-slate-300'} />
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className={`text-[13px] font-medium truncate ${isOwn ? 'text-amber-100' : 'text-white'}`}>
+                                                                    {message.media_filename || 'Arquivo'}
+                                                                </p>
+                                                            </div>
+                                                            <Download size={16} className={isOwn ? 'text-amber-200/70' : 'text-slate-400'} />
+                                                        </a>
+                                                        {message.content && !message.content.startsWith('📎') && (
+                                                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                                {message.content}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    /* Text message */
+                                                    <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                        {message.content}
+                                                    </p>
+                                                )}
+
+                                                {/* Inline timestamp + status */}
+                                                <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                                    <span className={`text-[10px] ${isOwn ? 'text-amber-200/60' : 'text-slate-500'}`}>
+                                                        {formatMessageTime(message.created_at)}
+                                                    </span>
+                                                    {isOwn && !isFailed && (
+                                                        <span className="text-amber-200/60">
+                                                            {isOptimistic ? (
+                                                                <Loader2 size={10} className="animate-spin" />
+                                                            ) : message.is_read ? (
+                                                                <CheckCheck size={12} className="text-sky-400" />
+                                                            ) : (
+                                                                <Check size={12} />
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Failed indicator */}
+                                                {isFailed && (
+                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-red-500/20">
+                                                        <AlertCircle size={12} className="text-red-400" />
+                                                        <span className="text-[11px] text-red-400">Falha</span>
+                                                        <button
+                                                            onClick={() => handleRetry(message)}
+                                                            className="text-[11px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1 ml-auto"
+                                                        >
+                                                            <RefreshCw size={10} />
+                                                            Reenviar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDismissFailed(message.id)}
+                                                            className="text-[11px] text-slate-500 hover:text-slate-400"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </SwipeableItem>
                             );
                         })}
                         <div ref={messagesEndRef} />
@@ -699,6 +759,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     backdropFilter: 'blur(12px)',
                 }}
             >
+                {/* Reply Quote Bar */}
+                {replyTo && (
+                    <div className="flex items-center gap-2 mb-2 mx-1 px-3 py-2 bg-slate-800/60 border-l-2 border-yellow-500 rounded-xl">
+                        <Reply size={14} className="text-yellow-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[11px] text-yellow-500 font-medium mb-0.5">
+                                {replyTo.sender_id === currentUserId ? 'Você' : otherUserName}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate">
+                                {replyTo.content}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setReplyTo(null)}
+                            className="p-1 text-slate-500 hover:text-slate-300 transition shrink-0"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
                 {/* File Preview Bar */}
                 {selectedFile && (
                     <div className="flex items-center gap-2 mb-2 px-2 py-2 bg-slate-800/60 border border-slate-700/50 rounded-xl">
@@ -805,6 +886,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <ImageLightbox
                     src={lightboxSrc}
                     onClose={() => setLightboxSrc(null)}
+                />
+            )}
+
+            {/* Message Context Menu (Long Press) */}
+            {contextMenuMsg && (
+                <MessageContextMenu
+                    messageContent={contextMenuMsg.content}
+                    isOwnMessage={contextMenuMsg.sender_id === currentUserId}
+                    onClose={() => setContextMenuMsg(null)}
+                    onReply={() => handleReplyTo(contextMenuMsg)}
+                    onCopy={handleCopyMessage}
+                    onDelete={contextMenuMsg.sender_id === currentUserId
+                        ? () => handleDeleteMessage(contextMenuMsg)
+                        : undefined
+                    }
                 />
             )}
 
