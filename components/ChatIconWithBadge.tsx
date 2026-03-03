@@ -2,7 +2,6 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useUnreadMessageCount } from '../hooks/useUnreadMessageCount';
-import { UnreadCountProvider } from '../contexts/UnreadCountContext';
 
 interface ChatIconWithBadgeProps {
     userId: string;
@@ -19,10 +18,10 @@ export const ChatIconWithBadge: React.FC<ChatIconWithBadgeProps> = ({
     className = '',
     children
 }) => {
-    const { unreadCount, refreshCount } = useUnreadMessageCount(userId);
+    const { unreadCount } = useUnreadMessageCount(userId);
 
     return (
-        <UnreadCountProvider refreshFn={refreshCount}>
+        <>
             <button
                 onClick={onClick}
                 className={`relative p-2 text-prosperus-grey hover:text-prosperus-gold hover:bg-prosperus-navy-light rounded-lg transition-colors ${className}`}
@@ -36,6 +35,6 @@ export const ChatIconWithBadge: React.FC<ChatIconWithBadgeProps> = ({
                 )}
             </button>
             {children}
-        </UnreadCountProvider>
+        </>
     );
 };

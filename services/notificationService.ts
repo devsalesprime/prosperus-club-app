@@ -6,6 +6,7 @@ import { logger } from '../utils/logger';
 export interface UserNotification {
     id: string;
     user_id: string;
+    type?: string;
     title: string;
     message: string;
     action_url?: string;

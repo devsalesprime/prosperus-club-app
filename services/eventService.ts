@@ -156,6 +156,12 @@ class EventService {
             }
 
             logger.info('✅ Event created:', data.title);
+
+            // Push + in-app notification to all members (fire-and-forget)
+            import('./notificationTriggers').then(({ notifyNewEvent }) => {
+                notifyNewEvent(data.id, data.title, data.date).catch(() => { });
+            });
+
             return { success: true, data: rowToClubEvent(data) };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';

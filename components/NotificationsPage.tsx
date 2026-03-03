@@ -7,6 +7,18 @@ import { notificationService, UserNotification } from '../services/notificationS
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// Type-based icons for visual distinction
+const NOTIFICATION_ICONS: Record<string, string> = {
+    message: '💬',
+    event: '📅',
+    video: '🎥',
+    gallery: '🖼️',
+    referral: '🤝',
+    deal: '💼',
+    report: '📊',
+    notification: '🔔',
+};
+
 interface NotificationsPageProps {
     currentUserId: string;
     onNavigate?: (url: string) => void;
@@ -291,13 +303,12 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                                 } ${deletingIds.has(notification.id) ? 'opacity-50 scale-95' : ''}`}
                         >
                             <div className="flex items-start gap-3 p-4">
-                                {/* Unread indicator */}
-                                <div className="shrink-0 pt-1.5">
-                                    {!notification.is_read ? (
-                                        <div className="w-2.5 h-2.5 bg-yellow-500 rounded-full shadow-sm shadow-yellow-500/50"></div>
-                                    ) : (
-                                        <div className="w-2.5 h-2.5 bg-slate-700 rounded-full"></div>
-                                    )}
+                                {/* Type icon */}
+                                <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg ${!notification.is_read
+                                    ? 'bg-yellow-600/15 border border-yellow-600/20'
+                                    : 'bg-slate-800 border border-slate-700/50'
+                                    }`}>
+                                    {NOTIFICATION_ICONS[notification.type || 'notification'] || NOTIFICATION_ICONS['notification']}
                                 </div>
 
                                 {/* Content */}

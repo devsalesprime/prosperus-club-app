@@ -20,6 +20,7 @@ import { RoleSelector } from './components/RoleSelector';
 import { InstallPrompt } from './components/InstallPrompt';
 import { PushPermissionPrompt } from './components/PushPermissionPrompt';
 import { PushAutoSubscriber } from './components/PushAutoSubscriber';
+import { UnreadCountProvider } from './contexts/UnreadCountContext';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
 const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
@@ -181,18 +182,20 @@ const AppShell: React.FC = () => {
 
     // ─── Main App ────────────────────────────────────
     return (
-        <AppLayout>
-            <ViewSwitcher />
-            {/* Always mounted — silently saves push subscription */}
-            {currentUser && <PushAutoSubscriber userId={currentUser.id} />}
-            {/* Permission prompt — only when permission is 'default' */}
-            {showPushPrompt && currentUser && (
-                <PushPermissionPrompt
-                    userId={currentUser.id}
-                    onDismiss={() => setShowPushPrompt(false)}
-                />
-            )}
-        </AppLayout>
+        <UnreadCountProvider>
+            <AppLayout>
+                <ViewSwitcher />
+                {/* Always mounted — silently saves push subscription */}
+                {currentUser && <PushAutoSubscriber userId={currentUser.id} />}
+                {/* Permission prompt — only when permission is 'default' */}
+                {showPushPrompt && currentUser && (
+                    <PushPermissionPrompt
+                        userId={currentUser.id}
+                        onDismiss={() => setShowPushPrompt(false)}
+                    />
+                )}
+            </AppLayout>
+        </UnreadCountProvider>
     );
 };
 
