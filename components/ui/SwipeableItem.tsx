@@ -252,7 +252,7 @@ export function SwipeableItem({
 
             {/* ── Main content ── */}
             <div
-                className="relative z-10 bg-slate-950"
+                className="relative z-10 bg-inherit"
                 style={{
                     transform: `translateX(${translateX}px)`,
                     transition: transitionStyle,
