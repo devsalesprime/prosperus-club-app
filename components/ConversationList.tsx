@@ -7,6 +7,7 @@ import { MessageCircle, Search, Plus, Loader2, Users, Trash2, CheckCircle } from
 import { conversationService, ConversationWithDetails } from '../services/conversationService';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { COPY } from '../utils/copy';
 
 interface ConversationListProps {
     currentUserId: string;
@@ -233,7 +234,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         <div className="w-12 h-12 rounded-full border-2 border-yellow-500/20"></div>
                         <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-transparent border-t-yellow-500 animate-spin"></div>
                     </div>
-                    <p className="text-slate-500 text-sm">Carregando conversas...</p>
+                    <p className="text-slate-500 text-sm">Buscando conversas...</p>
                 </div>
             </div>
         );
@@ -349,7 +350,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         <p className="text-slate-500 text-sm mb-4 max-w-[220px]">
                             {searchQuery
                                 ? 'Tente buscar por outro nome'
-                                : 'Inicie uma conversa com um membro do clube'}
+                                : COPY.empty.conversations}
                         </p>
                         {!searchQuery && (
                             <button

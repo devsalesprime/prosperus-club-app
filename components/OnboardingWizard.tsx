@@ -432,7 +432,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     rows={3}
                     maxLength={300}
                     className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.bio ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-600'}`}
-                    placeholder="Conte um pouco sobre você e seu negócio..."
+                    placeholder="Conte com clareza o que você faz — isso gera matches melhores"
                 />
                 <div className="flex justify-between mt-1">
                     {errors.bio ? <p className="text-xs text-red-400">{errors.bio}</p> : <span />}
@@ -532,14 +532,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                     <Briefcase size={14} className="inline mr-1.5 -mt-0.5 text-yellow-500" />
-                    O que você vende/faz? <span className="text-yellow-500">*</span>
+                    O que você leva para a mesa? <span className="text-yellow-500">*</span>
                 </label>
                 <textarea
                     value={formData.what_i_sell || ''}
                     onChange={(e) => { handleInputChange('what_i_sell', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.what_i_sell; return n; }); }}
                     rows={2}
                     className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.what_i_sell ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-yellow-500'}`}
-                    placeholder="Ex: Consultoria em gestão empresarial, software de CRM, serviços jurídicos..."
+                    placeholder="Descreva com clareza — ‘Consultoria em gestão’ > ‘Negócios’"
                 />
                 {errors.what_i_sell && <p className="text-xs text-red-400 mt-1">{errors.what_i_sell}</p>}
             </div>
@@ -555,7 +555,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     onChange={(e) => { handleInputChange('what_i_need', e.target.value); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.what_i_need; return n; }); }}
                     rows={2}
                     className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none transition resize-none ${errors.what_i_need ? 'border-red-500 focus:border-red-500' : 'border-slate-700 focus:border-blue-500'}`}
-                    placeholder="Ex: Sistema de automação de marketing, parceiro logístico, assessoria contábil..."
+                    placeholder="Quanto mais específico, mais certeiro o match"
                 />
                 {errors.what_i_need && <p className="text-xs text-red-400 mt-1">{errors.what_i_need}</p>}
             </div>

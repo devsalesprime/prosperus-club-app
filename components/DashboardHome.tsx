@@ -95,8 +95,8 @@ const NextEventEmptyState = () => {
     return (
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 overflow-hidden flex flex-col items-center justify-center p-12 hover:border-slate-600 transition-all">
             <Calendar size={48} className="text-slate-600 mb-4" />
-            <h3 className="text-xl font-bold text-slate-400 mb-2">Sem eventos agendados</h3>
-            <p className="text-sm text-slate-500">Novos eventos serão exibidos aqui</p>
+            <h3 className="text-xl font-bold text-slate-400 mb-2">Novos encontros em breve</h3>
+            <p className="text-sm text-slate-500">Você será notificado assim que um evento for publicado.</p>
         </div>
     );
 };
@@ -519,13 +519,20 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         return firstName || 'Sócio';
     };
 
+    const getGreeting = (): string => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Bom dia,';
+        if (hour < 18) return 'Boa tarde,';
+        return 'Boa noite,';
+    };
+
     return (
         <PullToRefresh onRefresh={onRefresh || (async () => { window.location.reload(); })}>
             <div className="space-y-4 animate-in fade-in px-4 pt-4 pb-8 max-w-7xl mx-auto">
                 {/* 1. Saudação */}
                 {currentUser && (
                     <div>
-                        <p className="text-slate-400 text-sm">Olá,</p>
+                        <p className="text-slate-400 text-sm">{getGreeting()}</p>
                         <h1 className="text-2xl font-bold text-white">
                             {getFirstName()}
                         </h1>

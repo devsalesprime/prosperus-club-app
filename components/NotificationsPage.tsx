@@ -1,12 +1,14 @@
 // NotificationsPage.tsx
 // Full notifications page for members to view all notifications and manage them
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, Trash2, CheckCheck, Check, ExternalLink, Loader2, ChevronDown, Inbox } from 'lucide-react';
 import { notificationService, UserNotification } from '../services/notificationService';
 import { useUnreadCount } from '../contexts/UnreadCountContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { COPY } from '../utils/copy';
+import { CardSkeleton } from './ui/CardSkeleton';
 
 // Type-based icons for visual distinction
 const NOTIFICATION_ICONS: Record<string, string> = {
@@ -40,6 +42,15 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     const [total, setTotal] = useState(0);
     const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
     const [markingReadIds, setMarkingReadIds] = useState<Set<string>>(new Set());
+
+    // Swipe-to-delete state (mobile gesture)
+    const [swipedNotifId, setSwipedNotifId] = useState<string | null>(null);
+    const [swipeOffsets, setSwipeOffsets] = useState<Record<string, number>>({});
+    const [isSwiping, setIsSwiping] = useState(false);
+    const [removingId, setRemovingId] = useState<string | null>(null);
+    const touchStartX = useRef(0);
+    const touchStartY = useRef(0);
+    const SWIPE_THRESHOLD = 72;
 
     const { markAllRead } = useUnreadCount();
 
@@ -192,6 +203,51 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
         }
     };
 
+    // ─── Swipe handlers (same pattern as ConversationList) ──────
+    const handleTouchStart = (notifId: string, e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        setIsSwiping(true);
+    };
+
+    const handleTouchMove = (notifId: string, e: React.TouchEvent) => {
+        const dx = e.touches[0].clientX - touchStartX.current;
+        const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+        if (dy > Math.abs(dx)) { setIsSwiping(false); return; }
+        if (dx < 0) {
+            setSwipeOffsets(prev => ({ ...prev, [notifId]: Math.max(dx, -SWIPE_THRESHOLD) }));
+        }
+    };
+
+    const handleTouchEnd = (notifId: string) => {
+        setIsSwiping(false);
+        const offset = swipeOffsets[notifId] || 0;
+        if (offset < -SWIPE_THRESHOLD / 2) {
+            setSwipeOffsets(prev => ({ ...prev, [notifId]: -SWIPE_THRESHOLD }));
+            setSwipedNotifId(notifId);
+        } else {
+            setSwipeOffsets(prev => ({ ...prev, [notifId]: 0 }));
+            setSwipedNotifId(null);
+        }
+    };
+
+    const closeSwipe = (notifId: string) => {
+        setSwipeOffsets(prev => ({ ...prev, [notifId]: 0 }));
+        setSwipedNotifId(null);
+    };
+
+    const handleSwipeDelete = (notification: UserNotification) => {
+        const notifId = notification.id;
+        setRemovingId(notifId);
+        closeSwipe(notifId);
+        setTimeout(async () => {
+            await notificationService.deleteNotification(notifId);
+            setNotifications(prev => prev.filter(n => n.id !== notifId));
+            setTotal(prev => Math.max(0, prev - 1));
+            setRemovingId(null);
+        }, 300);
+    };
+
     // Filter notifications based on active tab
     const filteredNotifications = notifications.filter(n => {
         if (activeTab === 'UNREAD') return !n.is_read;
@@ -219,7 +275,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                     <div>
                         <h1 className="text-2xl font-bold text-white">Notificações</h1>
                         <p className="text-slate-400 text-sm">
-                            {total > 0 ? `${total} notificação(ões) • ${unreadCount} não lida(s)` : 'Nenhuma notificação'}
+                            {total > 0 ? `${total} aviso${total !== 1 ? 's' : ''}` : 'Nenhum aviso'}
                         </p>
                     </div>
                 </div>
@@ -278,9 +334,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 
             {/* Notifications List */}
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="animate-spin text-yellow-500" size={32} />
-                </div>
+                <CardSkeleton count={5} variant="list" />
             ) : filteredNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                     <div className="w-16 h-16 bg-slate-800/50 rounded-full flex items-center justify-center mb-4 border border-slate-700">
@@ -291,86 +345,120 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
                     </h3>
                     <p className="text-sm text-slate-500">
                         {activeTab === 'UNREAD'
-                            ? 'Você não tem notificações não lidas.'
+                            ? 'Você será avisado sobre eventos, mensagens e novidades do clube.'
                             : activeTab === 'READ'
                                 ? 'Nenhuma notificação lida para exibir.'
-                                : 'Você será notificado quando algo importante acontecer.'
+                                : 'Você será avisado sobre eventos, mensagens e novidades do clube.'
                         }
                     </p>
                 </div>
             ) : (
                 <div className="space-y-2">
-                    {filteredNotifications.map((notification) => (
-                        <div
-                            key={notification.id}
-                            className={`group relative bg-slate-900 border rounded-xl transition overflow-hidden ${!notification.is_read
-                                ? 'border-yellow-600/30 bg-yellow-900/5'
-                                : 'border-slate-800 hover:border-slate-700'
-                                } ${deletingIds.has(notification.id) ? 'opacity-50 scale-95' : ''}`}
-                        >
-                            <div className="flex items-start gap-3 p-4">
-                                {/* Type icon */}
-                                <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg ${!notification.is_read
-                                    ? 'bg-yellow-600/15 border border-yellow-600/20'
-                                    : 'bg-slate-800 border border-slate-700/50'
-                                    }`}>
-                                    {NOTIFICATION_ICONS[notification.type || 'notification'] || NOTIFICATION_ICONS['notification']}
+                    {filteredNotifications.map((notification) => {
+                        const offset = swipeOffsets[notification.id] || 0;
+                        const isRevealed = swipedNotifId === notification.id;
+                        const isRemoving = removingId === notification.id;
+
+                        return (
+                            <div
+                                key={notification.id}
+                                className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isRemoving ? 'max-h-0 opacity-0 -translate-x-full' : 'max-h-40 opacity-100'
+                                    }`}
+                            >
+                                {/* Delete button — behind the item */}
+                                <div className="absolute inset-y-0 right-0 flex items-center
+                                    bg-red-500/90 px-5 rounded-r-xl z-0">
+                                    <button
+                                        onClick={() => handleSwipeDelete(notification)}
+                                        className="flex flex-col items-center gap-1"
+                                    >
+                                        <Trash2 size={18} className="text-white" />
+                                        <span className="text-[10px] text-white font-medium">Excluir</span>
+                                    </button>
                                 </div>
 
-                                {/* Content */}
-                                <button
-                                    className="flex-1 min-w-0 text-left"
-                                    onClick={() => handleNotificationClick(notification)}
+                                {/* Notification item — slides on swipe */}
+                                <div
+                                    className="relative z-10"
+                                    style={{
+                                        transform: `translateX(${offset}px)`,
+                                        transition: isSwiping ? 'none' : 'transform 0.25s ease-out',
+                                    }}
+                                    onTouchStart={(e) => handleTouchStart(notification.id, e)}
+                                    onTouchMove={(e) => handleTouchMove(notification.id, e)}
+                                    onTouchEnd={() => handleTouchEnd(notification.id)}
                                 >
-                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                        <h4 className={`font-bold text-sm ${!notification.is_read ? 'text-white' : 'text-slate-300'
-                                            }`}>
-                                            {notification.title}
-                                        </h4>
-                                        {notification.action_url && (
-                                            <ExternalLink className="text-slate-600 shrink-0 mt-0.5" size={14} />
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-slate-400 mb-2 leading-relaxed">
-                                        {notification.message}
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs text-slate-500" title={formatFullDate(notification.created_at)}>
-                                            {formatTimestamp(notification.created_at)}
-                                        </span>
-                                    </div>
-                                </button>
+                                    <div
+                                        className={`group bg-slate-900 border rounded-xl transition overflow-hidden ${!notification.is_read
+                                            ? 'border-yellow-600/30 bg-yellow-900/5'
+                                            : 'border-slate-800 hover:border-slate-700'
+                                            } ${deletingIds.has(notification.id) ? 'opacity-50 scale-95' : ''}`}
+                                        onClick={() => isRevealed ? closeSwipe(notification.id) : undefined}
+                                    >
+                                        <div className="flex items-start gap-3 p-4">
+                                            {/* Type icon */}
+                                            <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-lg ${!notification.is_read
+                                                ? 'bg-yellow-600/15 border border-yellow-600/20'
+                                                : 'bg-slate-800 border border-slate-700/50'
+                                                }`}>
+                                                {NOTIFICATION_ICONS[notification.type || 'notification'] || NOTIFICATION_ICONS['notification']}
+                                            </div>
 
-                                {/* Actions */}
-                                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-                                    {!notification.is_read && (
-                                        <button
-                                            onClick={() => handleMarkAsRead(notification)}
-                                            disabled={markingReadIds.has(notification.id)}
-                                            className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition"
-                                            title="Marcar como lida"
-                                        >
-                                            <Check size={16} />
-                                        </button>
-                                    )}
-                                    {notification.is_read && (
-                                        <button
-                                            onClick={() => handleDelete(notification)}
-                                            disabled={deletingIds.has(notification.id)}
-                                            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition"
-                                            title="Excluir notificação"
-                                        >
-                                            {deletingIds.has(notification.id) ? (
-                                                <Loader2 size={16} className="animate-spin" />
-                                            ) : (
-                                                <Trash2 size={16} />
-                                            )}
-                                        </button>
-                                    )}
+                                            {/* Content */}
+                                            <button
+                                                className="flex-1 min-w-0 text-left"
+                                                onClick={() => !isRevealed && handleNotificationClick(notification)}
+                                            >
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <h4 className={`font-bold text-sm ${!notification.is_read ? 'text-white' : 'text-slate-300'
+                                                        }`}>
+                                                        {notification.title}
+                                                    </h4>
+                                                    {notification.action_url && (
+                                                        <ExternalLink className="text-slate-600 shrink-0 mt-0.5" size={14} />
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-slate-400 mb-2 leading-relaxed">
+                                                    {notification.message}
+                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-slate-500" title={formatFullDate(notification.created_at)}>
+                                                        {formatTimestamp(notification.created_at)}
+                                                    </span>
+                                                </div>
+                                            </button>
+
+                                            {/* Actions (desktop hover) */}
+                                            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
+                                                {!notification.is_read && (
+                                                    <button
+                                                        onClick={() => handleMarkAsRead(notification)}
+                                                        disabled={markingReadIds.has(notification.id)}
+                                                        className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition"
+                                                        title="Marcar como lida"
+                                                    >
+                                                        <Check size={16} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(notification)}
+                                                    disabled={deletingIds.has(notification.id)}
+                                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition"
+                                                    title="Excluir notificação"
+                                                >
+                                                    {deletingIds.has(notification.id) ? (
+                                                        <Loader2 size={16} className="animate-spin" />
+                                                    ) : (
+                                                        <Trash2 size={16} />
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
 
                     {/* Load More */}
                     {hasMore && (

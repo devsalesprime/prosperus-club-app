@@ -34,6 +34,8 @@ import { favoriteService } from '../services/favoriteService';
 import { exportMembersCSV, exportMembersVCard } from '../services/exportService';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateMatch, MatchResult } from '../utils/matchEngine';
+import { COPY } from '../utils/copy';
+import { CardSkeleton } from './ui/CardSkeleton';
 
 // ─── Match Badge Config ───────────────────────────────────────────
 const MATCH_CONFIG = {
@@ -240,7 +242,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                 <div>
                     <h2 className="text-2xl font-bold text-white">Members' Book</h2>
                     <p className="text-slate-400 text-sm">
-                        {loading ? 'Carregando...' : (
+                        {loading ? COPY.loading.members : (
                             <>
                                 {memberCount} sócio{memberCount !== 1 ? 's' : ''}
                                 {matches.length > 0 && (
@@ -324,7 +326,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Buscar por nome ou empresa..."
+                            placeholder="Buscar por nome, empresa ou setor"
                             className="w-full h-12 bg-slate-800 border border-slate-700 rounded-xl py-3 pl-11 pr-10 text-white placeholder-slate-500 focus:outline-none focus:border-yellow-600 transition-all"
                         />
                         {searchQuery && (
@@ -490,9 +492,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
 
             {/* Members Grid */}
             {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <div className="animate-spin w-8 h-8 border-2 border-yellow-600 border-t-transparent rounded-full"></div>
-                </div>
+                <CardSkeleton count={6} variant="card" />
             ) : members.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="p-4 bg-slate-800 rounded-full mb-4">
@@ -500,7 +500,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                     </div>
                     <h3 className="text-lg font-bold text-white mb-2">Nenhum sócio encontrado</h3>
                     <p className="text-slate-400 max-w-md">
-                        Nenhum sócio corresponde aos filtros selecionados. Tente ajustar sua busca.
+                        {COPY.empty.members}
                     </p>
                     {hasActiveFilters && (
                         <button
@@ -719,7 +719,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                     {isLoadingMore && (
                         <div className="flex items-center justify-center py-8 gap-3">
                             <div className="animate-spin w-5 h-5 border-2 border-yellow-600 border-t-transparent rounded-full" />
-                            <span className="text-sm text-slate-400">Carregando mais sócios...</span>
+                            <span className="text-sm text-slate-400">Buscando mais sócios...</span>
                         </div>
                     )}
 
