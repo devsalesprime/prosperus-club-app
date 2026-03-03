@@ -3,10 +3,10 @@
 // ============================================
 // Provides unread notification count to the entire app
 // with Realtime subscription and Badging API integration.
+// Accepts userId as prop to avoid circular auth dependencies.
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
 import { badgeService } from '../services/badgeService';
 
 interface UnreadCountContextType {
@@ -21,17 +21,16 @@ const UnreadCountContext = createContext<UnreadCountContextType>({
     markAllRead: async () => { },
 });
 
-export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { userProfile } = useAuth();
+export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNode }> = ({ userId, children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const refreshUnreadCount = useCallback(async () => {
-        if (!userProfile?.id) return;
+        if (!userId) return;
         try {
             const { count } = await supabase
                 .from('user_notifications')
                 .select('*', { count: 'exact', head: true })
-                .eq('user_id', userProfile.id)
+                .eq('user_id', userId)
                 .eq('is_read', false);
 
             const total = count ?? 0;
@@ -40,43 +39,43 @@ export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ childre
         } catch (err) {
             console.error('UnreadCountContext: refresh error', err);
         }
-    }, [userProfile?.id]);
+    }, [userId]);
 
     const markAllRead = useCallback(async () => {
-        if (!userProfile?.id) return;
+        if (!userId) return;
         try {
             await supabase
                 .from('user_notifications')
                 .update({ is_read: true })
-                .eq('user_id', userProfile.id)
+                .eq('user_id', userId)
                 .eq('is_read', false);
             setUnreadCount(0);
             badgeService.clear();
         } catch (err) {
             console.error('UnreadCountContext: markAllRead error', err);
         }
-    }, [userProfile?.id]);
+    }, [userId]);
 
     useEffect(() => {
-        if (!userProfile?.id) return;
+        if (!userId) return;
 
         // Initial fetch
         refreshUnreadCount();
 
         // Realtime: listen for notification inserts/updates
         const channel = supabase
-            .channel(`unread-notif-${userProfile.id}`)
+            .channel(`unread-notif-${userId}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'user_notifications',
-                filter: `user_id=eq.${userProfile.id}`,
+                filter: `user_id=eq.${userId}`,
             }, () => refreshUnreadCount())
             .on('postgres_changes', {
                 event: 'UPDATE',
                 schema: 'public',
                 table: 'user_notifications',
-                filter: `user_id=eq.${userProfile.id}`,
+                filter: `user_id=eq.${userId}`,
             }, () => refreshUnreadCount())
             .subscribe();
 
@@ -90,7 +89,7 @@ export const UnreadCountProvider: React.FC<{ children: ReactNode }> = ({ childre
             supabase.removeChannel(channel);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
-    }, [userProfile?.id, refreshUnreadCount]);
+    }, [userId, refreshUnreadCount]);
 
     return (
         <UnreadCountContext.Provider value={{ unreadCount, refreshUnreadCount, markAllRead }}>

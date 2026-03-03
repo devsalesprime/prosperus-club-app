@@ -182,7 +182,7 @@ const AppShell: React.FC = () => {
 
     // ─── Main App ────────────────────────────────────
     return (
-        <UnreadCountProvider>
+        <UnreadCountProvider userId={session?.user?.id}>
             <AppLayout>
                 <ViewSwitcher />
                 {/* Always mounted — silently saves push subscription */}
