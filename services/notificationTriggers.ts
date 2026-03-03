@@ -56,14 +56,14 @@ export async function notifyNewMessage(
 ): Promise<void> {
     const { data: sender } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('name')
         .eq('id', senderId)
         .single();
 
     await dispatchNotification({
         userId: recipientId,
         type: 'message',
-        title: sender?.full_name || 'Nova mensagem',
+        title: sender?.name || 'Nova mensagem',
         message: content.length > 80 ? content.slice(0, 77) + '...' : content,
         url: `/chat?conversation=${conversationId}`,
         tag: `chat-${conversationId}`,
@@ -176,7 +176,7 @@ export async function notifyReferralReceived(
 ): Promise<void> {
     const { data: referrer } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('name')
         .eq('id', referrerId)
         .single();
 
@@ -184,7 +184,7 @@ export async function notifyReferralReceived(
         userId: recipientId,
         type: 'referral',
         title: '🤝 Nova indicação',
-        message: `${referrer?.full_name || 'Um sócio'} te indicou`,
+        message: `${referrer?.name || 'Um sócio'} te indicou`,
         url: '/negocios?tab=indicacoes',
         tag: `referral-${referralId}`,
     });
@@ -200,7 +200,7 @@ export async function notifyDealRegistered(
 ): Promise<void> {
     const { data: registrer } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('name')
         .eq('id', registrerId)
         .single();
 
@@ -212,7 +212,7 @@ export async function notifyDealRegistered(
         userId: partnerId,
         type: 'deal',
         title: '💼 Negócio registrado',
-        message: `${registrer?.full_name || 'Um sócio'} registrou um negócio com você${valueStr}`,
+        message: `${registrer?.name || 'Um sócio'} registrou um negócio com você${valueStr}`,
         url: '/negocios?tab=negocios',
         tag: `deal-${dealId}`,
     });

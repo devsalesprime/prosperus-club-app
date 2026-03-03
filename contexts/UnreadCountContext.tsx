@@ -2,12 +2,11 @@
 // UnreadCountContext — Global Unread Count
 // ============================================
 // Provides unread notification count to the entire app
-// with Realtime subscription and Badging API integration.
-// Accepts userId as prop to avoid circular auth dependencies.
+// with Realtime subscription, BroadcastChannel (SW push),
+// and Badging API integration.
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { badgeService } from '../services/badgeService';
 
 interface UnreadCountContextType {
     unreadCount: number;
@@ -35,7 +34,15 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
 
             const total = count ?? 0;
             setUnreadCount(total);
-            badgeService.setBadge(total);
+
+            // Update app badge (Badging API)
+            if ('setAppBadge' in navigator) {
+                if (total > 0) {
+                    (navigator as any).setAppBadge(total).catch(() => { });
+                } else {
+                    (navigator as any).clearAppBadge().catch(() => { });
+                }
+            }
         } catch (err) {
             console.error('UnreadCountContext: refresh error', err);
         }
@@ -50,7 +57,11 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
                 .eq('user_id', userId)
                 .eq('is_read', false);
             setUnreadCount(0);
-            badgeService.clear();
+
+            // Clear app badge
+            if ('clearAppBadge' in navigator) {
+                (navigator as any).clearAppBadge().catch(() => { });
+            }
         } catch (err) {
             console.error('UnreadCountContext: markAllRead error', err);
         }
@@ -85,9 +96,22 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
+        // BroadcastChannel: SW sends PUSH_RECEIVED when push arrives
+        // This ensures badge refreshes even when app is open (foreground)
+        let broadcastChannel: BroadcastChannel | null = null;
+        try {
+            broadcastChannel = new BroadcastChannel('prosperus-push');
+            broadcastChannel.onmessage = () => {
+                refreshUnreadCount();
+            };
+        } catch {
+            // BroadcastChannel not supported in this browser
+        }
+
         return () => {
             supabase.removeChannel(channel);
             document.removeEventListener('visibilitychange', handleVisibility);
+            broadcastChannel?.close();
         };
     }, [userId, refreshUnreadCount]);
 

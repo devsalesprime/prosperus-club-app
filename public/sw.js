@@ -248,76 +248,53 @@ async function trimCache(cacheName, maxEntries) {
 // ============================================
 // PUSH NOTIFICATION EVENT
 // ============================================
+// ALWAYS shows notification — even when app is open (required for iOS)
+// Uses BroadcastChannel to notify app for badge/count refresh
 self.addEventListener('push', (event) => {
     console.log('[SW] Push notification received');
-    
-    let data = {
-        title: 'Prosperus Club',
-        body: 'Você tem uma nova notificação!',
-        icon: '/app/default-avatar.png',
-        badge: '/app/default-avatar.png',
-        url: '/app/',
-        tag: 'prosperus-default',
-        type: 'notification'
-    };
-    
-    // Tenta extrair dados do payload
-    if (event.data) {
-        try {
-            const payload = event.data.json();
-            data = {
-                title: payload.title || data.title,
-                body: payload.body || payload.message || data.body,
-                icon: payload.icon || data.icon,
-                badge: payload.badge || data.badge,
-                url: payload.url || payload.target_url || data.url,
-                tag: payload.tag || 'prosperus-notification',
-                type: payload.type || 'notification'
-            };
-        } catch (e) {
-            // Se não for JSON, usa o texto diretamente
-            data.body = event.data.text() || data.body;
-        }
+
+    if (!event.data) return;
+
+    let data = {};
+    try {
+        data = event.data.json();
+    } catch (e) {
+        data = { title: 'Prosperus Club', body: event.data.text() };
     }
 
-    // Ações condicionais por tipo de notificação
-    let actions = [];
-    let requireInteraction = false;
-
-    if (data.type === 'message') {
-        actions = [
-            { action: 'open', title: '💬 Responder' },
-            { action: 'close', title: 'Dispensar' }
-        ];
-        requireInteraction = true; // Mantém visível até interação
-    } else if (data.type === 'event') {
-        actions = [
-            { action: 'open', title: '✅ Confirmar presença' },
-            { action: 'close', title: 'Agora não' }
-        ];
-    } else {
-        actions = [
-            { action: 'open', title: 'Abrir' },
-            { action: 'close', title: 'Fechar' }
-        ];
+    // Notify the open app to refresh badge count via BroadcastChannel
+    try {
+        const ch = new BroadcastChannel('prosperus-push');
+        ch.postMessage({ type: 'PUSH_RECEIVED', data });
+        ch.close();
+    } catch (e) {
+        // BroadcastChannel not supported — app will refresh on next focus
     }
-    
+
+    // Build notification options
+    const title = data.title || 'Prosperus Club';
     const options = {
-        body: data.body,
-        icon: data.icon,
-        badge: data.badge,
-        tag: data.tag,
+        body: data.body || data.message || '',
+        icon: data.icon || '/app/default-avatar.png',
+        badge: '/app/default-avatar.png',
+        tag: data.tag || 'prosperus-notification',
         vibrate: [200, 100, 200],
-        requireInteraction: requireInteraction,
+        requireInteraction: data.type === 'message',
         data: {
-            url: data.url,
-            type: data.type
+            url: data.url || '/',
+            type: data.type || 'notification'
         },
-        actions: actions
     };
-    
+
+    // ALWAYS show — iOS needs this even when app is in foreground
     event.waitUntil(
-        self.registration.showNotification(data.title, options)
+        Promise.all([
+            self.registration.showNotification(title, options),
+            // Set app badge (if supported by SW registration)
+            ('setAppBadge' in self.registration)
+                ? self.registration.setAppBadge().catch(() => {})
+                : Promise.resolve(),
+        ])
     );
 });
 
@@ -326,39 +303,39 @@ self.addEventListener('push', (event) => {
 // ============================================
 self.addEventListener('notificationclick', (event) => {
     console.log('[SW] Notification clicked:', event.action);
-    
-    // Fecha a notificação
     event.notification.close();
-    
+
+    // Clear badge on click
+    if ('clearAppBadge' in self.registration) {
+        self.registration.clearAppBadge().catch(() => {});
+    }
+
     // Se clicou em "fechar", não faz nada
     if (event.action === 'close') {
         return;
     }
-    
+
     // URL de destino (do payload ou raiz)
     let targetUrl = event.notification.data?.url || '/app/';
-    
+
     // Resolve relative URLs to the app's base path (/app/)
-    // Notifications send paths like "/deals?tab=sales" which need to become "/app/deals?tab=sales"
     if (targetUrl.startsWith('/') && !targetUrl.startsWith('/app/')) {
         targetUrl = '/app' + targetUrl;
     }
-    
-    // Build full absolute URL for reliable matching and navigation
+
     const fullUrl = new URL(targetUrl, self.location.origin).href;
-    
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then(async (clientList) => {
-                // Procura uma janela já aberta com o app
+                // Focus existing window and navigate
                 for (const client of clientList) {
                     if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        // Navega para a URL de destino e foca (await navigate before focus)
                         await client.navigate(fullUrl);
                         return client.focus();
                     }
                 }
-                // Se não encontrou, abre uma nova janela
+                // Open new window
                 if (clients.openWindow) {
                     return clients.openWindow(fullUrl);
                 }
@@ -367,11 +344,10 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ============================================
-// NOTIFICATION CLOSE EVENT (Analytics)
+// NOTIFICATION CLOSE EVENT
 // ============================================
 self.addEventListener('notificationclose', (event) => {
     console.log('[SW] Notification dismissed:', event.notification.tag);
-    // Pode enviar analytics aqui se necessário
 });
 
 // ============================================

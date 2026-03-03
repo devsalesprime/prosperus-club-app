@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Trash2, CheckCheck, Check, ExternalLink, Loader2, ChevronDown, Inbox } from 'lucide-react';
 import { notificationService, UserNotification } from '../services/notificationService';
+import { useUnreadCount } from '../contexts/UnreadCountContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -39,6 +40,11 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     const [total, setTotal] = useState(0);
     const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
     const [markingReadIds, setMarkingReadIds] = useState<Set<string>>(new Set());
+
+    const { markAllRead } = useUnreadCount();
+
+    // Mark all as read when page opens (clears badge)
+    useEffect(() => { markAllRead(); }, [markAllRead]);
 
     const loadNotifications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
         try {
