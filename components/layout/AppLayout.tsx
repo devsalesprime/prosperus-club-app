@@ -15,6 +15,10 @@ import { OfflineBanner } from '../OfflineBanner';
 import { InstallPrompt } from '../InstallPrompt';
 import { AppTour } from '../AppTour';
 
+// Alturas fixas em JS — evita problema de CSS var não resolver no iOS
+const NAV_ICON_H = 56;   // px — altura fixa dos ícones do nav
+const HEADER_H = 60;     // px — altura do header mobile
+
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isMobile, currentUser, tour, tourSteps, view, mobileView } = useApp();
 
@@ -23,8 +27,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             {/* Global Shell Styles — Safe Area CSS Variables */}
             <style>{`
                 :root {
-                    --header-h: calc(60px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(56px + env(safe-area-inset-bottom, 0px));
+                    --header-h: calc(${HEADER_H}px + env(safe-area-inset-top, 0px));
+                    --nav-h: calc(${NAV_ICON_H}px + env(safe-area-inset-bottom, 0px));
                 }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
@@ -45,14 +49,16 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
                 <main
                     className="md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain md:p-8 app-scroll-main scroll-smooth"
-                    style={{
-                        position: isMobile ? 'fixed' : undefined,
-                        top: isMobile ? 'var(--header-h, 60px)' : undefined,
-                        bottom: isMobile ? 'var(--nav-h, 48px)' : undefined,
-                        left: isMobile ? 0 : undefined,
-                        right: isMobile ? 0 : undefined,
+                    style={isMobile ? {
+                        position: 'fixed',
+                        top: 'var(--header-h, 60px)',
+                        // CORREÇÃO: calc() direto em vez de var() composta
+                        // para garantir que env() resolve corretamente no iOS
+                        bottom: `calc(${NAV_ICON_H}px + env(safe-area-inset-bottom, 0px))`,
+                        left: 0,
+                        right: 0,
                         WebkitOverflowScrolling: 'touch',
-                    }}
+                    } : undefined}
                 >
                     {children}
                 </main>
