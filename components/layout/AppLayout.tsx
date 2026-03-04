@@ -24,7 +24,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             <style>{`
                 :root {
                     --header-h: calc(60px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(48px + env(safe-area-inset-bottom, 0px));
+                    --nav-h: calc(56px + env(safe-area-inset-bottom, 0px));
                 }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }

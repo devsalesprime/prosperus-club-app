@@ -14,7 +14,6 @@ import {
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 
-// Fixed nav items for bottom bar (first 5)
 const bottomNavItems = [
     { id: ViewState.DASHBOARD, label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: ViewState.AGENDA, label: 'Agenda', icon: <CalendarIcon size={20} /> },
@@ -28,23 +27,52 @@ export const BottomNav: React.FC = () => {
 
     return (
         <nav
-            className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-start px-2 pt-1.5"
-            style={{ minHeight: 'var(--nav-h, 48px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            className="md:hidden fixed bottom-0 left-0 right-0 z-50
+                       bg-prosperus-navy border-t border-prosperus-navy-light"
+            style={{
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            }}
         >
-            {bottomNavItems.map(item => {
-                const targetView = ('view' in item && item.view) ? item.view : item.id;
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => setView(targetView as ViewState)}
-                        data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
-                        className={`flex-1 min-w-0 flex flex-col items-center rounded-lg transition ${view === targetView ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
-                    >
-                        <span className="w-5 h-5 mb-0.5">{item.icon}</span>
-                        <span className="text-[9px] leading-tight">{item.label}</span>
-                    </button>
-                );
-            })}
+            {/* ── Área dos ícones: altura fixa, centralizada ── */}
+            <div className="flex justify-around items-center px-2 h-14">
+                {bottomNavItems.map(item => {
+                    const targetView = ('view' in item && item.view)
+                        ? item.view
+                        : item.id;
+                    const isActive = view === targetView;
+
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => setView(targetView as ViewState)}
+                            data-tour-id={
+                                item.id === 'prosperus-tools'
+                                    ? 'prosperus-tools'
+                                    : item.id.toLowerCase()
+                            }
+                            className={`
+                                flex-1 min-w-0 flex flex-col items-center
+                                justify-center gap-0.5 py-1
+                                rounded-lg transition-colors
+                                ${isActive
+                                    ? 'text-prosperus-gold'
+                                    : 'text-prosperus-grey'}
+                            `}
+                        >
+                            <span className="w-5 h-5 flex items-center justify-center">
+                                {item.icon}
+                            </span>
+                            <span className={`
+                                text-[9px] leading-tight font-medium
+                                transition-colors
+                                ${isActive ? 'text-prosperus-gold' : 'text-prosperus-grey'}
+                            `}>
+                                {item.label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
         </nav>
     );
 };
