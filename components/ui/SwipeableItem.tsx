@@ -27,8 +27,6 @@ interface SwipeableItemProps {
     autoTriggerAt?: number;        // % da largura (default 0.5)
     disabled?: boolean;
     className?: string;
-    /** Solid background for the sliding panel (must be opaque to cover actions) */
-    contentBg?: string;            // CSS color, default '#0f172a'
     /** ID for managing open state externally */
     itemId?: string;
     /** Currently open item ID — close this if different */
@@ -45,7 +43,6 @@ export function SwipeableItem({
     autoTriggerAt = 0.5,
     disabled = false,
     className = '',
-    contentBg = '#0f172a',
     itemId,
     openItemId,
     onOpen,
@@ -201,10 +198,14 @@ export function SwipeableItem({
         ? 'none'
         : 'transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)';
 
+    // Only render action panels when user is swiping or panel is open
+    // This prevents color bleed-through on gradient backgrounds
+    const showActions = translateX !== 0 || isDragging;
+
     return (
         <div className={`relative overflow-hidden ${className}`}>
             {/* ── Left actions (swipe right to reveal) ── */}
-            {leftActions.length > 0 && (
+            {showActions && leftActions.length > 0 && (
                 <div
                     className="absolute inset-y-0 left-0 flex"
                     style={{ width: leftTotalWidth }}
@@ -229,7 +230,7 @@ export function SwipeableItem({
             )}
 
             {/* ── Right actions (swipe left to reveal) ── */}
-            {rightActions.length > 0 && (
+            {showActions && rightActions.length > 0 && (
                 <div
                     className="absolute inset-y-0 right-0 flex"
                     style={{ width: rightTotalWidth }}
@@ -257,7 +258,6 @@ export function SwipeableItem({
             <div
                 className="relative z-10"
                 style={{
-                    background: contentBg,
                     transform: `translateX(${translateX}px)`,
                     transition: transitionStyle,
                 }}

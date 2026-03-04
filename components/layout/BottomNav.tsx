@@ -29,7 +29,7 @@ export const BottomNav: React.FC = () => {
     return (
         <nav
             className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-navy-light flex justify-around items-start px-2 pt-1.5"
-            style={{ height: 'var(--nav-h, 48px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            style={{ minHeight: 'var(--nav-h, 48px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
             {bottomNavItems.map(item => {
                 const targetView = ('view' in item && item.view) ? item.view : item.id;
