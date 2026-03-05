@@ -1,21 +1,17 @@
 // DocViewer.tsx — Bottom sheet viewer for legal docs and FAQ
 // Renders parsed markdown sections. FAQ uses accordion, legal docs use flowing text.
 // Floats over current content — no route change needed.
+// Docs loaded at runtime via fetch() from public/docs/ (avoids build-time plugin conflicts).
 
 import React, { useState, useEffect } from 'react';
-import { X, Search } from 'lucide-react';
+import { X, Search, Loader2 } from 'lucide-react';
 import { useDocViewer, type DocType } from '../../hooks/useDocViewer';
 import { parseMarkdownSections, filterSections, type DocSection } from '../../utils/docParser';
 
-// Vite ?raw imports — loads the .md files as strings at build time
-import faqRaw from '../../docs/FAQ_USABILIDADE.md?raw';
-import privacyRaw from '../../docs/POLITICA_PRIVACIDADE.md?raw';
-import termsRaw from '../../docs/TERMOS_DE_USO.md?raw';
-
-const DOC_META: Record<DocType, { title: string; emoji: string; raw: string }> = {
-    faq: { title: 'Central de Ajuda', emoji: '💬', raw: faqRaw },
-    privacy: { title: 'Política de Privacidade', emoji: '🔒', raw: privacyRaw },
-    terms: { title: 'Termos de Uso', emoji: '📋', raw: termsRaw },
+const DOC_META: Record<DocType, { title: string; emoji: string; file: string }> = {
+    faq: { title: 'Central de Ajuda', emoji: '💬', file: 'FAQ_USABILIDADE.md' },
+    privacy: { title: 'Política de Privacidade', emoji: '🔒', file: 'POLITICA_PRIVACIDADE.md' },
+    terms: { title: 'Termos de Uso', emoji: '📋', file: 'TERMOS_DE_USO.md' },
 };
 
 export const DocViewer: React.FC = () => {
@@ -23,12 +19,22 @@ export const DocViewer: React.FC = () => {
     const [sections, setSections] = useState<DocSection[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [openSection, setOpenSection] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (!activeDoc) return;
-        setSections(parseMarkdownSections(DOC_META[activeDoc].raw));
         setSearchQuery('');
         setOpenSection(null);
+        setLoading(true);
+
+        const base = import.meta.env.BASE_URL || '/';
+        fetch(`${base}docs/${DOC_META[activeDoc].file}`)
+            .then(r => r.text())
+            .then(raw => {
+                setSections(parseMarkdownSections(raw));
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
     }, [activeDoc]);
 
     if (!activeDoc) return null;
@@ -82,33 +88,41 @@ export const DocViewer: React.FC = () => {
 
                 {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1">
-                    {filtered.map((section, i) =>
-                        isFaq ? (
-                            <FaqAccordion
-                                key={i}
-                                section={section}
-                                isOpen={openSection === section.title}
-                                onToggle={() =>
-                                    setOpenSection(openSection === section.title ? null : section.title)
-                                }
-                            />
-                        ) : (
-                            <LegalSection key={i} section={section} />
-                        )
-                    )}
-
-                    {filtered.length === 0 && (
-                        <div className="text-center py-12">
-                            <p className="text-slate-600 text-sm">
-                                Nenhum resultado para "{searchQuery}"
-                            </p>
+                    {loading ? (
+                        <div className="flex items-center justify-center py-16">
+                            <Loader2 size={24} className="animate-spin text-yellow-500" />
                         </div>
-                    )}
+                    ) : (
+                        <>
+                            {filtered.map((section, i) =>
+                                isFaq ? (
+                                    <FaqAccordion
+                                        key={i}
+                                        section={section}
+                                        isOpen={openSection === section.title}
+                                        onToggle={() =>
+                                            setOpenSection(openSection === section.title ? null : section.title)
+                                        }
+                                    />
+                                ) : (
+                                    <LegalSection key={i} section={section} />
+                                )
+                            )}
 
-                    {/* Footer */}
-                    <p className="text-xs text-slate-700 text-center pt-6 pb-4">
-                        Última atualização: março de 2026
-                    </p>
+                            {filtered.length === 0 && !loading && (
+                                <div className="text-center py-12">
+                                    <p className="text-slate-600 text-sm">
+                                        Nenhum resultado para "{searchQuery}"
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Footer */}
+                            <p className="text-xs text-slate-700 text-center pt-6 pb-4">
+                                Última atualização: março de 2026
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
         </>
