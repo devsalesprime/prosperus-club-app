@@ -278,6 +278,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         alt="Prosperus Logo"
                         className="h-12 mx-auto mb-4"
                     />
+                    <p className="text-slate-400 text-sm mb-3">Bem-vindo ao aplicativo do Prosperus Club.</p>
                     <h2 className="text-2xl font-bold text-white">{title}</h2>
                     <p className="text-slate-400 text-sm mt-1">{subtitle}</p>
                 </div>
@@ -443,7 +444,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                     Email não encontrado no clube.
                                 </p>
                                 <a
-                                    href="https://wa.me/5511999999999"
+                                    href="https://wa.me/5511918236211"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-xs text-yellow-600/70 underline underline-offset-2 hover:text-yellow-400 transition-colors"
