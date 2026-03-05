@@ -1,7 +1,8 @@
 // ============================================
 // BOTTOM NAV — Mobile Bottom Navigation
 // ============================================
-// Extracted from App.tsx L1554-1573
+// Flex item within AppLayout — NO position:fixed
+// (body is already position:fixed on iOS, so children use flow layout)
 
 import React from 'react';
 import {
@@ -22,23 +23,17 @@ const bottomNavItems = [
     { id: ViewState.GALLERY, label: 'Galeria', icon: <ImageIcon size={20} /> },
 ];
 
-// Altura fixa da área de ícones (sem safe area):
-const NAV_ICON_HEIGHT = 56; // px = h-14
-
 export const BottomNav: React.FC = () => {
     const { view, setView } = useApp();
 
     return (
         <nav
-            className="md:hidden fixed bottom-0 left-0 right-0 z-50
+            className="md:hidden shrink-0 z-50
                        bg-prosperus-navy border-t border-prosperus-navy-light"
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
             {/* Área dos ícones: altura FIXA, ícones CENTRALIZADOS */}
-            <div
-                className="flex justify-around items-center px-2"
-                style={{ height: NAV_ICON_HEIGHT }}
-            >
+            <div className="flex justify-around items-center px-2" style={{ height: 56 }}>
                 {bottomNavItems.map(item => {
                     const targetView = ('view' in item && item.view) ? item.view : item.id;
                     const isActive = view === targetView;
@@ -48,7 +43,6 @@ export const BottomNav: React.FC = () => {
                             onClick={() => setView(targetView as ViewState)}
                             data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
                             className={`flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 rounded-lg transition-colors ${isActive ? 'text-prosperus-gold' : 'text-prosperus-grey'}`}
-                            style={{ minHeight: 'unset' }}
                         >
                             <span className="w-5 h-5 flex items-center justify-center">
                                 {item.icon}
@@ -60,7 +54,6 @@ export const BottomNav: React.FC = () => {
                     );
                 })}
             </div>
-            {/* Espaço abaixo = apenas safe area (home indicator) — sem conteúdo */}
         </nav>
     );
 };

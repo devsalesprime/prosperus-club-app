@@ -48,9 +48,9 @@ function saveDismiss() {
 function getBannerBottom(): number {
     try {
         // Look for the mobile bottom nav
-        const navEl = document.querySelector('nav.fixed.bottom-0') ||
-            document.querySelector('nav[class*="bottom-0"]') ||
-            document.querySelector('.safe-area-bottom');
+        const navEl = document.querySelector('nav[class*="bg-prosperus-navy"]') ||
+            document.querySelector('nav.shrink-0') ||
+            document.querySelector('nav');
         if (navEl) {
             return navEl.getBoundingClientRect().height + 12;
         }

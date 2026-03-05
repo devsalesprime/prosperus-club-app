@@ -1,7 +1,8 @@
 // ============================================
 // APP HEADER — Mobile Top Bar
 // ============================================
-// Extracted from App.tsx L1025-1058
+// Flex item within AppLayout — NO position:fixed
+// (body is already position:fixed on iOS, so children use flow layout)
 
 import React from 'react';
 import { Heart, MessageCircle, User } from 'lucide-react';
@@ -14,8 +15,8 @@ export const AppHeader: React.FC = () => {
 
     return (
         <header
-            className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
-            style={{ height: 'var(--header-h, 60px)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            className="md:hidden shrink-0 z-50 flex items-center justify-between px-4 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/60"
+            style={{ height: 60 }}
         >
             <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
                 <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />

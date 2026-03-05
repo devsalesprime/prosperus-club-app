@@ -1,8 +1,9 @@
 // ============================================
 // APP LAYOUT — Application Shell
 // ============================================
-// The visual chrome: sidebar, header, main content area, bottom nav.
-// Receives ViewSwitcher as children.
+// Uses NATURAL FLEXBOX flow — no position:fixed on children.
+// body is already position:fixed on iOS (index.html @supports),
+// so header/main/nav are flex items that fill body naturally.
 
 import React from 'react';
 import { ViewState } from '../../types';
@@ -15,21 +16,13 @@ import { OfflineBanner } from '../OfflineBanner';
 import { InstallPrompt } from '../InstallPrompt';
 import { AppTour } from '../AppTour';
 
-// Alturas fixas em JS — evita problema de CSS var não resolver no iOS
-const NAV_ICON_H = 56;   // px — altura fixa dos ícones do nav
-const HEADER_H = 60;     // px — altura do header mobile
-
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isMobile, currentUser, tour, tourSteps, view, mobileView } = useApp();
 
     return (
-        <div className="bg-prosperus-navy h-[100dvh] text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden relative">
-            {/* Global Shell Styles — Safe Area CSS Variables */}
+        <div className="bg-prosperus-navy h-full text-prosperus-white font-sans flex flex-col md:flex-row overflow-hidden relative">
+            {/* Global Shell Styles */}
             <style>{`
-                :root {
-                    --header-h: calc(${HEADER_H}px + env(safe-area-inset-top, 0px));
-                    --nav-h: calc(${NAV_ICON_H}px + env(safe-area-inset-bottom, 0px));
-                }
                 html, body, #root { overflow: hidden; height: 100%; margin: 0; }
                 .app-scroll-main { scrollbar-width: none; -ms-overflow-style: none; }
                 .app-scroll-main::-webkit-scrollbar { display: none; }
@@ -42,28 +35,20 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             {/* Sidebar (Desktop) */}
             <DesktopSidebar />
 
-            {/* Main Content */}
+            {/* Main Content — flex column: header | content | nav */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-prosperus-navy relative">
-                {/* Mobile Header */}
+                {/* Mobile Header — shrink-0, no fixed */}
                 <AppHeader />
 
+                {/* Scrollable content area — flex-1 fills between header and nav */}
                 <main
-                    className="md:relative md:top-auto md:bottom-auto md:left-auto md:right-auto md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain md:p-8 app-scroll-main scroll-smooth"
-                    style={isMobile ? {
-                        position: 'fixed',
-                        top: 'var(--header-h, 60px)',
-                        // CORREÇÃO: calc() direto em vez de var() composta
-                        // para garantir que env() resolve corretamente no iOS
-                        bottom: `calc(${NAV_ICON_H}px + env(safe-area-inset-bottom, 0px))`,
-                        left: 0,
-                        right: 0,
-                        WebkitOverflowScrolling: 'touch',
-                    } : undefined}
+                    className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain md:p-8 app-scroll-main scroll-smooth"
+                    style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
                 >
                     {children}
                 </main>
 
-                {/* Mobile Bottom Nav */}
+                {/* Mobile Bottom Nav — shrink-0, no fixed */}
                 <BottomNav />
             </div>
 
