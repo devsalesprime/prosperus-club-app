@@ -43,8 +43,11 @@ const PARTNERSHIP_SECTORS = [
     'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
     'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
     'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
-    'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage'
+    'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage',
+    'Outros'
 ];
+
+const MAX_INTERESTS = 5;
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     currentUser,
@@ -60,6 +63,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+    const [customInterest, setCustomInterest] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +134,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             if (!formData.company?.trim()) errs.company = 'Empresa é obrigatória';
             if (!formData.job_title?.trim()) errs.job_title = 'Cargo é obrigatório';
             if (!formData.bio?.trim()) errs.bio = 'Conte sobre você';
+            // Photo is required
+            const hasRealPhoto = formData.image_url && !formData.image_url.includes('default-avatar');
+            if (!hasRealPhoto) errs.photo = 'Foto obrigatória para aparecer no Member Book';
         } else if (s === 2) {
             const liUser = getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin');
             const igUser = getUsernameFromUrl(formData.socials?.instagram || '', 'instagram');
@@ -140,6 +147,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             if (!formData.what_i_sell?.trim()) errs.what_i_sell = 'Campo obrigatório';
             if (!formData.what_i_need?.trim()) errs.what_i_need = 'Campo obrigatório';
             if (!(formData.partnership_interests && formData.partnership_interests.length >= 1)) errs.partnership_interests = 'Selecione pelo menos 1 setor';
+            if (formData.partnership_interests && formData.partnership_interests.length > MAX_INTERESTS) errs.partnership_interests = `Máximo ${MAX_INTERESTS} setores`;
+            if (formData.partnership_interests?.includes('Outros') && !customInterest.trim()) errs.custom_interest = 'Descreva qual área';
         }
         return errs;
     };
@@ -159,8 +168,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         setFormData(prev => {
             const interests = prev.partnership_interests || [];
             if (interests.includes(sector)) {
-                return { ...prev, partnership_interests: interests.filter(s => s !== sector) };
+                const next = interests.filter(s => s !== sector);
+                // Clear custom interest if deselecting Outros
+                if (sector === 'Outros') setCustomInterest('');
+                return { ...prev, partnership_interests: next };
             } else {
+                if (interests.length >= MAX_INTERESTS) return prev; // Block above max
                 return { ...prev, partnership_interests: [...interests, sector] };
             }
         });
@@ -285,6 +298,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             await supabase.from('profiles').update({
                 accepted_terms_at: now,
                 accepted_privacy_at: now,
+                custom_interest: customInterest.trim() || null,
             }).eq('id', currentUser.id);
 
             // Mark onboarding as complete
@@ -384,7 +398,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
             </div>
             {errors.photo && (
-                <p className="text-center text-red-400 text-xs -mt-4 mb-4">{errors.photo}</p>
+                <div className="flex items-center justify-center gap-1.5 -mt-4 mb-4">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
+                        <p className="text-xs text-red-400">
+                            📷 {errors.photo}
+                        </p>
+                    </div>
+                </div>
             )}
 
             {/* Form Fields */}
@@ -574,26 +594,77 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             {/* Partnership Interests */}
             <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                    <Users size={14} className="inline mr-1.5 -mt-0.5 text-emerald-400" />
-                    Setores de interesse para parcerias <span className="text-yellow-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-slate-300">
+                        <Users size={14} className="inline mr-1.5 -mt-0.5 text-emerald-400" />
+                        Setores de interesse <span className="text-yellow-500">*</span>
+                    </label>
+                    <span
+                        className="text-xs font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                            background: (formData.partnership_interests?.length || 0) >= 1
+                                ? 'rgba(255,218,113,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: (formData.partnership_interests?.length || 0) >= 1
+                                ? '#FFDA71' : '#f87171',
+                            border: `1px solid ${(formData.partnership_interests?.length || 0) >= 1 ? 'rgba(255,218,113,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                        }}
+                    >
+                        {formData.partnership_interests?.length || 0}/{MAX_INTERESTS}
+                    </span>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                    Escolha de 1 a {MAX_INTERESTS} áreas
+                    {(formData.partnership_interests?.length || 0) >= MAX_INTERESTS && (
+                        <span className="ml-1 text-yellow-600">· limite atingido</span>
+                    )}
+                </p>
                 <div className={`flex flex-wrap gap-2 ${errors.partnership_interests ? 'ring-1 ring-red-500/50 rounded-xl p-2 -m-2' : ''}`}>
-                    {PARTNERSHIP_SECTORS.map(sector => (
-                        <button
-                            key={sector}
-                            onClick={() => { handlePartnershipToggle(sector); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.partnership_interests; return n; }); }}
-                            className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${(formData.partnership_interests || []).includes(sector)
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
-                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
-                                }`}
-                        >
-                            {(formData.partnership_interests || []).includes(sector) && <Check size={12} className="inline mr-1" />}
-                            {sector}
-                        </button>
-                    ))}
+                    {PARTNERSHIP_SECTORS.map(sector => {
+                        const isSelected = (formData.partnership_interests || []).includes(sector);
+                        const atMax = (formData.partnership_interests?.length || 0) >= MAX_INTERESTS;
+                        const isDisabled = !isSelected && atMax;
+                        return (
+                            <button
+                                key={sector}
+                                onClick={() => { handlePartnershipToggle(sector); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.partnership_interests; return n; }); }}
+                                disabled={isDisabled}
+                                className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isSelected
+                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
+                                        : isDisabled
+                                            ? 'bg-slate-800/40 text-slate-600 border border-slate-800 cursor-not-allowed'
+                                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                    }`}
+                            >
+                                {isSelected && <Check size={12} className="inline mr-1" />}
+                                {sector === 'Outros' && isSelected ? '✦ Outros' : sector}
+                            </button>
+                        );
+                    })}
                 </div>
                 {errors.partnership_interests && <p className="text-xs text-red-400 mt-2">{errors.partnership_interests}</p>}
+
+                {/* Campo "Outros" — aparece ao selecionar */}
+                {(formData.partnership_interests || []).includes('Outros') && (
+                    <div className="mt-3 rounded-2xl overflow-hidden" style={{ border: '1px solid #FFDA71', background: '#0D2E44' }}>
+                        <div className="flex items-center px-4 py-1" style={{ borderBottom: '1px solid #123F5B' }}>
+                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FFDA71', opacity: 0.7 }}>Qual área?</span>
+                        </div>
+                        <input
+                            type="text"
+                            value={customInterest}
+                            onChange={e => { setCustomInterest(e.target.value); if (triedNext && errors.custom_interest) setErrors(prev => { const n = { ...prev }; delete n.custom_interest; return n; }); }}
+                            placeholder="Ex: Construção civil, Moda, Saúde mental..."
+                            maxLength={60}
+                            className="w-full px-4 py-3 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none"
+                        />
+                        {customInterest && (
+                            <div className="px-4 pb-2 flex justify-end">
+                                <span className="text-[10px] text-slate-600">{customInterest.length}/60</span>
+                            </div>
+                        )}
+                        {errors.custom_interest && <p className="text-xs text-red-400 px-4 pb-2">{errors.custom_interest}</p>}
+                    </div>
+                )}
             </div>
         </div>
     );

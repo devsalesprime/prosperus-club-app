@@ -22,6 +22,8 @@ const SECTOR_OPTIONS = [
     'Outros'
 ];
 
+const MAX_INTERESTS = 5;
+
 interface ProfileStrategicFieldsProps {
     whatISell: string;
     whatINeed: string;
@@ -52,6 +54,7 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
                 );
             }
         } else {
+            if (interests.length >= MAX_INTERESTS) return; // Block above max
             onChange('partnership_interests',
                 [...interests, sector] as any
             );
@@ -61,6 +64,7 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
     const addCustomTag = (value: string) => {
         const val = value.trim();
         if (!val || interests.includes(val)) return;
+        if (interests.length >= MAX_INTERESTS) return; // Block above max
         onChange('partnership_interests', [...interests, val] as any);
     };
 
@@ -122,30 +126,49 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
 
                 {/* Partnership Interests — SectorSelector */}
                 <div className="space-y-3">
-                    {/* Label */}
-                    <div>
-                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                            <Users size={12} className="inline mr-1.5 text-yellow-500" />
-                            Setor de Interesse
-                        </label>
-                        <p className="text-xs text-slate-600 mt-0.5">
-                            Selecione os setores para parcerias
-                        </p>
+                    {/* Label + Counter */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <Users size={12} className="inline mr-1.5 text-yellow-500" />
+                                Setor de Interesse
+                            </label>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                                Escolha de 1 a {MAX_INTERESTS} setores
+                                {interests.length >= MAX_INTERESTS && (
+                                    <span className="ml-1 text-yellow-600">· limite atingido</span>
+                                )}
+                            </p>
+                        </div>
+                        <span
+                            className="text-xs font-bold px-2 py-0.5 rounded-full"
+                            style={{
+                                background: interests.length >= 1 ? 'rgba(255,218,113,0.15)' : 'rgba(239,68,68,0.15)',
+                                color: interests.length >= 1 ? '#FFDA71' : '#f87171',
+                                border: `1px solid ${interests.length >= 1 ? 'rgba(255,218,113,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                            }}
+                        >
+                            {interests.filter((s: string) => SECTOR_OPTIONS.includes(s)).length}/{MAX_INTERESTS}
+                        </span>
                     </div>
 
-                    {/* Tag grid — flex-wrap with stretch override */}
                     <div className="w-full">
                         <div className="flex flex-wrap gap-2 items-start content-start">
                             {SECTOR_OPTIONS.map(sector => {
                                 const isSelected = interests.includes(sector);
+                                const atMax = interests.length >= MAX_INTERESTS;
+                                const isDisabled = !isSelected && atMax;
                                 return (
                                     <button
                                         key={sector}
                                         type="button"
                                         onClick={() => toggleSector(sector)}
+                                        disabled={isDisabled}
                                         className={`whitespace-nowrap flex-shrink-0 self-start w-auto px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 active:scale-95 ${isSelected
-                                            ? 'bg-yellow-600 border-yellow-500 text-white shadow-sm shadow-yellow-900/30'
-                                            : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white'
+                                                ? 'bg-yellow-600 border-yellow-500 text-white shadow-sm shadow-yellow-900/30'
+                                                : isDisabled
+                                                    ? 'bg-slate-800/40 border-slate-800 text-slate-600 cursor-not-allowed'
+                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white'
                                             }`}
                                     >
                                         {isSelected && sector !== 'Outros' && (

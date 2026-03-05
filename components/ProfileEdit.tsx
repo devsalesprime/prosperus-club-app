@@ -124,6 +124,11 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                         onImageUrlChange={(url) => handleInputChange('image_url', url)}
                         onOpenUpload={() => setShowImageUpload(true)}
                     />
+                    {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
+                        <p className="text-xs text-center -mt-3 mb-2" style={{ color: '#CA9A43' }}>
+                            ⚠ Sem foto, você não aparece em destaque no Member Book
+                        </p>
+                    )}
 
                     {/* Basic Fields: Name, Job, Company, Phone, Bio */}
                     <ProfileBasicFields
