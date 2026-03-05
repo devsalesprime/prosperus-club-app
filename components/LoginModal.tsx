@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AlertCircle, ArrowLeft, CheckCircle, Mail, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { AlertCircle, CheckCircle, Mail, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button } from './ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,472 +11,300 @@ interface LoginModalProps {
     onLoginSuccess: (user: User) => void;
 }
 
-type ModalView = 'LOGIN' | 'LOGIN_PASSWORD' | 'CHECK_EMAIL' | 'CREATE_PASSWORD' | 'FORGOT_PASSWORD';
+// ── State machine for the login flow ──────────────────────────
+type LoginStep =
+    | 'idle'           // Email empty or not yet validated
+    | 'checking'       // Debounce fired, verifying email
+    | 'password'       // Known user with password → login
+    | 'first-access'   // HubSpot user, no password yet → create
+    | 'not-found'      // Email not in profiles AND not in HubSpot
+    | 'forgot';        // Password recovery view
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEBOUNCE_MS = 600;
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
     const { resetPassword } = useAuth();
-    const [view, setView] = useState<ModalView>('LOGIN');
+
+    // ── Form state ────────────────────────────────────────────
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [step, setStep] = useState<LoginStep>('idle');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
-    const [profileData, setProfileData] = useState<{ fullName?: string; jobTitle?: string; company?: string; phone?: string } | null>(null);
-    const [resetEmailSent, setResetEmailSent] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [resetEmailSent, setResetEmailSent] = useState(false);
+    const [profileData, setProfileData] = useState<{
+        fullName?: string; jobTitle?: string; company?: string; phone?: string;
+    } | null>(null);
+
+    // ── Refs ──────────────────────────────────────────────────
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+    const lastChecked = useRef('');
+    const passwordRef = useRef<HTMLInputElement>(null);
+
+    // Cleanup debounce on unmount
+    useEffect(() => () => clearTimeout(debounceRef.current), []);
 
     if (!isOpen) return null;
 
-    const resetState = () => {
+    // ── Auto-check email (debounced) ──────────────────────────
+    const checkEmail = async (value: string) => {
+        if (!EMAIL_REGEX.test(value)) return;
+        if (value === lastChecked.current) return;
+        lastChecked.current = value;
+
+        setStep('checking');
         setError(null);
-        setSuccessMsg(null);
-        setLoading(false);
-    };
-
-    // ─── VIEW HEADERS ───────────────────────────────────────────────
-
-    const getViewTitle = (): string => {
-        switch (view) {
-            case 'LOGIN': return 'Bem-vindo ao Prosperus';
-            case 'LOGIN_PASSWORD': return 'Bem-vindo de volta';
-            case 'CHECK_EMAIL': return 'Primeiro Acesso';
-            case 'CREATE_PASSWORD': return 'Criar Senha';
-            case 'FORGOT_PASSWORD': return 'Recuperar Senha';
-            default: return '';
-        }
-    };
-
-    const getViewSubtitle = (): string => {
-        switch (view) {
-            case 'LOGIN': return 'Digite seu email para continuar';
-            case 'LOGIN_PASSWORD': return 'Digite sua senha para acessar';
-            case 'CHECK_EMAIL': return 'Vamos verificar seu cadastro de sócio';
-            case 'CREATE_PASSWORD': return 'Defina uma senha segura para seu acesso';
-            case 'FORGOT_PASSWORD': return 'Digite o e-mail cadastrado para receber um link';
-            default: return '';
-        }
-    };
-
-    // ─── STEP 1: EMAIL CHECK ────────────────────────────────────────
-
-    const handleEmailSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!email.trim()) return;
-
-        setLoading(true);
-        resetState();
 
         try {
-            // Check if email already has an account via Edge Function
-            const { data, error: fnError } = await supabase.functions.invoke('check-email-exists', {
-                body: { email: email.trim().toLowerCase() }
-            });
+            // 1. Fast check: profiles + auth.users
+            const { data, error: fnError } = await supabase.functions.invoke(
+                'check-email-exists',
+                { body: { email: value.toLowerCase().trim() } }
+            );
 
-            if (fnError) {
-                console.error('check-email-exists error:', fnError);
-                // On error, assume user exists and let them try to login
-                setView('LOGIN_PASSWORD');
-                return;
-            }
+            if (fnError) throw fnError;
 
-            if (data?.exists) {
-                // Email found — go to password
-                setView('LOGIN_PASSWORD');
+            if (data?.exists && data?.has_password) {
+                // Known user with password → show password field
+                setStep('password');
+                setTimeout(() => passwordRef.current?.focus(), 280);
+            } else if (data?.exists && !data?.has_password) {
+                // Profile exists but no password (edge case)
+                setStep('first-access');
+                setTimeout(() => passwordRef.current?.focus(), 280);
             } else {
-                // Email not found — redirect to first access (HubSpot check)
-                setSuccessMsg('Vamos verificar seu cadastro de sócio');
-                setView('CHECK_EMAIL');
+                // Not in profiles → check HubSpot
+                await checkHubSpot(value);
             }
-
-        } catch (err: unknown) {
-            console.error('Email check error:', err);
-            // Fallback: go to password view anyway
-            setView('LOGIN_PASSWORD');
-        } finally {
-            setLoading(false);
+        } catch {
+            setStep('idle');
+            setError('Não foi possível verificar. Tente novamente.');
         }
     };
 
-    // ─── STEP 2: LOGIN WITH PASSWORD ────────────────────────────────
-
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-
+    // ── HubSpot check for first-access users ──────────────────
+    const checkHubSpot = async (emailValue: string) => {
         try {
-            // 1. Authenticate with Supabase Auth
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            const { data, error: fnError } = await supabase.functions.invoke(
+                'login-socio',
+                { body: { email: emailValue.toLowerCase().trim() } }
+            );
 
-            if (authError) {
-                console.error('Supabase Auth Error:', authError);
-
-                if (authError.message?.includes('Invalid login credentials')) {
-                    throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
-                }
-
-                if (authError.status === 429 || authError.message?.includes('rate limit')) {
-                    throw new Error('Muitas tentativas de login. Aguarde alguns minutos e tente novamente.');
-                }
-
-                if (authError.message?.includes('Failed to fetch')) {
-                    throw new Error('Erro de conexão com o servidor. Verifique sua internet.');
-                }
-
-                throw new Error(authError.message || 'Falha na autenticação. Verifique suas credenciais.');
-            }
-
-            if (!authData.user) throw new Error('Usuário não encontrado.');
-
-            // 2. Pass user to App.tsx — role routing is handled there via AuthContext
-            onLoginSuccess(authData.user);
-
-        } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro inesperado.';
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // ─── FIRST ACCESS: CHECK HUBSPOT ────────────────────────────────
-
-    const handleCheckFirstAccess = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        resetState();
-
-        try {
-            const { data, error } = await supabase.functions.invoke('login-socio', {
-                body: { email }
-            });
-
-            if (error) {
-                console.error('Edge Function Error:', error);
-                throw new Error('Erro ao validar cadastro. Tente novamente.');
-            }
+            if (fnError) throw fnError;
 
             if (data?.valid) {
                 setProfileData(data.profile);
-                setSuccessMsg('Email localizado! Defina sua senha de acesso.');
-                setView('CREATE_PASSWORD');
+                setStep('first-access');
+                setTimeout(() => passwordRef.current?.focus(), 280);
             } else {
-                const message = data?.message || 'Cadastro não encontrado ou etapa de pagamento pendente.';
-                setError(message);
+                setStep('not-found');
             }
-
-        } catch (err: unknown) {
-            console.error('First Access Validation Error:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Erro ao verificar cadastro. Entre em contato com o suporte.';
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
+        } catch {
+            setStep('not-found');
         }
     };
 
-    // ─── CREATE PASSWORD + AUTO-LOGIN ───────────────────────────────
+    // ── Handle email input with debounce ──────────────────────
+    const handleEmailChange = (value: string) => {
+        setEmail(value);
+        setError(null);
+        setSuccessMsg(null);
 
-    const handleCreatePassword = async (e: React.FormEvent) => {
+        // Reset if email changed after a check
+        if (value !== lastChecked.current) {
+            setStep('idle');
+            setPassword('');
+            setConfirmPassword('');
+            setProfileData(null);
+        }
+
+        clearTimeout(debounceRef.current);
+        if (!EMAIL_REGEX.test(value)) return;
+
+        debounceRef.current = setTimeout(() => checkEmail(value), DEBOUNCE_MS);
+    };
+
+    // ── Submit: login or create password ──────────────────────
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (password !== confirmPassword) {
-            setError('As senhas não coincidem.');
-            return;
-        }
-        if (password.length < 6) {
-            setError('A senha deve ter no mínimo 6 caracteres.');
-            return;
-        }
+        if (loading || step === 'idle' || step === 'checking') return;
 
         setLoading(true);
-        resetState();
+        setError(null);
 
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: profileData?.fullName || email,
-                        job_title: profileData?.jobTitle || '',
-                        company: profileData?.company || '',
-                        phone: profileData?.phone || ''
+            if (step === 'password') {
+                // ── Login with password ───────────────────
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                    email: email.toLowerCase().trim(),
+                    password,
+                });
+
+                if (authError) {
+                    if (authError.message?.includes('Invalid login credentials')) {
+                        throw new Error('Senha incorreta. Tente novamente.');
                     }
-                }
-            });
-
-            if (error) {
-                console.error('Supabase SignUp Error:', error);
-
-                if (error.status === 429 || error.message?.includes('rate limit')) {
-                    throw new Error('Muitas tentativas. Aguarde alguns minutos e tente novamente.');
-                }
-
-                if (error.message?.includes('User already registered')) {
-                    throw new Error('Este email já está cadastrado. Use a opção "Login" com sua senha.');
+                    if (authError.status === 429 || authError.message?.includes('rate limit')) {
+                        throw new Error('Muitas tentativas. Aguarde alguns minutos.');
+                    }
+                    if (authError.message?.includes('Failed to fetch')) {
+                        throw new Error('Erro de conexão. Verifique sua internet.');
+                    }
+                    throw new Error(authError.message || 'Falha na autenticação.');
                 }
 
-                if (error.message?.includes('Failed to fetch')) {
-                    throw new Error('Erro de conexão com o servidor. Verifique sua internet.');
+                if (!authData.user) throw new Error('Usuário não encontrado.');
+                onLoginSuccess(authData.user);
+
+            } else if (step === 'first-access') {
+                // ── Create password + auto-login ──────────
+                if (password.length < 6) {
+                    throw new Error('Senha deve ter pelo menos 6 caracteres.');
+                }
+                if (password !== confirmPassword) {
+                    throw new Error('As senhas não coincidem.');
                 }
 
-                throw new Error(error.message || 'Erro ao criar conta. Tente novamente.');
-            }
+                const normalizedEmail = email.toLowerCase().trim();
 
-            // Account created — auto-login
-            setSuccessMsg('Conta ativada com sucesso! Entrando...');
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                    email: normalizedEmail,
+                    password,
+                    options: {
+                        data: {
+                            full_name: profileData?.fullName || normalizedEmail,
+                            job_title: profileData?.jobTitle || '',
+                            company: profileData?.company || '',
+                            phone: profileData?.phone || '',
+                        },
+                    },
+                });
 
-            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
+                if (signUpError) {
+                    if (signUpError.status === 429) {
+                        throw new Error('Muitas tentativas. Aguarde alguns minutos.');
+                    }
+                    if (signUpError.message?.includes('User already registered')) {
+                        throw new Error('Este email já está cadastrado. Tente fazer login com senha.');
+                    }
+                    throw new Error(signUpError.message || 'Erro ao ativar conta.');
+                }
 
-            if (loginError || !loginData.user) {
-                // Fallback: use the signUp user if auto-login fails
-                if (data.user) {
-                    setTimeout(() => {
-                        onLoginSuccess(data.user!);
-                        onClose();
-                    }, 1500);
+                setSuccessMsg('Conta ativada! Entrando...');
+
+                // Auto-login after signup
+                const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+                    email: normalizedEmail,
+                    password,
+                });
+
+                if (loginError || !loginData.user) {
+                    if (signUpData.user) {
+                        setTimeout(() => { onLoginSuccess(signUpData.user!); onClose(); }, 1500);
+                    } else {
+                        throw new Error('Conta criada, mas erro ao entrar. Faça login normalmente.');
+                    }
                 } else {
-                    throw new Error('Conta criada, mas houve um erro ao entrar. Faça login normalmente.');
+                    setTimeout(() => { onLoginSuccess(loginData.user); onClose(); }, 1500);
                 }
-            } else {
-                // Auto-login succeeded
-                setTimeout(() => {
-                    onLoginSuccess(loginData.user);
-                    onClose();
-                }, 1500);
             }
-
         } catch (err: unknown) {
-            console.error('Signup error:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Erro ao criar conta. Tente novamente.';
-            setError(errorMessage);
+            const msg = err instanceof Error ? err.message : 'Erro inesperado.';
+            setError(msg);
         } finally {
             setLoading(false);
         }
     };
 
-    // ─── RENDER ─────────────────────────────────────────────────────
+    // ── Forgot password ───────────────────────────────────────
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        const result = await resetPassword(email);
+        setLoading(false);
+        if (result.success) {
+            setResetEmailSent(true);
+            setSuccessMsg('Link enviado! Verifique sua caixa de entrada e spam.');
+        } else {
+            setError(result.error || 'Erro ao enviar email.');
+        }
+    };
 
+    // ── UI Helpers ────────────────────────────────────────────
+    const showPasswordFields = step === 'password' || step === 'first-access';
+    const title = step === 'first-access'
+        ? 'Bem-vindo ao clube!'
+        : step === 'forgot'
+            ? 'Recuperar Senha'
+            : 'Acesse sua conta';
+    const subtitle = step === 'first-access'
+        ? 'Crie sua senha para ativar o acesso.'
+        : step === 'forgot'
+            ? 'Enviaremos um link para redefinir sua senha.'
+            : 'Digite seu email para continuar.';
+
+    // ── RENDER ────────────────────────────────────────────────
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-md p-6 rounded-2xl shadow-2xl relative">
-                {/* Close button — only visible on non-primary views */}
-                {view !== 'LOGIN' && (
+
+                {/* Back button for forgot password view */}
+                {step === 'forgot' && (
                     <button
-                        onClick={() => {
-                            if (view === 'LOGIN_PASSWORD' || view === 'CHECK_EMAIL') {
-                                setView('LOGIN');
-                                resetState();
-                            } else if (view === 'FORGOT_PASSWORD') {
-                                setView('LOGIN_PASSWORD');
-                                resetState();
-                                setResetEmailSent(false);
-                            } else if (view === 'CREATE_PASSWORD') {
-                                setView('CHECK_EMAIL');
-                                resetState();
-                            }
-                        }}
-                        className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors"
+                        onClick={() => { setStep('password'); setError(null); setSuccessMsg(null); setResetEmailSent(false); }}
+                        className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors text-sm"
                     >
-                        <ArrowLeft size={20} />
+                        ← Voltar
                     </button>
                 )}
 
-                {/* HEADER */}
+                {/* ── HEADER ────────────────────────────────── */}
                 <div className="text-center mb-8">
-                    <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus Logo" className="h-12 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-white">
-                        {getViewTitle()}
-                    </h2>
-                    <p className="text-slate-400 text-sm">
-                        {getViewSubtitle()}
-                    </p>
+                    <img
+                        src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg"
+                        alt="Prosperus Logo"
+                        className="h-12 mx-auto mb-4"
+                    />
+                    <h2 className="text-2xl font-bold text-white">{title}</h2>
+                    <p className="text-slate-400 text-sm mt-1">{subtitle}</p>
                 </div>
 
-                {/* ALERTS */}
+                {/* ── ALERTS ────────────────────────────────── */}
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl mb-6 flex items-center gap-2">
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl mb-4 flex items-center gap-2 animate-in fade-in duration-150">
                         <AlertCircle size={16} className="shrink-0" />
                         {error}
                     </div>
                 )}
                 {successMsg && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm p-3 rounded-xl mb-6 flex items-center gap-2">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm p-3 rounded-xl mb-4 flex items-center gap-2 animate-in fade-in duration-150">
                         <CheckCircle size={16} className="shrink-0" />
                         {successMsg}
                     </div>
                 )}
 
-                {/* ═══════════════ VIEW: LOGIN (email-first) ═══════════════ */}
-                {view === 'LOGIN' && (
-                    <form onSubmit={handleEmailSubmit} className="space-y-4 animate-in fade-in duration-200">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
-                            <input
-                                type="email"
-                                required
-                                autoFocus
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                placeholder="seu@email.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                readOnly={loading}
-                            />
-                        </div>
-
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            size="lg"
-                            isLoading={loading}
-                            className="w-full rounded-xl py-3.5 flex items-center justify-center gap-2"
-                        >
-                            {loading ? 'Verificando...' : (
-                                <>
-                                    Continuar
-                                    <ChevronRight size={18} />
-                                </>
-                            )}
-                        </Button>
-
-                        <div className="mt-6 text-center">
-                            <span className="text-slate-500 text-sm">Primeiro Acesso? </span>
-                            <button
-                                type="button"
-                                onClick={() => { setView('CHECK_EMAIL'); resetState(); }}
-                                className="text-yellow-600 hover:text-yellow-400 text-sm font-medium transition-colors"
-                            >
-                                Ative sua conta →
-                            </button>
-                        </div>
-                    </form>
-                )}
-
-                {/* ═══════════════ VIEW: LOGIN_PASSWORD ═══════════════ */}
-                {view === 'LOGIN_PASSWORD' && (
-                    <form onSubmit={handleLogin} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        {/* Email chip */}
-                        <div className="flex items-center justify-between bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-3 mb-1">
-                            <div className="flex items-center gap-2">
-                                <Mail size={14} className="text-slate-400" />
-                                <span className="text-sm text-slate-300">{email}</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => { setView('LOGIN'); resetState(); }}
-                                className="text-xs text-yellow-600 hover:text-yellow-400 transition-colors font-medium"
-                            >
-                                Trocar
-                            </button>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Senha</label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    required
-                                    autoFocus
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                    placeholder="••••••••"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            size="lg"
-                            isLoading={loading}
-                            className="w-full rounded-xl py-3.5"
-                        >
-                            {loading ? 'Verificando...' : 'Entrar na Plataforma'}
-                        </Button>
-
-                        <div className="mt-4 text-center">
-                            <button
-                                type="button"
-                                onClick={() => { setView('FORGOT_PASSWORD'); resetState(); setResetEmailSent(false); }}
-                                className="text-yellow-600/70 hover:text-yellow-400 text-sm transition-colors"
-                            >
-                                Esqueci minha senha
-                            </button>
-                        </div>
-                    </form>
-                )}
-
-                {/* ═══════════════ VIEW: CHECK_EMAIL (HubSpot) ═══════════════ */}
-                {view === 'CHECK_EMAIL' && (
-                    <form onSubmit={handleCheckFirstAccess} className="space-y-4 animate-in fade-in duration-200">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email da Assinatura do Contrato</label>
-                            <input
-                                type="email"
-                                required
-                                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                placeholder="ex: carlos@empresa.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            size="lg"
-                            isLoading={loading}
-                            className="w-full rounded-xl py-3.5"
-                        >
-                            {loading ? 'Buscando...' : 'Verificar Cadastro'}
-                        </Button>
-                    </form>
-                )}
-
-                {/* ═══════════════ VIEW: FORGOT_PASSWORD ═══════════════ */}
-                {view === 'FORGOT_PASSWORD' && (
-                    <form onSubmit={async (e) => {
-                        e.preventDefault();
-                        setLoading(true);
-                        resetState();
-                        const result = await resetPassword(email);
-                        setLoading(false);
-                        if (result.success) {
-                            setResetEmailSent(true);
-                            setSuccessMsg('Link enviado! Verifique sua caixa de entrada e spam.');
-                        } else {
-                            setError(result.error || 'Erro ao enviar email.');
-                        }
-                    }} className="space-y-4 animate-in fade-in duration-200">
+                {/* ═══════════ FORGOT PASSWORD VIEW ═══════════ */}
+                {step === 'forgot' ? (
+                    <form onSubmit={handleForgotPassword} className="space-y-4 animate-in fade-in duration-200">
                         {!resetEmailSent ? (
                             <>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email da Assinatura do Contrato</label>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
                                     <input
                                         type="email"
                                         required
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                         placeholder="seu@email.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                     />
                                 </div>
-
                                 <Button
                                     type="submit"
                                     variant="primary"
@@ -490,31 +318,74 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                         ) : (
                             <div className="text-center py-4">
                                 <Mail size={40} className="mx-auto text-yellow-500 mb-3" />
-                                <p className="text-slate-300 text-sm">Verifique o email <span className="font-bold text-white">{email}</span></p>
-                                <p className="text-slate-500 text-xs mt-2">Não recebeu? Cheque a pasta de spam ou tente novamente.</p>
+                                <p className="text-slate-300 text-sm">
+                                    Verifique o email <span className="font-bold text-white">{email}</span>
+                                </p>
+                                <p className="text-slate-500 text-xs mt-2">
+                                    Não recebeu? Cheque a pasta de spam ou tente novamente.
+                                </p>
                             </div>
                         )}
                     </form>
-                )}
+                ) : (
+                    /* ═══════════ MAIN LOGIN FLOW ═══════════ */
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
 
-                {/* ═══════════════ VIEW: CREATE_PASSWORD ═══════════════ */}
-                {view === 'CREATE_PASSWORD' && (
-                    <form onSubmit={handleCreatePassword} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <div className="p-3 bg-slate-800 rounded-xl text-xs text-slate-300 mb-4 border border-slate-700">
-                            Olá! Localizamos seu cadastro. Defina sua senha pessoal para acessar o clube.
+                        {/* ── Email input with status indicator ── */}
+                        <div className="relative">
+                            <input
+                                type="email"
+                                inputMode="email"
+                                value={email}
+                                onChange={e => handleEmailChange(e.target.value)}
+                                placeholder="seu@email.com"
+                                autoComplete="email"
+                                autoFocus
+                                className={`
+                                    w-full bg-slate-950 rounded-xl px-4 py-3.5 pr-10
+                                    text-white placeholder-slate-600
+                                    focus:outline-none transition-all
+                                    border ${step === 'not-found'
+                                        ? 'border-red-500/50'
+                                        : showPasswordFields
+                                            ? 'border-emerald-500/50'
+                                            : 'border-slate-800 focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30'}
+                                `}
+                            />
+
+                            {/* Status indicator: spinner / check / x */}
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+                                {step === 'checking' && (
+                                    <div className="w-4 h-4 border-2 border-yellow-600/60 border-t-yellow-500 rounded-full animate-spin" />
+                                )}
+                                {showPasswordFields && (
+                                    <span className="text-emerald-400 text-base leading-none">✓</span>
+                                )}
+                                {step === 'not-found' && (
+                                    <span className="text-red-400 text-base leading-none">✕</span>
+                                )}
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nova Senha</label>
+                        {/* ── Password fields: animated slide + fade ── */}
+                        <div
+                            className="flex flex-col gap-3 overflow-hidden transition-all duration-300 ease-out"
+                            style={{
+                                maxHeight: showPasswordFields ? '300px' : '0px',
+                                opacity: showPasswordFields ? 1 : 0,
+                                transform: showPasswordFields ? 'translateY(0)' : 'translateY(-8px)',
+                            }}
+                        >
+                            {/* Password input */}
                             <div className="relative">
                                 <input
+                                    ref={passwordRef}
                                     type={showPassword ? 'text' : 'password'}
-                                    required
-                                    autoFocus
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                    placeholder="Mínimo 6 caracteres"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={e => setPassword(e.target.value)}
+                                    placeholder={step === 'first-access' ? 'Criar senha (mín. 6 caracteres)' : 'Sua senha'}
+                                    autoComplete={step === 'first-access' ? 'new-password' : 'current-password'}
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
                                 />
                                 <button
                                     type="button"
@@ -524,38 +395,77 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Confirmar Senha</label>
-                            <div className="relative">
-                                <input
-                                    type={showConfirmPassword ? 'text' : 'password'}
-                                    required
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                    placeholder="Repita a senha"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                />
+                            {/* Confirm password: first-access only */}
+                            {step === 'first-access' && (
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        placeholder="Confirmar senha"
+                                        autoComplete="new-password"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 pr-12 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                                    >
+                                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Forgot password link: login only */}
+                            {step === 'password' && (
                                 <button
                                     type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                                    onClick={() => { setStep('forgot'); setError(null); setSuccessMsg(null); setResetEmailSent(false); }}
+                                    className="text-xs text-yellow-600/70 text-right hover:text-yellow-400 transition-colors -mt-1"
                                 >
-                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    Esqueci minha senha
                                 </button>
-                            </div>
+                            )}
                         </div>
 
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            size="lg"
-                            isLoading={loading}
-                            className="w-full rounded-xl py-3.5 bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20"
-                        >
-                            {loading ? 'Ativando...' : 'Ativar Minha Conta'}
-                        </Button>
+                        {/* ── Not found message ────────────────── */}
+                        {step === 'not-found' && (
+                            <div className="text-center py-3 animate-in fade-in duration-200">
+                                <p className="text-sm text-red-400 mb-2">
+                                    Email não encontrado no clube.
+                                </p>
+                                <a
+                                    href="https://wa.me/5511999999999"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-yellow-600/70 underline underline-offset-2 hover:text-yellow-400 transition-colors"
+                                >
+                                    Falar com o suporte
+                                </a>
+                            </div>
+                        )}
+
+                        {/* ── Submit button ─────────────────────── */}
+                        {showPasswordFields && (
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                size="lg"
+                                isLoading={loading}
+                                disabled={loading || !password || (step === 'first-access' && !confirmPassword)}
+                                className={`w-full rounded-xl py-3.5 mt-1 animate-in slide-in-from-bottom-2 duration-300 ${step === 'first-access'
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'
+                                        : ''
+                                    }`}
+                            >
+                                {loading
+                                    ? 'Aguarde...'
+                                    : step === 'first-access'
+                                        ? 'Ativar Minha Conta'
+                                        : 'Entrar'}
+                            </Button>
+                        )}
                     </form>
                 )}
             </div>
