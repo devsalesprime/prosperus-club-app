@@ -21,8 +21,7 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { PushPermissionPrompt } from './components/PushPermissionPrompt';
 import { PushAutoSubscriber } from './components/PushAutoSubscriber';
 import { UnreadCountProvider } from './contexts/UnreadCountContext';
-import { DocViewerProvider } from './hooks/useDocViewer';
-import { DocViewer } from './components/ui/DocViewer';
+import { SupportDocsProvider } from './components/support/SupportDocsSheet';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
 const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
@@ -203,12 +202,11 @@ const AppShell: React.FC = () => {
 
 // ─── Root Component ──────────────────────────────────
 const App = () => (
-    <DocViewerProvider>
+    <SupportDocsProvider>
         <AppProvider>
             <AppShell />
-            <DocViewer />
         </AppProvider>
-    </DocViewerProvider>
+    </SupportDocsProvider>
 );
 
 export default App;

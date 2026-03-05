@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { ProfileData, ProfileUpdateData, profileService } from '../services/profileService';
 import { supabase } from '../lib/supabase';
-import { useDocViewer } from '../hooks/useDocViewer';
+import { useSupportDocs } from './support/SupportDocsSheet';
 
 interface OnboardingWizardProps {
     currentUser: ProfileData;
@@ -54,7 +54,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const { openDoc } = useDocViewer();
+    const { openDoc } = useSupportDocs();
     const [triedNext, setTriedNext] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);

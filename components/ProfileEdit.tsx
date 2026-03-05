@@ -37,7 +37,7 @@ import { ProfileBenefitEditor } from './profile/ProfileBenefitEditor';
 
 // Hook
 import { useProfileForm } from '../hooks/useProfileForm';
-import { useDocViewer } from '../hooks/useDocViewer';
+import { useSupportDocs } from './support/SupportDocsSheet';
 
 interface ProfileEditProps {
     currentUser: ProfileData;
@@ -49,7 +49,7 @@ interface ProfileEditProps {
 
 export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase, isMockMode = false, onSave, onCancel }) => {
     const { refreshProfile } = useAuth();
-    const { openDoc } = useDocViewer();
+    const { openDoc } = useSupportDocs();
 
     const {
         formData,
