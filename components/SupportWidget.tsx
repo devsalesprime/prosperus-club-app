@@ -16,9 +16,11 @@ import {
     Headphones,
     CreditCard,
     FileText,
-    ChevronRight
+    ChevronRight,
+    Shield
 } from 'lucide-react';
 import { settingsService, AppSettings } from '../services/settingsService';
+import { useSupportDocs } from './support/SupportDocsSheet';
 
 // Format phone for WhatsApp link (remove non-digits)
 const formatWhatsAppLink = (phone: string): string => {
@@ -69,6 +71,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
     const [isOpen, setIsOpen] = useState(false);
     const [settings, setSettings] = useState<AppSettings | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const { openDoc } = useSupportDocs();
     const panelRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -254,50 +257,33 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                                     </div>
                                 )}
 
-                                {/* Links Úteis */}
-                                {(settings.faq_url || settings.terms_url || settings.privacy_url) && (
-                                    <div>
-                                        <SectionHeader icon={<FileText size={16} />} title="Links Úteis" />
-                                        <div className="flex flex-wrap gap-2">
-                                            {settings.faq_url && (
-                                                <a
-                                                    href={settings.faq_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
-                                                >
-                                                    <HelpCircle size={12} />
-                                                    FAQ
-                                                    <ExternalLink size={10} className="opacity-50" />
-                                                </a>
-                                            )}
-                                            {settings.terms_url && (
-                                                <a
-                                                    href={settings.terms_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
-                                                >
-                                                    <FileText size={12} />
-                                                    Termos
-                                                    <ExternalLink size={10} className="opacity-50" />
-                                                </a>
-                                            )}
-                                            {settings.privacy_url && (
-                                                <a
-                                                    href={settings.privacy_url}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
-                                                >
-                                                    <FileText size={12} />
-                                                    Privacidade
-                                                    <ExternalLink size={10} className="opacity-50" />
-                                                </a>
-                                            )}
-                                        </div>
+                                {/* Documentação e Ajuda */}
+                                <div>
+                                    <SectionHeader icon={<FileText size={16} />} title="Documentação" />
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            onClick={() => { setIsOpen(false); openDoc('faq'); }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
+                                        >
+                                            <HelpCircle size={12} />
+                                            FAQ
+                                        </button>
+                                        <button
+                                            onClick={() => { setIsOpen(false); openDoc('terms'); }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
+                                        >
+                                            <FileText size={12} />
+                                            Termos
+                                        </button>
+                                        <button
+                                            onClick={() => { setIsOpen(false); openDoc('privacy'); }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
+                                        >
+                                            <Shield size={12} />
+                                            Privacidade
+                                        </button>
                                     </div>
-                                )}
+                                </div>
                             </>
                         ) : (
                             <p className="text-center text-slate-400 py-4">

@@ -29,13 +29,13 @@ export function SupportDocsSheet({ open, onClose }: Props) {
         <>
             {/* Overlay */}
             <div
-                className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
+                className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
                 onClick={onClose}
             />
 
             {/* Sheet */}
             <div
-                className="fixed inset-x-0 bottom-0 z-[60] flex flex-col rounded-t-3xl"
+                className="fixed inset-x-0 bottom-0 z-[80] flex flex-col rounded-t-3xl"
                 style={{
                     background: '#031A2B',
                     borderTop: '1px solid #123F5B',
