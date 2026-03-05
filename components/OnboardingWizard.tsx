@@ -233,7 +233,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 setSlideDirection(null);
             }, 150);
         }
-    }, [step, formData]);
+    }, [step, formData, customInterest]);
 
     const handleBack = useCallback(() => {
         if (step > 0) {
@@ -629,10 +629,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                                 onClick={() => { handlePartnershipToggle(sector); if (triedNext) setErrors(prev => { const n = { ...prev }; delete n.partnership_interests; return n; }); }}
                                 disabled={isDisabled}
                                 className={`px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${isSelected
-                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
-                                        : isDisabled
-                                            ? 'bg-slate-800/40 text-slate-600 border border-slate-800 cursor-not-allowed'
-                                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 scale-105'
+                                    : isDisabled
+                                        ? 'bg-slate-800/40 text-slate-600 border border-slate-800 cursor-not-allowed'
+                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
                                     }`}
                             >
                                 {isSelected && <Check size={12} className="inline mr-1" />}
