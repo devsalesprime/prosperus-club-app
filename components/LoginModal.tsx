@@ -69,14 +69,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
             if (fnError) throw fnError;
 
-            if (data?.exists && data?.has_password) {
-                // Known user with password → show password field
-                setStep('password');
-                setTimeout(() => passwordRef.current?.focus(), 280);
-            } else if (data?.exists && !data?.has_password) {
-                // Profile exists but no password (edge case)
-                setStep('first-access');
-                setTimeout(() => passwordRef.current?.focus(), 280);
+            if (data?.exists) {
+                // User found in profiles
+                // has_password defaults to true for backward compatibility
+                // (old edge function returns only { exists } without has_password)
+                const hasPassword = data.has_password !== false;
+
+                if (hasPassword) {
+                    // Known user with password → show password field
+                    setStep('password');
+                    setTimeout(() => passwordRef.current?.focus(), 280);
+                } else {
+                    // Profile exists but no password (rare edge case)
+                    setStep('first-access');
+                    setTimeout(() => passwordRef.current?.focus(), 280);
+                }
             } else {
                 // Not in profiles → check HubSpot
                 await checkHubSpot(value);
@@ -455,8 +462,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 isLoading={loading}
                                 disabled={loading || !password || (step === 'first-access' && !confirmPassword)}
                                 className={`w-full rounded-xl py-3.5 mt-1 animate-in slide-in-from-bottom-2 duration-300 ${step === 'first-access'
-                                        ? 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'
-                                        : ''
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-900/20'
+                                    : ''
                                     }`}
                             >
                                 {loading
