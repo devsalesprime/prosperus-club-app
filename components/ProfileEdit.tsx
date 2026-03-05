@@ -9,6 +9,12 @@ import {
     CheckCircle,
     Eye,
     History,
+    HelpCircle,
+    Shield,
+    FileText,
+    MessageCircle,
+    ExternalLink,
+    ChevronRight,
 } from 'lucide-react';
 import { profileService, ProfileData, ExclusiveBenefit } from '../services/profileService';
 import { ImageUpload } from './ImageUpload';
@@ -31,6 +37,7 @@ import { ProfileBenefitEditor } from './profile/ProfileBenefitEditor';
 
 // Hook
 import { useProfileForm } from '../hooks/useProfileForm';
+import { useDocViewer } from '../hooks/useDocViewer';
 
 interface ProfileEditProps {
     currentUser: ProfileData;
@@ -42,6 +49,7 @@ interface ProfileEditProps {
 
 export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase, isMockMode = false, onSave, onCancel }) => {
     const { refreshProfile } = useAuth();
+    const { openDoc } = useDocViewer();
 
     const {
         formData,
@@ -167,6 +175,52 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                         ownerId={currentUser.id}
                         onBenefitChange={(benefit) => handleInputChange('exclusive_benefit', benefit)}
                     />
+
+                    {/* ═══ Suporte e Legal ═══ */}
+                    <section className="pt-4 border-t border-slate-800">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-slate-600 mb-3 px-1">
+                            Suporte e Legal
+                        </p>
+                        <div className="flex flex-col gap-1">
+                            {[
+                                { icon: HelpCircle, label: 'Central de ajuda', sub: 'Dúvidas de uso e funcionalidades', action: () => openDoc('faq') },
+                                { icon: Shield, label: 'Política de privacidade', sub: 'Como usamos seus dados', action: () => openDoc('privacy') },
+                                { icon: FileText, label: 'Termos de uso', sub: 'Regras da plataforma', action: () => openDoc('terms') },
+                            ].map(item => (
+                                <button
+                                    key={item.label}
+                                    type="button"
+                                    onClick={item.action}
+                                    className="flex items-center gap-3 p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-all text-left w-full"
+                                >
+                                    <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+                                        <item.icon size={18} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-white">{item.label}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">{item.sub}</p>
+                                    </div>
+                                    <ChevronRight size={16} className="text-slate-600 shrink-0" />
+                                </button>
+                            ))}
+                            <a
+                                href="https://wa.me/5511918236211"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-all text-left w-full"
+                            >
+                                <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+                                    <MessageCircle size={18} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-white">Falar com suporte</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">WhatsApp da equipe Prosperus</p>
+                                </div>
+                                <ExternalLink size={14} className="text-slate-600 shrink-0" />
+                            </a>
+                        </div>
+                    </section>
+
 
                     {/* Error/Success Messages */}
                     {error && (

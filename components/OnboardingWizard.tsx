@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { ProfileData, ProfileUpdateData, profileService } from '../services/profileService';
 import { supabase } from '../lib/supabase';
+import { useDocViewer } from '../hooks/useDocViewer';
 
 interface OnboardingWizardProps {
     currentUser: ProfileData;
@@ -53,9 +54,12 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const [step, setStep] = useState(0);
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const { openDoc } = useDocViewer();
     const [triedNext, setTriedNext] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -85,7 +89,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         partnership_interests: currentUser.partnership_interests || []
     });
 
-    const totalSteps = 5;
+    const totalSteps = 6;
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -276,6 +280,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             // Save profile updates
             const updated = await profileService.updateProfile(currentUser.id, formData);
 
+            // Save terms acceptance timestamps
+            const now = new Date().toISOString();
+            await supabase.from('profiles').update({
+                accepted_terms_at: now,
+                accepted_privacy_at: now,
+            }).eq('id', currentUser.id);
+
             // Mark onboarding as complete
             await profileService.completeOnboarding(currentUser.id);
 
@@ -300,7 +311,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             case 1: return renderProfileInfo();
             case 2: return renderSocialTags();
             case 3: return renderStrategicProfile();
-            case 4: return renderReady();
+            case 4: return renderTermsAcceptance();
+            case 5: return renderReady();
             default: return null;
         }
     };
@@ -586,7 +598,59 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
     );
 
-    // Step 4: Ready!
+    // Step 5: Terms Acceptance
+    const renderTermsAcceptance = () => (
+        <div className="flex flex-col h-full justify-between py-4">
+            <div>
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-white mb-1">Quase lá!</h2>
+                    <p className="text-slate-400 text-sm">Confirme que você leu e concorda com as regras.</p>
+                </div>
+
+                {/* Terms checkbox */}
+                <label className="flex items-start gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700 cursor-pointer mb-3">
+                    <input
+                        type="checkbox"
+                        checked={acceptedTerms}
+                        onChange={e => setAcceptedTerms(e.target.checked)}
+                        className="mt-0.5 accent-yellow-500 w-4 h-4 shrink-0"
+                    />
+                    <span className="text-sm text-slate-300 leading-relaxed">
+                        Li e aceito os{' '}
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); openDoc('terms'); }}
+                            className="text-yellow-500 underline underline-offset-2 hover:text-yellow-400"
+                        >
+                            Termos de Uso
+                        </button>
+                    </span>
+                </label>
+
+                {/* Privacy checkbox */}
+                <label className="flex items-start gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={acceptedPrivacy}
+                        onChange={e => setAcceptedPrivacy(e.target.checked)}
+                        className="mt-0.5 accent-yellow-500 w-4 h-4 shrink-0"
+                    />
+                    <span className="text-sm text-slate-300 leading-relaxed">
+                        Li e aceito a{' '}
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); openDoc('privacy'); }}
+                            className="text-yellow-500 underline underline-offset-2 hover:text-yellow-400"
+                        >
+                            Política de Privacidade
+                        </button>
+                    </span>
+                </label>
+            </div>
+        </div>
+    );
+
+    // Step 6: Ready!
     const renderReady = () => {
         const completion = profileService.getProfileCompletionPercentage({
             ...currentUser,
@@ -704,9 +768,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     {step < totalSteps - 1 ? (
                         <button
                             onClick={handleNext}
-                            className="flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition"
+                            disabled={step === 4 && (!acceptedTerms || !acceptedPrivacy)}
+                            className={`flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition${step === 4 && (!acceptedTerms || !acceptedPrivacy) ? ' opacity-30 cursor-not-allowed' : ''}`}
                         >
-                            Continuar
+                            {step === 4 ? 'Entrar no clube' : 'Continuar'}
                             <ChevronRight size={18} />
                         </button>
                     ) : (
