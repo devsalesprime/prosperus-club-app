@@ -75,7 +75,7 @@ class NotificationService {
                 hasMore
             };
         } catch (error) {
-            console.error('❌ Error fetching notifications:', error);
+            logger.error('❌ Error fetching notifications:', error);
             throw error;
         }
     }
@@ -95,7 +95,7 @@ class NotificationService {
             if (error) throw error;
             return count || 0;
         } catch (error) {
-            console.error('Error fetching unread count:', error);
+            logger.error('Error fetching unread count:', error);
             return 0;
         }
     }
@@ -122,7 +122,7 @@ class NotificationService {
                 unread: unread.count || 0
             };
         } catch (error) {
-            console.error('Error fetching notification stats:', error);
+            logger.error('Error fetching notification stats:', error);
             return { total: 0, unread: 0 };
         }
     }
@@ -139,7 +139,7 @@ class NotificationService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error marking notification as read:', error);
+            logger.error('Error marking notification as read:', error);
             throw error;
         }
     }
@@ -157,7 +157,7 @@ class NotificationService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error marking all as read:', error);
+            logger.error('Error marking all as read:', error);
             throw error;
         }
     }
@@ -175,7 +175,7 @@ class NotificationService {
                 .eq('id', notificationId);
 
             if (error) {
-                console.warn('Delete error, trying soft-delete:', error.message);
+                logger.warn('Delete error, trying soft-delete:', error.message);
             } else {
                 // Verify the record was actually deleted (RLS may silently block)
                 const { data: stillExists } = await supabase
@@ -188,7 +188,7 @@ class NotificationService {
                     // Successfully deleted
                     return;
                 }
-                console.warn('Delete returned no error but record still exists (RLS block), using soft-delete');
+                logger.warn('Delete returned no error but record still exists (RLS block), using soft-delete');
             }
 
             // Fallback: soft-delete by marking title as "[Excluída]"
@@ -202,13 +202,13 @@ class NotificationService {
                 .eq('id', notificationId);
 
             if (updateError) {
-                console.error('Soft-delete also failed:', updateError);
+                logger.error('Soft-delete also failed:', updateError);
                 throw updateError;
             }
 
             logger.info('✅ Notification soft-deleted successfully');
         } catch (error) {
-            console.error('Error deleting notification:', error);
+            logger.error('Error deleting notification:', error);
             throw error;
         }
     }
@@ -277,7 +277,7 @@ class NotificationService {
 
             return data || 0;
         } catch (error) {
-            console.error('Error creating notification:', error);
+            logger.error('Error creating notification:', error);
             throw error;
         }
     }
@@ -310,7 +310,7 @@ class NotificationService {
 
             // Log but don't block on master record failure
             if (notifError) {
-                console.warn('Warning: Could not create master notification record:', notifError);
+                logger.warn('Warning: Could not create master notification record:', notifError);
             }
 
             // 2. Try RPC first (bypasses RLS)
@@ -328,9 +328,9 @@ class NotificationService {
                 }
 
                 // RPC doesn't exist, fall through to direct insert
-                console.warn('RPC not available, trying direct insert:', rpcError.message);
+                logger.warn('RPC not available, trying direct insert:', rpcError.message);
             } catch (rpcErr) {
-                console.warn('RPC call failed, trying direct insert');
+                logger.warn('RPC call failed, trying direct insert');
             }
 
             // 3. Fallback: Direct insert into user_notifications
@@ -345,7 +345,7 @@ class NotificationService {
                 });
 
             if (error) {
-                console.error('Direct insert failed:', error);
+                logger.error('Direct insert failed:', error);
                 throw error;
             }
 
@@ -358,7 +358,7 @@ class NotificationService {
 
             return 1;
         } catch (error) {
-            console.error('Error creating individual notification:', error);
+            logger.error('Error creating individual notification:', error);
             throw error;
         }
     }
@@ -392,7 +392,7 @@ class NotificationService {
             .subscribe((status) => {
                 logger.debug(`📡 Realtime channel [${channelName}] status:`, status);
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Realtime subscription failed. Check if Realtime is enabled for user_notifications table in Supabase Dashboard.');
+                    logger.error('❌ Realtime subscription failed. Check if Realtime is enabled for user_notifications table in Supabase Dashboard.');
                 }
             });
 
@@ -415,7 +415,7 @@ class NotificationService {
             const count = await this.createNotification(title, message, segment, actionUrl);
             return { success: true, count };
         } catch (error: any) {
-            console.error('Error in sendNotificationWithLog:', error);
+            logger.error('Error in sendNotificationWithLog:', error);
             return { success: false, count: 0, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -444,7 +444,7 @@ class NotificationService {
                 hasMore: offset + limit < (count || 0)
             };
         } catch (error) {
-            console.error('Error fetching notification history:', error);
+            logger.error('Error fetching notification history:', error);
             return { data: [], total: 0, hasMore: false };
         }
     }
@@ -482,14 +482,14 @@ class NotificationService {
                 });
 
             if (error) {
-                console.error('❌ Error registering push token:', error);
+                logger.error('❌ Error registering push token:', error);
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Push token registered successfully');
             return { success: true };
         } catch (error: any) {
-            console.error('❌ Error in registerPushToken:', error);
+            logger.error('❌ Error in registerPushToken:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -507,7 +507,7 @@ class NotificationService {
                 })
                 .eq('endpoint', endpoint);
         } catch (error) {
-            console.error('Error updating push token activity:', error);
+            logger.error('Error updating push token activity:', error);
         }
     }
 
@@ -532,7 +532,7 @@ class NotificationService {
                 })
                 .eq('endpoint', endpoint);
         } catch (error) {
-            console.error('Error incrementing push token error:', error);
+            logger.error('Error incrementing push token error:', error);
         }
     }
 
@@ -557,7 +557,7 @@ class NotificationService {
             logger.info('✅ Push token removed successfully');
             return { success: true };
         } catch (error: any) {
-            console.error('Error removing push token:', error);
+            logger.error('Error removing push token:', error);
             return { success: false, error: error.message };
         }
     }
@@ -576,7 +576,7 @@ class NotificationService {
             if (error) throw error;
             return data || [];
         } catch (error) {
-            console.error('Error fetching user push subscriptions:', error);
+            logger.error('Error fetching user push subscriptions:', error);
             return [];
         }
     }
@@ -670,7 +670,7 @@ export async function getScheduledNotifications(): Promise<ScheduledNotification
         if (error) throw error;
         return (data || []) as ScheduledNotification[];
     } catch (error) {
-        console.error('Error fetching scheduled notifications:', error);
+        logger.error('Error fetching scheduled notifications:', error);
         return [];
     }
 }
@@ -688,7 +688,7 @@ export async function cancelScheduledNotification(id: string): Promise<void> {
 
         if (error) throw error;
     } catch (error) {
-        console.error('Error cancelling scheduled notification:', error);
+        logger.error('Error cancelling scheduled notification:', error);
         throw error;
     }
 }

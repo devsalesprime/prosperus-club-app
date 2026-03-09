@@ -82,7 +82,7 @@ class AdminChatService {
         // Verificar permissão
         const isAdmin = await this.checkAdminRole();
         if (!isAdmin) {
-            console.error('❌ Unauthorized: User is not ADMIN/TEAM');
+            logger.error('❌ Unauthorized: User is not ADMIN/TEAM');
             throw new Error('Unauthorized');
         }
 
@@ -99,7 +99,7 @@ class AdminChatService {
             const { data: conversations, error: convError, count } = await query;
 
             if (convError) {
-                console.error('Error fetching conversations:', convError);
+                logger.error('Error fetching conversations:', convError);
                 throw convError;
             }
 
@@ -175,7 +175,7 @@ class AdminChatService {
                 hasMore: offset + limit < (count || 0)
             };
         } catch (error) {
-            console.error('Error in getAllConversations:', error);
+            logger.error('Error in getAllConversations:', error);
             throw error;
         }
     }
@@ -215,7 +215,7 @@ class AdminChatService {
                 .order('created_at', { ascending: true });
 
             if (error) {
-                console.error('Error fetching messages:', error);
+                logger.error('Error fetching messages:', error);
                 throw error;
             }
 
@@ -236,7 +236,7 @@ class AdminChatService {
             logger.debug(`✅ Admin: Found ${mappedMessages.length} messages`);
             return mappedMessages;
         } catch (error) {
-            console.error('Error in getConversationMessages:', error);
+            logger.error('Error in getConversationMessages:', error);
             throw error;
         }
     }
@@ -265,7 +265,7 @@ class AdminChatService {
                 .eq('id', messageId);
 
             if (error) {
-                console.error('Error deleting message:', error);
+                logger.error('Error deleting message:', error);
                 throw error;
             }
 
@@ -274,7 +274,7 @@ class AdminChatService {
 
             return true;
         } catch (error) {
-            console.error('Error in deleteMessage:', error);
+            logger.error('Error in deleteMessage:', error);
             throw error;
         }
     }
@@ -305,7 +305,7 @@ class AdminChatService {
             logger.debug(`✅ Admin: Message ${messageId} restored`);
             return true;
         } catch (error) {
-            console.error('Error restoring message:', error);
+            logger.error('Error restoring message:', error);
             throw error;
         }
     }
@@ -341,7 +341,7 @@ class AdminChatService {
                 .single();
 
             if (error) {
-                console.error('Error sending admin message:', error);
+                logger.error('Error sending admin message:', error);
                 throw error;
             }
 
@@ -372,7 +372,7 @@ class AdminChatService {
                 sender: adminProfile || { id: adminId, name: 'Suporte', email: '', image_url: null }
             };
         } catch (error) {
-            console.error('Error in sendAdminMessage:', error);
+            logger.error('Error in sendAdminMessage:', error);
             throw error;
         }
     }

@@ -3,6 +3,7 @@
 // Captura métricas de uso silenciosamente sem impactar performance
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // ============================================
 // TYPES
@@ -166,7 +167,7 @@ class AnalyticsService {
             }
         } catch (error) {
             // Silent fail - never impact the app
-            console.debug('[Analytics] Error queuing event:', error);
+            logger.debug('[Analytics] Error queuing event:', error);
         }
     }
 
@@ -262,14 +263,14 @@ class AnalyticsService {
 
             if (error) {
                 // Log but don't throw - silent fail
-                console.debug('[Analytics] Error sending events:', error.message);
+                logger.debug('[Analytics] Error sending events:', error.message);
                 // Re-queue failed events (up to a limit)
                 if (this.queue.length < 50) {
                     this.queue = [...eventsToSend, ...this.queue];
                 }
             }
         } catch (error) {
-            console.debug('[Analytics] Network error:', error);
+            logger.debug('[Analytics] Network error:', error);
         } finally {
             this.isProcessing = false;
         }
@@ -348,11 +349,11 @@ class AnalyticsService {
                 });
 
             if (error) {
-                console.debug('[Analytics] Benefit tracking error:', error);
+                logger.debug('[Analytics] Benefit tracking error:', error);
             }
         } catch (err) {
             // Silent fail - analytics nunca deve quebrar a aplicação
-            console.debug('[Analytics] Benefit tracking failed:', err);
+            logger.debug('[Analytics] Benefit tracking failed:', err);
         }
     }
 
@@ -399,7 +400,7 @@ class AnalyticsService {
                 lastActivityAt: null
             };
         } catch (error) {
-            console.error('[Analytics] Error fetching benefit stats:', error);
+            logger.error('[Analytics] Error fetching benefit stats:', error);
             return null;
         }
     }
@@ -453,7 +454,7 @@ class AnalyticsService {
                 };
             });
         } catch (error) {
-            console.error('[Analytics] Error fetching top benefits:', error);
+            logger.error('[Analytics] Error fetching top benefits:', error);
             return [];
         }
     }
@@ -495,7 +496,7 @@ class AnalyticsService {
                 benefitsWithActivity: stats?.length || 0
             };
         } catch (error) {
-            console.error('[Analytics] Error fetching benefit overview:', error);
+            logger.error('[Analytics] Error fetching benefit overview:', error);
             return {
                 activeBenefits: 0,
                 totalViews: 0,
@@ -564,7 +565,7 @@ class AnalyticsService {
                 period: days
             };
         } catch (error) {
-            console.error('[Analytics] Error fetching benefit engagement:', error);
+            logger.error('[Analytics] Error fetching benefit engagement:', error);
             return {
                 uniqueViewers: 0,
                 uniqueClickers: 0,
@@ -645,7 +646,7 @@ class AnalyticsService {
                 period
             };
         } catch (error) {
-            console.error('[Analytics] Error fetching dashboard stats:', error);
+            logger.error('[Analytics] Error fetching dashboard stats:', error);
             return {
                 activeUsersToday: 0,
                 newMembersMonth: 0,
@@ -684,7 +685,7 @@ class AnalyticsService {
                 .order('created_at', { ascending: true });
 
             if (benefitError) {
-                console.warn('[Analytics] Error fetching benefit analytics:', benefitError);
+                logger.warn('[Analytics] Error fetching benefit analytics:', benefitError);
                 // Continue without benefit data if there's an error
             }
 
@@ -761,7 +762,7 @@ class AnalyticsService {
 
             return result;
         } catch (error) {
-            console.error('[Analytics] Error fetching activity by day:', error);
+            logger.error('[Analytics] Error fetching activity by day:', error);
             return [];
         }
     }
@@ -798,7 +799,7 @@ class AnalyticsService {
                 .sort((a, b) => b.count - a.count)
                 .slice(0, limit);
         } catch (error) {
-            console.error('[Analytics] Error fetching top videos:', error);
+            logger.error('[Analytics] Error fetching top videos:', error);
             return [];
         }
     }
@@ -835,7 +836,7 @@ class AnalyticsService {
                 .sort((a, b) => b.count - a.count)
                 .slice(0, limit);
         } catch (error) {
-            console.error('[Analytics] Error fetching top articles:', error);
+            logger.error('[Analytics] Error fetching top articles:', error);
             return [];
         }
     }
@@ -866,7 +867,7 @@ class AnalyticsService {
                 .map(([name, value]) => ({ name, value }))
                 .sort((a, b) => b.value - a.value);
         } catch (error) {
-            console.error('[Analytics] Error fetching event breakdown:', error);
+            logger.error('[Analytics] Error fetching event breakdown:', error);
             return [];
         }
     }

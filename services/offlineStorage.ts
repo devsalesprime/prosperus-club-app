@@ -1,6 +1,7 @@
 // services/offlineStorage.ts
 // IndexedDB-based offline data persistence
 // Stores API responses locally for offline access
+import { logger } from '../utils/logger';
 
 const DB_NAME = 'prosperus-offline';
 const DB_VERSION = 1;
@@ -57,7 +58,7 @@ export async function cacheData(key: string, data: unknown, ttlMs: number = MAX_
             tx.onerror = () => reject(tx.error);
         });
     } catch (error) {
-        console.warn('[OfflineStorage] Failed to cache data:', error);
+        logger.warn('[OfflineStorage] Failed to cache data:', error);
     }
 }
 
@@ -93,7 +94,7 @@ export async function getCachedData<T = unknown>(key: string): Promise<T | null>
             request.onerror = () => reject(request.error);
         });
     } catch (error) {
-        console.warn('[OfflineStorage] Failed to retrieve cached data:', error);
+        logger.warn('[OfflineStorage] Failed to retrieve cached data:', error);
         return null;
     }
 }
@@ -112,7 +113,7 @@ export async function removeCachedData(key: string): Promise<void> {
             tx.onerror = () => reject(tx.error);
         });
     } catch (error) {
-        console.warn('[OfflineStorage] Failed to remove cached data:', error);
+        logger.warn('[OfflineStorage] Failed to remove cached data:', error);
     }
 }
 
@@ -143,7 +144,7 @@ export async function cleanExpiredCache(): Promise<void> {
             tx.onerror = () => reject(tx.error);
         });
     } catch (error) {
-        console.warn('[OfflineStorage] Failed to clean expired cache:', error);
+        logger.warn('[OfflineStorage] Failed to clean expired cache:', error);
     }
 }
 
@@ -161,7 +162,7 @@ export async function clearOfflineCache(): Promise<void> {
             tx.onerror = () => reject(tx.error);
         });
     } catch (error) {
-        console.warn('[OfflineStorage] Failed to clear offline cache:', error);
+        logger.warn('[OfflineStorage] Failed to clear offline cache:', error);
     }
 }
 

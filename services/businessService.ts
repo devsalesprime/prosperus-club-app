@@ -3,6 +3,7 @@
 // Prosperus Club App v2.5
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // ========== TYPES ==========
 
@@ -456,7 +457,7 @@ class BusinessService {
             });
         } catch (error) {
             // Silently fail - push is best-effort, in-app notification is the primary channel
-            console.debug('Push notification skipped:', error);
+            logger.debug('Push notification skipped:', error);
         }
     }
 
@@ -483,7 +484,7 @@ class BusinessService {
             // Push notification
             await this.sendPushToUser(deal.buyer_id, title, message, actionUrl);
         } catch (error) {
-            console.error('Failed to notify buyer:', error);
+            logger.error('Failed to notify buyer:', error);
         }
     }
 
@@ -511,7 +512,7 @@ class BusinessService {
             // Push notification
             await this.sendPushToUser(deal.seller_id, title, message, actionUrl);
         } catch (error) {
-            console.error('Failed to notify seller:', error);
+            logger.error('Failed to notify seller:', error);
         }
     }
 
@@ -531,7 +532,7 @@ class BusinessService {
             // Push notification
             await this.sendPushToUser(referral.receiver_id, title, message, actionUrl);
         } catch (error) {
-            console.error('Failed to notify receiver:', error);
+            logger.error('Failed to notify receiver:', error);
         }
     }
 
@@ -551,7 +552,7 @@ class BusinessService {
             // Push notification
             await this.sendPushToUser(referral.referrer_id, title, message, actionUrl);
         } catch (error) {
-            console.error('Failed to notify referrer:', error);
+            logger.error('Failed to notify referrer:', error);
         }
     }
 
@@ -571,7 +572,7 @@ class BusinessService {
             // Push notification
             await this.sendPushToUser(referral.referrer_id, title, message, actionUrl);
         } catch (error) {
-            console.error('Failed to notify referrer contestation:', error);
+            logger.error('Failed to notify referrer contestation:', error);
         }
     }
 }

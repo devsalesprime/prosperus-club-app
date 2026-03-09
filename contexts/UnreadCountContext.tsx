@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 interface UnreadCountContextType {
     unreadCount: number;
@@ -44,7 +45,7 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
                 }
             }
         } catch (err) {
-            console.error('UnreadCountContext: refresh error', err);
+            logger.error('UnreadCountContext: refresh error', err);
         }
     }, [userId]);
 
@@ -63,7 +64,7 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
                 (navigator as any).clearAppBadge().catch(() => { });
             }
         } catch (err) {
-            console.error('UnreadCountContext: markAllRead error', err);
+            logger.error('UnreadCountContext: markAllRead error', err);
         }
     }, [userId]);
 

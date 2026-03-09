@@ -64,7 +64,7 @@ class BannerService {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('❌ Error fetching active banners:', error);
+                logger.error('❌ Error fetching active banners:', error);
                 throw error;
             }
 
@@ -79,7 +79,7 @@ class BannerService {
             logger.debug(`✅ Found ${filteredBanners.length} active banners for ${placement}`);
             return filteredBanners;
         } catch (error) {
-            console.error('Error in getActiveBanners:', error);
+            logger.error('Error in getActiveBanners:', error);
             return [];
         }
     }
@@ -98,7 +98,7 @@ class BannerService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error fetching banner:', error);
+            logger.error('Error fetching banner:', error);
             return null;
         }
     }
@@ -139,7 +139,7 @@ class BannerService {
                 hasMore: offset + limit < (count || 0)
             };
         } catch (error) {
-            console.error('Error fetching all banners:', error);
+            logger.error('Error fetching all banners:', error);
             return { data: [], total: 0, hasMore: false };
         }
     }
@@ -167,14 +167,14 @@ class BannerService {
                 .single();
 
             if (error) {
-                console.error('❌ Error creating banner:', error);
+                logger.error('❌ Error creating banner:', error);
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Banner created:', data.id);
             return { success: true, data };
         } catch (error: any) {
-            console.error('Error in createBanner:', error);
+            logger.error('Error in createBanner:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -211,14 +211,14 @@ class BannerService {
                 .single();
 
             if (error) {
-                console.error('❌ Error updating banner:', error);
+                logger.error('❌ Error updating banner:', error);
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Banner updated:', id);
             return { success: true, data };
         } catch (error: any) {
-            console.error('Error in updateBanner:', error);
+            logger.error('Error in updateBanner:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -234,14 +234,14 @@ class BannerService {
                 .eq('id', id);
 
             if (error) {
-                console.error('❌ Error deleting banner:', error);
+                logger.error('❌ Error deleting banner:', error);
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Banner deleted:', id);
             return { success: true };
         } catch (error: any) {
-            console.error('Error in deleteBanner:', error);
+            logger.error('Error in deleteBanner:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -276,7 +276,7 @@ class BannerService {
             logger.info(`✅ Banner ${id} toggled to ${newStatus ? 'active' : 'inactive'}`);
             return { success: true, isActive: newStatus };
         } catch (error: any) {
-            console.error('Error toggling banner:', error);
+            logger.error('Error toggling banner:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -306,7 +306,7 @@ class BannerService {
             logger.info('✅ Banners reordered');
             return { success: true };
         } catch (error: any) {
-            console.error('Error reordering banners:', error);
+            logger.error('Error reordering banners:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }
@@ -355,7 +355,7 @@ class BannerService {
 
             return stats;
         } catch (error) {
-            console.error('Error fetching banner stats:', error);
+            logger.error('Error fetching banner stats:', error);
             return { total: 0, active: 0, scheduled: 0, expired: 0 };
         }
     }
@@ -392,7 +392,7 @@ class BannerService {
             logger.debug(`✅ Carousel built: ${carouselItems.length} items (${banners.length} banners, ${suggestions.length} suggestions)`);
             return carouselItems;
         } catch (error) {
-            console.error('Error building home carousel:', error);
+            logger.error('Error building home carousel:', error);
             // Fallback: return only banners
             const banners = await this.getActiveBanners('HOME');
             return banners.map(b => ({ type: 'PROMO' as const, data: b }));
@@ -413,7 +413,7 @@ class BannerService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error fetching current user profile:', error);
+            logger.error('Error fetching current user profile:', error);
             return null;
         }
     }
@@ -449,7 +449,7 @@ class BannerService {
                 isNew: new Date(profile.created_at) >= fifteenDaysAgo
             }));
         } catch (error) {
-            console.error('Error fetching member suggestions:', error);
+            logger.error('Error fetching member suggestions:', error);
             return [];
         }
     }

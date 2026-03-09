@@ -16,6 +16,7 @@ import { bannerService, CarouselItem } from '../services/bannerService';
 import { cleanExpiredCache } from '../services/offlineStorage';
 import { useAppTour } from '../hooks/useAppTour';
 import { buildTourSteps } from '../components/AppTourSteps';
+import { logger } from '../utils/logger';
 
 // ─── Types ───────────────────────────────────────────
 export interface AppContextType {
@@ -219,7 +220,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 const profiles = await profileService.getAllProfiles();
                 setMembers(profiles);
             } catch (error) {
-                console.error('Error fetching members:', error);
+                logger.error('Error fetching members:', error);
             } finally {
                 setMembersLoading(false);
             }
@@ -265,7 +266,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     setCarouselItems(items);
                 }
             } catch (error) {
-                console.error('Error fetching carousel items:', error);
+                logger.error('Error fetching carousel items:', error);
             } finally {
                 setCarouselLoading(false);
             }
@@ -289,7 +290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
             })
             .catch((error) => {
-                console.error('Error getting session:', error);
+                logger.error('Error getting session:', error);
                 if (mounted) setIsLoginOpen(true);
             });
 
@@ -332,7 +333,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 return;
             }
         }
-        console.warn('Notification URL did not match any ViewState:', url);
+        logger.warn('Notification URL did not match any ViewState:', url);
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
@@ -411,7 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
             await supabase.auth.signOut();
         } catch (err) {
-            console.error('Logout exception:', err);
+            logger.error('Logout exception:', err);
         } finally {
             setSession(null);
             setPendingUser(null);

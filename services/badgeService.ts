@@ -5,6 +5,7 @@
 
 import { notificationService } from '../services/notificationService';
 import { unreadMessageService } from '../services/unreadMessageService';
+import { logger } from '../utils/logger';
 
 class BadgeService {
     private currentBadge = 0;
@@ -25,7 +26,7 @@ class BadgeService {
             const total = unreadNotifications + unreadMessages;
             this.setBadge(total);
         } catch (error) {
-            console.error('❌ BadgeService: Error updating badge:', error);
+            logger.error('❌ BadgeService: Error updating badge:', error);
         }
     }
 

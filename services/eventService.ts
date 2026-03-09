@@ -98,7 +98,7 @@ class EventService {
                 .order('date', { ascending: true });
 
             if (error) {
-                console.error('❌ Error fetching events:', error);
+                logger.error('❌ Error fetching events:', error);
                 return [];
             }
 
@@ -111,7 +111,7 @@ class EventService {
             }
             return events.filter(e => e.type !== 'PRIVATE');
         } catch (error) {
-            console.error('Error in getEventsForUser:', error);
+            logger.error('Error in getEventsForUser:', error);
             return [];
         }
     }
@@ -127,13 +127,13 @@ class EventService {
                 .order('date', { ascending: false });
 
             if (error) {
-                console.error('❌ Error fetching all events:', error);
+                logger.error('❌ Error fetching all events:', error);
                 return [];
             }
 
             return (data || []).map(rowToClubEvent);
         } catch (error) {
-            console.error('Error in getAllEvents:', error);
+            logger.error('Error in getAllEvents:', error);
             return [];
         }
     }
@@ -151,7 +151,7 @@ class EventService {
                 .single();
 
             if (error) {
-                console.error('❌ Error creating event:', error);
+                logger.error('❌ Error creating event:', error);
                 return { success: false, error: error.message };
             }
 
@@ -165,7 +165,7 @@ class EventService {
             return { success: true, data: rowToClubEvent(data) };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error in createEvent:', error);
+            logger.error('Error in createEvent:', error);
             return { success: false, error: message };
         }
     }
@@ -186,7 +186,7 @@ class EventService {
                 .single();
 
             if (error) {
-                console.error('❌ Error updating event:', error);
+                logger.error('❌ Error updating event:', error);
                 return { success: false, error: error.message };
             }
 
@@ -194,7 +194,7 @@ class EventService {
             return { success: true, data: rowToClubEvent(data) };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error in updateEvent:', error);
+            logger.error('Error in updateEvent:', error);
             return { success: false, error: message };
         }
     }
@@ -210,7 +210,7 @@ class EventService {
                 .eq('id', id);
 
             if (error) {
-                console.error('❌ Error deleting event:', error);
+                logger.error('❌ Error deleting event:', error);
                 return { success: false, error: error.message };
             }
 
@@ -218,7 +218,7 @@ class EventService {
             return { success: true };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Error in deleteEvent:', error);
+            logger.error('Error in deleteEvent:', error);
             return { success: false, error: message };
         }
     }
@@ -233,13 +233,13 @@ class EventService {
                 .select('*', { count: 'exact', head: true });
 
             if (error) {
-                console.error('❌ Error counting events:', error);
+                logger.error('❌ Error counting events:', error);
                 return 0;
             }
 
             return count || 0;
         } catch (error) {
-            console.error('Error in getEventCount:', error);
+            logger.error('Error in getEventCount:', error);
             return 0;
         }
     }

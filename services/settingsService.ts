@@ -85,7 +85,7 @@ class SettingsService {
                 .single();
 
             if (error) {
-                console.error('Error fetching settings:', error);
+                logger.error('Error fetching settings:', error);
                 return DEFAULT_SETTINGS;
             }
 
@@ -95,7 +95,7 @@ class SettingsService {
 
             return data;
         } catch (error) {
-            console.error('Error in getSettings:', error);
+            logger.error('Error in getSettings:', error);
             return DEFAULT_SETTINGS;
         }
     }
@@ -116,7 +116,7 @@ class SettingsService {
                 .single();
 
             if (error) {
-                console.error('Error updating settings:', error);
+                logger.error('Error updating settings:', error);
                 return { success: false, error: error.message };
             }
 
@@ -126,7 +126,7 @@ class SettingsService {
             logger.info('✅ Settings updated');
             return { success: true, data };
         } catch (error: any) {
-            console.error('Error in updateSettings:', error);
+            logger.error('Error in updateSettings:', error);
             return { success: false, error: error.message || 'Erro desconhecido' };
         }
     }

@@ -3,6 +3,7 @@
 // Prosperus Club App v2.9 — Gap Fix
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // ========== TYPES ==========
 
@@ -61,7 +62,7 @@ class FavoriteService {
                 return true; // favorited
             }
         } catch (error) {
-            console.error('Error toggling favorite:', error);
+            logger.error('Error toggling favorite:', error);
             throw error;
         }
     }
@@ -84,7 +85,7 @@ class FavoriteService {
 
             return !!data;
         } catch (error) {
-            console.error('Error checking favorite:', error);
+            logger.error('Error checking favorite:', error);
             return false;
         }
     }
@@ -107,7 +108,7 @@ class FavoriteService {
             if (error) throw error;
             return new Set((data || []).map(f => f.entity_id));
         } catch (error) {
-            console.error('Error getting favorited IDs:', error);
+            logger.error('Error getting favorited IDs:', error);
             return new Set();
         }
     }
@@ -134,7 +135,7 @@ class FavoriteService {
             if (error) throw error;
             return data || [];
         } catch (error) {
-            console.error('Error getting favorites:', error);
+            logger.error('Error getting favorites:', error);
             return [];
         }
     }
@@ -151,7 +152,7 @@ class FavoriteService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error removing favorite:', error);
+            logger.error('Error removing favorite:', error);
             throw error;
         }
     }
@@ -173,7 +174,7 @@ class FavoriteService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error removing favorite:', error);
+            logger.error('Error removing favorite:', error);
             throw error;
         }
     }

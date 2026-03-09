@@ -98,7 +98,7 @@ class ArticleService {
             logger.debug(`📰 hasPublishedArticles: ${hasArticles}`);
             return hasArticles;
         } catch (error) {
-            console.error('Error checking published articles:', error);
+            logger.error('Error checking published articles:', error);
             return false;
         }
     }
@@ -156,7 +156,7 @@ class ArticleService {
             );
             return data;
         } catch (error) {
-            console.error('Error fetching published articles:', error);
+            logger.error('Error fetching published articles:', error);
             throw error;
         }
     }
@@ -179,7 +179,7 @@ class ArticleService {
 
             return data;
         } catch (error) {
-            console.error('Error fetching article:', error);
+            logger.error('Error fetching article:', error);
             throw error;
         }
     }
@@ -203,7 +203,7 @@ class ArticleService {
 
             return data;
         } catch (error) {
-            console.error('Error fetching article by slug:', error);
+            logger.error('Error fetching article by slug:', error);
             throw error;
         }
     }
@@ -231,7 +231,7 @@ class ArticleService {
                 throw error;
             }
         } catch (error) {
-            console.error('Error incrementing views:', error);
+            logger.error('Error incrementing views:', error);
             // Don't throw - views increment is not critical
         }
     }
@@ -253,7 +253,7 @@ class ArticleService {
             const categories = [...new Set(data?.map(a => a.category_name).filter(Boolean))];
             return categories as string[];
         } catch (error) {
-            console.error('Error fetching categories:', error);
+            logger.error('Error fetching categories:', error);
             return [];
         }
     }
@@ -275,7 +275,7 @@ class ArticleService {
             if (error) throw error;
             return data || [];
         } catch (error) {
-            console.error('Error fetching all articles:', error);
+            logger.error('Error fetching all articles:', error);
             throw error;
         }
     }
@@ -298,7 +298,7 @@ class ArticleService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error creating article:', error);
+            logger.error('Error creating article:', error);
             throw error;
         }
     }
@@ -321,7 +321,7 @@ class ArticleService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error updating article:', error);
+            logger.error('Error updating article:', error);
             throw error;
         }
     }
@@ -341,7 +341,7 @@ class ArticleService {
             // Invalidate cache since article count changed
             this.invalidateVisibilityCache();
         } catch (error) {
-            console.error('Error deleting article:', error);
+            logger.error('Error deleting article:', error);
             throw error;
         }
     }
@@ -369,7 +369,7 @@ class ArticleService {
 
             return data;
         } catch (error) {
-            console.error('Error publishing article:', error);
+            logger.error('Error publishing article:', error);
             throw error;
         }
     }
@@ -396,7 +396,7 @@ class ArticleService {
 
             return data;
         } catch (error) {
-            console.error('Error unpublishing article:', error);
+            logger.error('Error unpublishing article:', error);
             throw error;
         }
     }
@@ -428,7 +428,7 @@ class ArticleService {
             if (error) throw error;
             return data;
         } catch (error) {
-            console.error('Error duplicating article:', error);
+            logger.error('Error duplicating article:', error);
             throw error;
         }
     }

@@ -62,7 +62,7 @@ class AdminUserService {
             .single();
 
         if (error) {
-            console.error('Error fetching user profile:', error);
+            logger.error('Error fetching user profile:', error);
             return null;
         }
 
@@ -128,12 +128,12 @@ class AdminUserService {
         logger.debug('📥 Admin: Update error:', updateError);
 
         if (updateError) {
-            console.error('❌ Error updating block status:', updateError);
+            logger.error('❌ Error updating block status:', updateError);
             throw new Error('Failed to update block status: ' + updateError.message);
         }
 
         if (!updateResult || updateResult.length === 0) {
-            console.error('❌ Update returned no rows - RLS may be blocking');
+            logger.error('❌ Update returned no rows - RLS may be blocking');
             throw new Error('Update failed: no rows affected. Check RLS policies on profiles table.');
         }
 
@@ -180,7 +180,7 @@ class AdminUserService {
             .order('blocked_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching blocked users:', error);
+            logger.error('Error fetching blocked users:', error);
             return [];
         }
 

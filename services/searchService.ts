@@ -4,6 +4,7 @@
 // Serviço para busca global em Sócios, Eventos, Notícias, Academy e Galeria
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 import { ProfileData } from './profileService';
 import { ClubEvent } from '../types';
 
@@ -209,33 +210,33 @@ class SearchService {
 
             // Log any errors for debugging
             if (membersResult.error) {
-                console.warn('Search members error:', membersResult.error);
+                logger.warn('Search members error:', membersResult.error);
             }
             if (eventsResult.error) {
-                console.warn('Search events error:', eventsResult.error);
+                logger.warn('Search events error:', eventsResult.error);
             }
             if (articlesResult.error) {
-                console.warn('Search articles error:', articlesResult.error);
+                logger.warn('Search articles error:', articlesResult.error);
             }
             if (videosResult.error) {
-                console.warn('Search videos error:', videosResult.error);
+                logger.warn('Search videos error:', videosResult.error);
             }
             if (galleryResult.error) {
-                console.warn('Search gallery error:', galleryResult.error);
+                logger.warn('Search gallery error:', galleryResult.error);
             }
             if (dealsResult.error) {
-                console.warn('Search deals error:', dealsResult.error);
+                logger.warn('Search deals error:', dealsResult.error);
             }
             if (referralsResult.error) {
-                console.warn('Search referrals error:', referralsResult.error);
+                logger.warn('Search referrals error:', referralsResult.error);
             }
             if (benefitsResult.error) {
-                console.warn('Search benefits error:', benefitsResult.error);
+                logger.warn('Search benefits error:', benefitsResult.error);
             }
 
             return { members, events, articles, videos, gallery, deals, referrals, benefits };
         } catch (error) {
-            console.error('Global search error:', error);
+            logger.error('Global search error:', error);
             return EMPTY_RESULTS;
         }
     }

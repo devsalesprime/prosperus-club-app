@@ -1,5 +1,6 @@
 // Service for managing unread message counts
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export interface UnreadCount {
     conversationId: string;
@@ -37,7 +38,7 @@ class UnreadMessageService {
 
             return count || 0;
         } catch (error) {
-            console.error('Error getting total unread count:', error);
+            logger.error('Error getting total unread count:', error);
             return 0;
         }
     }
@@ -80,7 +81,7 @@ class UnreadMessageService {
                 count
             }));
         } catch (error) {
-            console.error('Error getting unread count by conversation:', error);
+            logger.error('Error getting unread count by conversation:', error);
             return [];
         }
     }
@@ -99,7 +100,7 @@ class UnreadMessageService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error marking conversation as read:', error);
+            logger.error('Error marking conversation as read:', error);
         }
     }
 
@@ -115,7 +116,7 @@ class UnreadMessageService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error marking message as read:', error);
+            logger.error('Error marking message as read:', error);
         }
     }
 }

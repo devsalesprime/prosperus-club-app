@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setUserProfile(profile);
                 profileCacheRef.current = profile;
             } else {
-                console.warn('⚠️ AuthContext: No profile found for user:', userId);
+                logger.warn('⚠️ AuthContext: No profile found for user:', userId);
                 // Don't clear profile if we already have one cached (prevents flash)
                 if (!profileCacheRef.current) {
                     setUserProfile(null);
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 return;
             }
 
-            console.error('❌ AuthContext: Error fetching profile:', {
+            logger.error('❌ AuthContext: Error fetching profile:', {
                 name: error?.name,
                 message: error?.message,
                 code: error?.code,
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (isInitialLoad) {
                 const currentSession = session;
                 if (currentSession?.user) {
-                    console.warn('⚠️ AuthContext: Creating fallback profile from session data');
+                    logger.warn('⚠️ AuthContext: Creating fallback profile from session data');
                     const fallbackProfile: ProfileData = {
                         id: currentSession.user.id,
                         email: currentSession.user.email || '',
@@ -124,7 +124,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             profileCacheRef.current = null;
             setIsPasswordRecovery(false);
         } catch (error) {
-            console.error('❌ AuthContext: Error during logout:', error);
+            logger.error('❌ AuthContext: Error during logout:', error);
         }
     };
 
@@ -137,7 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             });
 
             if (error) {
-                console.error('❌ AuthContext: Reset password error:', error);
+                logger.error('❌ AuthContext: Reset password error:', error);
                 if (error.message?.includes('rate limit')) {
                     return { success: false, error: 'Muitas tentativas. Aguarde alguns minutos.' };
                 }
@@ -147,7 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             logger.debug('✅ AuthContext: Password reset email sent');
             return { success: true };
         } catch (err) {
-            console.error('❌ AuthContext: Unexpected reset error:', err);
+            logger.error('❌ AuthContext: Unexpected reset error:', err);
             return { success: false, error: 'Erro inesperado. Tente novamente.' };
         }
     };
@@ -159,7 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const { error } = await supabase.auth.updateUser({ password: newPassword });
 
             if (error) {
-                console.error('❌ AuthContext: Update password error:', error);
+                logger.error('❌ AuthContext: Update password error:', error);
                 if (error.message?.includes('same password')) {
                     return { success: false, error: 'A nova senha não pode ser igual à anterior.' };
                 }
@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setIsPasswordRecovery(false);
             return { success: true };
         } catch (err) {
-            console.error('❌ AuthContext: Unexpected update error:', err);
+            logger.error('❌ AuthContext: Unexpected update error:', err);
             return { success: false, error: 'Erro inesperado. Tente novamente.' };
         }
     };
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Safety timeout to prevent infinite loading (20 seconds)
         const safetyTimeout = setTimeout(() => {
             if (mountedRef.current && isLoading) {
-                console.warn('⚠️ AuthContext: Loading timeout - forcing isLoading to false');
+                logger.warn('⚠️ AuthContext: Loading timeout - forcing isLoading to false');
                 setIsLoading(false);
             }
         }, 20000);
@@ -199,7 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (session?.user?.id) {
                 fetchProfile(session.user.id, true)
                     .catch((error) => {
-                        console.error('❌ AuthContext: Error in fetchProfile:', error);
+                        logger.error('❌ AuthContext: Error in fetchProfile:', error);
                     })
                     .finally(() => {
                         if (mountedRef.current) {
@@ -212,7 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 clearTimeout(safetyTimeout);
             }
         }).catch((error) => {
-            console.error('❌ AuthContext: Error getting session:', error);
+            logger.error('❌ AuthContext: Error getting session:', error);
             if (mountedRef.current) {
                 setIsLoading(false);
                 clearTimeout(safetyTimeout);
@@ -247,7 +247,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 try {
                     await fetchProfile(newSession.user.id);
                 } catch (error) {
-                    console.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
+                    logger.error('❌ AuthContext: Error in onAuthStateChange fetchProfile:', error);
                 }
             } else if (event === 'PASSWORD_RECOVERY') {
                 logger.debug('🔑 AuthContext: PASSWORD_RECOVERY event detected');

@@ -104,7 +104,7 @@ class ProfileService {
                 const { data, error } = result as { data: ProfileData | null; error: any };
 
                 if (error) {
-                    console.error('❌ profileService.getProfile: Supabase error:', {
+                    logger.error('❌ profileService.getProfile: Supabase error:', {
                         code: error.code,
                         message: error.message,
                         details: error.details,
@@ -125,7 +125,7 @@ class ProfileService {
 
             return null;
         } catch (error: any) {
-            console.error('❌ profileService.getProfile: Exception caught:', {
+            logger.error('❌ profileService.getProfile: Exception caught:', {
                 name: error?.name,
                 message: error?.message,
                 code: error?.code,
@@ -175,7 +175,7 @@ class ProfileService {
             );
             return data;
         } catch (error) {
-            console.error('Error fetching all profiles:', error);
+            logger.error('Error fetching all profiles:', error);
             return [];
         }
     }
@@ -224,7 +224,7 @@ class ProfileService {
             if (error) throw error;
             return data || [];
         } catch (error) {
-            console.error('Error fetching filtered profiles:', error);
+            logger.error('Error fetching filtered profiles:', error);
             return [];
         }
     }
@@ -288,7 +288,7 @@ class ProfileService {
             if (error) throw error;
             return { data: data || [], count };
         } catch (error) {
-            console.error('Error fetching paginated profiles:', error);
+            logger.error('Error fetching paginated profiles:', error);
             return { data: [], count: null };
         }
     }
@@ -311,14 +311,14 @@ class ProfileService {
             });
 
             if (!session) {
-                console.error('❌ Cannot create profile: user not authenticated');
-                console.error('Session error:', sessionError);
+                logger.error('❌ Cannot create profile: user not authenticated');
+                logger.error('Session error:', sessionError);
                 throw new Error('User must be authenticated to create profile');
             }
 
             // Verify userId matches authenticated user
             if (session.user.id !== userId) {
-                console.error('Cannot create profile: userId mismatch', {
+                logger.error('Cannot create profile: userId mismatch', {
                     sessionUserId: session.user.id,
                     requestedUserId: userId
                 });
@@ -347,14 +347,14 @@ class ProfileService {
                 .single();
 
             if (error) {
-                console.error('Supabase error creating profile:', error);
+                logger.error('Supabase error creating profile:', error);
                 throw error;
             }
 
             logger.info('✅ Profile created successfully:', data);
             return data;
         } catch (error) {
-            console.error('Error creating profile:', error);
+            logger.error('Error creating profile:', error);
             throw error;
         }
     }
@@ -410,15 +410,15 @@ class ProfileService {
                     .invoke('sync-hubspot', { body: { profile: data } })
                     .then(({ error: syncError }) => {
                         if (syncError) {
-                            console.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
+                            logger.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
                         }
                     })
-                    .catch(err => console.warn('⚠️ HubSpot sync error (non-blocking):', err));
+                    .catch(err => logger.warn('⚠️ HubSpot sync error (non-blocking):', err));
             }
 
             return data;
         } catch (error) {
-            console.error('Error updating profile:', error);
+            logger.error('Error updating profile:', error);
             throw error;
         }
     }
@@ -438,7 +438,7 @@ class ProfileService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error updating profile image:', error);
+            logger.error('Error updating profile image:', error);
             throw error;
         }
     }
@@ -466,7 +466,7 @@ class ProfileService {
                     .eq('id', userId);
             }
         } catch (error) {
-            console.error('Error adding tag:', error);
+            logger.error('Error adding tag:', error);
             throw error;
         }
     }
@@ -491,7 +491,7 @@ class ProfileService {
                 })
                 .eq('id', userId);
         } catch (error) {
-            console.error('Error removing tag:', error);
+            logger.error('Error removing tag:', error);
             throw error;
         }
     }
@@ -511,7 +511,7 @@ class ProfileService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error completing onboarding:', error);
+            logger.error('Error completing onboarding:', error);
             throw error;
         }
     }

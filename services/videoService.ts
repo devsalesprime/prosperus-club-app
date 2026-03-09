@@ -121,12 +121,12 @@ export const videoService = {
             .maybeSingle();
 
         if (error) {
-            console.error('❌ updateVideo error:', error);
+            logger.error('❌ updateVideo error:', error);
             throw error;
         }
 
         if (!data) {
-            console.error('❌ updateVideo: No data returned - RLS may be blocking or video not found');
+            logger.error('❌ updateVideo: No data returned - RLS may be blocking or video not found');
             throw new Error('Não foi possível atualizar o vídeo. Verifique se você tem permissão de administrador.');
         }
 
@@ -204,14 +204,14 @@ export const videoService = {
             // Get current user
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
-                console.warn('⚠️ updateProgress: No authenticated user');
+                logger.warn('⚠️ updateProgress: No authenticated user');
                 return;
             }
 
             // Validate UUID format
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!uuidRegex.test(videoId)) {
-                console.warn('⚠️ updateProgress: Invalid video ID format:', videoId);
+                logger.warn('⚠️ updateProgress: Invalid video ID format:', videoId);
                 return;
             }
 
@@ -233,13 +233,13 @@ export const videoService = {
                 });
 
             if (error) {
-                console.error('❌ updateProgress error:', error);
+                logger.error('❌ updateProgress error:', error);
                 // Silent fail - don't throw for auto-save
             } else {
                 logger.info(`✅ Progress saved: ${finalPercentage}%${isCompleted ? ' (COMPLETED)' : ''}`);
             }
         } catch (error) {
-            console.error('❌ updateProgress exception:', error);
+            logger.error('❌ updateProgress exception:', error);
             // Silent fail
         }
     },
@@ -275,7 +275,7 @@ export const videoService = {
             });
 
         if (error) {
-            console.error('❌ updateProgressLegacy error:', error);
+            logger.error('❌ updateProgressLegacy error:', error);
         }
     },
 
@@ -293,7 +293,7 @@ export const videoService = {
             if (!effectiveUserId) {
                 const { data: { user }, error: authError } = await supabase.auth.getUser();
                 if (authError || !user) {
-                    console.warn('⚠️ markAsCompleted: No authenticated user and no userId provided');
+                    logger.warn('⚠️ markAsCompleted: No authenticated user and no userId provided');
                     return false;
                 }
                 effectiveUserId = user.id;
@@ -302,11 +302,11 @@ export const videoService = {
             // Validate UUIDs
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
             if (!uuidRegex.test(videoId)) {
-                console.warn('⚠️ markAsCompleted: Invalid video ID:', videoId);
+                logger.warn('⚠️ markAsCompleted: Invalid video ID:', videoId);
                 return false;
             }
             if (!uuidRegex.test(effectiveUserId)) {
-                console.warn('⚠️ markAsCompleted: Invalid user ID:', effectiveUserId);
+                logger.warn('⚠️ markAsCompleted: Invalid user ID:', effectiveUserId);
                 return false;
             }
 
@@ -324,14 +324,14 @@ export const videoService = {
                 });
 
             if (error) {
-                console.error('❌ markAsCompleted error:', error);
+                logger.error('❌ markAsCompleted error:', error);
                 return false;
             }
 
             logger.info('✅ Video marked as completed');
             return true;
         } catch (error) {
-            console.error('❌ markAsCompleted exception:', error);
+            logger.error('❌ markAsCompleted exception:', error);
             return false;
         }
     },
@@ -345,7 +345,7 @@ export const videoService = {
             // Get current user
             const { data: { user }, error: authError } = await supabase.auth.getUser();
             if (authError || !user) {
-                console.warn('⚠️ getVideoProgress: No authenticated user');
+                logger.warn('⚠️ getVideoProgress: No authenticated user');
                 return null;
             }
 
@@ -363,7 +363,7 @@ export const videoService = {
                 .maybeSingle();
 
             if (error) {
-                console.error('❌ getVideoProgress error:', error);
+                logger.error('❌ getVideoProgress error:', error);
                 return null;
             }
 
@@ -376,7 +376,7 @@ export const videoService = {
                 isCompleted: (data.progress || 0) >= 100
             };
         } catch (error) {
-            console.error('❌ getVideoProgress exception:', error);
+            logger.error('❌ getVideoProgress exception:', error);
             return null;
         }
     },

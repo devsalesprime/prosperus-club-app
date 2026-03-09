@@ -209,7 +209,7 @@ class ConversationService {
                 if (status === 'SUBSCRIBED') {
                     logger.debug('✅ Realtime: Successfully subscribed to conversation:', conversationId);
                 } else if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Realtime: Channel error for conversation:', conversationId);
+                    logger.error('❌ Realtime: Channel error for conversation:', conversationId);
                     // Auto-retry with exponential backoff (max 3 retries)
                     const retryCount = (channel as any).__retryCount || 0;
                     if (retryCount < 3) {
@@ -224,7 +224,7 @@ class ConversationService {
                             (channel as any).__newSub = newSub;
                         }, delay);
                     } else {
-                        console.error('❌ Realtime: Max retries reached for conversation:', conversationId,
+                        logger.error('❌ Realtime: Max retries reached for conversation:', conversationId,
                             '— Check Supabase Dashboard: Realtime must be enabled on "messages" table and RLS policies must allow SELECT.');
                     }
                 } else if (status === 'TIMED_OUT') {
@@ -360,7 +360,7 @@ class ConversationService {
                 .single();
 
             if (convError || !conv) {
-                console.error('Error fetching conversation:', convError);
+                logger.error('Error fetching conversation:', convError);
                 return null;
             }
 
@@ -381,7 +381,7 @@ class ConversationService {
                 .eq('conversation_id', conversationId);
 
             if (partError) {
-                console.error('Error fetching participants:', partError);
+                logger.error('Error fetching participants:', partError);
             }
 
             // Get last message
@@ -406,7 +406,7 @@ class ConversationService {
                 .maybeSingle();
 
             if (msgError && msgError.code !== 'PGRST116') {
-                console.error('Error fetching last message:', msgError);
+                logger.error('Error fetching last message:', msgError);
             }
 
             // Get unread count
@@ -428,7 +428,7 @@ class ConversationService {
                 otherParticipant: otherParticipant?.profiles as any
             };
         } catch (error) {
-            console.error('Error getting conversation by ID:', error);
+            logger.error('Error getting conversation by ID:', error);
             return null;
         }
     }
@@ -507,7 +507,7 @@ class ConversationService {
                         .eq('conversation_id', conv.id);
 
                     if (partError) {
-                        console.error('Error fetching participants:', partError);
+                        logger.error('Error fetching participants:', partError);
                     }
 
                     // Get last message
@@ -535,7 +535,7 @@ class ConversationService {
 
                     if (msgError && msgError.code !== 'PGRST116') {
                         // PGRST116 = no rows returned, which is ok
-                        console.error('Error fetching last message:', msgError);
+                        logger.error('Error fetching last message:', msgError);
                     }
 
                     // Get unread count
@@ -563,7 +563,7 @@ class ConversationService {
             const archivedIds = this.getArchivedConversationIds(userId);
             return conversationsWithDetails.filter(c => !archivedIds.includes(c.id));
         } catch (error) {
-            console.error('Error fetching conversations:', error);
+            logger.error('Error fetching conversations:', error);
             throw error;
         }
     }
@@ -627,7 +627,7 @@ class ConversationService {
 
             return newConv.id;
         } catch (error) {
-            console.error('Error getting or creating conversation:', error);
+            logger.error('Error getting or creating conversation:', error);
             throw error;
         }
     }
@@ -663,7 +663,7 @@ class ConversationService {
             if (error) throw error;
             return data || [];
         } catch (error) {
-            console.error('Error fetching messages:', error);
+            logger.error('Error fetching messages:', error);
             throw error;
         }
     }
@@ -719,7 +719,7 @@ class ConversationService {
 
             return data;
         } catch (error) {
-            console.error('Error sending message:', error);
+            logger.error('Error sending message:', error);
             throw error;
         }
     }
@@ -760,7 +760,7 @@ class ConversationService {
                 });
 
             if (uploadError) {
-                console.error('❌ Chat Media: Upload error:', uploadError);
+                logger.error('❌ Chat Media: Upload error:', uploadError);
                 throw new Error('Falha ao enviar arquivo. Tente novamente.');
             }
 
@@ -809,7 +809,7 @@ class ConversationService {
 
             return data;
         } catch (error) {
-            console.error('Error sending media message:', error);
+            logger.error('Error sending media message:', error);
             throw error;
         }
     }
@@ -839,7 +839,7 @@ class ConversationService {
                 messageIds: data?.map(m => m.id) || []
             });
         } catch (error) {
-            console.error('Error marking messages as read:', error);
+            logger.error('Error marking messages as read:', error);
             throw error;
         }
     }
@@ -858,7 +858,7 @@ class ConversationService {
             if (error) throw error;
             logger.debug('🗑️ ConversationService: Soft-deleted message', { messageId });
         } catch (error) {
-            console.error('Error deleting message:', error);
+            logger.error('Error deleting message:', error);
             throw error;
         }
     }
@@ -912,7 +912,7 @@ class ConversationService {
 
             if (error) throw error;
         } catch (error) {
-            console.error('Error deleting conversation:', error);
+            logger.error('Error deleting conversation:', error);
             throw error;
         }
     }

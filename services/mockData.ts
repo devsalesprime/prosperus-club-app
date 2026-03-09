@@ -314,7 +314,7 @@ class DataService {
       const stored = localStorage.getItem(`prosperus_${key}`);
       return stored ? JSON.parse(stored) : fallback;
     } catch (e) {
-      console.error('Error loading data', e);
+      logger.error('Error loading data', e);
       return fallback;
     }
   }
@@ -323,7 +323,7 @@ class DataService {
     try {
       localStorage.setItem(`prosperus_${key}`, JSON.stringify(data));
     } catch (e) {
-      console.error('Error saving data', e);
+      logger.error('Error saving data', e);
     }
   }
 

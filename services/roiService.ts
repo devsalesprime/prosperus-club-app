@@ -2,6 +2,7 @@
 // Service for ROI tracking: Deals and Referrals
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // ============================================
 // TYPES
@@ -98,7 +99,7 @@ class RoiService {
                 referralsCount: referrals?.length || 0
             };
         } catch (error) {
-            console.error('[ROI Service] Error fetching financial growth:', error);
+            logger.error('[ROI Service] Error fetching financial growth:', error);
             return {
                 totalRevenue: 0,
                 dealsRevenue: 0,
@@ -132,7 +133,7 @@ class RoiService {
                 buyer_name: d.buyer?.name
             }));
         } catch (error) {
-            console.error('[ROI Service] Error fetching deals:', error);
+            logger.error('[ROI Service] Error fetching deals:', error);
             return [];
         }
     }
@@ -160,7 +161,7 @@ class RoiService {
                 receiver_name: r.receiver?.name
             }));
         } catch (error) {
-            console.error('[ROI Service] Error fetching referrals:', error);
+            logger.error('[ROI Service] Error fetching referrals:', error);
             return [];
         }
     }
@@ -188,7 +189,7 @@ class RoiService {
 
             return { success: true, data };
         } catch (error: any) {
-            console.error('[ROI Service] Error creating deal:', error);
+            logger.error('[ROI Service] Error creating deal:', error);
             return { success: false, error: error.message };
         }
     }
@@ -214,7 +215,7 @@ class RoiService {
 
             return { success: true, data };
         } catch (error: any) {
-            console.error('[ROI Service] Error creating referral:', error);
+            logger.error('[ROI Service] Error creating referral:', error);
             return { success: false, error: error.message };
         }
     }
@@ -240,7 +241,7 @@ class RoiService {
                 count: row.deal_count
             }));
         } catch (error) {
-            console.error('[ROI Service] Error fetching top sellers:', error);
+            logger.error('[ROI Service] Error fetching top sellers:', error);
             return [];
         }
     }
@@ -266,7 +267,7 @@ class RoiService {
                 count: row.referral_count
             }));
         } catch (error) {
-            console.error('[ROI Service] Error fetching top referrers:', error);
+            logger.error('[ROI Service] Error fetching top referrers:', error);
             return [];
         }
     }

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 import { GalleryAlbum } from '../types';
 import { fetchWithOfflineCache } from './offlineStorage';
 
@@ -22,7 +23,7 @@ export const galleryService = {
                     .order('createdAt', { ascending: false });
 
                 if (error) {
-                    console.error('Error fetching gallery albums:', error);
+                    logger.error('Error fetching gallery albums:', error);
                     throw error;
                 }
 
@@ -44,7 +45,7 @@ export const galleryService = {
             .single();
 
         if (error) {
-            console.error('Error fetching album:', error);
+            logger.error('Error fetching album:', error);
             return null;
         }
 
@@ -63,7 +64,7 @@ export const galleryService = {
             .single();
 
         if (error) {
-            console.error('Error fetching most recent album:', error);
+            logger.error('Error fetching most recent album:', error);
             return null;
         }
 
@@ -89,7 +90,7 @@ export const galleryService = {
             .single();
 
         if (error) {
-            console.error('Error creating album:', error);
+            logger.error('Error creating album:', error);
             throw error;
         }
 
@@ -108,7 +109,7 @@ export const galleryService = {
             .single();
 
         if (error) {
-            console.error('Error updating album:', error);
+            logger.error('Error updating album:', error);
             throw error;
         }
 
@@ -125,7 +126,7 @@ export const galleryService = {
             .eq('id', id);
 
         if (error) {
-            console.error('Error deleting album:', error);
+            logger.error('Error deleting album:', error);
             throw error;
         }
     }
