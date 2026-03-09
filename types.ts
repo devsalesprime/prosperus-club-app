@@ -116,7 +116,7 @@ export interface VideoCategory {
   createdAt?: string;
 }
 
-export type EventCategory = 'PRESENTIAL' | 'ONLINE'; // RECORDED removed - legacy events may still exist in DB
+export type EventCategory = 'PRESENTIAL' | 'ONLINE' | 'RECORDED';
 
 export interface EventMaterial {
   title: string;
