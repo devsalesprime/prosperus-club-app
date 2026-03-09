@@ -93,7 +93,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         partnership_interests: currentUser.partnership_interests || []
     });
 
-    const totalSteps = 6;
+    const totalSteps = 7;
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -130,20 +130,24 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const validateStep = (s: number): Record<string, string> => {
         const errs: Record<string, string> = {};
         if (s === 1) {
+            // Photo step — dedicated
+            const hasRealPhoto = formData.image_url && !formData.image_url.includes('default-avatar');
+            if (!hasRealPhoto) errs.photo = 'Foto obrigatória para aparecer no Member Book';
+        } else if (s === 2) {
+            // Profile info
             if (!formData.name?.trim()) errs.name = 'Nome é obrigatório';
             if (!formData.company?.trim()) errs.company = 'Empresa é obrigatória';
             if (!formData.job_title?.trim()) errs.job_title = 'Cargo é obrigatório';
             if (!formData.bio?.trim()) errs.bio = 'Conte sobre você';
-            // Photo is required
-            const hasRealPhoto = formData.image_url && !formData.image_url.includes('default-avatar');
-            if (!hasRealPhoto) errs.photo = 'Foto obrigatória para aparecer no Member Book';
-        } else if (s === 2) {
+        } else if (s === 3) {
+            // Social & tags
             const liUser = getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin');
             const igUser = getUsernameFromUrl(formData.socials?.instagram || '', 'instagram');
             if (!liUser) errs.linkedin = 'LinkedIn é obrigatório';
             if (!igUser) errs.instagram = 'Instagram é obrigatório';
             if (!(formData.tags && formData.tags.length >= 1)) errs.tags = 'Selecione pelo menos 1 área';
-        } else if (s === 3) {
+        } else if (s === 4) {
+            // Strategic profile
             if (!formData.what_i_sell?.trim()) errs.what_i_sell = 'Campo obrigatório';
             if (!formData.what_i_need?.trim()) errs.what_i_need = 'Campo obrigatório';
             if (!(formData.partnership_interests && formData.partnership_interests.length >= 1)) errs.partnership_interests = 'Selecione pelo menos 1 setor';
@@ -338,35 +342,36 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const renderStep = () => {
         switch (step) {
             case 0: return renderWelcome();
-            case 1: return renderProfileInfo();
-            case 2: return renderSocialTags();
-            case 3: return renderStrategicProfile();
-            case 4: return renderTermsAcceptance();
-            case 5: return renderReady();
+            case 1: return renderPhotoStep();
+            case 2: return renderProfileInfo();
+            case 3: return renderSocialTags();
+            case 4: return renderStrategicProfile();
+            case 5: return renderTermsAcceptance();
+            case 6: return renderReady();
             default: return null;
         }
     };
 
-    // Step 1: Welcome
+    // Step 0: Welcome
     const renderWelcome = () => (
         <div className="text-center py-6">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-900/30">
                 <Sparkles className="text-white" size={40} />
             </div>
             <h2 className="text-3xl font-bold text-white mb-3">
-                Bem-vindo ao Prosperus Club!
+                Você chegou ao lugar certo.
             </h2>
             <p className="text-slate-300 text-lg mb-6 max-w-md mx-auto">
-                Vamos configurar seu perfil em <strong className="text-yellow-500">poucos passos</strong> para você aproveitar ao máximo a sua experiência.
+                Configure seu perfil em <strong className="text-yellow-500">menos de 3 minutos</strong> e comece a gerar negócios com os sócios do clube.
             </p>
             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto mt-8">
                 <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                    <User className="text-yellow-500 mx-auto mb-2" size={24} />
-                    <p className="text-xs text-slate-400">Seu Perfil</p>
+                    <Camera className="text-yellow-500 mx-auto mb-2" size={24} />
+                    <p className="text-xs text-slate-400">Sua Foto</p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                    <Globe className="text-yellow-500 mx-auto mb-2" size={24} />
-                    <p className="text-xs text-slate-400">Conexões</p>
+                    <User className="text-yellow-500 mx-auto mb-2" size={24} />
+                    <p className="text-xs text-slate-400">Seu Perfil</p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                     <Rocket className="text-yellow-500 mx-auto mb-2" size={24} />
@@ -376,19 +381,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
     );
 
-    // Step 2: Profile Info
-    const renderProfileInfo = () => (
-        <div className="space-y-5">
-            <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-white mb-1">Complete seu Perfil</h2>
-                <p className="text-slate-400 text-sm">Essas informações ajudam outros sócios a te encontrar</p>
-            </div>
+    // Step 1: Photo (dedicated)
+    const renderPhotoStep = () => (
+        <div className="text-center py-6">
+            <h2 className="text-2xl font-bold text-white mb-2">
+                Sua foto é sua presença.
+            </h2>
+            <p className="text-slate-400 text-sm mb-8 max-w-xs mx-auto">
+                Sócios com foto recebem <strong className="text-yellow-500">3× mais conexões</strong> estratégicas.
+            </p>
 
             {/* Photo Upload */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-4">
                 <div className="relative">
                     <div
-                        className="w-28 h-28 rounded-full border-4 border-yellow-600/50 overflow-hidden bg-slate-800 cursor-pointer hover:border-yellow-500 transition-colors"
+                        className="w-32 h-32 rounded-full border-4 border-yellow-600/50 overflow-hidden bg-slate-800 cursor-pointer hover:border-yellow-500 transition-colors"
                         onClick={() => fileInputRef.current?.click()}
                     >
                         <img src={formData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt="Avatar" className="w-full h-full object-cover" />
@@ -400,9 +407,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     </div>
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-0 right-0 bg-yellow-600 hover:bg-yellow-500 text-white p-2 rounded-full shadow-lg transition-colors"
+                        className="absolute bottom-0 right-0 bg-yellow-600 hover:bg-yellow-500 text-white p-2.5 rounded-full shadow-lg transition-colors"
                     >
-                        <Camera size={14} />
+                        <Camera size={16} />
                     </button>
                     <input
                         ref={fileInputRef}
@@ -413,8 +420,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     />
                 </div>
             </div>
+
+            {/* Status / Error */}
             {errors.photo && (
-                <div className="flex items-center justify-center gap-1.5 -mt-4 mb-4">
+                <div className="flex items-center justify-center gap-1.5 mb-4">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
                         <p className="text-xs text-red-400">
                             📷 {errors.photo}
@@ -422,6 +431,33 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Upload label */}
+            <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="text-sm font-semibold transition-colors disabled:opacity-40"
+                style={{ color: '#FFDA71' }}
+            >
+                {uploadingPhoto ? 'Processando...' : formData.image_url && !formData.image_url.includes('default-avatar') ? 'Trocar foto' : 'Adicionar foto'}
+            </button>
+
+            {/* Format hint */}
+            {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
+                <p className="text-[10px] mt-3" style={{ color: '#A8B4BC', opacity: 0.5 }}>
+                    JPG, PNG, HEIC · máx. 15MB · Google Fotos ✓
+                </p>
+            )}
+        </div>
+    );
+
+    // Step 2: Profile Info (data only — photo moved to step 1)
+    const renderProfileInfo = () => (
+        <div className="space-y-5">
+            <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-white mb-1">Seus dados básicos</h2>
+                <p className="text-slate-400 text-sm">Essas informações ajudam outros sócios a te encontrar</p>
+            </div>
 
             {/* Form Fields */}
             <div>
@@ -805,8 +841,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     />
                 </div>
 
-                {/* Step Indicator */}
-                <div className="flex items-center justify-center gap-2 pt-6 pb-2">
+                {/* Step Indicator + Counter */}
+                <div className="flex items-center justify-center gap-2 pt-6 pb-1">
                     {Array.from({ length: totalSteps }).map((_, i) => (
                         <div
                             key={i}
@@ -819,6 +855,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         />
                     ))}
                 </div>
+                <p className="text-center text-[10px] font-medium pb-2" style={{ color: '#CA9A43' }}>
+                    {step + 1} de {totalSteps}
+                </p>
 
                 {/* Content — swipeable area */}
                 <div
@@ -855,10 +894,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     {step < totalSteps - 1 ? (
                         <button
                             onClick={handleNext}
-                            disabled={step === 4 && (!acceptedTerms || !acceptedPrivacy)}
-                            className={`flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition${step === 4 && (!acceptedTerms || !acceptedPrivacy) ? ' opacity-30 cursor-not-allowed' : ''}`}
+                            disabled={step === 5 && (!acceptedTerms || !acceptedPrivacy)}
+                            className={`flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition${step === 5 && (!acceptedTerms || !acceptedPrivacy) ? ' opacity-30 cursor-not-allowed' : ''}`}
                         >
-                            {step === 4 ? 'Entrar no clube' : 'Continuar'}
+                            {step === 5 ? 'Entrar no clube' : 'Continuar'}
                             <ChevronRight size={18} />
                         </button>
                     ) : (

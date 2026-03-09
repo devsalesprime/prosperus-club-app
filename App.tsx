@@ -30,10 +30,7 @@ const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default:
 // Lazy loading fallback
 const LazyFallback = () => (
     <div className="flex items-center justify-center p-8 min-h-[200px]">
-        <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-slate-400">Carregando...</span>
-        </div>
+        <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
     </div>
 );
 
@@ -86,8 +83,8 @@ const AppShell: React.FC = () => {
     // ─── Guard 1: Auth Loading ───────────────────────
     if (authContextLoading) {
         return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">
-                Carregando...
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -136,8 +133,8 @@ const AppShell: React.FC = () => {
     // ─── Guard 5: Waiting for Profile ────────────────
     if (!currentUser) {
         return (
-            <div className="min-h-screen bg-prosperus-navy flex items-center justify-center text-prosperus-white">
-                Carregando perfil...
+            <div className="min-h-screen bg-prosperus-navy flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
