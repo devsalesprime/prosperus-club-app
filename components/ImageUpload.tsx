@@ -6,6 +6,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger';
+import { normalizeImage, validateImageFile } from '../utils/imageUpload';
 
 interface ImageUploadProps {
     currentImageUrl?: string;
@@ -35,27 +36,19 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            setError('Por favor, selecione uma imagem válida');
-            return;
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setError('A imagem deve ter no máximo 5MB');
+        // Validate with utility (handles HEIC, size, etc.)
+        const validationError = validateImageFile(file);
+        if (validationError) {
+            setError(validationError);
             return;
         }
 
         setSelectedFile(file);
         setError(null);
 
-        // Create preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setPreviewUrl(reader.result as string);
-        };
-        reader.readAsDataURL(file);
+        // Create preview via ObjectURL (faster than FileReader, HEIC-compatible)
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
     };
 
     const openFilePicker = useCallback(() => {
@@ -84,14 +77,15 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         setError(null);
 
         try {
-            // Generate unique filename
-            const fileExt = selectedFile.name.split('.').pop();
-            const fileName = `${userId}/${Date.now()}.${fileExt}`;
+            // Normalize to JPEG via Canvas (resolves HEIC, Google Fotos, AVIF, WebP)
+            const normalizedBlob = await normalizeImage(selectedFile);
+            const fileName = `${userId}/avatar_${Date.now()}.jpg`;
 
-            // Upload to Supabase Storage
+            // Upload normalized JPEG to Supabase Storage
             const { data, error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(fileName, selectedFile, {
+                .upload(fileName, normalizedBlob, {
+                    contentType: 'image/jpeg',
                     cacheControl: '3600',
                     upsert: true
                 });
@@ -189,7 +183,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         onChange={handleFileSelect}
                         className="hidden"
                     />
@@ -239,7 +233,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                                 <Upload size={32} />
                                 <div className="text-center">
                                     <p className="font-bold">Toque para selecionar</p>
-                                    <p className="text-xs mt-1">Máx: 5MB (JPG, PNG, GIF)</p>
+                                    <p className="text-xs mt-1">Máx: 15MB · JPG, PNG, HEIC · Google Fotos ✓</p>
                                 </div>
                             </button>
                         </div>

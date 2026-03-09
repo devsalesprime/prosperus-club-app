@@ -183,24 +183,39 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate file
-        if (!file.type.startsWith('image/')) return;
-        if (file.size > 5 * 1024 * 1024) return; // 5MB max
+        // Import normalization utilities
+        const { normalizeImage, validateImageFile } = await import('../utils/imageUpload');
+
+        // Validate before processing
+        const validationError = validateImageFile(file);
+        if (validationError) {
+            setErrors(prev => ({ ...prev, photo: validationError }));
+            e.target.value = ''; // Allow re-selection
+            return;
+        }
 
         setUploadingPhoto(true);
+        setErrors(prev => { const n = { ...prev }; delete n.photo; return n; });
+
         try {
-            const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-            const filePath = `${currentUser.id}/avatar.${fileExt}`;
+            // Normalize to JPEG via Canvas (resolves HEIC, Google Fotos, AVIF, WebP)
+            const normalizedBlob = await normalizeImage(file);
+
+            const fileName = `${currentUser.id}/avatar_${Date.now()}.jpg`;
 
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file, { upsert: true });
+                .upload(fileName, normalizedBlob, {
+                    contentType: 'image/jpeg',
+                    upsert: true,
+                    cacheControl: '3600',
+                });
 
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
-                .getPublicUrl(filePath);
+                .getPublicUrl(fileName);
 
             const timestampedUrl = `${publicUrl}?t=${Date.now()}`;
             setFormData(prev => ({ ...prev, image_url: timestampedUrl }));
@@ -209,9 +224,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             await profileService.updateProfileImage(currentUser.id, timestampedUrl);
         } catch (error) {
             console.error('Error uploading photo:', error);
-            setErrors(prev => ({ ...prev, photo: 'Erro ao enviar a foto. Tente novamente.' }));
+            setErrors(prev => ({ ...prev, photo: 'Não foi possível salvar a foto. Tente novamente.' }));
         } finally {
             setUploadingPhoto(false);
+            e.target.value = ''; // Allow re-selection of same file
         }
     };
 
@@ -391,7 +407,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         onChange={handlePhotoUpload}
                         className="hidden"
                     />
