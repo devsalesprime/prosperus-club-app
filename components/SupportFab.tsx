@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, X, Headphones, CreditCard } from 'lucide-react';
-import { dataService } from '../services/mockData';
+import { settingsService, AppSettings } from '../services/settingsService';
 
 export const SupportFab: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [config, setConfig] = useState(dataService.getSupportConfig());
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    // In a real app, this would be a Supabase subscription
-    const unsubscribe = dataService.subscribe(() => {
-      setConfig(dataService.getSupportConfig());
-    });
-    return unsubscribe;
+    settingsService.getSettings().then(setSettings);
   }, []);
 
   const handleSupportClick = (type: 'TECH' | 'FINANCIAL') => {
-    const phone = type === 'TECH' ? config.techPhone : config.financialPhone;
+    if (!settings) return;
+
+    // Strip non-digits for wa.me link
+    const rawPhone = type === 'TECH' ? settings.support_phone : settings.financial_phone;
+    const phone = rawPhone.replace(/\D/g, '');
     const message = type === 'TECH'
       ? 'Olá, preciso de ajuda técnica com o App Prosperus.'
       : 'Olá, gostaria de falar sobre assuntos financeiros do Prosperus Club.';

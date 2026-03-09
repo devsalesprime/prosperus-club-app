@@ -7,6 +7,7 @@ import { X, User, Mail, Phone, FileText, Loader2, Send } from 'lucide-react';
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { notify } from '../../utils/toast';
 
 interface CreateReferralModalProps {
     isOpen: boolean;
@@ -120,11 +121,13 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
             setNotes('');
             setSearchTerm('');
 
+            notify.success('Indicação enviada. Os dois serão notificados.');
             onSuccess();
             onClose();
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Erro ao enviar indicação';
             setError(errorMessage);
+            notify.error('Não foi possível enviar. Tente novamente.');
         } finally {
             setSubmitting(false);
         }

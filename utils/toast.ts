@@ -1,14 +1,16 @@
 // ============================================
 // TOAST UTILITY — Padronizado Prosperus Club
 // ============================================
-// Wrapper sobre react-hot-toast com design system
-// Cores: navy #031A2B · gold #FFDA71 · cream #FCF7F0
+// Design system: navy #031A2B · gold #FFDA71 · cream #FCF7F0
+// Posição: top-center com safe-area iOS
 
-import toast, { Toaster as HotToaster } from 'react-hot-toast';
+import React from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 
-const base = {
+const base: React.CSSProperties = {
     background: '#0D2E44',
     color: '#FCF7F0',
+    fontFamily: 'inherit',
     fontSize: '14px',
     borderRadius: '12px',
     padding: '12px 16px',
@@ -25,7 +27,7 @@ export const notify = {
     error: (msg: string) =>
         toast.error(msg, {
             style: { ...base, border: '1px solid #EF4444' },
-            duration: 4000,
+            duration: 4500,
         }),
 
     info: (msg: string) =>
@@ -39,10 +41,15 @@ export const notify = {
         toast.loading(msg, {
             style: { ...base, border: '1px solid #123F5B' },
         }),
+
+    dismiss: (id?: string) => toast.dismiss(id),
 };
 
-// Re-export toast.dismiss for loading -> success/error transitions
-export const dismissToast = toast.dismiss;
-
-// Re-export Toaster with Prosperus defaults
-export { HotToaster };
+// Componente para montar uma vez no App.tsx
+export function ProspToaster() {
+    return React.createElement(Toaster, {
+        position: 'top-center',
+        toastOptions: { style: base },
+        containerStyle: { top: 'calc(env(safe-area-inset-top, 0px) + 16px)' },
+    });
+}

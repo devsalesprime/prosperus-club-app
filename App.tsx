@@ -22,7 +22,7 @@ import { PushPermissionPrompt } from './components/PushPermissionPrompt';
 import { PushAutoSubscriber } from './components/PushAutoSubscriber';
 import { UnreadCountProvider } from './contexts/UnreadCountContext';
 import { SupportDocsProvider } from './components/support/SupportDocsSheet';
-import { HotToaster } from './utils/toast';
+import { ProspToaster } from './utils/toast';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
 const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
@@ -203,12 +203,7 @@ const App = () => (
     <SupportDocsProvider>
         <AppProvider>
             <AppShell />
-            <HotToaster
-                position="top-right"
-                toastOptions={{
-                    style: { zIndex: 99999 },
-                }}
-            />
+            <ProspToaster />
         </AppProvider>
     </SupportDocsProvider>
 );

@@ -7,6 +7,7 @@ import { X, DollarSign, Calendar, FileText, User, Loader2, Trash2 } from 'lucide
 import { businessService } from '../../services/businessService';
 import { supabase } from '../../lib/supabase';
 import { useScrollLock } from '../../hooks/useScrollLock';
+import { notify } from '../../utils/toast';
 
 interface RegisterDealModalProps {
     isOpen: boolean;
@@ -157,11 +158,13 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
             setDescription('');
             setDealDate(new Date().toISOString().split('T')[0]);
 
+            notify.success('Negócio registrado com sucesso.');
             onSuccess();
             onClose();
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Erro ao registrar negócio';
             setError(errorMessage);
+            notify.error('Não foi possível registrar. Tente novamente.');
         } finally {
             setSubmitting(false);
         }

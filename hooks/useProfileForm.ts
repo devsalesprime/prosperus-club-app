@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { profileService, ProfileData, ProfileUpdateData, ExclusiveBenefit } from '../services/profileService';
 import { useAuth } from '../contexts/AuthContext';
 import { logger } from '../utils/logger';
+import { notify } from '../utils/toast';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 interface UseProfileFormParams {
@@ -188,6 +189,7 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
                 });
 
                 setSuccess(true);
+                notify.success('Perfil atualizado.');
                 setTimeout(() => {
                     onSave(updatedProfile);
                 }, 1000);
@@ -195,6 +197,7 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
         } catch (err) {
             console.error('Error saving profile:', err);
             setError('Erro ao salvar perfil. Tente novamente.');
+            notify.error('Não foi possível salvar. Tente novamente.');
         } finally {
             setSaving(false);
         }

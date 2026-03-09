@@ -7,6 +7,7 @@ import { Deal, DealStatus } from '../../types';
 import { businessService } from '../../services/businessService';
 import { SwipeableItem } from '../ui/SwipeableItem';
 import { DeleteConfirmSheet } from '../ui/DeleteConfirmSheet';
+import { notify } from '../../utils/toast';
 
 interface DealCardProps {
     deal: Deal;
@@ -44,9 +45,11 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
         setLoading('confirm');
         try {
             await businessService.confirmDeal(deal.id);
+            notify.success('Negócio confirmado. ROI atualizado.');
             onStatusChange();
         } catch (error) {
             console.error('Error confirming deal:', error);
+            notify.error('Não foi possível confirmar. Tente novamente.');
         } finally {
             setLoading(null);
         }
@@ -56,9 +59,11 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
         setLoading('contest');
         try {
             await businessService.contestDeal(deal.id);
+            notify.info('Negócio contestado. O time será notificado.');
             onStatusChange();
         } catch (error) {
             console.error('Error contesting deal:', error);
+            notify.error('Não foi possível processar. Tente novamente.');
         } finally {
             setLoading(null);
         }
