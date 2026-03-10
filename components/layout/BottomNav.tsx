@@ -1,6 +1,9 @@
 // ============================================
 // BOTTOM NAV — Mobile Bottom Navigation
 // ============================================
+// Safe area tratada FORA deste componente (AppLayout)
+// Este componente: exatamente 56px, ícone + label sempre visíveis
+
 import React from 'react';
 import {
     LayoutDashboard,
@@ -32,80 +35,77 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden"
             style={{
-                display: 'flex',
-                flexDirection: 'column',   // coluna: botões em cima, safe-area embaixo
-                width: '100%',
+                // Exatamente 56px — sem padding que comprima o conteúdo
+                height: 56,
                 flexShrink: 0,
-                position: 'relative',
-                zIndex: 50,
-                background: BG,
-                borderTop: `1px solid ${BORDER}`,
-            }}
-        >
-            {/* ── Linha dos botões — sempre 56px, nunca comprimida ── */}
-            <div style={{
+                width: '100%',
+
+                // Layout interno
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-around',
-                height: 56,          // altura fixa só para os botões
-                paddingLeft: 8,
-                paddingRight: 8,
-            }}>
-                {bottomNavItems.map(item => {
-                    const targetView = ('view' in item && item.view) ? item.view : item.id;
-                    const isActive = view === targetView;
-                    const color = isActive ? GOLD : GREY;
-                    const { Icon } = item;
+                paddingLeft: 4,
+                paddingRight: 4,
 
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => setView(targetView as ViewState)}
-                            data-tour-id={
-                                item.id === 'prosperus-tools'
-                                    ? 'prosperus-tools'
-                                    : item.id.toLowerCase()
-                            }
-                            style={{
-                                flex: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 3,
-                                color: color,
-                                border: 'none',
-                                background: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                WebkitTapHighlightColor: 'transparent',
-                                outline: 'none',
-                            }}
-                        >
-                            <Icon
-                                size={22}
-                                color={color}
-                                strokeWidth={isActive ? 2.2 : 1.8}
-                            />
-                            <span style={{
-                                fontSize: 10,
-                                lineHeight: '12px',
-                                fontWeight: isActive ? 600 : 400,
-                                color: color,
-                                whiteSpace: 'nowrap',
-                                display: 'block',
-                            }}>
-                                {item.label}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+                // Posicionamento
+                position: 'relative',
+                zIndex: 50,
 
-            {/* ── Safe area iOS — espaço extra abaixo dos botões ── */}
-            {/* Separado: não comprime a linha de botões acima      */}
-            <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
+                // Visual
+                background: BG,
+                borderTop: `1px solid ${BORDER}`,
+            }}
+        >
+            {bottomNavItems.map(item => {
+                const targetView = ('view' in item && item.view) ? item.view : item.id;
+                const isActive = view === targetView;
+                const color = isActive ? GOLD : GREY;
+                const { Icon } = item;
+
+                return (
+                    <button
+                        key={item.id}
+                        onClick={() => setView(targetView as ViewState)}
+                        data-tour-id={
+                            item.id === 'prosperus-tools'
+                                ? 'prosperus-tools'
+                                : item.id.toLowerCase()
+                        }
+                        style={{
+                            flex: 1,
+                            height: '100%',       // preenche os 56px
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 3,
+                            border: 'none',
+                            background: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            WebkitTapHighlightColor: 'transparent',
+                            outline: 'none',
+                        }}
+                    >
+                        <Icon
+                            size={20}
+                            color={color}
+                            strokeWidth={isActive ? 2.2 : 1.8}
+                        />
+                        <span style={{
+                            fontSize: 10,
+                            lineHeight: '12px',
+                            fontWeight: isActive ? 600 : 400,
+                            color: color,
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                        }}>
+                            {item.label}
+                        </span>
+                    </button>
+                );
+            })}
         </nav>
     );
 };

@@ -136,7 +136,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                     }`}
                 title="Central de Ajuda"
             >
-                {isOpen ? <X size={22} /> : <Info size={22} />}
+                {isOpen ? <X size={22} /> : <HelpCircle size={22} />}
             </button>
 
             {/* Popover Panel */}
@@ -195,7 +195,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                                 {/* Gerente de Conta */}
                                 {settings.account_manager_name && (
                                     <div>
-                                        <SectionHeader icon={<User size={16} />} title="Sua Gerente de Conta" />
+                                        <SectionHeader icon={<User size={16} />} title="Seu Agente de Conta" />
                                         <div className="bg-gradient-to-br from-yellow-900/20 to-slate-800/50 border border-yellow-600/20 rounded-xl p-4 space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-yellow-600/20 flex items-center justify-center">
@@ -203,7 +203,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-white">{settings.account_manager_name}</p>
-                                                    <p className="text-xs text-slate-400">Gerente de Conta</p>
+                                                    <p className="text-xs text-slate-400">Agente de Conta</p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-2">

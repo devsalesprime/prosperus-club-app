@@ -75,8 +75,15 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                     {children}
                 </main>
 
-                {/* BottomNav: último filho da coluna — NUNCA coberto */}
+                {/* BottomNav: 56px fixos para os botões — sem safe area dentro */}
                 <BottomNav />
+                {/* Safe area iOS: irmão do nav, não dentro dele         */}
+                {/* Garante que os 56px do nav são 100% usados por botões */}
+                <div className="md:hidden" style={{
+                    flexShrink: 0,
+                    height: 'env(safe-area-inset-bottom, 0px)',
+                    background: '#031A2B',
+                }} />
 
                 {/* MUDANÇA: SupportWidget movido para DENTRO da coluna      */}
                 {/* Antes: estava fora do inner column, podendo cobrir o nav */}
