@@ -1,9 +1,3 @@
-// ============================================
-// BOTTOM NAV — Mobile Bottom Navigation
-// ============================================
-// Safe area tratada FORA deste componente (AppLayout)
-// Este componente: exatamente 56px, ícone + label sempre visíveis
-
 import React from 'react';
 import {
     LayoutDashboard,
@@ -35,24 +29,17 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden"
             style={{
-                // Exatamente 56px — sem padding que comprima o conteúdo
-                height: 56,
+                // SEM height fixo — altura determinada pelo padding + conteúdo
+                paddingTop: 10,
+                paddingBottom: 10,
                 flexShrink: 0,
                 width: '100%',
-
-                // Layout interno
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'space-around',
-                paddingLeft: 4,
-                paddingRight: 4,
-
-                // Posicionamento
                 position: 'relative',
                 zIndex: 50,
-
-                // Visual
+                overflow: 'visible',   // nunca clipar
                 background: BG,
                 borderTop: `1px solid ${BORDER}`,
             }}
@@ -74,16 +61,16 @@ export const BottomNav: React.FC = () => {
                         }
                         style={{
                             flex: 1,
-                            height: '100%',       // preenche os 56px
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 3,
+                            gap: 4,
                             border: 'none',
                             background: 'none',
                             padding: 0,
                             cursor: 'pointer',
+                            overflow: 'visible',
                             WebkitTapHighlightColor: 'transparent',
                             outline: 'none',
                         }}
@@ -100,6 +87,7 @@ export const BottomNav: React.FC = () => {
                             color: color,
                             whiteSpace: 'nowrap',
                             display: 'block',
+                            overflow: 'visible',
                         }}>
                             {item.label}
                         </span>
