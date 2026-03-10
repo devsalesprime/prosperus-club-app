@@ -80,7 +80,7 @@ export const BottomNav: React.FC = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 3,
-                                padding: '4px 0',
+                                padding: '0 0',
                                 cursor: 'pointer',
                                 userSelect: 'none',
                                 WebkitTapHighlightColor: 'transparent',
