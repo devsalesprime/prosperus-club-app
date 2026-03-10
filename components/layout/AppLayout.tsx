@@ -30,7 +30,6 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         >
             <style>{`
                 html, body, #root {
-                    overflow: hidden;
                     height: 100%;
                     margin: 0;
                 }
