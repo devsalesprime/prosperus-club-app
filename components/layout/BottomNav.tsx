@@ -87,13 +87,13 @@ export const BottomNav: React.FC = () => {
                             }}
                         >
                             <Icon
-                                size={20}
+                                size={24}
                                 color={color}
                                 strokeWidth={isActive ? 2.2 : 1.8}
                             />
                             <span style={{
-                                fontSize: 10,
-                                lineHeight: '12px',
+                                fontSize: 11,
+                                lineHeight: '14px',
                                 fontWeight: isActive ? 600 : 400,
                                 color: color,
                                 whiteSpace: 'nowrap',

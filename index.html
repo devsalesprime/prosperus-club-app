@@ -503,7 +503,18 @@
       }
     }
 
-    /* iOS-specific fixes */
+    /* ===== BASE LAYOUT — applies on ALL platforms ===== */
+    /* iOS @supports block below overrides body height/position */
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+    #root {
+      height: 100%;
+    }
+
+    /* iOS-specific fixes — OVERRIDES the base rules above */
     @supports (-webkit-touch-callout: none) {
 
       /* Background for areas outside body (home indicator zone) */
