@@ -73,8 +73,9 @@ function lockScroll() {
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
 
-    // touch-action:none blocks iOS rubber band / gesture scroll
-    document.body.style.touchAction = 'none';
+    // NOTE: touch-action:none REMOVED — it blocks ALL touch gestures
+    // including scroll inside modal content on iOS. The ModalWrapper's
+    // touchmove handler already prevents scroll bleed-through.
 
     // Add class for CSS-level overrides
     document.body.classList.add('scroll-locked');
@@ -85,7 +86,6 @@ function unlockScroll() {
     // Remove lock
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
-    document.body.style.touchAction = '';
 
     // Remove CSS class
     document.body.classList.remove('scroll-locked');

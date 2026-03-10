@@ -56,44 +56,22 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
         };
     }, [isOpen, onClose]);
 
-    // iOS touchmove prevention: blocks scroll propagation through overlay
+    // iOS touchmove prevention: only blocks scroll on the BACKDROP overlay.
+    // Content inside the modal scrolls freely — body overflow:hidden already
+    // prevents bleed-through. Previous approach tracked scroll edges but
+    // caused false positives during iOS momentum scrolling.
     const handleTouchMove = useCallback((e: TouchEvent) => {
         const target = e.target as HTMLElement;
         const content = contentRef.current;
 
         if (!content) return;
 
-        // Touch is INSIDE the modal content
-        if (content.contains(target)) {
-            // Find the nearest scrollable parent inside the modal
-            let scrollable: HTMLElement | null = target;
-            while (scrollable && scrollable !== content) {
-                if (scrollable.scrollHeight > scrollable.clientHeight) break;
-                scrollable = scrollable.parentElement;
-            }
-
-            // If there's a scrollable area, prevent bounce at edges
-            if (scrollable && scrollable.scrollHeight > scrollable.clientHeight) {
-                const { scrollTop, scrollHeight, clientHeight } = scrollable;
-                const atTop = scrollTop <= 0;
-                const atBottom = scrollTop + clientHeight >= scrollHeight;
-                const touch = e.touches[0];
-                const lastY = (scrollable as any).__lastTouchY || touch.clientY;
-                const goingUp = touch.clientY > lastY;
-                const goingDown = touch.clientY < lastY;
-                (scrollable as any).__lastTouchY = touch.clientY;
-
-                if ((atTop && goingUp) || (atBottom && goingDown)) {
-                    e.preventDefault();
-                }
-            } else {
-                // No scrollable area — block touch entirely
-                e.preventDefault();
-            }
-        } else {
-            // Touch is OUTSIDE the modal content (on overlay) — block
+        // Touch is OUTSIDE the modal content (on overlay backdrop) — block it
+        if (!content.contains(target)) {
             e.preventDefault();
         }
+        // Touch is INSIDE the modal — let it scroll naturally
+        // No edge detection, no __lastTouchY tracking — iOS handles it
     }, []);
 
     // Attach touchmove listener with { passive: false } (required for preventDefault)
