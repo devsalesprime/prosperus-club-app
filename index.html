@@ -459,6 +459,14 @@
       min-height: 0;
     }
 
+    /* Safe area bottom spacer — env() MUST be in CSS, not inline styles */
+    /* iOS WebKit ignores env() in JS-applied inline styles              */
+    .safe-area-spacer-bottom {
+      flex-shrink: 0;
+      height: env(safe-area-inset-bottom, 0px);
+      background: #031A2B;
+    }
+
     /* Mobile-specific adjustments */
     @media (max-width: 768px) {
 
