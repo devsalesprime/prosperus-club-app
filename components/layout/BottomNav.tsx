@@ -79,28 +79,37 @@ export const BottomNav: React.FC = () => {
                                 flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: 3,
-                                padding: '4px 0',
+                                gap: 2,
+                                padding: '2px 0',
                                 cursor: 'pointer',
                                 userSelect: 'none',
                                 WebkitTapHighlightColor: 'transparent',
+                                overflow: 'visible',
                             }}
                         >
+                            {/* LABEL ABOVE ICON — testing if position matters */}
+                            <div style={{
+                                fontSize: 12,
+                                fontWeight: isActive ? 700 : 500,
+                                color: '#FF0000',
+                                background: '#FFFF00',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                whiteSpace: 'nowrap',
+                                textAlign: 'center',
+                                minHeight: 18,
+                                lineHeight: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}>
+                                {item.label}
+                            </div>
                             <Icon
                                 size={20}
                                 color={color}
                                 strokeWidth={isActive ? 2.2 : 1.8}
                             />
-                            <span style={{
-                                fontSize: 12,
-                                lineHeight: '14px',
-                                fontWeight: isActive ? 600 : 400,
-                                color: color,
-                                whiteSpace: 'nowrap',
-                                textAlign: 'center',
-                            }}>
-                                {item.label}
-                            </span>
                         </div>
                     );
                 })}
