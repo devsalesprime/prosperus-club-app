@@ -3,8 +3,9 @@
 // ============================================
 // Flex item within AppLayout — NO position:fixed
 // Height: 56px icons+labels + safe-area-inset-bottom
-// Uses INLINE STYLES to guarantee rendering (no Tailwind purge risk)
-// Hidden on md+ via CSS media query (more reliable than JS check)
+//
+// CRITICAL: env(safe-area-inset-bottom) MUST be in a <style> tag,
+// NOT in React inline styles — iOS WebKit ignores env() in inline styles.
 
 import React from 'react';
 import {
@@ -30,93 +31,98 @@ export const BottomNav: React.FC = () => {
 
     return (
         <>
-            {/* CSS: hide on md+ screens, ensure stacking context */}
+            {/* ── CSS: safe-area + visibility + stacking ──
+                 env() MUST be in a stylesheet, NOT inline styles (iOS WebKit bug) */}
             <style>{`
-                .prosperus-bottom-nav { display: flex; }
+                .prosperus-bottom-nav {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: flex-start;
+                    justify-content: space-around;
+                    width: 100%;
+                    flex-shrink: 0;
+
+                    /* Safe area — MUST be in CSS, not inline */
+                    padding-top: 8px;
+                    padding-bottom: env(safe-area-inset-bottom, 0px);
+                    min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+
+                    /* Design system */
+                    background: #031A2B;
+                    border-top: 1px solid #123F5B;
+
+                    /* Stacking context */
+                    position: relative;
+                    z-index: 9999;
+                }
                 @media (min-width: 768px) {
                     .prosperus-bottom-nav { display: none !important; }
                 }
+
+                .prosperus-bottom-nav button {
+                    min-width: 44px;
+                    min-height: 44px;
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 3px;
+                    background: none;
+                    border: none;
+                    padding: 0 4px;
+                    cursor: pointer;
+                    -webkit-tap-highlight-color: transparent;
+                }
+
+                .prosperus-bottom-nav .nav-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 24px;
+                    height: 24px;
+                    flex-shrink: 0;
+                    transition: color 0.15s ease;
+                }
+
+                .prosperus-bottom-nav .nav-label {
+                    display: block;
+                    font-size: 10px;
+                    line-height: 12px;
+                    white-space: nowrap;
+                    transition: color 0.15s ease;
+                }
+
+                .prosperus-bottom-nav .nav-active {
+                    color: #FFDA71;
+                }
+                .prosperus-bottom-nav .nav-active .nav-label {
+                    font-weight: 600;
+                }
+                .prosperus-bottom-nav .nav-inactive {
+                    color: #A8B4BC;
+                }
+                .prosperus-bottom-nav .nav-inactive .nav-label {
+                    font-weight: 400;
+                }
             `}</style>
 
-            <nav
-                className="prosperus-bottom-nav"
-                style={{
-                    // ── Layout ──────────────────────────────────
-                    flexDirection: 'row',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-around',
-                    width: '100%',
-
-                    // ── Sizing ──────────────────────────────────
-                    flexShrink: 0,
-                    paddingTop: 8,
-                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                    minHeight: 'calc(56px + env(safe-area-inset-bottom, 0px))',
-
-                    // ── Design system ───────────────────────────
-                    background: '#031A2B',
-                    borderTop: '1px solid #123F5B',
-
-                    // ── Stacking — above ALL fixed overlays ─────
-                    position: 'relative',
-                    zIndex: 9999,
-                } as React.CSSProperties}
-            >
+            <nav className="prosperus-bottom-nav">
                 {bottomNavItems.map(item => {
                     const targetView = ('view' in item && item.view) ? item.view : item.id;
                     const isActive = view === targetView;
-                    const color = isActive ? '#FFDA71' : '#A8B4BC';
 
                     return (
                         <button
                             key={item.id}
                             onClick={() => setView(targetView as ViewState)}
                             data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
-                            style={{
-                                // Apple HIG touch target
-                                minWidth: 44,
-                                minHeight: 44,
-                                flex: 1,
-
-                                // Empilhar ícone + label verticalmente
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 3,
-
-                                // Reset de botão
-                                background: 'none',
-                                border: 'none',
-                                padding: '0 4px',
-                                cursor: 'pointer',
-                                WebkitTapHighlightColor: 'transparent',
-                            }}
+                            className={isActive ? 'nav-active' : 'nav-inactive'}
                         >
-                            {/* Ícone — tamanho fixo, nunca comprimir */}
-                            <span style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color,
-                                transition: 'color 0.15s ease',
-                                width: 24,
-                                height: 24,
-                                flexShrink: 0,
-                            }}>
+                            <span className="nav-icon">
                                 {item.icon}
                             </span>
-
-                            {/* Label — NUNCA esconder */}
-                            <span style={{
-                                display: 'block',
-                                fontSize: 10,
-                                lineHeight: '12px',
-                                fontWeight: isActive ? 600 : 400,
-                                color,
-                                transition: 'color 0.15s ease',
-                                whiteSpace: 'nowrap',
-                            }}>
+                            <span className="nav-label">
                                 {item.label}
                             </span>
                         </button>
