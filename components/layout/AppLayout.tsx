@@ -29,9 +29,14 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             style={{ height: '100%', overflow: 'hidden' }}
         >
             <style>{`
-                html, body, #root {
+                html, body {
+                    overflow: hidden;
                     height: 100%;
                     margin: 0;
+                }
+                #root {
+                    height: 100%;
+                    /* NO overflow:hidden here — iOS CSS needs #root { overflow-y: auto } */
                 }
                 .app-scroll-main {
                     scrollbar-width: none;
