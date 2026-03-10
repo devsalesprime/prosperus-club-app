@@ -45,16 +45,19 @@ export const BottomNav: React.FC = () => {
                 // paddingBottom empurra o conteúdo para cima do indicador
                 paddingBottom: 'env(safe-area-inset-bottom, 0px)',
 
-                // ── Altura mínima: 56px de conteúdo + safe area ──────────
+                // ── Altura mínima: 8+40+8=56px de conteúdo + safe area ─────
                 minHeight: 'calc(56px + env(safe-area-inset-bottom, 0px))',
 
                 // ── Background garante que nada "vaza" por baixo ─────────
                 background: '#031A2B',
             }}
         >
+            {/* MUDANÇA PRINCIPAL: remover height:56 fixo                    */}
+            {/* Usar paddingTop + paddingBottom → altura determinada pelo conteúdo */}
+            {/* Isso permite que ícone + label apareçam sem corte                  */}
             <div
-                className="flex justify-around items-center px-2"
-                style={{ height: 56 }}
+                className="flex justify-around items-stretch px-2"
+                style={{ paddingTop: 8, paddingBottom: 8 }}
             >
                 {bottomNavItems.map(item => {
                     const targetView = ('view' in item && item.view) ? item.view : item.id;
@@ -76,34 +79,39 @@ export const BottomNav: React.FC = () => {
                                 ${isActive ? 'text-prosperus-gold' : 'text-prosperus-grey'}
                             `}
                             style={{
-                                // Touch target mínimo Apple HIG: 44×44px
-                                minHeight: 44,
-                                minWidth: 44,
-                                gap: 3,
+                                gap: 4,
                                 border: 'none',
                                 background: 'none',
                                 padding: '0 4px',
                                 cursor: 'pointer',
                                 WebkitTapHighlightColor: 'transparent',
+                                // Altura fixa para cada botão: ícone + gap + label
+                                height: 40,
                             }}
                         >
-                            {/* Ícone */}
+                            {/* Ícone — tamanho fixo, nunca comprime */}
                             <span
-                                className="flex items-center justify-center"
-                                style={{ width: 20, height: 20, flexShrink: 0 }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 20,
+                                    height: 20,
+                                    flexShrink: 0,
+                                }}
                             >
                                 {item.icon}
                             </span>
 
-                            {/* Label — display:block garante renderização */}
+                            {/* Label — sempre visível, nunca hidden */}
                             <span
                                 style={{
                                     display: 'block',
-                                    fontSize: 9,
-                                    lineHeight: '11px',
+                                    flexShrink: 0,
+                                    fontSize: '10px',
+                                    lineHeight: '12px',
                                     fontWeight: isActive ? 600 : 400,
                                     whiteSpace: 'nowrap',
-                                    overflow: 'visible',
                                 }}
                             >
                                 {item.label}
