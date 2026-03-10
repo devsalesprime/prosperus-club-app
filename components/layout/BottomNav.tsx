@@ -42,7 +42,7 @@ export const BottomNav: React.FC = () => {
                     justifyContent: 'space-around',
                     width: '100%',
                     flexShrink: 0,
-                    paddingTop: 6,
+                    paddingTop: 4,
                     paddingBottom: 2,
                     background: BG,
                     borderTop: `1px solid ${BORDER}`,
