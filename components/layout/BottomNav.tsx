@@ -4,6 +4,7 @@
 // Flex item within AppLayout — NO position:fixed
 // Height: 56px icons+labels + safe-area-inset-bottom
 // Uses INLINE STYLES to guarantee rendering (no Tailwind purge risk)
+// Hidden on md+ via CSS media query (more reliable than JS check)
 
 import React from 'react';
 import {
@@ -25,98 +26,103 @@ const bottomNavItems = [
 ];
 
 export const BottomNav: React.FC = () => {
-    const { view, setView, isMobile } = useApp();
-
-    // Only render on mobile
-    if (!isMobile) return null;
+    const { view, setView } = useApp();
 
     return (
-        <nav
-            style={{
-                // ── Layout ──────────────────────────────────
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                justifyContent: 'space-around',
-                width: '100%',
+        <>
+            {/* CSS: hide on md+ screens, ensure stacking context */}
+            <style>{`
+                .prosperus-bottom-nav { display: flex; }
+                @media (min-width: 768px) {
+                    .prosperus-bottom-nav { display: none !important; }
+                }
+            `}</style>
 
-                // ── Sizing ──────────────────────────────────
-                // Nunca comprimir verticalmente
-                flexShrink: 0,
-                paddingTop: 8,
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                // Garante espaço mínimo mesmo sem safe-area
-                minHeight: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+            <nav
+                className="prosperus-bottom-nav"
+                style={{
+                    // ── Layout ──────────────────────────────────
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-around',
+                    width: '100%',
 
-                // ── Design system ───────────────────────────
-                background: '#031A2B',
-                borderTop: '1px solid #123F5B',
+                    // ── Sizing ──────────────────────────────────
+                    flexShrink: 0,
+                    paddingTop: 8,
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                    minHeight: 'calc(56px + env(safe-area-inset-bottom, 0px))',
 
-                // ── Stacking ────────────────────────────────
-                position: 'relative',
-                zIndex: 50,
-            } as React.CSSProperties}
-        >
-            {bottomNavItems.map(item => {
-                const targetView = ('view' in item && item.view) ? item.view : item.id;
-                const isActive = view === targetView;
-                const color = isActive ? '#FFDA71' : '#A8B4BC';
+                    // ── Design system ───────────────────────────
+                    background: '#031A2B',
+                    borderTop: '1px solid #123F5B',
 
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => setView(targetView as ViewState)}
-                        data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
-                        style={{
-                            // Apple HIG touch target
-                            minWidth: 44,
-                            minHeight: 44,
-                            flex: 1,
+                    // ── Stacking — above ALL fixed overlays ─────
+                    position: 'relative',
+                    zIndex: 9999,
+                } as React.CSSProperties}
+            >
+                {bottomNavItems.map(item => {
+                    const targetView = ('view' in item && item.view) ? item.view : item.id;
+                    const isActive = view === targetView;
+                    const color = isActive ? '#FFDA71' : '#A8B4BC';
 
-                            // Empilhar ícone + label verticalmente
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 3,
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => setView(targetView as ViewState)}
+                            data-tour-id={item.id === 'prosperus-tools' ? 'prosperus-tools' : item.id.toLowerCase()}
+                            style={{
+                                // Apple HIG touch target
+                                minWidth: 44,
+                                minHeight: 44,
+                                flex: 1,
 
-                            // Reset de botão
-                            background: 'none',
-                            border: 'none',
-                            padding: '0 4px',
-                            cursor: 'pointer',
-                            WebkitTapHighlightColor: 'transparent',
-                        }}
-                    >
-                        {/* Ícone — tamanho fixo, nunca comprimir */}
-                        <span style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color,
-                            transition: 'color 0.15s ease',
-                            width: 24,
-                            height: 24,
-                            flexShrink: 0,
-                        }}>
-                            {item.icon}
-                        </span>
+                                // Empilhar ícone + label verticalmente
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 3,
 
-                        {/* Label — NUNCA esconder */}
-                        <span style={{
-                            display: 'block',
-                            fontSize: 10,
-                            lineHeight: '12px',
-                            fontWeight: isActive ? 600 : 400,
-                            color,
-                            transition: 'color 0.15s ease',
-                            whiteSpace: 'nowrap',
-                        }}>
-                            {item.label}
-                        </span>
-                    </button>
-                );
-            })}
-        </nav>
+                                // Reset de botão
+                                background: 'none',
+                                border: 'none',
+                                padding: '0 4px',
+                                cursor: 'pointer',
+                                WebkitTapHighlightColor: 'transparent',
+                            }}
+                        >
+                            {/* Ícone — tamanho fixo, nunca comprimir */}
+                            <span style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color,
+                                transition: 'color 0.15s ease',
+                                width: 24,
+                                height: 24,
+                                flexShrink: 0,
+                            }}>
+                                {item.icon}
+                            </span>
+
+                            {/* Label — NUNCA esconder */}
+                            <span style={{
+                                display: 'block',
+                                fontSize: 10,
+                                lineHeight: '12px',
+                                fontWeight: isActive ? 600 : 400,
+                                color,
+                                transition: 'color 0.15s ease',
+                                whiteSpace: 'nowrap',
+                            }}>
+                                {item.label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </nav>
+        </>
     );
 };
