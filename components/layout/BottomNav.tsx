@@ -1,6 +1,6 @@
 // BottomNav — Mobile Bottom Navigation
-// No safe-area handling needed — body height in index.html
-// already subtracts both iOS safe areas.
+// Uses hardcoded 34px bottom padding on iOS (@supports)
+// because env(safe-area-inset-bottom) returns 0 on this device.
 
 import React from 'react';
 import {
@@ -39,12 +39,23 @@ export const BottomNav: React.FC = () => {
                     justify-content: space-around;
                     width: 100%;
                     flex-shrink: 0;
-                    padding: 10px 0;
+                    padding-top: 10px;
+                    padding-bottom: 10px;
                     background: ${BG};
                     border-top: 1px solid ${BORDER};
                     position: relative;
                     z-index: 50;
                 }
+
+                /* iOS: hardcoded 34px extra padding for home indicator */
+                /* env(safe-area-inset-bottom) returns 0 on this device */
+                @supports (-webkit-touch-callout: none) {
+                    #prosperus-bottom-nav {
+                        padding-bottom: 44px;
+                    }
+                }
+
+                /* Hide on desktop */
                 @media (min-width: 768px) {
                     #prosperus-bottom-nav { display: none !important; }
                 }

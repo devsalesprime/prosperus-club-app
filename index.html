@@ -506,27 +506,25 @@
     /* iOS-specific fixes */
     @supports (-webkit-touch-callout: none) {
 
-      /* html background covers the safe areas (notch + home indicator) */
+      /* Background for areas outside body (home indicator zone) */
       html {
         background: #031A2B;
       }
 
-      /* iOS Safari/Standalone specific styles */
       body {
-        /* Prevent rubber band scrolling */
         position: fixed;
         width: 100%;
-        /* Subtract BOTH safe areas so body fits between notch and home indicator */
-        height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+        /* Only subtract TOP safe area — bottom is handled by nav padding */
+        height: calc(100dvh - env(safe-area-inset-top, 0px));
         overflow: hidden;
-        /* Move body below the status bar / notch */
         top: env(safe-area-inset-top, 0px);
         padding-top: 0;
       }
 
       #root {
         height: 100%;
-        overflow: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
     }
 
