@@ -30,6 +30,7 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden shrink-0 z-50
                        bg-prosperus-navy border-t border-prosperus-navy-light"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
             {/* Área dos ícones: altura FIXA, ícones CENTRALIZADOS */}
             <div className="flex justify-around items-center px-2" style={{ height: 56 }}>
