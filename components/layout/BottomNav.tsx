@@ -1,3 +1,8 @@
+// BottomNav — Mobile Bottom Navigation
+// Uses <div role="button"> instead of <button> to avoid
+// iOS Safari's implicit overflow:clip on button elements
+// that clips labels below icons.
+
 import React from 'react';
 import {
     LayoutDashboard,
@@ -29,14 +34,15 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden"
             style={{
-                paddingTop: 12,
-                paddingBottom: 12,
-                minHeight: 64,
+                paddingTop: 8,
+                paddingBottom: 8,
+                minHeight: 60,
                 flexShrink: 0,
                 width: '100%',
                 display: 'flex',
                 flexDirection: 'row' as const,
-                alignItems: 'stretch',
+                alignItems: 'center',
+                justifyContent: 'space-around',
                 position: 'relative' as const,
                 zIndex: 50,
                 overflow: 'visible',
@@ -51,9 +57,19 @@ export const BottomNav: React.FC = () => {
                 const { Icon } = item;
 
                 return (
-                    <button
+                    // div role="button" instead of <button>
+                    // iOS Safari clips overflow on <button> elements
+                    <div
                         key={item.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setView(targetView as ViewState)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setView(targetView as ViewState);
+                            }
+                        }}
                         data-tour-id={
                             item.id === 'prosperus-tools'
                                 ? 'prosperus-tools'
@@ -62,17 +78,16 @@ export const BottomNav: React.FC = () => {
                         style={{
                             flex: 1,
                             display: 'flex',
-                            flexDirection: 'column',
+                            flexDirection: 'column' as const,
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 4,
-                            border: 'none',
-                            background: 'none',
-                            padding: 0,
+                            padding: '4px 0',
                             cursor: 'pointer',
                             overflow: 'visible',
                             WebkitTapHighlightColor: 'transparent',
                             outline: 'none',
+                            userSelect: 'none',
                         }}
                     >
                         <Icon
@@ -82,16 +97,17 @@ export const BottomNav: React.FC = () => {
                         />
                         <span style={{
                             fontSize: 10,
-                            lineHeight: '12px',
+                            lineHeight: '14px',
                             fontWeight: isActive ? 600 : 400,
                             color: color,
                             whiteSpace: 'nowrap',
                             display: 'block',
                             overflow: 'visible',
+                            textAlign: 'center' as const,
                         }}>
                             {item.label}
                         </span>
-                    </button>
+                    </div>
                 );
             })}
         </nav>
