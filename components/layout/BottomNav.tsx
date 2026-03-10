@@ -29,15 +29,15 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden"
             style={{
-                paddingTop: 10,
-                paddingBottom: 10,
-                minHeight: 56,         // garantir espaço para ícone + label
+                paddingTop: 12,
+                paddingBottom: 12,
+                minHeight: 64,
                 flexShrink: 0,
                 width: '100%',
                 display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                position: 'relative',
+                flexDirection: 'row' as const,
+                alignItems: 'stretch',
+                position: 'relative' as const,
                 zIndex: 50,
                 overflow: 'visible',
                 background: BG,
