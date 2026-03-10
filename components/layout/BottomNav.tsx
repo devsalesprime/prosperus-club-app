@@ -1,6 +1,5 @@
-// BottomNav — Mobile Bottom Navigation
-// Uses .bottom-nav-ios class from index.html for safe-area padding
-// (CSS env() must be in stylesheet, not inline styles for iOS)
+// BottomNav — DEBUG VERSION
+// Bright red labels to diagnose iOS visibility issue
 
 import React from 'react';
 import {
@@ -31,8 +30,6 @@ export const BottomNav: React.FC = () => {
 
     return (
         <nav
-            // md:hidden hides on desktop
-            // bottom-nav-ios: padding-bottom with env(safe-area-inset-bottom) from index.html CSS
             className="md:hidden bottom-nav-ios"
             style={{
                 flexShrink: 0,
@@ -76,7 +73,7 @@ export const BottomNav: React.FC = () => {
                             flexDirection: 'column' as const,
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 4,
+                            gap: 2,
                             padding: '4px 0',
                             cursor: 'pointer',
                             userSelect: 'none' as const,
@@ -88,13 +85,20 @@ export const BottomNav: React.FC = () => {
                             color={color}
                             strokeWidth={isActive ? 2.2 : 1.8}
                         />
+                        {/* ─── DEBUG: RED background, large white text ─── */}
                         <span style={{
-                            fontSize: 10,
-                            lineHeight: '14px',
-                            fontWeight: isActive ? 600 : 400,
-                            color: color,
+                            fontSize: 14,
+                            lineHeight: '16px',
+                            fontWeight: 700,
+                            color: '#FFFFFF',
+                            background: '#FF0000',
+                            padding: '2px 4px',
                             whiteSpace: 'nowrap' as const,
                             textAlign: 'center' as const,
+                            display: 'block',
+                            overflow: 'visible',
+                            visibility: 'visible' as const,
+                            opacity: 1,
                         }}>
                             {item.label}
                         </span>
