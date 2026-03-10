@@ -29,9 +29,9 @@ export const BottomNav: React.FC = () => {
         <nav
             className="md:hidden"
             style={{
-                // SEM height fixo — altura determinada pelo padding + conteúdo
                 paddingTop: 10,
                 paddingBottom: 10,
+                minHeight: 56,         // garantir espaço para ícone + label
                 flexShrink: 0,
                 width: '100%',
                 display: 'flex',
@@ -39,7 +39,7 @@ export const BottomNav: React.FC = () => {
                 alignItems: 'center',
                 position: 'relative',
                 zIndex: 50,
-                overflow: 'visible',   // nunca clipar
+                overflow: 'visible',
                 background: BG,
                 borderTop: `1px solid ${BORDER}`,
             }}
