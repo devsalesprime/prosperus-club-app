@@ -75,13 +75,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                     {children}
                 </main>
 
-                {/* BottomNav: 56px fixos para os botões — sem safe area dentro */}
+                {/* BottomNav: inclui .bottom-nav-ios que já tem safe-area padding */}
                 <BottomNav />
-                {/* Safe area iOS: irmão do nav, não dentro dele             */}
-                {/* Garante que os 56px do nav são 100% usados por botões     */}
-                {/* CRITICAL: usa CSS class, NÃO inline style — iOS ignora    */}
-                {/* env() em inline styles aplicados por JavaScript            */}
-                <div className="md:hidden safe-area-spacer-bottom" />
 
                 {/* MUDANÇA: SupportWidget movido para DENTRO da coluna      */}
                 {/* Antes: estava fora do inner column, podendo cobrir o nav */}
