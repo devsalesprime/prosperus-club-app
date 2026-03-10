@@ -26,7 +26,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     return (
         <div
             className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row"
-            style={{ height: '100dvh', overflow: 'hidden' }}
+            style={{ height: '100%', overflow: 'hidden' }}
         >
             <style>{`
                 html, body, #root {
