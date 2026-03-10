@@ -1,7 +1,3 @@
-// BottomNav — Mobile Bottom Navigation
-// Uses hardcoded 34px bottom padding on iOS (@supports)
-// because env(safe-area-inset-bottom) returns 0 on this device.
-
 import React from 'react';
 import {
     LayoutDashboard,
@@ -18,6 +14,10 @@ const GREY = '#8A9BB0';
 const BG = '#031A2B';
 const BORDER = '#123F5B';
 
+// Detect iOS at module level
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 const bottomNavItems = [
     { id: ViewState.DASHBOARD, label: 'Início', Icon: LayoutDashboard },
     { id: ViewState.AGENDA, label: 'Agenda', Icon: CalendarIcon },
@@ -32,36 +32,29 @@ export const BottomNav: React.FC = () => {
     return (
         <>
             <style>{`
-                #prosperus-bottom-nav {
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                    justify-content: space-around;
-                    width: 100%;
-                    flex-shrink: 0;
-                    padding-top: 10px;
-                    padding-bottom: 10px;
-                    background: ${BG};
-                    border-top: 1px solid ${BORDER};
-                    position: relative;
-                    z-index: 50;
-                }
-
-                /* iOS: hardcoded 34px extra padding for home indicator */
-                /* env(safe-area-inset-bottom) returns 0 on this device */
-                @supports (-webkit-touch-callout: none) {
-                    #prosperus-bottom-nav {
-                        padding-bottom: 44px;
-                    }
-                }
-
-                /* Hide on desktop */
                 @media (min-width: 768px) {
                     #prosperus-bottom-nav { display: none !important; }
                 }
             `}</style>
 
-            <nav id="prosperus-bottom-nav">
+            <nav
+                id="prosperus-bottom-nav"
+                style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    width: '100%',
+                    flexShrink: 0,
+                    paddingTop: 10,
+                    // iOS: 44px to clear home indicator. Android: 10px.
+                    paddingBottom: isIOS ? 44 : 10,
+                    background: BG,
+                    borderTop: `1px solid ${BORDER}`,
+                    position: 'relative',
+                    zIndex: 50,
+                } as React.CSSProperties}
+            >
                 {bottomNavItems.map(item => {
                     const targetView = ('view' in item && item.view) ? item.view : item.id;
                     const isActive = view === targetView;
@@ -88,15 +81,15 @@ export const BottomNav: React.FC = () => {
                             style={{
                                 flex: 1,
                                 display: 'flex',
-                                flexDirection: 'column' as const,
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 3,
                                 padding: '4px 0',
                                 cursor: 'pointer',
-                                userSelect: 'none' as const,
+                                userSelect: 'none',
                                 WebkitTapHighlightColor: 'transparent',
-                            }}
+                            } as React.CSSProperties}
                         >
                             <Icon
                                 size={20}
@@ -108,9 +101,9 @@ export const BottomNav: React.FC = () => {
                                 lineHeight: '12px',
                                 fontWeight: isActive ? 600 : 400,
                                 color: color,
-                                whiteSpace: 'nowrap' as const,
-                                textAlign: 'center' as const,
-                            }}>
+                                whiteSpace: 'nowrap',
+                                textAlign: 'center',
+                            } as React.CSSProperties}>
                                 {item.label}
                             </span>
                         </div>
