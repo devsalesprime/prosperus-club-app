@@ -1,8 +1,9 @@
 // ============================================
-// BOTTOM NAV — Mobile Bottom Navigation
+// BOTTOM NAV — Mobile Bottom Navigation (FIXED)
 // ============================================
 // Flex item within AppLayout — NO position:fixed
-// (body is already position:fixed on iOS, so children use flow layout)
+// Adicionado: position:relative + z-index explícito
+// Garante que o nav fica SEMPRE acima de qualquer absolute dentro da coluna
 
 import React from 'react';
 import {
@@ -18,7 +19,7 @@ import { useApp } from '../../contexts/AppContext';
 const bottomNavItems = [
     { id: ViewState.DASHBOARD, label: 'Início', icon: <LayoutDashboard size={20} /> },
     { id: ViewState.AGENDA, label: 'Agenda', icon: <CalendarIcon size={20} /> },
-    { id: 'prosperus-tools', label: 'Prosperus Tools', icon: <Briefcase size={20} />, view: ViewState.PROSPERUS_TOOLS },
+    { id: 'prosperus-tools', label: 'Prosperus', icon: <Briefcase size={20} />, view: ViewState.PROSPERUS_TOOLS },
     { id: ViewState.MEMBERS, label: 'Sócios', icon: <Users size={20} /> },
     { id: ViewState.GALLERY, label: 'Galeria', icon: <ImageIcon size={20} /> },
 ];
@@ -28,16 +29,27 @@ export const BottomNav: React.FC = () => {
 
     return (
         <nav
-            // md:hidden → some no desktop
-            // NÃO É MAIS fixed — é elemento normal no flex column
-            className="md:hidden w-full bg-prosperus-navy border-t border-prosperus-navy-light z-50"
+            className="md:hidden w-full bg-prosperus-navy border-t border-prosperus-navy-light"
             style={{
-                // Ícones: 56px de altura fixa
-                // Safe area: empurra o nav para baixo (home indicator)
-                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                // Nunca ser menor que 56px
-                minHeight: 56,
+                // ── Posicionamento ───────────────────────────────────────
+                // position:relative cria contexto de empilhamento próprio
+                // z-index 50 garante que fica acima do SupportWidget (z-40)
+                position: 'relative',
+                zIndex: 50,
+
+                // ── Dimensões ────────────────────────────────────────────
                 flexShrink: 0,
+                width: '100%',
+
+                // ── Safe area iOS (home indicator) ───────────────────────
+                // paddingBottom empurra o conteúdo para cima do indicador
+                paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+
+                // ── Altura mínima: 56px de conteúdo + safe area ──────────
+                minHeight: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+
+                // ── Background garante que nada "vaza" por baixo ─────────
+                background: '#031A2B',
             }}
         >
             <div
@@ -57,18 +69,43 @@ export const BottomNav: React.FC = () => {
                                     ? 'prosperus-tools'
                                     : item.id.toLowerCase()
                             }
-                            style={{ minHeight: 'unset', minWidth: 'unset' }}
                             className={`
                                 flex-1 min-w-0 flex flex-col items-center
-                                justify-center gap-0.5 rounded-lg
-                                transition-colors
+                                justify-center rounded-lg transition-colors
+                                active:scale-95
                                 ${isActive ? 'text-prosperus-gold' : 'text-prosperus-grey'}
                             `}
+                            style={{
+                                // Touch target mínimo Apple HIG: 44×44px
+                                minHeight: 44,
+                                minWidth: 44,
+                                gap: 3,
+                                border: 'none',
+                                background: 'none',
+                                padding: '0 4px',
+                                cursor: 'pointer',
+                                WebkitTapHighlightColor: 'transparent',
+                            }}
                         >
-                            <span className="w-5 h-5 flex items-center justify-center">
+                            {/* Ícone */}
+                            <span
+                                className="flex items-center justify-center"
+                                style={{ width: 20, height: 20, flexShrink: 0 }}
+                            >
                                 {item.icon}
                             </span>
-                            <span className="text-[9px] leading-tight font-medium">
+
+                            {/* Label — display:block garante renderização */}
+                            <span
+                                style={{
+                                    display: 'block',
+                                    fontSize: 9,
+                                    lineHeight: '11px',
+                                    fontWeight: isActive ? 600 : 400,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'visible',
+                                }}
+                            >
                                 {item.label}
                             </span>
                         </button>

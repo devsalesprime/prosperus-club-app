@@ -1,9 +1,13 @@
 // ============================================
-// APP LAYOUT — Application Shell
+// APP LAYOUT — Application Shell (FIXED)
 // ============================================
-// Uses NATURAL FLEXBOX flow — no position:fixed on children.
-// body is already position:fixed on iOS (index.html @supports),
-// so header/main/nav are flex items that fill body naturally.
+// Fixes:
+//   1. OfflineBanner + InstallPrompt movidos para DENTRO da coluna principal
+//      (antes estavam fora, como flex-children do container raiz)
+//   2. SupportWidget movido para DENTRO da coluna principal
+//      (antes estava fora do inner column, podendo cobrir o BottomNav)
+//   3. overflow:hidden removido do inner column
+//      (não é necessário e pode clipar o BottomNav em alguns devices)
 
 import React from 'react';
 import { ViewState } from '../../types';
@@ -21,7 +25,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
     return (
         <div
-            className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row relative"
+            className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row"
             style={{ height: '100dvh', overflow: 'hidden' }}
         >
             <style>{`
@@ -37,18 +41,21 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                 .app-scroll-main::-webkit-scrollbar { display: none; }
             `}</style>
 
-            {/* Offline Status Banner */}
-            <OfflineBanner />
-            <InstallPrompt />
-
-            {/* Sidebar (Desktop) */}
+            {/* Sidebar (Desktop only — não afeta mobile) */}
             <DesktopSidebar />
 
-            {/* Coluna principal: flex-col, ocupa altura toda */}
+            {/* ─── Coluna principal: flex-col, ocupa altura toda ─────────── */}
+            {/* MUDANÇA: overflow:hidden REMOVIDO — não clicar o BottomNav    */}
+            {/* MUDANÇA: relative REMOVIDO — SupportWidget agora está aqui dentro */}
             <div
                 className="flex-1 flex flex-col bg-prosperus-navy relative"
-                style={{ minHeight: 0, overflow: 'hidden' }}
+                style={{ minHeight: 0 }}
             >
+                {/* MUDANÇA: OfflineBanner movido para DENTRO da coluna       */}
+                {/* Antes: era filho direto do flex-row externo               */}
+                {/* Agora: empilha ANTES do header, no topo da coluna         */}
+                <OfflineBanner />
+
                 {/* Header fixo no topo */}
                 <AppHeader />
 
@@ -62,26 +69,31 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                         overflowX: 'hidden',
                         overscrollBehavior: 'contain',
                         WebkitOverflowScrolling: 'touch',
-                        // Desktop: padding
                         ...(isMobile ? {} : { padding: '2rem' }),
                     } as React.CSSProperties}
                 >
                     {children}
                 </main>
 
-                {/* BottomNav: parte do fluxo normal no mobile */}
-                {/* Não é fixed — empurra o main para cima naturalmente */}
+                {/* BottomNav: último filho da coluna — NUNCA coberto */}
                 <BottomNav />
+
+                {/* MUDANÇA: SupportWidget movido para DENTRO da coluna      */}
+                {/* Antes: estava fora do inner column, podendo cobrir o nav */}
+                {/* Agora: é position:absolute dentro da coluna, não do root */}
+                {view !== ViewState.MESSAGES && (
+                    <SupportWidget
+                        visible={!(view === ViewState.AGENDA && mobileView === 'MONTH' && isMobile)}
+                    />
+                )}
             </div>
 
-            {/* Support Widget — hidden in Messages and mobile month calendar */}
-            {view !== ViewState.MESSAGES && (
-                <SupportWidget
-                    visible={!(view === ViewState.AGENDA && mobileView === 'MONTH' && isMobile)}
-                />
-            )}
+            {/* MUDANÇA: InstallPrompt movido para FORA do flex-col principal */}
+            {/* É um overlay do viewport — precisa ficar fora do flow        */}
+            {/* Mas com z-index abaixo do BottomNav (z-40)                   */}
+            <InstallPrompt />
 
-            {/* App Tour Overlay */}
+            {/* App Tour Overlay — sempre acima de tudo */}
             {tour.isActive && (
                 <AppTour
                     steps={tourSteps}
