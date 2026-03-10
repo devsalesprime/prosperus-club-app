@@ -1,6 +1,6 @@
 // BottomNav — Mobile Bottom Navigation
-// Safe-area padding via embedded <style> tag (not index.html, not inline)
-// iOS needs env() in a real CSS rule, not JS-applied inline styles
+// No safe-area handling needed — body height in index.html
+// already subtracts both iOS safe areas.
 
 import React from 'react';
 import {
@@ -31,38 +31,22 @@ export const BottomNav: React.FC = () => {
 
     return (
         <>
-            {/* ── CSS embedded in component ──
-                 Using !important to override any conflicting rules.
-                 env() MUST be in a stylesheet <style> tag for iOS WebKit. */}
             <style>{`
                 #prosperus-bottom-nav {
-                    display: flex !important;
-                    flex-direction: row !important;
-                    align-items: center !important;
-                    justify-content: space-around !important;
-                    width: 100% !important;
-                    flex-shrink: 0 !important;
-                    padding-top: 10px !important;
-                    padding-bottom: 10px !important;
-                    background: ${BG} !important;
-                    border-top: 1px solid ${BORDER} !important;
-                    position: relative !important;
-                    z-index: 50 !important;
-                    overflow: visible !important;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-around;
+                    width: 100%;
+                    flex-shrink: 0;
+                    padding: 10px 0;
+                    background: ${BG};
+                    border-top: 1px solid ${BORDER};
+                    position: relative;
+                    z-index: 50;
                 }
-
-                /* iOS: add safe-area-inset-bottom to padding */
-                @supports (-webkit-touch-callout: none) {
-                    #prosperus-bottom-nav {
-                        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-                    }
-                }
-
-                /* Hide on desktop */
                 @media (min-width: 768px) {
-                    #prosperus-bottom-nav {
-                        display: none !important;
-                    }
+                    #prosperus-bottom-nav { display: none !important; }
                 }
             `}</style>
 

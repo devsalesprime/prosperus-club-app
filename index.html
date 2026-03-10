@@ -506,25 +506,27 @@
     /* iOS-specific fixes */
     @supports (-webkit-touch-callout: none) {
 
-      /* iOS Safari specific styles */
+      /* html background covers the safe areas (notch + home indicator) */
+      html {
+        background: #031A2B;
+      }
+
+      /* iOS Safari/Standalone specific styles */
       body {
         /* Prevent rubber band scrolling */
         position: fixed;
         width: 100%;
-        /* Subtract safe-area-inset-top so body fits below the status bar */
-        height: calc(100dvh - env(safe-area-inset-top, 0px));
+        /* Subtract BOTH safe areas so body fits between notch and home indicator */
+        height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
         overflow: hidden;
-        /* Move body below the safe area (status bar / notch) */
+        /* Move body below the status bar / notch */
         top: env(safe-area-inset-top, 0px);
-        /* Reset general padding-top — we use top instead on iOS */
         padding-top: 0;
       }
 
       #root {
-        /* Fill body's content area — no hardcoded 100dvh */
         height: 100%;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow: hidden;
       }
     }
 
