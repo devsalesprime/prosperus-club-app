@@ -27,27 +27,16 @@ export const BottomNav: React.FC = () => {
 
     return (
         <>
+            {/* Esconder no desktop */}
             <style>{`
-                /* Esconder no desktop */
                 @media (min-width: 768px) {
                     #prosperus-bottom-nav { display: none !important; }
-                }
-
-                /* ── iOS ONLY: estender nav até a base do home indicator ── */
-                /* Android: nenhuma regra aqui bate — nav fica 56px flat    */
-                @supports (-webkit-touch-callout: none) {
-                    #prosperus-bottom-nav {
-                        /* padding-bottom empurra o background navy até o home     */
-                        /* indicator, sem comprimir os 56px de conteúdo dos botões */
-                        padding-bottom: env(safe-area-inset-bottom, 0px);
-                    }
                 }
             `}</style>
 
             <nav
                 id="prosperus-bottom-nav"
                 style={{
-                    /* ── ANDROID BASELINE (não pode mudar) ── */
                     flexShrink: 0,
                     width: '100%',
                     height: 56,
@@ -61,10 +50,8 @@ export const BottomNav: React.FC = () => {
                     zIndex: 50,
                     background: BG,
                     borderTop: `1px solid ${BORDER}`,
-                    /* iOS: @supports acima adiciona padding-bottom         */
-                    /* que estende o BG navy até a base, sem alterar height  */
-                    /* Para o flex funcionar com o padding extra:            */
-                    boxSizing: 'content-box',
+                    // A safe area abaixo do nav mostra o background do body
+                    // que é a mesma cor navy — visualmente flush sem espaçador
                 }}
             >
                 {bottomNavItems.map(item => {
