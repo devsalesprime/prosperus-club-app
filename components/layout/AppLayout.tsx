@@ -26,12 +26,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     return (
         <div
             className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row"
-            style={{ height: '100%', overflow: 'hidden' }}
+            style={{ minHeight: '100vh', display: 'flex' }}
         >
             <style>{`
-                #root {
-                    height: 100%;
-                }
                 .app-scroll-main {
                     scrollbar-width: none;
                     -ms-overflow-style: none;
@@ -67,7 +64,9 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                         overflowX: 'hidden',
                         overscrollBehavior: 'contain',
                         WebkitOverflowScrolling: 'touch',
-                        ...(isMobile ? {} : { padding: '2rem' }),
+                        ...(isMobile ? {
+                            paddingBottom: 'calc(56px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)'
+                        } : { padding: '2rem' }),
                     } as React.CSSProperties}
                 >
                     {children}

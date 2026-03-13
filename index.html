@@ -504,39 +504,27 @@
     }
 
     /* ===== BASE LAYOUT — applies on ALL platforms ===== */
-    /* iOS @supports block below overrides body height/position */
-    html, body {
-      height: 100%;
+    html {
+      height: -webkit-fill-available;
+      background: #031A2B;
+    }
+    body {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      min-height: 100dvh;
       margin: 0;
-      overflow: hidden;
+      padding-top: env(safe-area-inset-top, 0px);
+      background-color: var(--prosperus-navy);
+      color: var(--prosperus-white);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overscroll-behavior: none;
     }
     #root {
-      height: 100%;
-    }
-
-    /* iOS-specific fixes — OVERRIDES the base rules above */
-    @supports (-webkit-touch-callout: none) {
-
-      /* Background for areas outside body (home indicator zone) */
-      html {
-        background: #000000;
-      }
-
-      body {
-        position: fixed;
-        width: 100%;
-        /* Only subtract TOP safe area — bottom is handled by nav padding */
-        height: calc(100dvh - env(safe-area-inset-top, 0px));
-        overflow: hidden;
-        top: env(safe-area-inset-top, 0px);
-        padding-top: 0;
-      }
-
-      #root {
-        height: 100%;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
     }
 
     /* ===== DVH VIEWPORT FIX ===== */
