@@ -27,10 +27,23 @@ export const BottomNav: React.FC = () => {
 
     return (
         <>
-            {/* Esconder no desktop */}
+            {/* Esconder no desktop + iOS safe-area override */}
             <style>{`
                 @media (min-width: 768px) {
                     #prosperus-bottom-nav { display: none !important; }
+                }
+
+                /* iOS: destrói a altura fixa de 56px e usa padding dinâmico.
+                   Subtrai 16px da safe-area (~34px), deixando ~18px de folga
+                   para não colidir com o Home Indicator.
+                   Android NÃO entra aqui — mantém os 56px do inline style. */
+                @supports (-webkit-touch-callout: none) {
+                    #prosperus-bottom-nav {
+                        height: auto !important;
+                        box-sizing: border-box !important;
+                        padding-top: 10px !important;
+                        padding-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) - 16px)) !important;
+                    }
                 }
             `}</style>
 
