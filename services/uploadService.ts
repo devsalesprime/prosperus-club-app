@@ -23,11 +23,11 @@ class UploadService {
     private getEndpoint(): string {
         const isDev = import.meta.env.DEV;
         if (isDev) {
-            // XAMPP local: PHP served directly
-            return '/prosperus-club-app/public/api/upload.php';
+            // Dev: direct to Node.js upload server
+            return 'http://localhost:3010/api/upload';
         }
-        // Prod: served via Nginx location block
-        return 'https://prosperusclub.com.br/api/upload.php';
+        // Prod: Nginx proxies /api/upload → localhost:3010
+        return 'https://prosperusclub.com.br/api/upload';
     }
 
     /**

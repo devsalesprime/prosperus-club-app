@@ -370,8 +370,8 @@ export const BannersModule: React.FC = () => {
                             label="Imagem do Banner"
                             value={formData.image_url}
                             onUploaded={(url) => setFormData({ ...formData, image_url: url })}
-                            accept="image/jpeg,image/png,image/webp,image/gif"
-                            hint="JPG, PNG, WebP ou GIF. Máx 10MB."
+                            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf"
+                            hint="JPG, PNG, WebP, GIF ou PDF. Máx 10MB."
                         />
 
                         {/* Fallback: colar URL manualmente */}
