@@ -443,10 +443,9 @@
     /* ===== iOS BOTTOM NAV FIX ===== */
     /* O nav ocupa espaço real — não flutua sobre o conteúdo */
     .bottom-nav-ios {
-      padding-top: 14px;
-      padding-bottom: 14px;
-      /* Safe area absorvida AQUI, não no main */
-      padding-bottom: max(14px, calc(14px + env(safe-area-inset-bottom, 0px)));
+      /* env() returns ~34px on iPhones with home indicator, 0 on others */
+      /* Fallback 12px for browsers that don't support env()            */
+      padding-bottom: env(safe-area-inset-bottom, 12px);
     }
 
     /* Main content para no topo do nav naturalmente */
