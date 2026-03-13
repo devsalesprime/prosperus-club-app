@@ -14,9 +14,12 @@ import {
     CheckCircle,
     AlertCircle,
     History,
-    RefreshCw
+    RefreshCw,
+    Paperclip,
+    FileText,
 } from 'lucide-react';
 import { notificationService, NotificationSegment } from '../../services/notificationService';
+import { AdminFileUpload } from './shared';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -65,6 +68,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [actionUrl, setActionUrl] = useState('');
+    const [attachmentUrl, setAttachmentUrl] = useState('');
     const [segment, setSegment] = useState<NotificationSegment>('ALL');
 
     // UI state
@@ -135,6 +139,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                 setTitle('');
                 setMessage('');
                 setActionUrl('');
+                setAttachmentUrl('');
                 setSegment('ALL');
                 // Reload history
                 loadHistory();
@@ -239,6 +244,26 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                             </div>
                         </div>
 
+                        {/* Attachment Upload */}
+                        <div>
+                            <AdminFileUpload
+                                label="Anexo (opcional)"
+                                value={attachmentUrl}
+                                onUploaded={(url) => {
+                                    setAttachmentUrl(url);
+                                    // Auto-fill action URL if empty
+                                    if (!actionUrl && url) setActionUrl(url);
+                                }}
+                                onClear={() => {
+                                    setAttachmentUrl('');
+                                    // Clear action URL only if it was the attachment
+                                    if (actionUrl === attachmentUrl) setActionUrl('');
+                                }}
+                                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                                hint="Anexe PDF ou imagem. Máx 10MB."
+                            />
+                        </div>
+
                         {/* Segment */}
                         <div>
                             <label className="block text-sm text-slate-400 mb-1.5">
@@ -332,6 +357,14 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                                         <p className="text-sm text-slate-400 line-clamp-2 mb-1">
                                             {message || 'A mensagem aparecerá aqui...'}
                                         </p>
+                                        {attachmentUrl && (
+                                            <div className="flex items-center gap-1 mb-1">
+                                                <Paperclip size={12} className="text-yellow-500" />
+                                                <span className="text-xs text-yellow-500 font-medium">
+                                                    {attachmentUrl.toLowerCase().endsWith('.pdf') ? 'PDF anexado' : 'Imagem anexada'}
+                                                </span>
+                                            </div>
+                                        )}
                                         <span className="text-xs text-slate-500">agora mesmo</span>
                                     </div>
                                 </div>
@@ -403,6 +436,12 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                                         <span className="inline-block text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full">
                                             {getSegmentLabel(item.segment)}
                                         </span>
+                                        {item.target_url && /\.(pdf|jpg|jpeg|png|webp|gif)$/i.test(item.target_url) && (
+                                            <span className="inline-block text-[10px] px-2 py-0.5 bg-yellow-600/20 text-yellow-400 rounded-full ml-1">
+                                                <Paperclip size={10} className="inline mr-0.5" />
+                                                {item.target_url.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Imagem'}
+                                            </span>
+                                        )}
                                     </div>
                                 ))}
                             </div>

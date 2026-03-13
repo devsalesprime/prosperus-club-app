@@ -1,8 +1,12 @@
-// AdminArticleList.tsx
+// ============================================
+// ADMIN ARTICLE LIST - Admin Component (Refactored)
+// ============================================
 // Lista de artigos para o painel administrativo
 // Features: Tabela com status, views, ações de publicar/despublicar/excluir
+// Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
     Plus,
     Edit,
@@ -18,6 +22,14 @@ import {
     Image as ImageIcon
 } from 'lucide-react';
 import { articleService, Article } from '../../services/articleService';
+import {
+    AdminPageHeader,
+    AdminTable,
+    AdminActionButton,
+    AdminLoadingState,
+    AdminEmptyState,
+    AdminConfirmDialog,
+} from './shared';
 
 interface AdminArticleListProps {
     onEdit: (article: Article) => void;
@@ -29,6 +41,15 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // Confirm Dialog state
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        id: string | null;
+        title: string;
+        message: string;
+        isLoading: boolean;
+    }>({ isOpen: false, id: null, title: '', message: '', isLoading: false });
 
     useEffect(() => {
         loadArticles();
@@ -53,9 +74,10 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
             setActionLoading(article.id);
             await articleService.publishArticle(article.id);
             await loadArticles();
+            toast.success(`"${article.title}" publicado com sucesso!`);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro ao publicar: ' + errorMessage);
+            toast.error('Erro ao publicar: ' + errorMessage);
         } finally {
             setActionLoading(null);
         }
@@ -66,26 +88,38 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
             setActionLoading(article.id);
             await articleService.unpublishArticle(article.id);
             await loadArticles();
+            toast.success(`"${article.title}" despublicado.`);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro ao despublicar: ' + errorMessage);
+            toast.error('Erro ao despublicar: ' + errorMessage);
         } finally {
             setActionLoading(null);
         }
     };
 
-    const handleDelete = async (article: Article) => {
-        if (!confirm(`Excluir "${article.title}"? Esta ação não pode ser desfeita.`)) {
-            return;
-        }
+    const requestDelete = (article: Article) => {
+        setConfirmState({
+            isOpen: true,
+            id: article.id,
+            title: 'Excluir Artigo',
+            message: `Excluir "${article.title}"? Esta ação não pode ser desfeita.`,
+            isLoading: false,
+        });
+    };
 
+    const executeDelete = async () => {
+        if (!confirmState.id) return;
         try {
-            setActionLoading(article.id);
-            await articleService.deleteArticle(article.id);
+            setConfirmState(prev => ({ ...prev, isLoading: true }));
+            setActionLoading(confirmState.id);
+            await articleService.deleteArticle(confirmState.id);
             await loadArticles();
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.success('Artigo excluído com sucesso!');
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro ao excluir: ' + errorMessage);
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.error('Erro ao excluir: ' + errorMessage);
         } finally {
             setActionLoading(null);
         }
@@ -100,49 +134,56 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
         });
     };
 
+    // ============================================
+    // LOADING STATE
+    // ============================================
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+            <div className="p-6 space-y-6">
+                <AdminPageHeader
+                    title="Artigos"
+                    subtitle="Gestão de conteúdo do clube"
+                />
+                <AdminLoadingState message="Carregando artigos..." />
             </div>
         );
     }
 
-    return (
-        <div className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-yellow-600 to-yellow-500 rounded-xl">
-                        <FileText className="text-white" size={24} />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">Artigos</h1>
-                        <p className="text-slate-400">{articles.length} artigo(s)</p>
-                    </div>
-                </div>
+    // ============================================
+    // RENDER
+    // ============================================
 
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={loadArticles}
-                        className="btn-sm p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
-                    >
-                        <RefreshCw size={20} />
-                    </button>
-                    <button
-                        onClick={onNew}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 
-                                 text-white font-bold rounded-lg hover:opacity-90 transition"
-                    >
-                        <Plus size={20} />
-                        Novo Artigo
-                    </button>
-                </div>
-            </div>
+    return (
+        <div className="p-6 space-y-6">
+            {/* Header */}
+            <AdminPageHeader
+                title="Artigos"
+                subtitle={`${articles.length} artigo(s)`}
+                action={
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={loadArticles}
+                            className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+                            title="Atualizar lista"
+                        >
+                            <RefreshCw size={20} />
+                        </button>
+                        <button
+                            onClick={onNew}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 
+                                     text-white font-bold rounded-lg hover:opacity-90 transition"
+                        >
+                            <Plus size={20} />
+                            Novo Artigo
+                        </button>
+                    </div>
+                }
+            />
 
             {/* Error */}
             {error && (
-                <div className="flex items-center gap-2 p-4 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 mb-4">
+                <div className="flex items-center gap-2 p-4 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400">
                     <AlertCircle size={20} />
                     {error}
                 </div>
@@ -150,142 +191,152 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
 
             {/* Empty State */}
             {articles.length === 0 ? (
-                <div className="text-center py-12 bg-slate-900 rounded-xl border border-slate-800">
-                    <FileText className="w-16 h-16 text-slate-700 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-white mb-2">Nenhum artigo ainda</h3>
-                    <p className="text-slate-400 mb-4">Comece criando seu primeiro artigo</p>
-                    <button
-                        onClick={onNew}
-                        className="px-6 py-2 bg-yellow-600 text-white font-bold rounded-lg hover:bg-yellow-500 transition"
-                    >
-                        Criar Artigo
-                    </button>
-                </div>
+                <AdminEmptyState
+                    icon={<FileText size={48} />}
+                    message="Nenhum artigo ainda"
+                    description="Comece criando seu primeiro artigo"
+                    action={
+                        <button
+                            onClick={onNew}
+                            className="px-6 py-2 bg-yellow-600 text-white font-bold rounded-lg hover:bg-yellow-500 transition"
+                        >
+                            Criar Artigo
+                        </button>
+                    }
+                />
             ) : (
-                /* Table */
-                <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-slate-800">
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Capa</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Título</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Status</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Views</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Data</th>
-                                    <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">Ações</th>
+                /* Table wrapped with AdminTable */
+                <AdminTable>
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-slate-800">
+                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Capa</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Título</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Status</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Views</th>
+                                <th className="px-4 py-3 text-left text-sm font-medium text-slate-400">Data</th>
+                                <th className="px-4 py-3 text-right text-sm font-medium text-slate-400">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800">
+                            {articles.map((article) => (
+                                <tr key={article.id} className="hover:bg-slate-800/50 transition">
+                                    {/* Cover */}
+                                    <td className="px-4 py-3">
+                                        {article.image_url ? (
+                                            <img
+                                                src={article.image_url}
+                                                alt={article.title}
+                                                className="w-16 h-10 object-cover rounded-lg"
+                                            />
+                                        ) : (
+                                            <div className="w-16 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
+                                                <ImageIcon className="w-5 h-5 text-slate-600" />
+                                            </div>
+                                        )}
+                                    </td>
+
+                                    {/* Title */}
+                                    <td className="px-4 py-3">
+                                        <p className="font-medium text-white truncate max-w-xs">
+                                            {article.title}
+                                        </p>
+                                        {article.category_name && (
+                                            <p className="text-xs text-slate-500">{article.category_name}</p>
+                                        )}
+                                    </td>
+
+                                    {/* Status */}
+                                    <td className="px-4 py-3">
+                                        {article.status === 'PUBLISHED' ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/30 text-green-400 text-xs font-medium rounded-full">
+                                                <Eye size={12} />
+                                                Publicado
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 text-slate-400 text-xs font-medium rounded-full">
+                                                <EyeOff size={12} />
+                                                Rascunho
+                                            </span>
+                                        )}
+                                    </td>
+
+                                    {/* Views */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-1 text-slate-400">
+                                            <BarChart3 size={14} />
+                                            <span>{article.views || 0}</span>
+                                        </div>
+                                    </td>
+
+                                    {/* Date */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-1 text-slate-400 text-sm">
+                                            <Calendar size={14} />
+                                            <span>{formatDate(article.published_date || article.created_at)}</span>
+                                        </div>
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center justify-end gap-1">
+                                            {actionLoading === article.id ? (
+                                                <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+                                            ) : (
+                                                <>
+                                                    <AdminActionButton
+                                                        icon={Edit}
+                                                        onClick={() => onEdit(article)}
+                                                        variant="ghost"
+                                                        title="Editar"
+                                                    />
+
+                                                    {article.status === 'PUBLISHED' ? (
+                                                        <AdminActionButton
+                                                            icon={EyeOff}
+                                                            onClick={() => handleUnpublish(article)}
+                                                            variant="ghost"
+                                                            title="Despublicar"
+                                                        />
+                                                    ) : (
+                                                        <AdminActionButton
+                                                            icon={Eye}
+                                                            onClick={() => handlePublish(article)}
+                                                            variant="ghost"
+                                                            title="Publicar"
+                                                        />
+                                                    )}
+
+                                                    <AdminActionButton
+                                                        icon={Trash2}
+                                                        onClick={() => requestDelete(article)}
+                                                        variant="danger"
+                                                        title="Excluir"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-800">
-                                {articles.map((article) => (
-                                    <tr key={article.id} className="hover:bg-slate-800/50 transition">
-                                        {/* Cover */}
-                                        <td className="px-4 py-3">
-                                            {article.image_url ? (
-                                                <img
-                                                    src={article.image_url}
-                                                    alt={article.title}
-                                                    className="w-16 h-10 object-cover rounded-lg"
-                                                />
-                                            ) : (
-                                                <div className="w-16 h-10 bg-slate-800 rounded-lg flex items-center justify-center">
-                                                    <ImageIcon className="w-5 h-5 text-slate-600" />
-                                                </div>
-                                            )}
-                                        </td>
-
-                                        {/* Title */}
-                                        <td className="px-4 py-3">
-                                            <p className="font-medium text-white truncate max-w-xs">
-                                                {article.title}
-                                            </p>
-                                            {article.category_name && (
-                                                <p className="text-xs text-slate-500">{article.category_name}</p>
-                                            )}
-                                        </td>
-
-                                        {/* Status */}
-                                        <td className="px-4 py-3">
-                                            {article.status === 'PUBLISHED' ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/30 text-green-400 text-xs font-medium rounded-full">
-                                                    <Eye size={12} />
-                                                    Publicado
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 text-slate-400 text-xs font-medium rounded-full">
-                                                    <EyeOff size={12} />
-                                                    Rascunho
-                                                </span>
-                                            )}
-                                        </td>
-
-                                        {/* Views */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1 text-slate-400">
-                                                <BarChart3 size={14} />
-                                                <span>{article.views || 0}</span>
-                                            </div>
-                                        </td>
-
-                                        {/* Date */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1 text-slate-400 text-sm">
-                                                <Calendar size={14} />
-                                                <span>{formatDate(article.published_date || article.created_at)}</span>
-                                            </div>
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {actionLoading === article.id ? (
-                                                    <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            onClick={() => onEdit(article)}
-                                                            className="btn-sm p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition"
-                                                            title="Editar"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
-
-                                                        {article.status === 'PUBLISHED' ? (
-                                                            <button
-                                                                onClick={() => handleUnpublish(article)}
-                                                                className="btn-sm p-2 hover:bg-slate-700 rounded-lg text-orange-400 hover:text-orange-300 transition"
-                                                                title="Despublicar"
-                                                            >
-                                                                <EyeOff size={16} />
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                onClick={() => handlePublish(article)}
-                                                                className="btn-sm p-2 hover:bg-slate-700 rounded-lg text-green-400 hover:text-green-300 transition"
-                                                                title="Publicar"
-                                                            >
-                                                                <Eye size={16} />
-                                                            </button>
-                                                        )}
-
-                                                        <button
-                                                            onClick={() => handleDelete(article)}
-                                                            className="btn-sm p-2 hover:bg-slate-700 rounded-lg text-red-400 hover:text-red-300 transition"
-                                                            title="Excluir"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            ))}
+                        </tbody>
+                    </table>
+                </AdminTable>
             )}
+
+            {/* ============================================ */}
+            {/* CONFIRM DIALOG */}
+            {/* ============================================ */}
+            <AdminConfirmDialog
+                isOpen={confirmState.isOpen}
+                onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={executeDelete}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText="Excluir"
+                isDestructive
+                isLoading={confirmState.isLoading}
+            />
         </div>
     );
 };

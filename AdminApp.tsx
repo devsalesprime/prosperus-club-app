@@ -49,7 +49,7 @@ import { AdminChatManager } from './components/AdminChatManager';
 import { AdminRoiManager } from './components/admin/AdminRoiManager';
 import { AdminSolutions } from './components/admin/AdminSolutions';
 import { AdminMemberProgress } from './components/admin/AdminMemberProgress';
-import { EventsModule } from './components/admin/EventsModule';
+import { EventsModule } from './components/admin/events';
 import { MembersModule } from './components/admin/MembersModule';
 import { AcademyModule } from './components/admin/AcademyModule';
 import { GalleryModule } from './components/admin/GalleryModule';
@@ -207,7 +207,8 @@ function DataTable<T extends { id: string }>({ columns, data, onEdit, onDelete }
                   </td>
                 </tr>
               );
-            })}            {data.length === 0 && (
+            })}
+            {data.length === 0 && (
               <tr>
                 <td colSpan={columns.length + 1} className="px-6 py-8 text-center text-slate-600">
                   Nenhum registro encontrado.

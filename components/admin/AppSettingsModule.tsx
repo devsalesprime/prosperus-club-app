@@ -1,9 +1,11 @@
 // ============================================
-// APP SETTINGS MODULE - Admin Component
+// APP SETTINGS MODULE - Admin Component (Refactored)
 // ============================================
 // Gerenciador de configurações do app (Suporte, Financeiro, Links)
+// Refatorado: custom header→AdminPageHeader, custom loading→AdminLoadingState, inline status→toast
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
     Save,
     Phone,
@@ -11,16 +13,15 @@ import {
     User,
     Link as LinkIcon,
     Loader2,
-    CheckCircle,
-    AlertTriangle,
     Settings,
     Headphones,
     CreditCard,
-    FileText
+    FileText,
 } from 'lucide-react';
 import { settingsService, AppSettings, AppSettingsUpdate } from '../../services/settingsService';
+import { AdminPageHeader, AdminLoadingState } from './shared';
 
-// Form Input Component
+// Form Input Component (module-specific — has icon support not in AdminFormInput)
 const FormInput = ({
     label,
     value,
@@ -76,7 +77,6 @@ export const AppSettingsModule: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
     // Form state
     const [formData, setFormData] = useState<AppSettingsUpdate>({
@@ -113,6 +113,7 @@ export const AppSettingsModule: React.FC = () => {
                 });
             } catch (error) {
                 console.error('Error loading settings:', error);
+                toast.error('Erro ao carregar configurações.');
             } finally {
                 setIsLoading(false);
             }
@@ -140,23 +141,24 @@ export const AppSettingsModule: React.FC = () => {
 
     // Save settings
     const handleSave = async () => {
-        if (!validateForm()) return;
+        if (!validateForm()) {
+            toast.error('Corrija os campos inválidos antes de salvar.');
+            return;
+        }
 
         setIsSaving(true);
-        setSaveStatus('idle');
 
         try {
             const result = await settingsService.updateSettings(formData);
 
             if (result.success) {
-                setSaveStatus('success');
-                setTimeout(() => setSaveStatus('idle'), 3000);
+                toast.success('Configurações salvas com sucesso!');
             } else {
-                setSaveStatus('error');
+                toast.error('Erro ao salvar configurações.');
             }
         } catch (error) {
             console.error('Error saving settings:', error);
-            setSaveStatus('error');
+            toast.error('Erro ao salvar configurações.');
         } finally {
             setIsSaving(false);
         }
@@ -177,45 +179,33 @@ export const AppSettingsModule: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 size={32} className="text-yellow-500 animate-spin" />
+            <div className="space-y-6">
+                <AdminPageHeader title="Configurações do App" subtitle="Gerencie informações de contato e links importantes" />
+                <AdminLoadingState message="Carregando configurações..." />
             </div>
         );
     }
 
     return (
         <div className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                        <Settings size={24} className="text-yellow-500" />
-                        Configurações do App
-                    </h2>
-                    <p className="text-sm text-slate-400">Gerencie informações de contato e links importantes</p>
-                </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className={`flex items-center gap-2 px-5 py-2.5 font-bold rounded-lg transition shadow-lg ${saveStatus === 'success'
-                            ? 'bg-green-600 text-white'
-                            : saveStatus === 'error'
-                                ? 'bg-red-600 text-white'
-                                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                        }`}
-                >
-                    {isSaving ? (
-                        <Loader2 size={18} className="animate-spin" />
-                    ) : saveStatus === 'success' ? (
-                        <CheckCircle size={18} />
-                    ) : saveStatus === 'error' ? (
-                        <AlertTriangle size={18} />
-                    ) : (
-                        <Save size={18} />
-                    )}
-                    {isSaving ? 'Salvando...' : saveStatus === 'success' ? 'Salvo!' : saveStatus === 'error' ? 'Erro' : 'Salvar Alterações'}
-                </button>
-            </div>
+            <AdminPageHeader
+                title="Configurações do App"
+                subtitle="Gerencie informações de contato e links importantes"
+                action={
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-5 py-2.5 font-bold rounded-lg transition shadow-lg bg-yellow-600 hover:bg-yellow-700 text-white disabled:opacity-50"
+                    >
+                        {isSaving ? (
+                            <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                            <Save size={18} />
+                        )}
+                        {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                    </button>
+                }
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Suporte Técnico */}

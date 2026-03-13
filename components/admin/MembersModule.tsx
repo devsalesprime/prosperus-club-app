@@ -1,11 +1,20 @@
 // ============================================
-// MEMBERS MODULE - Admin Component (Extracted)
+// MEMBERS MODULE - Admin Component (Refactored)
 // ============================================
 // Gerenciamento de membros com dados reais do Supabase
+// Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
 
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, PlaySquare } from 'lucide-react';
-import { AdminPageHeader, AdminModal, AdminLoadingState } from './shared';
+import toast from 'react-hot-toast';
+import { Edit, Trash2, PlaySquare, RefreshCw } from 'lucide-react';
+import {
+    AdminPageHeader,
+    AdminModal,
+    AdminLoadingState,
+    AdminTable,
+    AdminActionButton,
+    AdminConfirmDialog,
+} from './shared';
 
 interface ProfileRow {
     id: string;
@@ -31,6 +40,14 @@ export const MembersModule: React.FC = () => {
     const [saving, setSaving] = useState(false);
     const [videoUrlStatus, setVideoUrlStatus] = useState<{ type: 'youtube' | 'vimeo' | 'drive' | 'loom' | 'invalid' | null; message: string }>({ type: null, message: '' });
 
+    // Confirm Dialog state
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        id: string | null;
+        memberName: string;
+        isLoading: boolean;
+    }>({ isOpen: false, id: null, memberName: '', isLoading: false });
+
     const loadMembers = async () => {
         try {
             setLoading(true);
@@ -44,6 +61,7 @@ export const MembersModule: React.FC = () => {
             if (fetchError) throw fetchError;
             setMembers(data || []);
         } catch (err: any) {
+            if (err?.message?.includes('AbortError') || err?.code === 'ABORT_ERR') return;
             console.error('Error loading members:', err);
             setError(err.message || 'Erro ao carregar membros');
         } finally {
@@ -87,7 +105,7 @@ export const MembersModule: React.FC = () => {
     const handleSaveEdit = async () => {
         if (!editingMember) return;
         if (editFormData.pitch_video_url && videoUrlStatus.type === 'invalid') {
-            alert('Por favor, use uma URL válida do YouTube, Vimeo, Google Drive ou Loom.');
+            toast.error('Por favor, use uma URL válida do YouTube, Vimeo, Google Drive ou Loom.');
             return;
         }
         try {
@@ -101,24 +119,38 @@ export const MembersModule: React.FC = () => {
             await loadMembers();
             setIsEditModalOpen(false);
             setEditingMember(null);
+            toast.success('Membro atualizado com sucesso!');
         } catch (err: any) {
             console.error('Error saving member:', err);
-            alert('Erro ao salvar: ' + err.message);
+            toast.error('Erro ao salvar: ' + err.message);
         } finally {
             setSaving(false);
         }
     };
 
-    const handleDeleteMember = async (id: string) => {
-        if (!confirm('Tem certeza que deseja remover este membro? Esta ação não pode ser desfeita.')) return;
+    const requestDeleteMember = (member: ProfileRow) => {
+        setConfirmState({
+            isOpen: true,
+            id: member.id,
+            memberName: member.name || member.email,
+            isLoading: false,
+        });
+    };
+
+    const executeDeleteMember = async () => {
+        if (!confirmState.id) return;
         try {
+            setConfirmState(prev => ({ ...prev, isLoading: true }));
             const { supabase } = await import('../../lib/supabase');
-            const { error: deleteError } = await supabase.from('profiles').delete().eq('id', id);
+            const { error: deleteError } = await supabase.from('profiles').delete().eq('id', confirmState.id);
             if (deleteError) throw deleteError;
-            loadMembers();
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            await loadMembers();
+            toast.success('Membro removido com sucesso.');
         } catch (err: any) {
             console.error('Error deleting member:', err);
-            alert('Erro ao remover membro: ' + err.message);
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.error('Erro ao remover membro: ' + err.message);
         }
     };
 
@@ -160,72 +192,79 @@ export const MembersModule: React.FC = () => {
                 title="Sócios"
                 subtitle={`Total: ${members.length} usuários cadastrados`}
                 action={
-                    <button onClick={loadMembers} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                    <button
+                        onClick={loadMembers}
+                        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
+                    >
+                        <RefreshCw size={16} />
                         Atualizar
                     </button>
                 }
             />
 
-            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
-                        <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
-                            <tr>
-                                <th className="px-6 py-4">Usuário</th>
-                                <th className="px-6 py-4">Email</th>
-                                <th className="px-6 py-4">Empresa</th>
-                                <th className="px-6 py-4">Cargo</th>
-                                <th className="px-6 py-4">Role</th>
-                                <th className="px-6 py-4">Vídeo Pitch</th>
-                                <th className="px-6 py-4 text-right">Ações</th>
+            <AdminTable>
+                <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
+                    <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
+                        <tr>
+                            <th className="px-6 py-4">Usuário</th>
+                            <th className="px-6 py-4">Email</th>
+                            <th className="px-6 py-4">Empresa</th>
+                            <th className="px-6 py-4">Cargo</th>
+                            <th className="px-6 py-4">Role</th>
+                            <th className="px-6 py-4">Vídeo Pitch</th>
+                            <th className="px-6 py-4 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                        {members.map((member) => (
+                            <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <img src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={member.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                                        <span className="font-medium text-white">{member.name || 'Sem nome'}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">{member.email}</td>
+                                <td className="px-6 py-4">{member.company || '-'}</td>
+                                <td className="px-6 py-4">{member.job_title || '-'}</td>
+                                <td className="px-6 py-4">{formatRole(member.role)}</td>
+                                <td className="px-6 py-4">
+                                    {member.pitch_video_url ? (
+                                        <span className="inline-flex items-center gap-1 text-emerald-400 text-xs">
+                                            <PlaySquare size={14} /> Configurado
+                                        </span>
+                                    ) : (
+                                        <span className="text-slate-600 text-xs">-</span>
+                                    )}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center justify-end gap-1">
+                                        <AdminActionButton
+                                            icon={Edit}
+                                            onClick={() => handleEditMember(member)}
+                                            variant="primary"
+                                            title="Editar membro"
+                                        />
+                                        <AdminActionButton
+                                            icon={Trash2}
+                                            onClick={() => requestDeleteMember(member)}
+                                            variant="danger"
+                                            title="Remover membro"
+                                        />
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800">
-                            {members.map((member) => (
-                                <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <img src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={member.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
-                                            <span className="font-medium text-white">{member.name || 'Sem nome'}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">{member.email}</td>
-                                    <td className="px-6 py-4">{member.company || '-'}</td>
-                                    <td className="px-6 py-4">{member.job_title || '-'}</td>
-                                    <td className="px-6 py-4">{formatRole(member.role)}</td>
-                                    <td className="px-6 py-4">
-                                        {member.pitch_video_url ? (
-                                            <span className="inline-flex items-center gap-1 text-emerald-400 text-xs">
-                                                <PlaySquare size={14} /> Configurado
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-600 text-xs">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right space-x-2">
-                                        <button onClick={() => handleEditMember(member)} className="btn-sm text-yellow-400 hover:text-yellow-300 p-1 inline-block" title="Editar membro">
-                                            <Edit size={16} />
-                                        </button>
-                                        <button onClick={() => handleDeleteMember(member.id)} className="btn-sm text-red-400 hover:text-red-300 p-1 inline-block" title="Remover membro">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {members.length === 0 && (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
-                                        Nenhum membro cadastrado.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        ))}
+                        {members.length === 0 && (
+                            <tr>
+                                <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
+                                    Nenhum membro cadastrado.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </AdminTable>
 
             {/* Edit Member Modal */}
             {isEditModalOpen && editingMember && (
@@ -280,6 +319,20 @@ export const MembersModule: React.FC = () => {
                     </div>
                 </AdminModal>
             )}
+
+            {/* ============================================ */}
+            {/* CONFIRM DIALOG */}
+            {/* ============================================ */}
+            <AdminConfirmDialog
+                isOpen={confirmState.isOpen}
+                onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={executeDeleteMember}
+                title="Remover Membro"
+                message={`Tem certeza que deseja remover "${confirmState.memberName}"? Esta ação não pode ser desfeita.`}
+                confirmText="Remover"
+                isDestructive
+                isLoading={confirmState.isLoading}
+            />
         </div>
     );
 };

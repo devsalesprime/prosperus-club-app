@@ -2,11 +2,22 @@
 // ACADEMY MODULE - Admin Component (Refactored)
 // ============================================
 // Gerenciamento de vídeos/aulas + categorias com abas de navegação
+// Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image } from 'lucide-react';
 import { Video, VideoCategory } from '../../types';
-import { AdminPageHeader, AdminModal, AdminFormInput } from './shared';
+import {
+    AdminPageHeader,
+    AdminModal,
+    AdminFormInput,
+    AdminConfirmDialog,
+    AdminTable,
+    AdminActionButton,
+    AdminLoadingState,
+    AdminEmptyState,
+} from './shared';
 
 interface AcademyModuleProps {
     DataTable: React.FC<any>;
@@ -24,6 +35,17 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     const [editingCategory, setEditingCategory] = useState<Partial<VideoCategory>>({});
     const [isPartOfSeries, setIsPartOfSeries] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
+
+    // Confirm Dialog state
+    const [confirmState, setConfirmState] = useState<{
+        isOpen: boolean;
+        id: string | null;
+        action: 'deleteVideo' | 'deleteCategory' | null;
+        title: string;
+        message: string;
+        isLoading: boolean;
+    }>({ isOpen: false, id: null, action: null, title: '', message: '', isLoading: false });
 
     // ============================================
     // DATA LOADING
@@ -34,9 +56,10 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const { videoService } = await import('../../services/videoService');
             const data = await videoService.listVideos();
             setVideos(data);
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading videos:', error);
-            alert('Erro ao carregar vídeos. Verifique a conexão com o banco de dados.');
+            toast.error('Erro ao carregar vídeos. Verifique a conexão com o banco de dados.');
         }
     };
 
@@ -45,14 +68,14 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const { videoService } = await import('../../services/videoService');
             const data = await videoService.getCategories();
             setCategories(data);
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading categories:', error);
         }
     };
 
     useEffect(() => {
-        loadVideos();
-        loadCategories();
+        Promise.all([loadVideos(), loadCategories()]).finally(() => setInitialLoading(false));
     }, []);
 
     // ============================================
@@ -72,7 +95,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
 
     const handleSaveVideo = async () => {
         if (!editingVideo.title || !editingVideo.videoUrl) {
-            alert('Título e URL do Vídeo são obrigatórios.');
+            toast.error('Título e URL do Vídeo são obrigatórios.');
             return;
         }
         try {
@@ -102,25 +125,38 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setEditingVideo({});
             setIsPartOfSeries(false);
             await loadVideos();
-            alert('Vídeo salvo com sucesso!');
+            toast.success('Vídeo salvo com sucesso!');
         } catch (error) {
             console.error('Error saving video:', error);
-            alert('Erro ao salvar vídeo. Tente novamente.');
+            toast.error('Erro ao salvar vídeo. Tente novamente.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDeleteVideo = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este vídeo?')) return;
+    const requestDeleteVideo = (id: string) => {
+        setConfirmState({
+            isOpen: true,
+            id,
+            action: 'deleteVideo',
+            title: 'Excluir Vídeo',
+            message: 'Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita.',
+            isLoading: false,
+        });
+    };
+
+    const executeDeleteVideo = async (id: string) => {
         try {
+            setConfirmState(prev => ({ ...prev, isLoading: true }));
             const { videoService } = await import('../../services/videoService');
             await videoService.deleteVideo(id);
             await loadVideos();
-            alert('Vídeo excluído com sucesso!');
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.success('Vídeo excluído com sucesso!');
         } catch (error) {
             console.error('Error deleting video:', error);
-            alert('Erro ao excluir vídeo. Tente novamente.');
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.error('Erro ao excluir vídeo. Tente novamente.');
         }
     };
 
@@ -135,7 +171,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
 
     const handleSaveCategory = async () => {
         if (!editingCategory.name) {
-            alert('Nome da categoria é obrigatório.');
+            toast.error('Nome da categoria é obrigatório.');
             return;
         }
         try {
@@ -149,25 +185,48 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setIsCategoryModalOpen(false);
             setEditingCategory({});
             await loadCategories();
-            alert('Categoria salva com sucesso!');
+            toast.success('Categoria salva com sucesso!');
         } catch (error) {
             console.error('Error saving category:', error);
-            alert('Erro ao salvar categoria. Tente novamente.');
+            toast.error('Erro ao salvar categoria. Tente novamente.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleDeleteCategory = async (id: string) => {
-        if (!confirm('Excluir esta categoria? Os vídeos vinculados perderão a categoria.')) return;
+    const requestDeleteCategory = (id: string) => {
+        setConfirmState({
+            isOpen: true,
+            id,
+            action: 'deleteCategory',
+            title: 'Excluir Categoria',
+            message: 'Excluir esta categoria? Os vídeos vinculados perderão a categoria.',
+            isLoading: false,
+        });
+    };
+
+    const executeDeleteCategory = async (id: string) => {
         try {
+            setConfirmState(prev => ({ ...prev, isLoading: true }));
             const { videoService } = await import('../../services/videoService');
             await videoService.deleteCategory(id);
             await loadCategories();
-            alert('Categoria excluída com sucesso!');
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.success('Categoria excluída com sucesso!');
         } catch (error) {
             console.error('Error deleting category:', error);
-            alert('Erro ao excluir categoria. Tente novamente.');
+            setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
+            toast.error('Erro ao excluir categoria. Tente novamente.');
+        }
+    };
+
+    // Confirm Dialog handler
+    const handleConfirm = () => {
+        if (!confirmState.id) return;
+        if (confirmState.action === 'deleteVideo') {
+            executeDeleteVideo(confirmState.id);
+        } else if (confirmState.action === 'deleteCategory') {
+            executeDeleteCategory(confirmState.id);
         }
     };
 
@@ -186,6 +245,15 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     // ============================================
     // RENDER
     // ============================================
+
+    if (initialLoading) {
+        return (
+            <div className="space-y-6">
+                <AdminPageHeader title="Academy" subtitle="Gerencie categorias e vídeos do clube" />
+                <AdminLoadingState message="Carregando Academy..." />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -232,12 +300,14 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             {/* ============================================ */}
             {activeTab === 'videos' && (
                 <>
-                    <DataTable
-                        columns={['Título', 'Categoria', 'Duração']}
-                        data={videos.map(v => ({ ...v, category: getCategoryName(v) }))}
-                        onEdit={(v: Video) => openVideoModal(v)}
-                        onDelete={(id: string) => handleDeleteVideo(id)}
-                    />
+                    <AdminTable title="Vídeos" subtitle={`${videos.length} vídeo(s) cadastrado(s)`}>
+                        <DataTable
+                            columns={['Título', 'Categoria', 'Duração']}
+                            data={videos.map(v => ({ ...v, category: getCategoryName(v) }))}
+                            onEdit={(v: Video) => openVideoModal(v)}
+                            onDelete={(id: string) => requestDeleteVideo(id)}
+                        />
+                    </AdminTable>
 
                     {/* Video Modal */}
                     {isVideoModalOpen && (
@@ -327,11 +397,20 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                 <>
                     {/* Categories Grid */}
                     {categories.length === 0 ? (
-                        <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
-                            <FolderOpen size={48} className="mx-auto text-slate-600 mb-4" />
-                            <p className="text-slate-400 mb-2">Nenhuma categoria criada ainda.</p>
-                            <p className="text-sm text-slate-500">Crie categorias para organizar seus vídeos.</p>
-                        </div>
+                        <AdminEmptyState
+                            icon={<FolderOpen size={48} />}
+                            message="Nenhuma categoria criada ainda."
+                            description="Crie categorias para organizar seus vídeos."
+                            action={
+                                <button
+                                    onClick={() => openCategoryModal()}
+                                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition text-sm font-medium"
+                                >
+                                    <Plus size={16} className="inline mr-1" />
+                                    Criar Categoria
+                                </button>
+                            }
+                        />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categories.map(cat => (
@@ -348,12 +427,20 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
                                         {/* Actions */}
                                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => openCategoryModal(cat)} className="p-1.5 bg-slate-800/80 rounded-lg hover:bg-yellow-600 transition text-white">
-                                                <Pencil size={14} />
-                                            </button>
-                                            <button onClick={() => handleDeleteCategory(cat.id)} className="p-1.5 bg-slate-800/80 rounded-lg hover:bg-red-600 transition text-white">
-                                                <Trash2 size={14} />
-                                            </button>
+                                            <AdminActionButton
+                                                icon={Pencil}
+                                                onClick={() => openCategoryModal(cat)}
+                                                variant="primary"
+                                                title="Editar categoria"
+                                                size={14}
+                                            />
+                                            <AdminActionButton
+                                                icon={Trash2}
+                                                onClick={() => requestDeleteCategory(cat.id)}
+                                                variant="danger"
+                                                title="Excluir categoria"
+                                                size={14}
+                                            />
                                         </div>
                                     </div>
                                     {/* Info */}
@@ -398,6 +485,20 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                     )}
                 </>
             )}
+
+            {/* ============================================ */}
+            {/* CONFIRM DIALOG (shared across tabs) */}
+            {/* ============================================ */}
+            <AdminConfirmDialog
+                isOpen={confirmState.isOpen}
+                onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={handleConfirm}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText="Excluir"
+                isDestructive
+                isLoading={confirmState.isLoading}
+            />
         </div>
     );
 };
