@@ -37,7 +37,7 @@ export const AdminFileUpload: React.FC<AdminFileUploadProps> = ({
     value,
     onUploaded,
     onClear,
-    accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+    accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf',
     label = 'Arquivo',
     hint = 'JPG, PNG, WebP, GIF ou PDF. Máx 10MB.',
     compact = false,

@@ -259,7 +259,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                                     // Clear action URL only if it was the attachment
                                     if (actionUrl === attachmentUrl) setActionUrl('');
                                 }}
-                                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                                accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf"
                                 hint="Anexe PDF ou imagem. Máx 10MB."
                             />
                         </div>

@@ -21,13 +21,12 @@ export type UploadProgressCallback = (percent: number) => void;
 
 class UploadService {
     private getEndpoint(): string {
-        // In dev: Vite proxy or direct XAMPP
-        // In prod: same domain
         const isDev = import.meta.env.DEV;
         if (isDev) {
-            // Use Vite proxy (configured in vite.config.ts) or direct
-            return '/api/upload.php';
+            // XAMPP local: PHP served directly
+            return '/prosperus-club-app/public/api/upload.php';
         }
+        // Prod: served via Nginx location block
         return 'https://prosperusclub.com.br/api/upload.php';
     }
 
