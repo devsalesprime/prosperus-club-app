@@ -50,8 +50,9 @@ export const BottomNav: React.FC = () => {
                     zIndex: 50,
                     background: BG,
                     borderTop: `1px solid ${BORDER}`,
-                    // A safe area abaixo do nav mostra o background do body
-                    // que é a mesma cor navy — visualmente flush sem espaçador
+                    // content-box: padding-bottom from iOS CSS is OUTSIDE the 56px
+                    // so the button area stays fixed at 56px, safe area extends below
+                    boxSizing: 'content-box',
                 }}
             >
                 {bottomNavItems.map(item => {
