@@ -440,31 +440,10 @@
       padding-bottom: calc(5rem + max(env(safe-area-inset-bottom, 0px), 8px)) !important;
     }
 
-    /* ===== iOS BOTTOM NAV FIX ===== */
-    /* O nav ocupa espaço real — não flutua sobre o conteúdo */
-    .bottom-nav-ios {
-      /* env() returns ~34px on iPhones with home indicator, 0 on others */
-      /* Fallback 12px for browsers that don't support env()            */
-      padding-bottom: env(safe-area-inset-bottom, 12px);
-    }
-
-    /* Main content para no topo do nav naturalmente */
-    .main-content-ios {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      min-height: 0;
-    }
-
-    /* Safe area bottom spacer — env() MUST be in CSS, not inline styles */
-    /* iOS WebKit ignores env() in JS-applied inline styles              */
-    .safe-area-spacer-bottom {
-      flex-shrink: 0;
-      height: env(safe-area-inset-bottom, 0px);
-      background: #031A2B;
-    }
+    /* ===== iOS BOTTOM NAV ===== */
+    /* Safe area handling is now self-contained in BottomNav.tsx <style> tag */
+    /* using min-height: calc(56px + env(safe-area-inset-bottom))           */
+    /* and padding-bottom: env(safe-area-inset-bottom)                      */
 
     /* Mobile-specific adjustments */
     @media (max-width: 768px) {

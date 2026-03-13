@@ -1,3 +1,21 @@
+// ============================================
+// BOTTOM NAV — Mobile Navigation (iOS Safe Area Aware)
+// ============================================
+// Layout: The nav absorbs env(safe-area-inset-bottom) into its own
+// background, sitting flush against the screen edge on all devices.
+//
+// Architecture:
+//   <nav>                         ← flex-column, expands into safe area
+//     <div height=56>             ← usable button area (icons + labels)
+//     [safe area padding]         ← CSS padding-bottom via env()
+//
+// CRITICAL:  env() MUST be in a <style> tag — iOS WebKit ignores
+//            env() when applied via JS inline styles.
+// NON-REGRESSION:
+//   - NO overflow:hidden on html/body/#root in React components
+//   - div role="button" (not <button>) to avoid iOS overflow:clip
+//   - Icon 24px, label 11px/14px line-height
+
 import React from 'react';
 import {
     LayoutDashboard,
@@ -27,21 +45,21 @@ export const BottomNav: React.FC = () => {
 
     return (
         <>
-            {/* Esconder no desktop */}
             <style>{`
+                /* ── Nav safe area: absorb bottom inset into nav background ── */
+                /* env() returns ~34px on iPhones with Home Indicator, 0 elsewhere */
+                #prosperus-bottom-nav {
+                    min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+                    padding-bottom: env(safe-area-inset-bottom, 0px);
+                }
+                /* Hide on desktop */
                 @media (min-width: 768px) {
                     #prosperus-bottom-nav { display: none !important; }
                 }
             `}</style>
 
-            {/* ── Nav container: flex-column ──
-                 Row 1: 56px button bar
-                 Row 2: safe-area spacer via .bottom-nav-ios CSS class
-                        (env(safe-area-inset-bottom) — CSS only, not inline)
-                 Android: spacer = 0px. iPhone: spacer = ~34px. */}
             <nav
                 id="prosperus-bottom-nav"
-                className="bottom-nav-ios"
                 style={{
                     flexShrink: 0,
                     width: '100%',
@@ -49,11 +67,14 @@ export const BottomNav: React.FC = () => {
                     flexDirection: 'column',
                     position: 'relative',
                     zIndex: 50,
+                    overflow: 'visible',
                     background: BG,
                     borderTop: `1px solid ${BORDER}`,
                 }}
             >
-                {/* ── Button row: fixed 56px ── */}
+                {/* ── Usable button area: exactly 56px ── */}
+                {/* Icons + labels are vertically centered within this zone */}
+                {/* Safe area padding sits BELOW this div, inside the nav */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'row',
@@ -117,7 +138,6 @@ export const BottomNav: React.FC = () => {
                         );
                     })}
                 </div>
-                {/* Safe area handled by .bottom-nav-ios padding-bottom from index.html CSS */}
             </nav>
         </>
     );

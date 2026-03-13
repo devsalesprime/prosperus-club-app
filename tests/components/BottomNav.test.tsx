@@ -28,7 +28,7 @@ describe('BottomNav', () => {
         expect(screen.getByText('Galeria')).toBeInTheDocument();
     });
 
-    it('renders exactly 5 items from bottomNavItems', () => {
+    it('exports exactly 5 items from bottomNavItems', () => {
         expect(bottomNavItems).toHaveLength(5);
         const labels = bottomNavItems.map(i => i.label);
         expect(labels).toEqual(['Início', 'Agenda', 'Prosperus', 'Sócios', 'Galeria']);
@@ -41,18 +41,27 @@ describe('BottomNav', () => {
         expect(nav?.tagName).toBe('NAV');
     });
 
-    it('applies bottom-nav-ios class for safe area handling', () => {
-        const { container } = render(<BottomNav />);
-        const nav = container.querySelector('#prosperus-bottom-nav');
-        expect(nav?.classList.contains('bottom-nav-ios')).toBe(true);
-    });
-
-    it('contains a 56px button row', () => {
+    it('contains an inner 56px button row', () => {
         const { container } = render(<BottomNav />);
         const nav = container.querySelector('#prosperus-bottom-nav');
         const buttonRow = nav?.firstElementChild as HTMLElement;
         expect(buttonRow).toBeTruthy();
         expect(buttonRow.style.height).toBe('56px');
+    });
+
+    it('nav uses flex-column for safe area expansion', () => {
+        const { container } = render(<BottomNav />);
+        const nav = container.querySelector('#prosperus-bottom-nav') as HTMLElement;
+        expect(nav.style.flexDirection).toBe('column');
+    });
+
+    it('injects <style> tag with env() safe area rules', () => {
+        const { container } = render(<BottomNav />);
+        const styleTag = container.querySelector('style');
+        expect(styleTag).toBeTruthy();
+        expect(styleTag?.textContent).toContain('env(safe-area-inset-bottom');
+        expect(styleTag?.textContent).toContain('min-height');
+        expect(styleTag?.textContent).toContain('padding-bottom');
     });
 
     it('highlights active tab with gold color', () => {
