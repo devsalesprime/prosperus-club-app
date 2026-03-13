@@ -24,6 +24,7 @@ const PORT = 3010;
 
 // --- CONFIG ---
 const SUPABASE_URL = 'https://ptvsctwwonvirdwprugv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0dnNjdHd3b252aXJkd3BydWd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNTc3OTMsImV4cCI6MjA4MDkzMzc5M30.cLcOdaD7WdC4_WyTQwP5eTDO52YJ2LyZZUgVcRj5AwE';
 const UPLOAD_BASE_DIR = '/var/www/pdf/uploads';
 const PUBLIC_BASE_URL = 'https://prosperusclub.com.br/pdf/uploads';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -76,7 +77,7 @@ async function validateSupabaseToken(req, res, next) {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'apikey': token,
+                'apikey': SUPABASE_ANON_KEY,
             },
         });
 
