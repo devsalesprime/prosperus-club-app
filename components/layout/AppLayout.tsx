@@ -57,11 +57,10 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
                 {/* Main: flex-1 → ocupa TUDO entre header e nav */}
                 <main
-                    className="app-scroll-main"
                     style={{
                         flex: 1,
                         minHeight: 0,
-                        overflowY: 'auto',
+                        overflowY: 'scroll',
                         overflowX: 'hidden',
                         overscrollBehavior: 'contain',
                         WebkitOverflowScrolling: 'touch',

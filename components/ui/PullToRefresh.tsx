@@ -36,8 +36,8 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
         <div
             {...bind()}
             ref={scrollRef}
-            className={`overflow-y-auto h-full ${className}`}
-            style={{ touchAction: 'pan-y' }}
+            className={`overflow-y-auto overscroll-contain h-full ${className}`}
+            style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
             {/* Pull indicator */}
             <div
