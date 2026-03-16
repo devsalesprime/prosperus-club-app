@@ -122,3 +122,35 @@ RETURNS void LANGUAGE sql SECURITY DEFINER AS $$
       updated_at     = NOW()
   WHERE id = p_file_id;
 $$;
+
+-- Top downloaders (users ranked by total downloads)
+CREATE OR REPLACE FUNCTION get_top_file_downloaders(
+  p_period TEXT DEFAULT '30d'
+)
+RETURNS TABLE (
+  user_id         UUID,
+  user_name       TEXT,
+  user_image      TEXT,
+  user_company    TEXT,
+  total_downloads BIGINT,
+  unique_files    BIGINT,
+  last_download   TIMESTAMPTZ
+) LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT
+    p.id,
+    p.name,
+    p.image_url,
+    p.company,
+    COUNT(d.id)              AS total_downloads,
+    COUNT(DISTINCT d.file_id) AS unique_files,
+    MAX(d.downloaded_at)     AS last_download
+  FROM file_downloads d
+  JOIN profiles p ON p.id = d.user_id
+  WHERE (
+    p_period = 'all'
+    OR d.downloaded_at > NOW() - (p_period::INTERVAL)
+  )
+  GROUP BY p.id, p.name, p.image_url, p.company
+  ORDER BY total_downloads DESC
+  LIMIT 20;
+$$;

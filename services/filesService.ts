@@ -181,3 +181,22 @@ export async function getFileDownloadStats(period: string = '30d'): Promise<File
     if (error) { console.error('[filesService] getFileDownloadStats error:', error); return []; }
     return data ?? [];
 }
+
+// ========== TOP DOWNLOADERS ==========
+
+export interface TopDownloader {
+    user_id: string;
+    user_name: string;
+    user_image: string | null;
+    user_company: string | null;
+    total_downloads: number;
+    unique_files: number;
+    last_download: string | null;
+}
+
+export async function getTopFileDownloaders(period: string = '30d'): Promise<TopDownloader[]> {
+    const { data, error } = await supabase
+        .rpc('get_top_file_downloaders', { p_period: period });
+    if (error) { console.error('[filesService] getTopFileDownloaders error:', error); return []; }
+    return data ?? [];
+}

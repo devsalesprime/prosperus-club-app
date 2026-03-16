@@ -68,7 +68,7 @@ import {
 } from './shared';
 import { AdminBenefitKpiCards } from './AdminBenefitKpiCards';
 import { TopBenefitsTable } from './TopBenefitsTable';
-import { getFileDownloadStats, FileDownloadStat } from '../../services/filesService';
+import { getFileDownloadStats, FileDownloadStat, getTopFileDownloaders, TopDownloader } from '../../services/filesService';
 
 // ============================================
 // CHART COLORS
@@ -171,6 +171,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const [academy, setAcademy] = useState<AcademyCompletion | null>(null);
     const [attendance, setAttendance] = useState<EventAttendance | null>(null);
     const [fileStats, setFileStats] = useState<FileDownloadStat[]>([]);
+    const [topDownloaders, setTopDownloaders] = useState<TopDownloader[]>([]);
 
     const days = periodToDays(period);
 
@@ -195,6 +196,7 @@ export const AnalyticsDashboard: React.FC = () => {
 
             // Load file stats separately (non-blocking)
             getFileDownloadStats(period).then(setFileStats).catch(console.error);
+            getTopFileDownloaders(period).then(setTopDownloaders).catch(console.error);
 
             setStats(statsData);
             setDailyActivity(activityData);
@@ -918,6 +920,58 @@ export const AnalyticsDashboard: React.FC = () => {
                     {fileStats.filter(s => s.total_downloads > 0).length === 0 && (
                         <p className="text-slate-500 text-sm text-center py-4">Nenhum download no período.</p>
                     )}
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════ */}
+            {/* TOP DOWNLOADERS SECTION                                */}
+            {/* ═══════════════════════════════════════════════════════ */}
+            {topDownloaders.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Users size={20} className="text-yellow-500" />
+                        <h3 className="font-bold text-white">Sócios Mais Engajados (Downloads)</h3>
+                        <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
+                            {periodLabel(period)}
+                        </span>
+                    </div>
+                    <div className="space-y-2">
+                        {topDownloaders.slice(0, 10).map((user, index) => (
+                            <div key={user.user_id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                                <span className={`text-xs font-bold w-5 text-right ${
+                                    index === 0 ? 'text-yellow-400' :
+                                    index === 1 ? 'text-slate-300' :
+                                    index === 2 ? 'text-amber-600' :
+                                    'text-slate-500'
+                                }`}>
+                                    #{index + 1}
+                                </span>
+                                <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-700 shrink-0">
+                                    {user.user_image ? (
+                                        <img src={user.user_image} alt={user.user_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-400">
+                                            {user.user_name?.charAt(0) || '?'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate font-medium">{user.user_name}</p>
+                                    {user.user_company && (
+                                        <p className="text-xs text-slate-500 truncate">{user.user_company}</p>
+                                    )}
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <span className="text-sm font-bold text-yellow-400">
+                                        {user.total_downloads}
+                                    </span>
+                                    <p className="text-[10px] text-slate-500">
+                                        {user.unique_files} arquivo{Number(user.unique_files) !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 
