@@ -3,6 +3,7 @@
 
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { isAbortError } from '../utils/isAbortError';
 
 export interface UserProfile {
     id: string;
@@ -62,6 +63,7 @@ class AdminUserService {
             .single();
 
         if (error) {
+            if (isAbortError(error)) return null;
             logger.error('Error fetching user profile:', error);
             return null;
         }
@@ -180,6 +182,7 @@ class AdminUserService {
             .order('blocked_at', { ascending: false });
 
         if (error) {
+            if (isAbortError(error)) return [];
             logger.error('Error fetching blocked users:', error);
             return [];
         }

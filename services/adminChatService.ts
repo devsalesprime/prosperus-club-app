@@ -4,6 +4,7 @@
 
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { isAbortError } from '../utils/isAbortError';
 
 // Types
 export interface ConversationWithParticipants {
@@ -120,7 +121,7 @@ class AdminChatService {
                         `)
                         .eq('conversation_id', conv.id);
 
-                    // Buscar última mensagem
+                    // Buscar última mensagem (.maybeSingle — pode não ter mensagens)
                     const { data: lastMessage } = await supabase
                         .from('messages')
                         .select('id, content, created_at, sender_id, is_deleted')
@@ -128,7 +129,7 @@ class AdminChatService {
                         .eq('is_deleted', false)
                         .order('created_at', { ascending: false })
                         .limit(1)
-                        .single();
+                        .maybeSingle();
 
                     // Contar mensagens
                     const { count: messageCount } = await supabase
@@ -175,6 +176,7 @@ class AdminChatService {
                 hasMore: offset + limit < (count || 0)
             };
         } catch (error) {
+            if (isAbortError(error)) return { data: [], total: 0, page, limit, hasMore: false };
             logger.error('Error in getAllConversations:', error);
             throw error;
         }
@@ -236,6 +238,7 @@ class AdminChatService {
             logger.debug(`✅ Admin: Found ${mappedMessages.length} messages`);
             return mappedMessages;
         } catch (error) {
+            if (isAbortError(error)) return [];
             logger.error('Error in getConversationMessages:', error);
             throw error;
         }
@@ -274,6 +277,7 @@ class AdminChatService {
 
             return true;
         } catch (error) {
+            if (isAbortError(error)) return false;
             logger.error('Error in deleteMessage:', error);
             throw error;
         }
@@ -305,6 +309,7 @@ class AdminChatService {
             logger.debug(`✅ Admin: Message ${messageId} restored`);
             return true;
         } catch (error) {
+            if (isAbortError(error)) return false;
             logger.error('Error restoring message:', error);
             throw error;
         }
@@ -372,6 +377,7 @@ class AdminChatService {
                 sender: adminProfile || { id: adminId, name: 'Suporte', email: '', image_url: null }
             };
         } catch (error) {
+            if (isAbortError(error)) return { id: '', conversation_id: conversationId, sender_id: adminId, content: '', created_at: '', is_read: false, is_deleted: false, sender: { id: adminId, name: 'Suporte', email: '', image_url: null } };
             logger.error('Error in sendAdminMessage:', error);
             throw error;
         }

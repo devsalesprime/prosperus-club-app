@@ -6,6 +6,7 @@
 
 import { supabase } from '../lib/supabase';
 import { Deal, DealStatus, RankingEntry } from '../types';
+import { isAbortError } from '../utils/isAbortError';
 
 export interface AdminDealFilters {
     status?: DealStatus[];
@@ -102,6 +103,7 @@ class AdminBusinessService {
         const { data, error, count } = await query;
 
         if (error) {
+            if (isAbortError(error)) return { data: [], total: 0 };
             console.error('Error fetching deals:', error);
             throw new Error('Erro ao buscar negócios');
         }
@@ -132,6 +134,7 @@ class AdminBusinessService {
         });
 
         if (error) {
+            if (isAbortError(error)) return;
             console.error('Error auditing deal:', error);
             throw new Error(error.message || 'Erro ao auditar negócio');
         }
@@ -213,6 +216,7 @@ class AdminBusinessService {
         });
 
         if (error) {
+            if (isAbortError(error)) return 0;
             console.error('Error bulk auditing deals:', error);
             throw new Error(error.message || 'Erro ao auditar negócios em lote');
         }
@@ -230,6 +234,7 @@ class AdminBusinessService {
             .order('created_at', { ascending: true });
 
         if (error) {
+            if (isAbortError(error)) return [];
             console.error('Error fetching contested deals:', error);
             throw new Error('Erro ao buscar negócios contestados');
         }
@@ -248,6 +253,7 @@ class AdminBusinessService {
             .order('amount', { ascending: false });
 
         if (error) {
+            if (isAbortError(error)) return [];
             console.error('Error fetching high-value deals:', error);
             throw new Error('Erro ao buscar negócios de alto valor');
         }
@@ -266,6 +272,7 @@ class AdminBusinessService {
             .limit(100);
 
         if (error) {
+            if (isAbortError(error)) return [];
             console.error('Error fetching official rankings:', error);
             throw new Error('Erro ao buscar rankings oficiais');
         }
@@ -290,6 +297,7 @@ class AdminBusinessService {
         });
 
         if (error) {
+            if (isAbortError(error)) return { totalVolume: 0, avgTicket: 0, dealsCount: 0, confirmedCount: 0, auditedCount: 0, contestedCount: 0, invalidatedCount: 0, pendingCount: 0, highValueCount: 0 };
             console.error('Error fetching admin KPIs:', error);
             throw new Error('Erro ao buscar KPIs administrativos');
         }
@@ -318,6 +326,7 @@ class AdminBusinessService {
             .limit(50);
 
         if (error) {
+            if (isAbortError(error)) return [];
             console.error('Error fetching suspicious deals:', error);
             throw new Error('Erro ao buscar negócios suspeitos');
         }
@@ -419,6 +428,7 @@ class AdminBusinessService {
             .order('updated_at', { ascending: true });
 
         if (error) {
+            if (isAbortError(error)) return [];
             console.error('Error fetching contested referrals:', error);
             throw new Error('Erro ao buscar indicações contestadas');
         }
@@ -466,6 +476,7 @@ class AdminBusinessService {
             .eq('id', referralId);
 
         if (error) {
+            if (isAbortError(error)) return;
             console.error('Error resolving contested referral:', error);
             throw new Error(error.message || 'Erro ao resolver indicação contestada');
         }
