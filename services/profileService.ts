@@ -3,6 +3,7 @@
 import { supabase } from '../lib/supabase';
 import { fetchWithOfflineCache, cacheData, getCachedData } from './offlineStorage';
 import { logger } from '../utils/logger';
+import { isAbortError } from '../utils/isAbortError';
 
 export interface ProfileData {
     id: string;
@@ -104,6 +105,7 @@ class ProfileService {
                 const { data, error } = result as { data: ProfileData | null; error: any };
 
                 if (error) {
+                    if (isAbortError(error)) throw error; // handled in outer catch
                     logger.error('❌ profileService.getProfile: Supabase error:', {
                         code: error.code,
                         message: error.message,
@@ -125,12 +127,15 @@ class ProfileService {
 
             return null;
         } catch (error: any) {
-            logger.error('❌ profileService.getProfile: Exception caught:', {
-                name: error?.name,
-                message: error?.message,
-                code: error?.code,
-                userId
-            });
+            // Silently handle AbortError — fall through to cache
+            if (!isAbortError(error)) {
+                logger.error('❌ profileService.getProfile: Exception caught:', {
+                    name: error?.name,
+                    message: error?.message,
+                    code: error?.code,
+                    userId
+                });
+            }
 
             // Fallback to offline cache
             const cached = await getCachedData<ProfileData>(cacheKey);

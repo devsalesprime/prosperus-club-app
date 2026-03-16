@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 import { GalleryAlbum } from '../types';
 import { fetchWithOfflineCache } from './offlineStorage';
+import { isAbortError } from '../utils/isAbortError';
 
 /**
  * Gallery Service - CRUD operations for Gallery Albums
@@ -23,6 +24,7 @@ export const galleryService = {
                     .order('createdAt', { ascending: false });
 
                 if (error) {
+                    if (isAbortError(error)) return [];
                     logger.error('Error fetching gallery albums:', error);
                     throw error;
                 }
@@ -90,6 +92,7 @@ export const galleryService = {
             .single();
 
         if (error) {
+            if (isAbortError(error)) throw error; // createAlbum must propagate to show user error
             logger.error('Error creating album:', error);
             throw error;
         }
@@ -109,6 +112,7 @@ export const galleryService = {
             .single();
 
         if (error) {
+            if (isAbortError(error)) throw error;
             logger.error('Error updating album:', error);
             throw error;
         }
@@ -126,6 +130,7 @@ export const galleryService = {
             .eq('id', id);
 
         if (error) {
+            if (isAbortError(error)) throw error;
             logger.error('Error deleting album:', error);
             throw error;
         }
