@@ -1,9 +1,22 @@
 // analyticsService.ts
 // Sistema de Analytics Interno - Fire and Forget Event Tracking
 // Captura métricas de uso silenciosamente sem impactar performance
+//
+// ═══════════════════════════════════════════════════════════════
+// FASE A.1 — Refatoração: RPCs no lugar de downloads em massa
+// - getDashboardStats → get_dashboard_stats_with_trends (RPC)
+// - getActivityByDay  → get_daily_activity_stats (RPC)
+// - getTopVideos/Articles → get_top_content (RPC)
+// - getEventBreakdown → get_event_type_breakdown (RPC)
+// - getBenefitOverview → get_benefit_overview_stats (RPC)
+// - getBenefitEngagement → get_benefit_engagement_stats (RPC)
+// - Trends calculados via período anterior (não mais hardcoded)
+// - isAbortError guard em todas as queries admin
+// ═══════════════════════════════════════════════════════════════
 
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { isAbortError } from '../utils/isAbortError';
 
 // ============================================
 // TYPES
@@ -106,6 +119,19 @@ const getDeviceInfo = (): DeviceInfo => {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     };
 };
+
+// ============================================
+// TREND CALCULATION HELPER
+// ============================================
+
+/**
+ * Calculate trend percentage: ((current - previous) / previous) * 100
+ * Returns null if no previous data to compare against
+ */
+function calcTrend(current: number, previous: number): number | null {
+    if (previous === 0) return current > 0 ? 100 : null;
+    return Math.round(((current - previous) / previous) * 100);
+}
 
 // ============================================
 // ANALYTICS SERVICE
@@ -367,6 +393,7 @@ class AnalyticsService {
                 .rpc('get_my_benefit_stats');
 
             if (error) {
+                if (isAbortError(error)) return null;
                 // No stats yet - return zeros
                 if (error.code === 'PGRST116' || error.message?.includes('no rows')) {
                     return {
@@ -400,13 +427,14 @@ class AnalyticsService {
                 lastActivityAt: null
             };
         } catch (error) {
+            if (isAbortError(error)) return null;
             logger.error('[Analytics] Error fetching benefit stats:', error);
             return null;
         }
     }
 
     // ========================================
-    // BENEFIT ANALYTICS - ADMIN LEVEL
+    // BENEFIT ANALYTICS - ADMIN LEVEL (RPCs)
     // ========================================
 
     /**
@@ -427,7 +455,10 @@ class AnalyticsService {
                 .order('total_clicks', { ascending: false })
                 .limit(limit);
 
-            if (error) throw error;
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
 
             // Fetch owner names
             if (!data || data.length === 0) return [];
@@ -438,7 +469,10 @@ class AnalyticsService {
                 .select('id, name, exclusive_benefit')
                 .in('id', ownerIds);
 
-            if (profileError) throw profileError;
+            if (profileError) {
+                if (isAbortError(profileError)) return [];
+                throw profileError;
+            }
 
             // Merge data
             return data.map(stat => {
@@ -454,6 +488,7 @@ class AnalyticsService {
                 };
             });
         } catch (error) {
+            if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching top benefits:', error);
             return [];
         }
@@ -461,307 +496,187 @@ class AnalyticsService {
 
     /**
      * Get benefit overview stats (Admin only)
-     * Aggregated stats across all benefits
+     * ✅ REFACTORED: Uses RPC instead of downloading all stats for JS .reduce()
      */
     async getBenefitOverview(): Promise<BenefitOverview> {
+        const EMPTY: BenefitOverview = {
+            activeBenefits: 0,
+            totalViews: 0,
+            totalClicks: 0,
+            totalUniqueVisitors: 0,
+            avgCtrPercent: 0,
+            benefitsWithActivity: 0
+        };
+
         try {
-            // Count active benefits
-            const { count: activeBenefitsCount, error: countError } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .not('exclusive_benefit', 'is', null)
-                .eq('exclusive_benefit->>active', 'true');
+            const { data, error } = await supabase
+                .rpc('get_benefit_overview_stats');
 
-            if (countError) throw countError;
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
 
-            // Get aggregated stats from view
-            const { data: stats, error: statsError } = await supabase
-                .from('view_benefit_stats')
-                .select('total_views, total_clicks, unique_visitors');
-
-            if (statsError) throw statsError;
-
-            // Calculate totals
-            const totalViews = stats?.reduce((sum, s) => sum + (s.total_views || 0), 0) || 0;
-            const totalClicks = stats?.reduce((sum, s) => sum + (s.total_clicks || 0), 0) || 0;
-            const totalUniqueVisitors = stats?.reduce((sum, s) => sum + (s.unique_visitors || 0), 0) || 0;
-            const avgCtr = totalViews > 0 ? (totalClicks / totalViews * 100) : 0;
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
 
             return {
-                activeBenefits: activeBenefitsCount || 0,
-                totalViews,
-                totalClicks,
-                totalUniqueVisitors,
-                avgCtrPercent: parseFloat(avgCtr.toFixed(2)),
-                benefitsWithActivity: stats?.length || 0
+                activeBenefits: Number(row.active_benefits) || 0,
+                totalViews: Number(row.total_views) || 0,
+                totalClicks: Number(row.total_clicks) || 0,
+                totalUniqueVisitors: Number(row.total_unique_visitors) || 0,
+                avgCtrPercent: parseFloat(row.avg_ctr_percent) || 0,
+                benefitsWithActivity: Number(row.benefits_with_activity) || 0
             };
         } catch (error) {
+            if (isAbortError(error)) return EMPTY;
             logger.error('[Analytics] Error fetching benefit overview:', error);
-            return {
-                activeBenefits: 0,
-                totalViews: 0,
-                totalClicks: 0,
-                totalUniqueVisitors: 0,
-                avgCtrPercent: 0,
-                benefitsWithActivity: 0
-            };
+            return EMPTY;
         }
     }
 
     /**
      * Get benefit engagement metrics (Admin only)
-     * Shows how many members are engaging with benefits
+     * ✅ REFACTORED: Uses RPC with COUNT(DISTINCT) instead of downloading visitor_ids to JS
      */
     async getBenefitEngagement(days: number = 30): Promise<BenefitEngagement> {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        const startDateStr = startDate.toISOString();
+        const EMPTY: BenefitEngagement = {
+            uniqueViewers: 0,
+            uniqueClickers: 0,
+            totalMembers: 0,
+            engagementRate: 0,
+            conversionRate: 0,
+            period: days
+        };
 
         try {
-            // Count unique users who viewed any benefit
-            const { data: viewData, error: viewError } = await supabase
-                .from('benefit_analytics')
-                .select('visitor_id')
-                .eq('action', 'VIEW')
-                .gte('created_at', startDateStr)
-                .not('visitor_id', 'is', null);
+            const { data, error } = await supabase
+                .rpc('get_benefit_engagement_stats', { p_days: days });
 
-            if (viewError) throw viewError;
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
 
-            // Count unique users who clicked any benefit
-            const { data: clickData, error: clickError } = await supabase
-                .from('benefit_analytics')
-                .select('visitor_id')
-                .eq('action', 'CLICK')
-                .gte('created_at', startDateStr)
-                .not('visitor_id', 'is', null);
-
-            if (clickError) throw clickError;
-
-            const uniqueViewers = new Set(viewData?.map(d => d.visitor_id) || []).size;
-            const uniqueClickers = new Set(clickData?.map(d => d.visitor_id) || []).size;
-
-            // Get total member count for percentage
-            const { count: totalMembers, error: memberError } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true });
-
-            if (memberError) throw memberError;
-
-            const engagementRate = totalMembers && totalMembers > 0
-                ? (uniqueViewers / totalMembers * 100)
-                : 0;
-
-            const conversionRate = uniqueViewers > 0
-                ? (uniqueClickers / uniqueViewers * 100)
-                : 0;
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
 
             return {
-                uniqueViewers,
-                uniqueClickers,
-                totalMembers: totalMembers || 0,
-                engagementRate: parseFloat(engagementRate.toFixed(2)),
-                conversionRate: parseFloat(conversionRate.toFixed(2)),
+                uniqueViewers: Number(row.unique_viewers) || 0,
+                uniqueClickers: Number(row.unique_clickers) || 0,
+                totalMembers: Number(row.total_members) || 0,
+                engagementRate: parseFloat(row.engagement_rate) || 0,
+                conversionRate: parseFloat(row.conversion_rate) || 0,
                 period: days
             };
         } catch (error) {
+            if (isAbortError(error)) return EMPTY;
             logger.error('[Analytics] Error fetching benefit engagement:', error);
-            return {
-                uniqueViewers: 0,
-                uniqueClickers: 0,
-                totalMembers: 0,
-                engagementRate: 0,
-                conversionRate: 0,
-                period: days
-            };
+            return EMPTY;
         }
     }
 
     // ========================================
-    // DASHBOARD STATS (ADMIN)
+    // DASHBOARD STATS (ADMIN) — RPCs
     // ========================================
 
     /**
      * Get dashboard statistics for admin panel
+     * ✅ REFACTORED: Uses single RPC that returns current + previous period
+     * for real trend calculation
      */
-    async getDashboardStats(period: '7d' | '30d' = '30d'): Promise<DashboardStats> {
-        const days = period === '7d' ? 7 : 30;
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        const startDateStr = startDate.toISOString();
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString();
+    async getDashboardStats(period: '7d' | '30d' | '90d' = '30d'): Promise<DashboardStats> {
+        const days = period === '7d' ? 7 : period === '90d' ? 90 : 30;
+        const EMPTY: DashboardStats = {
+            activeUsersToday: 0,
+            newMembersMonth: 0,
+            messagesSent: 0,
+            videosCompleted: 0,
+            totalEvents: 0,
+            period,
+            trendNewMembers: null,
+            trendMessages: null,
+            trendVideos: null,
+            trendEvents: null
+        };
 
         try {
-            // Parallel queries for performance
-            const [
-                activeUsersToday,
-                newMembersMonth,
-                messagesSent,
-                videosCompleted,
-                totalEvents
-            ] = await Promise.all([
-                // Active users today (distinct user_id)
-                supabase
-                    .from('analytics_events')
-                    .select('user_id', { count: 'exact', head: true })
-                    .gte('created_at', todayStr)
-                    .not('user_id', 'is', null),
+            const { data, error } = await supabase
+                .rpc('get_dashboard_stats_with_trends', { p_days: days });
 
-                // New members this month
-                supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', startDateStr),
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
 
-                // Messages sent in period
-                supabase
-                    .from('analytics_events')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('event_type', 'MESSAGE_SENT')
-                    .gte('created_at', startDateStr),
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
 
-                // Videos completed in period
-                supabase
-                    .from('analytics_events')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('event_type', 'VIDEO_COMPLETE')
-                    .gte('created_at', startDateStr),
+            const current = {
+                activeUsersToday: Number(row.active_users_today) || 0,
+                newMembers: Number(row.new_members) || 0,
+                messagesSent: Number(row.messages_sent) || 0,
+                videosCompleted: Number(row.videos_completed) || 0,
+                totalEvents: Number(row.total_events) || 0,
+            };
 
-                // Total events in period
-                supabase
-                    .from('analytics_events')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', startDateStr)
-            ]);
+            const prev = {
+                newMembers: Number(row.prev_new_members) || 0,
+                messagesSent: Number(row.prev_messages_sent) || 0,
+                videosCompleted: Number(row.prev_videos_completed) || 0,
+                totalEvents: Number(row.prev_total_events) || 0,
+            };
 
             return {
-                activeUsersToday: activeUsersToday.count || 0,
-                newMembersMonth: newMembersMonth.count || 0,
-                messagesSent: messagesSent.count || 0,
-                videosCompleted: videosCompleted.count || 0,
-                totalEvents: totalEvents.count || 0,
-                period
+                activeUsersToday: current.activeUsersToday,
+                newMembersMonth: current.newMembers,
+                messagesSent: current.messagesSent,
+                videosCompleted: current.videosCompleted,
+                totalEvents: current.totalEvents,
+                period,
+                trendNewMembers: calcTrend(current.newMembers, prev.newMembers),
+                trendMessages: calcTrend(current.messagesSent, prev.messagesSent),
+                trendVideos: calcTrend(current.videosCompleted, prev.videosCompleted),
+                trendEvents: calcTrend(current.totalEvents, prev.totalEvents),
             };
         } catch (error) {
+            if (isAbortError(error)) return EMPTY;
             logger.error('[Analytics] Error fetching dashboard stats:', error);
-            return {
-                activeUsersToday: 0,
-                newMembersMonth: 0,
-                messagesSent: 0,
-                videosCompleted: 0,
-                totalEvents: 0,
-                period
-            };
+            return EMPTY;
         }
     }
 
     /**
      * Get activity by day for chart
-     * Includes both regular analytics events and benefit analytics
+     * ✅ REFACTORED: Uses RPC — Postgres does GROUP BY instead of downloading ALL rows
      */
     async getActivityByDay(days: number = 30): Promise<DailyActivity[]> {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        const startDateStr = startDate.toISOString();
-
         try {
-            // Fetch regular analytics events
-            const { data: analyticsData, error: analyticsError } = await supabase
-                .from('analytics_events')
-                .select('created_at, event_type')
-                .gte('created_at', startDateStr)
-                .order('created_at', { ascending: true });
+            const { data, error } = await supabase
+                .rpc('get_daily_activity_stats', { p_days: days });
 
-            if (analyticsError) throw analyticsError;
-
-            // Fetch benefit analytics events
-            const { data: benefitData, error: benefitError } = await supabase
-                .from('benefit_analytics')
-                .select('created_at, action')
-                .gte('created_at', startDateStr)
-                .order('created_at', { ascending: true });
-
-            if (benefitError) {
-                logger.warn('[Analytics] Error fetching benefit analytics:', benefitError);
-                // Continue without benefit data if there's an error
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
             }
 
-            // Group by day
-            const grouped: Record<string, {
-                total: number;
-                pageViews: number;
-                videos: number;
-                messages: number;
-                benefitViews: number;
-                benefitClicks: number;
-            }> = {};
-
-            // Process regular analytics events
-            (analyticsData || []).forEach(event => {
-                const date = new Date(event.created_at).toISOString().split('T')[0];
-                if (!grouped[date]) {
-                    grouped[date] = {
-                        total: 0,
-                        pageViews: 0,
-                        videos: 0,
-                        messages: 0,
-                        benefitViews: 0,
-                        benefitClicks: 0
-                    };
-                }
-                grouped[date].total++;
-                if (event.event_type === 'PAGE_VIEW') grouped[date].pageViews++;
-                if (event.event_type === 'VIDEO_START' || event.event_type === 'VIDEO_COMPLETE') grouped[date].videos++;
-                if (event.event_type === 'MESSAGE_SENT') grouped[date].messages++;
-            });
-
-            // Process benefit analytics events
-            (benefitData || []).forEach(event => {
-                const date = new Date(event.created_at).toISOString().split('T')[0];
-                if (!grouped[date]) {
-                    grouped[date] = {
-                        total: 0,
-                        pageViews: 0,
-                        videos: 0,
-                        messages: 0,
-                        benefitViews: 0,
-                        benefitClicks: 0
-                    };
-                }
-                grouped[date].total++;
-                if (event.action === 'VIEW') grouped[date].benefitViews++;
-                if (event.action === 'CLICK') grouped[date].benefitClicks++;
-            });
-
-            // Convert to array and fill missing days
-            const result: DailyActivity[] = [];
-            for (let i = 0; i < days; i++) {
-                const d = new Date();
-                d.setDate(d.getDate() - (days - 1 - i));
-                const dateStr = d.toISOString().split('T')[0];
-                const dayData = grouped[dateStr] || {
-                    total: 0,
-                    pageViews: 0,
-                    videos: 0,
-                    messages: 0,
-                    benefitViews: 0,
-                    benefitClicks: 0
-                };
-                result.push({
+            // RPC now returns generate_series rows (always p_days rows, zero-filled)
+            // activity_date is TEXT 'YYYY-MM-DD' — no timezone ambiguity
+            return (data || []).map((row: any) => {
+                const dateStr = String(row.activity_date || '');
+                // Safe date parse: append T12:00:00Z to avoid browser timezone shifting the day
+                const d = new Date(dateStr + 'T12:00:00Z');
+                return {
                     date: dateStr,
-                    label: d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
-                    total: dayData.total,
-                    pageViews: dayData.pageViews,
-                    videos: dayData.videos,
-                    messages: dayData.messages
-                });
-            }
-
-            return result;
+                    label: d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' }),
+                    total: Number(row.total) || 0,
+                    pageViews: Number(row.page_views) || 0,
+                    videos: Number(row.videos) || 0,
+                    messages: Number(row.messages) || 0,
+                };
+            });
         } catch (error) {
+            if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching activity by day:', error);
             return [];
         }
@@ -769,36 +684,29 @@ class AnalyticsService {
 
     /**
      * Get top videos by view count
+     * ✅ REFACTORED: Uses RPC with date filter — no more downloading ALL metadata
      */
-    async getTopVideos(limit: number = 5): Promise<TopContent[]> {
+    async getTopVideos(limit: number = 5, days: number = 30): Promise<TopContent[]> {
         try {
             const { data, error } = await supabase
-                .from('analytics_events')
-                .select('metadata')
-                .eq('event_type', 'VIDEO_START')
-                .not('metadata', 'is', null);
+                .rpc('get_top_content', {
+                    p_event_type: 'VIDEO_START',
+                    p_days: days,
+                    p_limit: limit
+                });
 
-            if (error) throw error;
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
 
-            // Count by video_id
-            const counts: Record<string, { id: string; title: string; count: number }> = {};
-
-            (data || []).forEach(event => {
-                const meta = event.metadata as any;
-                const videoId = meta?.video_id;
-                const title = meta?.video_title || 'Sem título';
-                if (videoId) {
-                    if (!counts[videoId]) {
-                        counts[videoId] = { id: videoId, title, count: 0 };
-                    }
-                    counts[videoId].count++;
-                }
-            });
-
-            return Object.values(counts)
-                .sort((a, b) => b.count - a.count)
-                .slice(0, limit);
+            return (data || []).map((row: any) => ({
+                id: row.content_id,
+                title: row.content_title || 'Sem título',
+                count: Number(row.view_count) || 0
+            }));
         } catch (error) {
+            if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching top videos:', error);
             return [];
         }
@@ -806,36 +714,29 @@ class AnalyticsService {
 
     /**
      * Get top articles by read count
+     * ✅ REFACTORED: Uses RPC with date filter — no more downloading ALL metadata
      */
-    async getTopArticles(limit: number = 5): Promise<TopContent[]> {
+    async getTopArticles(limit: number = 5, days: number = 30): Promise<TopContent[]> {
         try {
             const { data, error } = await supabase
-                .from('analytics_events')
-                .select('metadata')
-                .eq('event_type', 'ARTICLE_READ')
-                .not('metadata', 'is', null);
+                .rpc('get_top_content', {
+                    p_event_type: 'ARTICLE_READ',
+                    p_days: days,
+                    p_limit: limit
+                });
 
-            if (error) throw error;
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
 
-            // Count by article_id
-            const counts: Record<string, { id: string; title: string; count: number }> = {};
-
-            (data || []).forEach(event => {
-                const meta = event.metadata as any;
-                const articleId = meta?.article_id;
-                const title = meta?.article_title || 'Sem título';
-                if (articleId) {
-                    if (!counts[articleId]) {
-                        counts[articleId] = { id: articleId, title, count: 0 };
-                    }
-                    counts[articleId].count++;
-                }
-            });
-
-            return Object.values(counts)
-                .sort((a, b) => b.count - a.count)
-                .slice(0, limit);
+            return (data || []).map((row: any) => ({
+                id: row.content_id,
+                title: row.content_title || 'Sem título',
+                count: Number(row.view_count) || 0
+            }));
         } catch (error) {
+            if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching top articles:', error);
             return [];
         }
@@ -843,32 +744,200 @@ class AnalyticsService {
 
     /**
      * Get event breakdown by type
+     * ✅ REFACTORED: Uses RPC — Postgres does GROUP BY instead of counting in JS
      */
     async getEventBreakdown(days: number = 30): Promise<EventBreakdown[]> {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
+        try {
+            const { data, error } = await supabase
+                .rpc('get_event_type_breakdown', { p_days: days });
+
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
+
+            return (data || []).map((row: any) => ({
+                name: row.event_name,
+                value: Number(row.event_count) || 0
+            }));
+        } catch (error) {
+            if (isAbortError(error)) return [];
+            logger.error('[Analytics] Error fetching event breakdown:', error);
+            return [];
+        }
+    }
+
+    // ========================================
+    // BUSINESS INTELLIGENCE — Fase B RPCs
+    // ========================================
+
+    /**
+     * Get networking funnel: Referrals → Deals → Audited Deals
+     * ✅ Via RPC get_networking_funnel
+     */
+    async getNetworkingFunnel(days: number = 30): Promise<NetworkingFunnel> {
+        const EMPTY: NetworkingFunnel = {
+            totalReferrals: 0,
+            totalDeals: 0,
+            auditedDeals: 0,
+            auditedVolume: 0,
+            conversionRate: 0
+        };
 
         try {
             const { data, error } = await supabase
-                .from('analytics_events')
-                .select('event_type')
-                .gte('created_at', startDate.toISOString());
+                .rpc('get_networking_funnel', { p_days: days });
 
-            if (error) throw error;
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
 
-            // Count by event_type
-            const counts: Record<string, number> = {};
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
 
-            (data || []).forEach(event => {
-                counts[event.event_type] = (counts[event.event_type] || 0) + 1;
-            });
-
-            return Object.entries(counts)
-                .map(([name, value]) => ({ name, value }))
-                .sort((a, b) => b.value - a.value);
+            return {
+                totalReferrals: Number(row.total_referrals) || 0,
+                totalDeals: Number(row.total_deals) || 0,
+                auditedDeals: Number(row.audited_deals) || 0,
+                auditedVolume: parseFloat(row.audited_volume) || 0,
+                conversionRate: parseFloat(row.conversion_rate) || 0
+            };
         } catch (error) {
-            logger.error('[Analytics] Error fetching event breakdown:', error);
+            if (isAbortError(error)) return EMPTY;
+            logger.error('[Analytics] Error fetching networking funnel:', error);
+            return EMPTY;
+        }
+    }
+
+    /**
+     * Get top ROI members ranked by audited deal volume
+     * ✅ Via RPC get_top_roi_members
+     */
+    async getTopRoiMembers(days: number = 30, limit: number = 10): Promise<TopRoiMember[]> {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_top_roi_members', { p_days: days, p_limit: limit });
+
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
+
+            return (data || []).map((row: any) => ({
+                memberId: row.member_id,
+                memberName: row.member_name || 'Desconhecido',
+                memberImage: row.member_image || null,
+                dealCount: Number(row.deal_count) || 0,
+                totalVolume: parseFloat(row.total_volume) || 0
+            }));
+        } catch (error) {
+            if (isAbortError(error)) return [];
+            logger.error('[Analytics] Error fetching top ROI members:', error);
             return [];
+        }
+    }
+
+    /**
+     * Get members at churn risk: inactive + no deals
+     * ✅ Via RPC get_churn_risk_members
+     */
+    async getChurnRiskMembers(daysInactive: number = 14): Promise<ChurnRiskMember[]> {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_churn_risk_members', { p_days_inactive: daysInactive });
+
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
+
+            return (data || []).map((row: any) => ({
+                memberId: row.member_id,
+                memberName: row.member_name || 'Desconhecido',
+                memberEmail: row.member_email || '',
+                memberImage: row.member_image || null,
+                phone: row.member_phone || null,
+                lastAccess: row.last_access || null,
+                daysInactive: Number(row.days_inactive) || 0,
+                dealsLast60d: Number(row.deals_last_60d) || 0
+            }));
+        } catch (error) {
+            if (isAbortError(error)) return [];
+            logger.error('[Analytics] Error fetching churn risk members:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Get Academy completion rate: VIDEO_START vs VIDEO_COMPLETE
+     * ✅ Via RPC get_academy_completion_rate
+     */
+    async getAcademyCompletionRate(days: number = 30): Promise<AcademyCompletion> {
+        const EMPTY: AcademyCompletion = {
+            videosStarted: 0,
+            videosCompleted: 0,
+            completionRate: 0
+        };
+
+        try {
+            const { data, error } = await supabase
+                .rpc('get_academy_completion_rate', { p_days: days });
+
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
+
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
+
+            return {
+                videosStarted: Number(row.videos_started) || 0,
+                videosCompleted: Number(row.videos_completed) || 0,
+                completionRate: parseFloat(row.completion_rate) || 0
+            };
+        } catch (error) {
+            if (isAbortError(error)) return EMPTY;
+            logger.error('[Analytics] Error fetching academy completion:', error);
+            return EMPTY;
+        }
+    }
+
+    /**
+     * Get event attendance rate: RSVP vs check-in
+     * ✅ Via RPC get_event_attendance_rate
+     */
+    async getEventAttendanceRate(days: number = 30): Promise<EventAttendance> {
+        const EMPTY: EventAttendance = {
+            totalRsvps: 0,
+            totalCheckins: 0,
+            attendanceRate: 0,
+            noShowCount: 0
+        };
+
+        try {
+            const { data, error } = await supabase
+                .rpc('get_event_attendance_rate', { p_days: days });
+
+            if (error) {
+                if (isAbortError(error)) return EMPTY;
+                throw error;
+            }
+
+            const row = Array.isArray(data) && data.length > 0 ? data[0] : null;
+            if (!row) return EMPTY;
+
+            return {
+                totalRsvps: Number(row.total_rsvps) || 0,
+                totalCheckins: Number(row.total_checkins) || 0,
+                attendanceRate: parseFloat(row.attendance_rate) || 0,
+                noShowCount: Number(row.no_show_count) || 0
+            };
+        } catch (error) {
+            if (isAbortError(error)) return EMPTY;
+            logger.error('[Analytics] Error fetching event attendance:', error);
+            return EMPTY;
         }
     }
 }
@@ -883,7 +952,12 @@ export interface DashboardStats {
     messagesSent: number;
     videosCompleted: number;
     totalEvents: number;
-    period: '7d' | '30d';
+    period: '7d' | '30d' | '90d';
+    // ✅ Real trend percentages (null = no previous data to compare)
+    trendNewMembers: number | null;
+    trendMessages: number | null;
+    trendVideos: number | null;
+    trendEvents: number | null;
 }
 
 export interface DailyActivity {
@@ -943,6 +1017,49 @@ export interface BenefitEngagement {
     period: number;
 }
 
+// ============================================
+// BUSINESS INTELLIGENCE TYPES (Fase B)
+// ============================================
+
+export interface NetworkingFunnel {
+    totalReferrals: number;
+    totalDeals: number;
+    auditedDeals: number;
+    auditedVolume: number;
+    conversionRate: number;
+}
+
+export interface TopRoiMember {
+    memberId: string;
+    memberName: string;
+    memberImage: string | null;
+    dealCount: number;
+    totalVolume: number;
+}
+
+export interface ChurnRiskMember {
+    memberId: string;
+    memberName: string;
+    memberEmail: string;
+    memberImage: string | null;
+    phone: string | null;
+    lastAccess: string | null;
+    daysInactive: number;
+    dealsLast60d: number;
+}
+
+export interface AcademyCompletion {
+    videosStarted: number;
+    videosCompleted: number;
+    completionRate: number;
+}
+
+export interface EventAttendance {
+    totalRsvps: number;
+    totalCheckins: number;
+    attendanceRate: number;
+    noShowCount: number;
+}
+
 // Singleton export
 export const analyticsService = new AnalyticsService();
-
