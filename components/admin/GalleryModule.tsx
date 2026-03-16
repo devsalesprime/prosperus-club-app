@@ -69,7 +69,11 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
             if (editingAlbum.id) {
                 await galleryService.updateAlbum(editingAlbum.id, payload);
             } else {
-                await galleryService.createAlbum(payload);
+                const newAlbum = await galleryService.createAlbum(payload);
+                // 🔔 Notificar todos os sócios sobre nova galeria (fire-and-forget)
+                import('../../services/notificationTriggers').then(({ notifyNewGallery }) => {
+                    notifyNewGallery(payload.title, newAlbum?.id || '').catch(() => { });
+                });
             }
             setIsModalOpen(false);
             setEditingAlbum({});

@@ -120,6 +120,10 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                 await videoService.updateVideo(editingVideo.id, videoData);
             } else {
                 await videoService.createVideo(videoData);
+                // 🔔 Notificar todos os sócios sobre novo vídeo (fire-and-forget)
+                import('../../services/notificationTriggers').then(({ notifyNewVideo }) => {
+                    notifyNewVideo(videoData.title, '').catch(() => { });
+                });
             }
             setIsVideoModalOpen(false);
             setEditingVideo({});
