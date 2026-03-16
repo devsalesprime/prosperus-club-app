@@ -112,8 +112,8 @@ export const HomeCarousel: React.FC<HomeCarouselProps> = ({
                         ))}
                     </div>
 
-                    {/* Slide Counter */}
-                    <div className="absolute bottom-3 right-3 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full z-10">
+                    {/* Slide Counter — top-right to avoid subtitle overlap */}
+                    <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full z-10">
                         <span className="text-xs text-white/80 font-medium">
                             {index + 1} / {items.length}
                         </span>
