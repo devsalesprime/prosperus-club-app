@@ -28,14 +28,6 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row"
             style={{ minHeight: '100vh', display: 'flex' }}
         >
-            <style>{`
-                .app-scroll-main {
-                    scrollbar-width: thin;
-                    scrollbar-color: transparent transparent;
-                    -ms-overflow-style: none;
-                }
-                .app-scroll-main::-webkit-scrollbar { width: 0; background: transparent; }
-            `}</style>
 
             {/* Sidebar (Desktop only — não afeta mobile) */}
             <DesktopSidebar />

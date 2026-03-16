@@ -3,8 +3,12 @@
 // ============================================
 // Wraps scrollable content with pull-down-to-refresh gesture
 // Shows a gold spinner indicator during pull and refresh
+//
+// IMPORTANT: This component does NOT create its own scroll container.
+// Scroll is handled by the parent <main> in AppLayout.
+// The scrollRef points to the closest scrollable ancestor.
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { GESTURE, SPRING_EASE } from '../../hooks/gestureConfig';
 
@@ -13,9 +17,25 @@ interface PullToRefreshProps {
     onRefresh: () => Promise<void>;
     /** Whether the gesture is enabled */
     enabled?: boolean;
-    /** Additional className for the scroll container */
+    /** Additional className for the container */
     className?: string;
     children: React.ReactNode;
+}
+
+/**
+ * Find the nearest scrollable parent element.
+ * Walks up the DOM from `el` until it finds an element with overflowY scroll/auto.
+ */
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+    let node = el?.parentElement;
+    while (node) {
+        const style = getComputedStyle(node);
+        if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+            return node;
+        }
+        node = node.parentElement;
+    }
+    return null;
 }
 
 export const PullToRefresh: React.FC<PullToRefreshProps> = ({
@@ -24,7 +44,13 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     className = '',
     children,
 }) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const scrollRef = useRef<HTMLElement | null>(null);
+
+    // On mount, find the scrollable parent (<main> in AppLayout)
+    useEffect(() => {
+        scrollRef.current = findScrollParent(containerRef.current);
+    }, []);
 
     const { pullDistance, progress, isRefreshing, bind } = usePullToRefresh({
         onRefresh,
@@ -35,9 +61,9 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     return (
         <div
             {...bind()}
-            ref={scrollRef}
-            className={`overflow-y-auto overscroll-contain h-full ${className}`}
-            style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+            ref={containerRef}
+            className={className}
+            style={{ touchAction: 'pan-y' }}
         >
             {/* Pull indicator */}
             <div
