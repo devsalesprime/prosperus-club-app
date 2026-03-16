@@ -5,6 +5,7 @@
 // Dark theme, gold accents, custom upload, responsive
 
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
     Plus,
     ExternalLink,
@@ -20,6 +21,7 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { toolsService, ToolSolution, CreateSolutionInput } from '../../services/toolsService';
+import { AdminConfirmDialog } from './shared';
 
 // ── Form state type ──
 interface SolutionFormState {
@@ -388,18 +390,10 @@ export const AdminSolutions: React.FC = () => {
     const [deleteTarget, setDeleteTarget] = useState<ToolSolution | null>(null);
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const [toast, setToast] = useState<string | null>(null);
 
     useEffect(() => {
         loadSolutions();
     }, []);
-
-    // Toast auto-dismiss
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3000);
-        return () => clearTimeout(t);
-    }, [toast]);
 
     const loadSolutions = async () => {
         try {
@@ -432,10 +426,10 @@ export const AdminSolutions: React.FC = () => {
 
             if (editTarget) {
                 await toolsService.updateSolution(editTarget.id, input);
-                setToast('✅ Solução atualizada!');
+                toast.success('Solução atualizada!');
             } else {
                 await toolsService.createSolution(input);
-                setToast('✅ Solução criada!');
+                toast.success('Solução criada!');
             }
 
             setShowModal(false);
@@ -443,7 +437,7 @@ export const AdminSolutions: React.FC = () => {
             loadSolutions();
         } catch (error) {
             console.error('Failed to save solution:', error);
-            setToast('❌ Erro ao salvar solução');
+            toast.error('Erro ao salvar solução');
         } finally {
             setSaving(false);
         }
@@ -454,12 +448,12 @@ export const AdminSolutions: React.FC = () => {
         setDeleting(true);
         try {
             await toolsService.deleteSolution(deleteTarget.id);
-            setToast('✅ Solução excluída');
+            toast.success('Solução excluída');
             setDeleteTarget(null);
             loadSolutions();
         } catch (error) {
             console.error('Failed to delete solution:', error);
-            setToast('❌ Erro ao excluir');
+            toast.error('Erro ao excluir solução');
         } finally {
             setDeleting(false);
         }
@@ -469,7 +463,7 @@ export const AdminSolutions: React.FC = () => {
         try {
             await toolsService.toggleSolutionStatus(id, !currentStatus);
             loadSolutions();
-            setToast(currentStatus ? 'Solução desativada' : 'Solução ativada');
+            toast.success(currentStatus ? 'Solução desativada' : 'Solução ativada');
         } catch (error) {
             console.error('Failed to toggle status:', error);
         }
@@ -538,32 +532,17 @@ export const AdminSolutions: React.FC = () => {
                 />
             )}
 
-            {/* Delete confirmation modal */}
-            {deleteTarget && (
-                <DeleteConfirmModal
-                    title={deleteTarget.title}
-                    onConfirm={handleDelete}
-                    onCancel={() => setDeleteTarget(null)}
-                    loading={deleting}
-                />
-            )}
-
-            {/* Toast */}
-            {toast && (
-                <div
-                    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white shadow-2xl"
-                    style={{ animation: 'adminSlideUp 200ms ease-out' }}
-                >
-                    {toast}
-                </div>
-            )}
-
-            <style>{`
-                @keyframes adminSlideUp {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
+            {/* Delete confirmation — shared component */}
+            <AdminConfirmDialog
+                isOpen={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={handleDelete}
+                title="Excluir Solução"
+                message={`"${deleteTarget?.title}" será removida permanentemente.`}
+                confirmText="Excluir"
+                isDestructive
+                isLoading={deleting}
+            />
         </div>
     );
 };

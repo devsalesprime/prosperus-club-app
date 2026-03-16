@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, PlaySquare, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, PlaySquare, RefreshCw, Search, X } from 'lucide-react';
 import {
     AdminPageHeader,
     AdminModal,
@@ -32,6 +32,8 @@ export const MembersModule: React.FC = () => {
     const [members, setMembers] = useState<ProfileRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'TEAM' | 'MEMBER'>('ALL');
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -186,11 +188,20 @@ export const MembersModule: React.FC = () => {
         );
     }
 
+    const term = searchTerm.toLowerCase().trim();
+    const filteredMembers = members.filter(m => {
+        const matchesRole = roleFilter === 'ALL' || m.role === roleFilter;
+        const matchesSearch = !term || [
+            m.name, m.email, m.company, m.job_title
+        ].some(f => f?.toLowerCase().includes(term));
+        return matchesRole && matchesSearch;
+    });
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
                 title="Sócios"
-                subtitle={`Total: ${members.length} usuários cadastrados`}
+                subtitle={`${filteredMembers.length} de ${members.length} usuários`}
                 action={
                     <button
                         onClick={loadMembers}
@@ -201,6 +212,38 @@ export const MembersModule: React.FC = () => {
                     </button>
                 }
             />
+
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar por nome, email ou empresa..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/20 transition"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+                <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[140px]"
+                >
+                    <option value="ALL">Todos os perfis</option>
+                    <option value="MEMBER">Sócios</option>
+                    <option value="TEAM">Time</option>
+                    <option value="ADMIN">Admins</option>
+                </select>
+            </div>
 
             <AdminTable>
                 <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
@@ -216,7 +259,7 @@ export const MembersModule: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {members.map((member) => (
+                        {filteredMembers.map((member) => (
                             <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
@@ -255,10 +298,12 @@ export const MembersModule: React.FC = () => {
                                 </td>
                             </tr>
                         ))}
-                        {members.length === 0 && (
+                        {filteredMembers.length === 0 && (
                             <tr>
                                 <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
-                                    Nenhum membro cadastrado.
+                                    {searchTerm || roleFilter !== 'ALL'
+                                        ? 'Nenhum membro encontrado com esses filtros.'
+                                        : 'Nenhum membro cadastrado.'}
                                 </td>
                             </tr>
                         )}

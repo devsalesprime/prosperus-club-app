@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
   Calendar,
@@ -32,7 +33,10 @@ import {
   Zap,
   TrendingUp,
   Wrench,
-  FolderOpen
+  FolderOpen,
+  ChevronDown,
+  PenTool,
+  Cog
 } from 'lucide-react';
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
@@ -66,25 +70,85 @@ interface AdminSidebarProps {
   onClose: () => void;
 }
 
+// Sidebar menu groups
+interface SidebarGroup {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  items: { id: AdminViewState; label: string; icon: React.ReactNode }[];
+}
+
+const SIDEBAR_GROUPS: SidebarGroup[] = [
+  {
+    id: 'data',
+    label: 'Dados & Analytics',
+    icon: <BarChart size={18} />,
+    items: [
+      { id: AdminViewState.DASHBOARD, label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+      { id: AdminViewState.ANALYTICS, label: 'Analytics', icon: <BarChart size={18} /> },
+    ],
+  },
+  {
+    id: 'content',
+    label: 'Conteúdo',
+    icon: <PenTool size={18} />,
+    items: [
+      { id: AdminViewState.VIDEOS, label: 'Academy', icon: <PlaySquare size={18} /> },
+      { id: AdminViewState.ARTICLES, label: 'Notícias', icon: <Newspaper size={18} /> },
+      { id: AdminViewState.BANNERS, label: 'Banners', icon: <ImageIcon size={18} /> },
+      { id: AdminViewState.GALLERY, label: 'Galeria', icon: <ImageIcon size={18} /> },
+      { id: AdminViewState.MEMBER_FILES, label: 'Arquivos', icon: <FolderOpen size={18} /> },
+    ],
+  },
+  {
+    id: 'operations',
+    label: 'Operações',
+    icon: <Cog size={18} />,
+    items: [
+      { id: AdminViewState.EVENTS, label: 'Eventos', icon: <Calendar size={18} /> },
+      { id: AdminViewState.MEMBERS, label: 'Sócios', icon: <Users size={18} /> },
+      { id: AdminViewState.TOOLS_PROGRESS, label: 'Relatórios', icon: <Upload size={18} /> },
+      { id: AdminViewState.TOOLS_SOLUTIONS, label: 'Soluções', icon: <Wrench size={18} /> },
+      { id: AdminViewState.ROI_AUDIT, label: 'ROI & Auditoria', icon: <TrendingUp size={18} /> },
+    ],
+  },
+  {
+    id: 'system',
+    label: 'Sistema',
+    icon: <Settings size={18} />,
+    items: [
+      { id: AdminViewState.NOTIFICATIONS, label: 'Notificações', icon: <Bell size={18} /> },
+      { id: AdminViewState.MESSAGES, label: 'Mensagens', icon: <MessageSquare size={18} /> },
+      { id: AdminViewState.CATEGORIES, label: 'Tags / Categorias', icon: <Tags size={18} /> },
+      { id: AdminViewState.SETTINGS, label: 'Suporte', icon: <Settings size={18} /> },
+    ],
+  },
+];
+
 const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: AdminSidebarProps) => {
-  const menuItems = [
-    { id: AdminViewState.DASHBOARD, label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { id: AdminViewState.ANALYTICS, label: 'Analytics', icon: <BarChart size={20} /> },
-    { id: AdminViewState.EVENTS, label: 'Eventos', icon: <Calendar size={20} /> },
-    { id: AdminViewState.VIDEOS, label: 'Academy', icon: <PlaySquare size={20} /> },
-    { id: AdminViewState.TOOLS_SOLUTIONS, label: 'Gerenciar Soluções', icon: <Wrench size={20} /> },
-    { id: AdminViewState.TOOLS_PROGRESS, label: 'Enviar Relatórios', icon: <Upload size={20} /> },
-    { id: AdminViewState.MEMBERS, label: 'Sócios', icon: <Users size={20} /> },
-    { id: AdminViewState.ARTICLES, label: 'Notícias', icon: <Newspaper size={20} /> },
-    { id: AdminViewState.GALLERY, label: 'Galeria', icon: <ImageIcon size={20} /> },
-    { id: AdminViewState.BANNERS, label: 'Banners', icon: <ImageIcon size={20} /> },
-    { id: AdminViewState.CATEGORIES, label: 'Tags / Categorias', icon: <Tags size={20} /> },
-    { id: AdminViewState.MESSAGES, label: 'Mensagens', icon: <MessageSquare size={20} /> },
-    { id: AdminViewState.ROI_AUDIT, label: 'ROI & Auditoria', icon: <TrendingUp size={20} /> },
-    { id: AdminViewState.MEMBER_FILES, label: 'Arquivos', icon: <FolderOpen size={20} /> },
-    { id: AdminViewState.NOTIFICATIONS, label: 'Notificações', icon: <Bell size={20} /> },
-    { id: AdminViewState.SETTINGS, label: 'Suporte', icon: <Settings size={20} /> },
-  ];
+  // Find which group contains the current view to auto-expand it
+  const getActiveGroupId = (view: AdminViewState): string => {
+    for (const group of SIDEBAR_GROUPS) {
+      if (group.items.some(item => item.id === view)) return group.id;
+    }
+    return 'data';
+  };
+
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    SIDEBAR_GROUPS.forEach(g => { initial[g.id] = g.id === getActiveGroupId(currentView); });
+    return initial;
+  });
+
+  // Auto-expand group when navigating
+  useEffect(() => {
+    const activeGroup = getActiveGroupId(currentView);
+    setExpandedGroups(prev => ({ ...prev, [activeGroup]: true }));
+  }, [currentView]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   const handleNavigation = (id: AdminViewState) => {
     setView(id);
@@ -110,24 +174,60 @@ const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: Admin
         <div className="px-4 py-3 bg-red-900/20 border-b border-red-900/30">
           <p className="text-xs text-red-400 font-bold uppercase tracking-wider text-center">Modo Administrativo</p>
         </div>
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => handleNavigation(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${currentView === item.id
-                ? 'bg-slate-800 text-yellow-500'
-                : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-                }`}
-            >
-              {item.icon}
-              <span className="font-medium text-sm">{item.label}</span>
-            </button>
-          ))}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {SIDEBAR_GROUPS.map(group => {
+            const isExpanded = expandedGroups[group.id];
+            const hasActiveItem = group.items.some(item => item.id === currentView);
+            return (
+              <div key={group.id}>
+                {/* Group Header */}
+                <button
+                  onClick={() => toggleGroup(group.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-sm font-semibold tracking-wide ${
+                    hasActiveItem
+                      ? 'text-yellow-500'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-900/50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    {group.icon}
+                    {group.label}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
+                  />
+                </button>
+                {/* Group Items */}
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-in-out ${
+                    isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="pl-3 pr-1 pb-1 space-y-0.5">
+                    {group.items.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavigation(item.id)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-colors text-sm ${
+                          currentView === item.id
+                            ? 'bg-slate-800 text-yellow-500 font-medium'
+                            : 'text-slate-500 hover:bg-slate-900 hover:text-slate-200'
+                        }`}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </nav>
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={onLogout} className="w-full flex items-center space-x-3 px-4 py-3 text-red-400 hover:bg-red-950/30 rounded-lg transition-colors">
-            <LogOut size={20} />
+        <div className="p-3 border-t border-slate-800">
+          <button onClick={onLogout} className="w-full flex items-center space-x-3 px-3 py-2.5 text-red-400 hover:bg-red-950/30 rounded-lg transition-colors">
+            <LogOut size={18} />
             <span className="font-medium text-sm">Sair</span>
           </button>
         </div>
@@ -310,50 +410,168 @@ const RichTextEditor = ({ value, onChange }: RichTextEditorProps) => (
 
 // --- DASHBOARD HOME COMPONENT ---
 
+interface DashboardKpi {
+  label: string;
+  value: number | null;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+  navigateTo: AdminViewState;
+}
+
 const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState) => void }) => {
-  const cards = [
-    { id: AdminViewState.ANALYTICS, title: 'Analytics & Métricas', description: 'Acompanhe o engajamento dos usuários, views de vídeos e leitura de artigos.', icon: <BarChart size={32} className="text-indigo-400" />, cta: 'Ver Dashboard', color: 'hover:border-indigo-500/50' },
-    { id: AdminViewState.NOTIFICATIONS, title: 'Notificações Push', description: 'Envie alertas e comunicados para os dispositivos dos usuários.', icon: <Bell size={32} className="text-red-400" />, cta: 'Enviar Push', color: 'hover:border-red-500/50' },
-    { id: AdminViewState.EVENTS, title: 'Agenda & Eventos', description: 'Gerencie eventos presenciais, online e aulas ao vivo.', icon: <Calendar size={32} className="text-purple-400" />, cta: 'Gerenciar Agenda', color: 'hover:border-purple-500/50' },
-    { id: AdminViewState.ARTICLES, title: 'Notícias & Blog', description: 'Publique artigos, comunicados e novidades do clube.', icon: <Newspaper size={32} className="text-blue-400" />, cta: 'Gerenciar Notícias', color: 'hover:border-blue-500/50' },
-    { id: AdminViewState.VIDEOS, title: 'Academy (Vídeos)', description: 'Organize a biblioteca de vídeos e masterclasses.', icon: <PlaySquare size={32} className="text-amber-400" />, cta: 'Gerenciar Academy', color: 'hover:border-amber-500/50' },
-    { id: AdminViewState.MEMBERS, title: 'Sócios', description: 'Visualize e gerencie a base de sócios e permissões.', icon: <Users size={32} className="text-emerald-400" />, cta: 'Ver Sócios', color: 'hover:border-emerald-500/50' },
-    { id: AdminViewState.MESSAGES, title: 'Moderação de Mensagens', description: 'Visualize conversas entre membros para fins de moderação.', icon: <MessageSquare size={32} className="text-teal-400" />, cta: 'Ver Conversas', color: 'hover:border-teal-500/50' },
-    { id: AdminViewState.BANNERS, title: 'Banners', description: 'Gerencie os banners promocionais e datas de exibição.', icon: <ImageIcon size={32} className="text-pink-400" />, cta: 'Gerenciar Banners', color: 'hover:border-pink-500/50' },
-    { id: AdminViewState.GALLERY, title: 'Galeria', description: 'Organize e gerencie as imagens da galeria do clube.', icon: <ImageIcon size={32} className="text-cyan-400" />, cta: 'Ver Galeria', color: 'hover:border-cyan-500/50' },
-    { id: AdminViewState.CATEGORIES, title: 'Tags / Categorias', description: 'Gerencie as categorias e tags de organização de conteúdo.', icon: <Tags size={32} className="text-orange-400" />, cta: 'Gerenciar Categorias', color: 'hover:border-orange-500/50' },
-    { id: AdminViewState.ROI_AUDIT, title: 'ROI & Auditoria', description: 'Acompanhe ROI, indicações e rankings do Business Core.', icon: <TrendingUp size={32} className="text-green-400" />, cta: 'Ver ROI', color: 'hover:border-green-500/50' },
-    { id: AdminViewState.TOOLS_SOLUTIONS, title: 'Gerenciar Soluções', description: 'Configure as soluções disponíveis no Prosperus Tools.', icon: <Wrench size={32} className="text-slate-400" />, cta: 'Gerenciar Soluções', color: 'hover:border-slate-500/50' },
-    { id: AdminViewState.TOOLS_PROGRESS, title: 'Enviar Relatórios', description: 'Envie relatórios de progresso para os membros.', icon: <Upload size={32} className="text-violet-400" />, cta: 'Enviar Relatórios', color: 'hover:border-violet-500/50' },
-    { id: AdminViewState.MEMBER_FILES, title: 'Arquivos do Clube', description: 'Publique PDFs, apresentações e materiais para sócios.', icon: <FolderOpen size={32} className="text-teal-400" />, cta: 'Gerenciar Arquivos', color: 'hover:border-teal-500/50' },
-    { id: AdminViewState.SETTINGS, title: 'Suporte', description: 'Configure informações de suporte e contato.', icon: <Settings size={32} className="text-gray-400" />, cta: 'Configurar Suporte', color: 'hover:border-gray-500/50' },
+  const [kpis, setKpis] = useState<{ members: number | null; upcomingEvents: number | null; videos: number | null; articles: number | null; files: number | null }>({
+    members: null, upcomingEvents: null, videos: null, articles: null, files: null,
+  });
+  const [kpiLoading, setKpiLoading] = useState(true);
+
+  useEffect(() => {
+    const loadKpis = async () => {
+      try {
+        const { supabase } = await import('./lib/supabase');
+
+        const [membersRes, eventsRes, videosRes, articlesRes, filesRes] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'MEMBER'),
+          supabase.from('club_events').select('*', { count: 'exact', head: true }).gte('date', new Date().toISOString()),
+          supabase.from('videos').select('*', { count: 'exact', head: true }),
+          supabase.from('articles').select('*', { count: 'exact', head: true }).eq('status', 'PUBLISHED'),
+          supabase.from('member_files').select('*', { count: 'exact', head: true }).eq('is_visible', true),
+        ]);
+
+        setKpis({
+          members: membersRes.count ?? 0,
+          upcomingEvents: eventsRes.count ?? 0,
+          videos: videosRes.count ?? 0,
+          articles: articlesRes.count ?? 0,
+          files: filesRes.count ?? 0,
+        });
+      } catch (err) {
+        console.error('Error loading KPIs:', err);
+      } finally {
+        setKpiLoading(false);
+      }
+    };
+    loadKpis();
+  }, []);
+
+  const kpiCards: DashboardKpi[] = [
+    { label: 'Sócios Ativos', value: kpis.members, icon: <Users size={24} />, color: 'text-emerald-400', bgColor: 'bg-emerald-500/10 border-emerald-500/20', navigateTo: AdminViewState.MEMBERS },
+    { label: 'Eventos Próximos', value: kpis.upcomingEvents, icon: <Calendar size={24} />, color: 'text-purple-400', bgColor: 'bg-purple-500/10 border-purple-500/20', navigateTo: AdminViewState.EVENTS },
+    { label: 'Vídeos Academy', value: kpis.videos, icon: <PlaySquare size={24} />, color: 'text-amber-400', bgColor: 'bg-amber-500/10 border-amber-500/20', navigateTo: AdminViewState.VIDEOS },
+    { label: 'Artigos Publicados', value: kpis.articles, icon: <Newspaper size={24} />, color: 'text-blue-400', bgColor: 'bg-blue-500/10 border-blue-500/20', navigateTo: AdminViewState.ARTICLES },
+    { label: 'Arquivos do Clube', value: kpis.files, icon: <FolderOpen size={24} />, color: 'text-teal-400', bgColor: 'bg-teal-500/10 border-teal-500/20', navigateTo: AdminViewState.MEMBER_FILES },
+  ];
+
+  const quickActions = [
+    { label: 'Criar Evento', icon: <Calendar size={18} />, view: AdminViewState.EVENTS, color: 'from-purple-600 to-purple-500' },
+    { label: 'Enviar Notificação', icon: <Bell size={18} />, view: AdminViewState.NOTIFICATIONS, color: 'from-red-600 to-red-500' },
+    { label: 'Novo Vídeo', icon: <PlaySquare size={18} />, view: AdminViewState.VIDEOS, color: 'from-amber-600 to-amber-500' },
+    { label: 'Ver Analytics', icon: <BarChart size={18} />, view: AdminViewState.ANALYTICS, color: 'from-indigo-600 to-indigo-500' },
+  ];
+
+  const navGroups = [
+    {
+      title: 'Conteúdo',
+      items: [
+        { id: AdminViewState.VIDEOS, title: 'Academy', icon: <PlaySquare size={24} className="text-amber-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.ARTICLES, title: 'Notícias', icon: <Newspaper size={24} className="text-blue-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.BANNERS, title: 'Banners', icon: <ImageIcon size={24} className="text-pink-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.GALLERY, title: 'Galeria', icon: <ImageIcon size={24} className="text-cyan-400" />, cta: 'Ver' },
+        { id: AdminViewState.MEMBER_FILES, title: 'Arquivos', icon: <FolderOpen size={24} className="text-teal-400" />, cta: 'Gerenciar' },
+      ],
+    },
+    {
+      title: 'Operações',
+      items: [
+        { id: AdminViewState.EVENTS, title: 'Eventos', icon: <Calendar size={24} className="text-purple-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.MEMBERS, title: 'Sócios', icon: <Users size={24} className="text-emerald-400" />, cta: 'Ver' },
+        { id: AdminViewState.TOOLS_PROGRESS, title: 'Relatórios', icon: <Upload size={24} className="text-violet-400" />, cta: 'Enviar' },
+        { id: AdminViewState.TOOLS_SOLUTIONS, title: 'Soluções', icon: <Wrench size={24} className="text-slate-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.ROI_AUDIT, title: 'ROI & Auditoria', icon: <TrendingUp size={24} className="text-green-400" />, cta: 'Ver' },
+      ],
+    },
+    {
+      title: 'Sistema',
+      items: [
+        { id: AdminViewState.NOTIFICATIONS, title: 'Notificações', icon: <Bell size={24} className="text-red-400" />, cta: 'Enviar' },
+        { id: AdminViewState.MESSAGES, title: 'Mensagens', icon: <MessageSquare size={24} className="text-teal-400" />, cta: 'Moderar' },
+        { id: AdminViewState.CATEGORIES, title: 'Tags', icon: <Tags size={24} className="text-orange-400" />, cta: 'Gerenciar' },
+        { id: AdminViewState.SETTINGS, title: 'Suporte', icon: <Settings size={24} className="text-gray-400" />, cta: 'Configurar' },
+      ],
+    },
   ];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
       <div>
-        <h2 className="text-3xl font-bold text-white mb-2">Painel de Controle</h2>
-        <p className="text-slate-400 max-w-2xl">Bem-vindo à central de gestão do Prosperus Club. Selecione um módulo abaixo para iniciar.</p>
+        <h2 className="text-3xl font-bold text-white mb-1">Painel de Controle</h2>
+        <p className="text-slate-400">Visão geral do Prosperus Club</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {cards.map((card) => (
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {kpiCards.map((kpi) => (
           <button
-            key={card.id}
-            onClick={() => setView(card.id)}
-            className={`flex flex-col items-start text-left p-6 bg-slate-900 rounded-xl border border-slate-800 transition-all duration-300 group hover:shadow-xl hover:-translate-y-1 ${card.color}`}
+            key={kpi.label}
+            onClick={() => setView(kpi.navigateTo)}
+            className={`flex flex-col items-start p-4 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-lg ${kpi.bgColor}`}
           >
-            <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 mb-4 group-hover:scale-110 transition-transform">
-              {card.icon}
+            <div className={`mb-3 ${kpi.color}`}>
+              {kpi.icon}
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
-            <p className="text-sm text-slate-400 mb-6 flex-1 leading-relaxed">{card.description}</p>
-            <span className="text-sm font-semibold text-white flex items-center gap-2 group-hover:text-yellow-500 transition-colors">
-              {card.cta} <ArrowRight size={16} />
+            <span className="text-2xl font-bold text-white">
+              {kpiLoading ? (
+                <span className="inline-block w-8 h-6 bg-slate-700 rounded animate-pulse" />
+              ) : (
+                kpi.value ?? '—'
+              )}
             </span>
+            <span className="text-xs text-slate-400 mt-1 font-medium">{kpi.label}</span>
           </button>
         ))}
       </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Ações Rápidas</h3>
+        <div className="flex flex-wrap gap-3">
+          {quickActions.map((action) => (
+            <button
+              key={action.label}
+              onClick={() => setView(action.view)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r ${action.color} text-white text-sm font-semibold hover:opacity-90 transition shadow-lg hover:shadow-xl`}
+            >
+              {action.icon}
+              {action.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation Cards — Grouped */}
+      {navGroups.map((group) => (
+        <div key={group.title}>
+          <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">{group.title}</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {group.items.map((card) => (
+              <button
+                key={card.id}
+                onClick={() => setView(card.id)}
+                className="flex flex-col items-start p-4 bg-slate-900 rounded-xl border border-slate-800 transition-all group hover:border-yellow-500/30 hover:-translate-y-0.5"
+              >
+                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 mb-3 group-hover:scale-110 transition-transform">
+                  {card.icon}
+                </div>
+                <h4 className="text-sm font-bold text-white mb-1">{card.title}</h4>
+                <span className="text-xs text-slate-500 flex items-center gap-1 group-hover:text-yellow-500 transition-colors">
+                  {card.cta} <ArrowRight size={12} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };
@@ -396,7 +614,7 @@ const NotificationsModule = () => {
     dataService.sendPushNotification({ title, message, targetUrl, segment, scheduledFor: scheduledFor || undefined });
     setIsModalOpen(false);
     setTitle(''); setMessage(''); setTargetUrl(''); setSegment('ALL'); setScheduledFor('');
-    alert('Notificação enviada com sucesso!');
+    toast.success('Notificação enviada com sucesso!');
   };
 
   const handleSelectContent = (e: React.ChangeEvent<HTMLSelectElement>) => {

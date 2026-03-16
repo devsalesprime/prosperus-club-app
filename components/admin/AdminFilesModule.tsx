@@ -3,6 +3,7 @@
 // Multi-upload with + pattern, list with visibility toggle and delete
 
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
     Plus, Trash2, Eye, EyeOff, FileText, Image as ImageIcon,
     Download, X, Upload, Loader2, FolderOpen
@@ -14,7 +15,7 @@ import {
     toggleFileVisibility,
     MemberFile,
 } from '../../services/filesService';
-import { AdminPageHeader } from './shared';
+import { AdminPageHeader, AdminConfirmDialog } from './shared';
 
 const CATEGORIES = [
     { id: 'geral', label: 'Geral' },
@@ -219,6 +220,8 @@ export const AdminFilesModule: React.FC = () => {
     const [files, setFiles] = useState<MemberFile[]>([]);
     const [loadingList, setLoadingList] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string; path: string; title: string } | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Load list when switching to lista tab
     useEffect(() => {
@@ -276,6 +279,8 @@ export const AdminFilesModule: React.FC = () => {
         }
 
         setUploading(false);
+        const successCount = items.filter(i => i.status === 'done').length;
+        if (successCount > 0) toast.success(`${successCount} arquivo${successCount > 1 ? 's' : ''} enviado${successCount > 1 ? 's' : ''} com sucesso!`);
     };
 
     const readyCount = items.filter(i => i.file && i.title.trim() && i.status !== 'done').length;
@@ -283,6 +288,7 @@ export const AdminFilesModule: React.FC = () => {
 
     // ─── Render ─────────────────────────────────────────────────────────────
     return (
+        <>
         <div className="space-y-6">
             <AdminPageHeader
                 title="Arquivos do Clube"
@@ -414,17 +420,14 @@ export const AdminFilesModule: React.FC = () => {
                                                 <td className="px-5 py-3">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
-                                                            onClick={() => toggleFileVisibility(file.id, !file.is_visible).then(loadList)}
+                                                            onClick={() => toggleFileVisibility(file.id, !file.is_visible).then(() => { toast.success(file.is_visible ? 'Arquivo ocultado' : 'Arquivo publicado'); loadList(); })}
                                                             title={file.is_visible ? 'Ocultar' : 'Publicar'}
                                                             className="p-1.5 text-slate-400 hover:text-yellow-500 transition"
                                                         >
                                                             {file.is_visible ? <Eye size={16} /> : <EyeOff size={16} />}
                                                         </button>
                                                         <button
-                                                            onClick={() => {
-                                                                if (!confirm(`Deletar "${file.title}"?`)) return;
-                                                                deleteFile(file.id, file.file_path).then(ok => { if (ok) loadList(); });
-                                                            }}
+                                                            onClick={() => setConfirmDelete({ id: file.id, path: file.file_path, title: file.title })}
                                                             className="p-1.5 text-slate-400 hover:text-red-400 transition"
                                                         >
                                                             <Trash2 size={16} />
@@ -446,6 +449,30 @@ export const AdminFilesModule: React.FC = () => {
                 </div>
             )}
         </div>
+
+            <AdminConfirmDialog
+                isOpen={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={async () => {
+                    if (!confirmDelete) return;
+                    setDeleting(true);
+                    const ok = await deleteFile(confirmDelete.id, confirmDelete.path);
+                    setDeleting(false);
+                    if (ok) {
+                        toast.success('Arquivo excluído');
+                        setConfirmDelete(null);
+                        loadList();
+                    } else {
+                        toast.error('Erro ao excluir arquivo');
+                    }
+                }}
+                title="Excluir Arquivo"
+                message={`"${confirmDelete?.title}" será removido permanentemente.`}
+                confirmText="Excluir"
+                isDestructive
+                isLoading={deleting}
+            />
+        </>
     );
 };
 
