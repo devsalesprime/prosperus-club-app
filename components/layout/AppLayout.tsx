@@ -30,10 +30,11 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         >
             <style>{`
                 .app-scroll-main {
-                    scrollbar-width: none;
+                    scrollbar-width: thin;
+                    scrollbar-color: transparent transparent;
                     -ms-overflow-style: none;
                 }
-                .app-scroll-main::-webkit-scrollbar { display: none; }
+                .app-scroll-main::-webkit-scrollbar { width: 0; background: transparent; }
             `}</style>
 
             {/* Sidebar (Desktop only — não afeta mobile) */}

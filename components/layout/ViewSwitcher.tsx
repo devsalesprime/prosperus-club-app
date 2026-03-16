@@ -168,7 +168,7 @@ export const ViewSwitcher: React.FC = () => {
                             </div>
 
                             {mobileView === 'LIST' ? (
-                                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain agenda-scroll-area" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain agenda-scroll-area" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
                                     <MobileAgendaView
                                         events={clubEvents}
                                         onSelectEvent={(event) => setSelectedEvent(event)}
@@ -176,14 +176,13 @@ export const ViewSwitcher: React.FC = () => {
                                     />
                                 </div>
                             ) : (
-                                <div className="flex-1 min-h-0 flex flex-col mobile-calendar-month px-2 overflow-hidden">
+                                <div className="flex-1 min-h-0 flex flex-col mobile-calendar-month px-2 overflow-auto">
                                     <style>{`
-                                        .agenda-scroll-area { scrollbar-width: none; -ms-overflow-style: none; }
-                                        .agenda-scroll-area::-webkit-scrollbar { display: none; }
+                                        .agenda-scroll-area { scrollbar-width: thin; scrollbar-color: transparent transparent; -ms-overflow-style: none; }
+                                        .agenda-scroll-area::-webkit-scrollbar { width: 0; background: transparent; }
                                         .mobile-calendar-month .rbc-header { font-size: 0.8rem; }
-                                        .mobile-calendar-month .rbc-month-view { max-width: 100%; flex: 1; min-height: 0; overflow: hidden; }
-                                        .mobile-calendar-month .rbc-month-view::-webkit-scrollbar { display: none; }
-                                        .mobile-calendar-month .rbc-month-view { scrollbar-width: none; }
+                                        .mobile-calendar-month .rbc-month-view { max-width: 100%; flex: 1; min-height: 0; overflow: visible; }
+                                        .mobile-calendar-month .rbc-month-row { min-height: 60px; }
                                     `}</style>
                                     <Calendar
                                         localizer={localizer}
