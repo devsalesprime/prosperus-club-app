@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Download, Loader2, ArrowLeft, FileText, FileCode, FileSpreadsheet, File, Eye, X } from 'lucide-react';
 import { ViewState } from '../types';
 import { toolsService, MemberProgressFile } from '../services/toolsService';
+import { MemberFilesPage } from './MemberFilesPage';
 
 interface ProgressListPageProps {
     setView: (view: ViewState) => void;
@@ -196,6 +197,11 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                     ))}
                 </div>
             )}
+            {/* Loading overlay for preview */}
+            {/* ─── Club Files Section ─── */}
+            <div className="mt-8 pt-6 border-t border-slate-700/50">
+                <MemberFilesPage />
+            </div>
 
             {/* Loading overlay for preview */}
             {loadingPreview && (

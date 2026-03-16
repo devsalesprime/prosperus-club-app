@@ -44,7 +44,8 @@ import {
     CalendarCheck,
     Crown,
     UserX,
-    CheckCircle2
+    CheckCircle2,
+    Download
 } from 'lucide-react';
 import {
     analyticsService,
@@ -67,6 +68,7 @@ import {
 } from './shared';
 import { AdminBenefitKpiCards } from './AdminBenefitKpiCards';
 import { TopBenefitsTable } from './TopBenefitsTable';
+import { getFileDownloadStats, FileDownloadStat } from '../../services/filesService';
 
 // ============================================
 // CHART COLORS
@@ -168,6 +170,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const [churnRisk, setChurnRisk] = useState<ChurnRiskMember[]>([]);
     const [academy, setAcademy] = useState<AcademyCompletion | null>(null);
     const [attendance, setAttendance] = useState<EventAttendance | null>(null);
+    const [fileStats, setFileStats] = useState<FileDownloadStat[]>([]);
 
     const days = periodToDays(period);
 
@@ -189,6 +192,9 @@ export const AnalyticsDashboard: React.FC = () => {
                 analyticsService.getAcademyCompletionRate(days),
                 analyticsService.getEventAttendanceRate(days)
             ]);
+
+            // Load file stats separately (non-blocking)
+            getFileDownloadStats(period).then(setFileStats).catch(console.error);
 
             setStats(statsData);
             setDailyActivity(activityData);
@@ -875,6 +881,45 @@ export const AnalyticsDashboard: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* ═══════════════════════════════════════════════════════ */}
+            {/* FILE DOWNLOADS SECTION                                  */}
+            {/* ═══════════════════════════════════════════════════════ */}
+            {fileStats.length > 0 && (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Download size={20} className="text-teal-500" />
+                        <h3 className="font-bold text-white">Downloads de Arquivos</h3>
+                        <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
+                            {periodLabel(period)}
+                        </span>
+                    </div>
+                    <div className="space-y-2">
+                        {fileStats.filter(s => s.total_downloads > 0).slice(0, 10).map((stat, index) => (
+                            <div key={stat.file_id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                                <span className="text-xs font-bold text-slate-500 w-5 text-right">
+                                    #{index + 1}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white truncate">{stat.title}</p>
+                                    <p className="text-xs text-slate-500">
+                                        {stat.file_type.toUpperCase()} · {stat.unique_downloaders} sócio{Number(stat.unique_downloaders) !== 1 ? 's' : ''} único{Number(stat.unique_downloaders) !== 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <span className="text-sm font-bold text-teal-400">
+                                        {stat.total_downloads}
+                                    </span>
+                                    <p className="text-[10px] text-slate-500">downloads</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {fileStats.filter(s => s.total_downloads > 0).length === 0 && (
+                        <p className="text-slate-500 text-sm text-center py-4">Nenhum download no período.</p>
+                    )}
+                </div>
+            )}
 
             {/* ═══════════════════════════════════════════════════════ */}
             {/* TOTAL EVENTS FOOTER (Fase A)                           */}

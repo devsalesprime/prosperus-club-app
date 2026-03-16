@@ -31,7 +31,8 @@ import {
   Clock,
   Zap,
   TrendingUp,
-  Wrench
+  Wrench,
+  FolderOpen
 } from 'lucide-react';
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
@@ -53,6 +54,7 @@ import { EventsModule } from './components/admin/events';
 import { MembersModule } from './components/admin/MembersModule';
 import { AcademyModule } from './components/admin/AcademyModule';
 import { GalleryModule } from './components/admin/GalleryModule';
+import { AdminFilesModule } from './components/admin/AdminFilesModule';
 
 // --- SHARED ADMIN COMPONENTS ---
 
@@ -79,6 +81,7 @@ const AdminSidebar = ({ currentView, setView, onLogout, isOpen, onClose }: Admin
     { id: AdminViewState.CATEGORIES, label: 'Tags / Categorias', icon: <Tags size={20} /> },
     { id: AdminViewState.MESSAGES, label: 'Mensagens', icon: <MessageSquare size={20} /> },
     { id: AdminViewState.ROI_AUDIT, label: 'ROI & Auditoria', icon: <TrendingUp size={20} /> },
+    { id: AdminViewState.MEMBER_FILES, label: 'Arquivos', icon: <FolderOpen size={20} /> },
     { id: AdminViewState.NOTIFICATIONS, label: 'Notificações', icon: <Bell size={20} /> },
     { id: AdminViewState.SETTINGS, label: 'Suporte', icon: <Settings size={20} /> },
   ];
@@ -322,6 +325,7 @@ const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState) => vo
     { id: AdminViewState.ROI_AUDIT, title: 'ROI & Auditoria', description: 'Acompanhe ROI, indicações e rankings do Business Core.', icon: <TrendingUp size={32} className="text-green-400" />, cta: 'Ver ROI', color: 'hover:border-green-500/50' },
     { id: AdminViewState.TOOLS_SOLUTIONS, title: 'Gerenciar Soluções', description: 'Configure as soluções disponíveis no Prosperus Tools.', icon: <Wrench size={32} className="text-slate-400" />, cta: 'Gerenciar Soluções', color: 'hover:border-slate-500/50' },
     { id: AdminViewState.TOOLS_PROGRESS, title: 'Enviar Relatórios', description: 'Envie relatórios de progresso para os membros.', icon: <Upload size={32} className="text-violet-400" />, cta: 'Enviar Relatórios', color: 'hover:border-violet-500/50' },
+    { id: AdminViewState.MEMBER_FILES, title: 'Arquivos do Clube', description: 'Publique PDFs, apresentações e materiais para sócios.', icon: <FolderOpen size={32} className="text-teal-400" />, cta: 'Gerenciar Arquivos', color: 'hover:border-teal-500/50' },
     { id: AdminViewState.SETTINGS, title: 'Suporte', description: 'Configure informações de suporte e contato.', icon: <Settings size={32} className="text-gray-400" />, cta: 'Configurar Suporte', color: 'hover:border-gray-500/50' },
   ];
 
@@ -714,6 +718,7 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
       case AdminViewState.BANNERS: return <BannersModule />;
       case AdminViewState.CATEGORIES: return <CategoriesModule />;
       case AdminViewState.ROI_AUDIT: return <AdminRoiManager />;
+      case AdminViewState.MEMBER_FILES: return <AdminFilesModule />;
       case AdminViewState.SETTINGS: return <SettingsModule />;
       default: return null;
     }
