@@ -4,9 +4,9 @@
 // Wraps scrollable content with pull-down-to-refresh gesture
 // Shows a gold spinner indicator during pull and refresh
 //
-// IMPORTANT: This component does NOT create its own scroll container.
-// Scroll is handled by the parent <main> in AppLayout.
-// The scrollRef points to the closest scrollable ancestor.
+// NOTE: This component does NOT create its own scroll container.
+// The parent <main> in AppLayout handles scrolling.
+// scrollRef finds the nearest scrollable ancestor for scrollTop checks.
 
 import React, { useRef, useEffect } from 'react';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
@@ -24,7 +24,7 @@ interface PullToRefreshProps {
 
 /**
  * Find the nearest scrollable parent element.
- * Walks up the DOM from `el` until it finds an element with overflowY scroll/auto.
+ * Walks up the DOM to find the <main> with overflowY: auto/scroll.
  */
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
     let node = el?.parentElement;

@@ -1,13 +1,33 @@
 // ============================================
-// APP LAYOUT — Application Shell (FIXED)
+// APP LAYOUT — Application Shell
 // ============================================
-// Fixes:
-//   1. OfflineBanner + InstallPrompt movidos para DENTRO da coluna principal
-//      (antes estavam fora, como flex-children do container raiz)
-//   2. SupportWidget movido para DENTRO da coluna principal
-//      (antes estava fora do inner column, podendo cobrir o BottomNav)
-//   3. overflow:hidden removido do inner column
-//      (não é necessário e pode clipar o BottomNav em alguns devices)
+// SOLUÇÃO DEFINITIVA — Março 2026
+// FIX ANDROID SCROLL — Março 2026
+//
+// ============================================================
+// REGRAS DE NÃO-REGRESSÃO — Bottom Nav + Scroll
+// Não alterar sem entender o impacto em AMBAS as plataformas
+// ============================================================
+//
+// WRAPPER EXTERNO (este div):
+//   height: '100dvh'    → fixa altura no viewport (Android scrolla dentro do <main>)
+//   overflow: 'hidden'  → impede body scroll (força scroll no <main>)
+//   NÃO usar minHeight  → permitiria body scroll (quebraria Android)
+//
+// <main> (filho direto):
+//   flex: 1             → ocupa o espaço restante
+//   minHeight: 0        → permite scroll em flex children (CRÍTICO)
+//   overflowY: 'auto'   → ativa scroll vertical
+//
+// BottomNav:
+//   position: 'fixed'   → fora do fluxo (iOS: labels visíveis)
+//   padding-bottom CSS  → safe area iOS via CSS (não inline)
+//   NÃO usar position: relative/static → quebraria iOS
+//
+// index.html:
+//   body: min-height: 100dvh (não height) → sem overflow:hidden
+//   NÃO adicionar overflow:hidden no body/html/#root → quebraria iOS
+// ============================================================
 
 import React from 'react';
 import { ViewState } from '../../types';
@@ -26,50 +46,62 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
     return (
         <div
             className="bg-prosperus-navy text-prosperus-white font-sans flex flex-col md:flex-row"
-            style={{ minHeight: '100vh', display: 'flex' }}
+            style={{
+                // ─── ANDROID SCROLL FIX ────────────────────────────────
+                // height (não minHeight) → trava o wrapper no viewport
+                // overflow: hidden → body não scrolla, só <main> scrolla
+                // Sem isso: Android body scroll domina, <main> não ativa
+                // ──────────────────────────────────────────────────────
+                height:   '100dvh',
+                display:  'flex',
+                overflow: 'hidden',
+            }}
         >
+            {/* NUNCA adicionar overflow:hidden em html/body/#root */}
+            {/* Essas regras ficam SOMENTE no index.html */}
+            <style>{`
+                .app-scroll-main {
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                }
+                .app-scroll-main::-webkit-scrollbar { display: none; }
+            `}</style>
 
-            {/* Sidebar (Desktop only — não afeta mobile) */}
+            {/* Sidebar (Desktop only) */}
             <DesktopSidebar />
 
-            {/* ─── Coluna principal: flex-col, ocupa altura toda ─────────── */}
-            {/* MUDANÇA: overflow:hidden REMOVIDO — não clicar o BottomNav    */}
-            {/* MUDANÇA: relative REMOVIDO — SupportWidget agora está aqui dentro */}
+            {/* Coluna principal */}
             <div
                 className="flex-1 flex flex-col bg-prosperus-navy relative"
                 style={{ minHeight: 0 }}
             >
-                {/* MUDANÇA: OfflineBanner movido para DENTRO da coluna       */}
-                {/* Antes: era filho direto do flex-row externo               */}
-                {/* Agora: empilha ANTES do header, no topo da coluna         */}
                 <OfflineBanner />
-
-                {/* Header fixo no topo */}
                 <AppHeader />
 
-                {/* Main: flex-1 → ocupa TUDO entre header e nav */}
+                {/* Main: único container de scroll da aplicação */}
                 <main
+                    className="app-scroll-main"
                     style={{
-                        flex: 1,
-                        minHeight: 0,
-                        overflowY: 'scroll',
+                        flex:      1,
+                        minHeight: 0,       // ← CRÍTICO para flex scroll funcionar
+                        overflowY: 'auto',  // ← scroll ativo aqui (não no body)
                         overflowX: 'hidden',
                         overscrollBehavior: 'contain',
                         WebkitOverflowScrolling: 'touch',
                         ...(isMobile ? {
-                            paddingBottom: 'calc(56px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)'
-                        } : { padding: '2rem' }),
+                            // paddingBottom compensa o BottomNav position:fixed
+                            paddingBottom: 'calc(56px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
+                        } : {
+                            padding: '2rem',
+                        }),
                     } as React.CSSProperties}
                 >
                     {children}
                 </main>
 
-                {/* BottomNav: inclui .bottom-nav-ios que já tem safe-area padding */}
+                {/* BottomNav position:fixed — não ocupa espaço no fluxo */}
                 <BottomNav />
 
-                {/* MUDANÇA: SupportWidget movido para DENTRO da coluna      */}
-                {/* Antes: estava fora do inner column, podendo cobrir o nav */}
-                {/* Agora: é position:absolute dentro da coluna, não do root */}
                 {view !== ViewState.MESSAGES && (
                     <SupportWidget
                         visible={!(view === ViewState.AGENDA && mobileView === 'MONTH' && isMobile)}
@@ -77,12 +109,8 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                 )}
             </div>
 
-            {/* MUDANÇA: InstallPrompt movido para FORA do flex-col principal */}
-            {/* É um overlay do viewport — precisa ficar fora do flow        */}
-            {/* Mas com z-index abaixo do BottomNav (z-40)                   */}
             <InstallPrompt />
 
-            {/* App Tour Overlay — sempre acima de tudo */}
             {tour.isActive && (
                 <AppTour
                     steps={tourSteps}
