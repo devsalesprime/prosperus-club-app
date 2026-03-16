@@ -17,6 +17,7 @@ import { cleanExpiredCache } from '../services/offlineStorage';
 import { useAppTour } from '../hooks/useAppTour';
 import { buildTourSteps } from '../components/AppTourSteps';
 import { logger } from '../utils/logger';
+import { analyticsService } from '../services/analyticsService';
 
 // ─── Types ───────────────────────────────────────────
 export interface AppContextType {
@@ -399,6 +400,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else {
             setIsLoginOpen(false);
         }
+
+        // Analytics: track successful login
+        analyticsService.trackLogin(memberUser.id);
     };
 
     const handleRoleSelection = (selectedRole: 'MEMBER' | 'ADMIN') => {
@@ -409,6 +413,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleLogout = async () => {
+        // Analytics: track logout before clearing session
+        analyticsService.trackLogout(currentUser?.id || null);
         try {
             await supabase.auth.signOut();
         } catch (err) {

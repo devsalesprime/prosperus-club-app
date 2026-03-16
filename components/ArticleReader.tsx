@@ -13,6 +13,7 @@ import {
     Clock
 } from 'lucide-react';
 import { Article, articleService } from '../services/articleService';
+import { analyticsService } from '../services/analyticsService';
 import { logger } from '../utils/logger';
 
 interface ArticleReaderProps {
@@ -21,10 +22,12 @@ interface ArticleReaderProps {
 }
 
 export const ArticleReader: React.FC<ArticleReaderProps> = ({ article, onBack }) => {
-    // Increment views on mount
+    // Increment views and track article read on mount
     useEffect(() => {
         if (article.id) {
             articleService.incrementViews(article.id);
+            // Analytics: track article read event
+            analyticsService.trackArticleRead(null, article.id, article.title);
         }
     }, [article.id]);
 

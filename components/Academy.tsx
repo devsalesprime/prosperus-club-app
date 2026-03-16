@@ -9,6 +9,7 @@ import { Play, Loader2 } from 'lucide-react';
 import { useAcademyData } from '../hooks/queries/useAcademyData';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../utils/queryKeys';
+import { analyticsService } from '../services/analyticsService';
 
 interface AcademyProps {
     userId: string;
@@ -90,6 +91,8 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
             progress: progressMap.get(video.id)?.progress || 0
         };
         setSelectedVideo(videoWithProgress);
+        // Analytics: track video start
+        analyticsService.trackVideoStart(userId, video.id, video.title);
     };
 
     const handleCloseVideo = () => {

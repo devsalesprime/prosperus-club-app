@@ -6,6 +6,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
 import { videoService } from '../services/videoService';
+import { analyticsService } from '../services/analyticsService';
 import { useCursEducaTracker } from '../hooks/useCursEducaTracker';
 import {
     X,
@@ -136,8 +137,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         videoService.updateProgress(video.id, 100);
         setDisplayProgress(100);
         setIsCompleted(true);
+        // Analytics: track video completion
+        analyticsService.trackVideoComplete(userId, video.id);
         onVideoEnd?.();
-    }, [video.id, onVideoEnd]);
+    }, [video.id, userId, onVideoEnd]);
 
     // Mark as completed manually
     const handleMarkComplete = async () => {
@@ -155,6 +158,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 // Rollback on failure
                 setIsCompleted(false);
                 setDisplayProgress(lastSavedProgress);
+            } else {
+                // Analytics: track manual video completion
+                analyticsService.trackVideoComplete(userId, video.id);
             }
         } catch (error) {
             console.error('Failed to mark as complete:', error);

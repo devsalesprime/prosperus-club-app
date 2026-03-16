@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download, Reply, Trash2 } from 'lucide-react';
 import { conversationService, Message, MessageType } from '../services/conversationService';
+import { analyticsService } from '../services/analyticsService';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useUnreadCountContext } from '../contexts/UnreadCountContext';
@@ -267,6 +268,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 m.id === optimisticId ? { ...sentMessage, _isOptimistic: false, _failed: false } : m
             ));
 
+            // Analytics: track successful text message
+            analyticsService.trackMessageSent(currentUserId, conversationId);
+
         } catch (error) {
             console.error('Error sending message:', error);
             setMessages(prev => prev.map(m =>
@@ -394,6 +398,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 m.id === optimisticId ? { ...sentMessage, _isOptimistic: false, _failed: false } : m
             ));
             setNewMessage('');
+
+            // Analytics: track successful media message
+            analyticsService.trackMessageSent(currentUserId, conversationId);
         } catch (error) {
             console.error('Error sending media:', error);
             setMessages(prev => prev.map(m =>

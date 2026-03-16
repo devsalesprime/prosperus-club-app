@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Video } from '../types';
 import { videoService } from '../services/videoService';
+import { analyticsService } from '../services/analyticsService';
 import { X, CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { logger } from '../utils/logger';
 
@@ -125,6 +126,8 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
         setIsCompleted(true);
 
         await videoService.markAsCompleted(video.id, userId);
+        // Analytics: track video completion
+        analyticsService.trackVideoComplete(userId, video.id);
         onVideoEnd?.();
     };
 
@@ -141,6 +144,9 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
             if (!success) {
                 setIsCompleted(false);
                 setDisplayProgress(lastSavedProgress);
+            } else {
+                // Analytics: track manual video completion
+                analyticsService.trackVideoComplete(userId, video.id);
             }
         } catch (error) {
             console.error('Failed to mark complete:', error);

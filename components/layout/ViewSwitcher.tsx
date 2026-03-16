@@ -16,6 +16,7 @@ import {
 import { ViewState, ClubEvent as Event } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { profileService } from '../../services/profileService';
+import useAnalytics from '../../hooks/useAnalytics';
 
 // --- Static Imports (Critical Path) ---
 import { NewsList } from '../NewsList';
@@ -75,6 +76,9 @@ export const ViewSwitcher: React.FC = () => {
         memberToProfileData,
         calendarDefaultView
     } = useApp();
+
+    // ── Analytics: auto-tracks APP_OPEN (mount) + PAGE_VIEW (view change) + LOGOUT (unmount)
+    useAnalytics({ userId: currentUser?.id || null, currentView: view });
 
     return (
         <Suspense fallback={<LazyFallback />}>
