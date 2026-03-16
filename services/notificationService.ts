@@ -36,7 +36,7 @@ export interface ScheduledNotification {
     target_url?: string;
     scheduled_for: string;
     status: string;
-    created_at: string;
+    sent_at?: string;
 }
 
 class NotificationService {
@@ -663,7 +663,7 @@ export async function getScheduledNotifications(): Promise<ScheduledNotification
     try {
         const { data, error } = await supabase
             .from('notifications')
-            .select('id, title, message, segment, target_url, scheduled_for, status, sent_at, created_at')
+            .select('id, title, message, segment, target_url, scheduled_for, status, sent_at')
             .eq('status', 'SCHEDULED')
             .order('scheduled_for', { ascending: true });
 
