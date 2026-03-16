@@ -73,6 +73,12 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
         try {
             setActionLoading(article.id);
             await articleService.publishArticle(article.id);
+
+            // 🔔 Notificar sócios sobre novo artigo (fire-and-forget)
+            import('../../services/notificationTriggers').then(({ notifyNewArticle }) => {
+                notifyNewArticle(article.id, article.title).catch(() => { });
+            });
+
             await loadArticles();
             toast.success(`"${article.title}" publicado com sucesso!`);
         } catch (err: unknown) {

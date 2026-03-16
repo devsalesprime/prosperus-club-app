@@ -209,6 +209,26 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
 
             if (event?.id) {
                 await eventService.updateEvent(event.id, eventData);
+
+                // 🔔 Detectar mudanças relevantes e notificar sócios com RSVP
+                const dateChanged = eventData.date !== event.date;
+                const locationChanged = (eventData.location || '') !== (event.location || '');
+                const linkChanged = (eventData.link || '') !== (event.link || '');
+
+                if (dateChanged || locationChanged || linkChanged) {
+                    import('../../../services/notificationTriggers').then(({ notifyEventUpdated }) => {
+                        notifyEventUpdated({
+                            eventId: event.id,
+                            eventTitle: eventData.title || event.title,
+                            dateChanged,
+                            newDate: dateChanged ? eventData.date : undefined,
+                            locationChanged,
+                            newLocation: locationChanged ? eventData.location : undefined,
+                            linkChanged,
+                            newLink: linkChanged ? eventData.link : undefined,
+                        }).catch(() => { });
+                    });
+                }
             } else {
                 await eventService.createEvent(eventData);
             }

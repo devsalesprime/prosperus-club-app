@@ -234,3 +234,95 @@ export async function notifyReport(
         tag: `report-${Date.now()}`,
     });
 }
+
+// ─── TIPO 8: Novo artigo publicado ─────────────────────────────────
+
+export async function notifyNewArticle(
+    articleId: string,
+    articleTitle: string
+): Promise<void> {
+    const { data: members } = await supabase
+        .from('profiles')
+        .select('id')
+        .in('role', ['MEMBER', 'ADMIN', 'TEAM'])
+        .eq('is_active', true);
+    if (!members?.length) return;
+
+    const BATCH = 20;
+    for (let i = 0; i < members.length; i += BATCH) {
+        await Promise.allSettled(
+            members.slice(i, i + BATCH).map((m) =>
+                dispatchNotification({
+                    userId: m.id,
+                    type: 'article',
+                    title: '📰 Novo artigo',
+                    message: articleTitle,
+                    url: '/artigos',
+                    tag: `article-${articleId}`,
+                })
+            )
+        );
+    }
+}
+
+// ─── TIPO 9: Evento atualizado (data/local/link) ───────────────────
+
+interface EventUpdatePayload {
+    eventId: string;
+    eventTitle: string;
+    dateChanged?: boolean;
+    newDate?: string;
+    locationChanged?: boolean;
+    newLocation?: string;
+    linkChanged?: boolean;
+    newLink?: string;
+}
+
+export async function notifyEventUpdated(payload: EventUpdatePayload): Promise<void> {
+    const { eventId, eventTitle, dateChanged, newDate, locationChanged, newLocation, linkChanged, newLink } = payload;
+
+    // Só notifica se algo relevante mudou
+    if (!dateChanged && !locationChanged && !linkChanged) return;
+
+    // Buscar apenas sócios com RSVP confirmado para este evento
+    const { data: rsvps, error: rsvpError } = await supabase
+        .from('event_rsvps')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .eq('status', 'CONFIRMED');
+
+    if (rsvpError) { logger.error('notifyEventUpdated rsvp query error:', rsvpError); return; }
+    if (!rsvps?.length) return;
+
+    // Montar mensagem com o que mudou
+    const changes: string[] = [];
+    if (dateChanged && newDate) {
+        const dateStr = new Date(newDate).toLocaleDateString('pt-BR', {
+            weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+        });
+        changes.push(`Data: ${dateStr}`);
+    }
+    if (locationChanged && newLocation) changes.push(`Local: ${newLocation}`);
+    if (linkChanged && newLink) changes.push(`Link atualizado`);
+
+    const message = changes.join(' · ');
+    const title = `⚠️ Evento atualizado: ${eventTitle}`;
+
+    const userIds = [...new Set(rsvps.map(r => r.user_id))]; // dedupe
+
+    const BATCH = 20;
+    for (let i = 0; i < userIds.length; i += BATCH) {
+        await Promise.allSettled(
+            userIds.slice(i, i + BATCH).map((userId) =>
+                dispatchNotification({
+                    userId,
+                    type: 'event',
+                    title,
+                    message,
+                    url: `/agenda/${eventId}`,
+                    tag: `event-update-${eventId}`,
+                })
+            )
+        );
+    }
+}
