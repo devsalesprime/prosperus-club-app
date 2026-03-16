@@ -13,11 +13,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
-        storage: window.localStorage,
-        storageKey: 'prosperus-club-auth',
-        flowType: 'implicit',
-        // Prevent AbortError when many concurrent requests compete for lock
-        lock: 'no-op' as any,
+        storage: window.localStorage, // Explicitly use localStorage
+        storageKey: 'prosperus-club-auth', // Custom key for this app
     }
 });
 
