@@ -46,7 +46,9 @@ import {
     UserX,
     CheckCircle2,
     Download,
-    LogIn
+    LogIn,
+    Image,
+    Wrench
 } from 'lucide-react';
 import {
     analyticsService,
@@ -72,6 +74,14 @@ import { AdminBenefitKpiCards } from './AdminBenefitKpiCards';
 import { TopBenefitsTable } from './TopBenefitsTable';
 import { AnalyticsExclusions } from './AnalyticsExclusions';
 import { getFileDownloadStats, FileDownloadStat, getTopFileDownloaders, TopDownloader } from '../../services/filesService';
+import { supabase } from '../../lib/supabase';
+
+interface SectionClickStats {
+    kpis: { gallery_views: number; solution_clicks: number; report_views: number; file_downloads: number };
+    top_galleries: { name: string; count: number }[];
+    top_solutions: { name: string; count: number }[];
+    top_reports: { name: string; count: number }[];
+}
 
 // ============================================
 // CHART COLORS
@@ -177,6 +187,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const [fileStats, setFileStats] = useState<FileDownloadStat[]>([]);
     const [topDownloaders, setTopDownloaders] = useState<TopDownloader[]>([]);
     const [accessMetrics, setAccessMetrics] = useState<DailyAccessMetrics[]>([]);
+    const [sectionStats, setSectionStats] = useState<SectionClickStats | null>(null);
 
     const days = periodToDays(period);
 
@@ -199,10 +210,13 @@ export const AnalyticsDashboard: React.FC = () => {
                 analyticsService.getEventAttendanceRate(days)
             ]);
 
-            // Load file stats + access metrics separately (non-blocking)
+            // Load file stats + access metrics + section stats separately (non-blocking)
             getFileDownloadStats(period).then(setFileStats).catch(console.error);
             getTopFileDownloaders(period).then(setTopDownloaders).catch(console.error);
             analyticsService.getDailyAccessMetrics(days).then(setAccessMetrics).catch(console.error);
+            Promise.resolve(supabase.rpc('get_section_click_stats', { p_days: days }))
+                .then(({ data }) => { if (data) setSectionStats(data as SectionClickStats); })
+                .catch(console.error);
 
             setStats(statsData);
             setDailyActivity(activityData);
@@ -827,6 +841,27 @@ export const AnalyticsDashboard: React.FC = () => {
             {/* ═══════════════════════════════════════════════════════ */}
             {activeTab === 'conteudo' && (<>
 
+            {/* Section Click KPIs */}
+            {sectionStats && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {[
+                        { label: 'Galeria', value: sectionStats.kpis.gallery_views, icon: <Image size={20} className="text-pink-400" />, bg: 'bg-pink-500/10' },
+                        { label: 'Soluções', value: sectionStats.kpis.solution_clicks, icon: <Wrench size={20} className="text-purple-400" />, bg: 'bg-purple-500/10' },
+                        { label: 'Relatórios', value: sectionStats.kpis.report_views, icon: <BarChart3 size={20} className="text-amber-400" />, bg: 'bg-amber-500/10' },
+                        { label: 'Arquivos', value: sectionStats.kpis.file_downloads, icon: <Download size={20} className="text-teal-400" />, bg: 'bg-teal-500/10' },
+                    ].map(item => (
+                        <div key={item.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`p-1.5 rounded-lg ${item.bg}`}>{item.icon}</div>
+                                <span className="text-xs text-slate-400 font-medium">{item.label}</span>
+                            </div>
+                            <p className="text-2xl font-bold text-white">{item.value.toLocaleString('pt-BR')}</p>
+                            <p className="text-[10px] text-slate-500 mt-1">cliques · {periodLabel(period)}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Top Content + Event Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Top Videos */}
@@ -1047,6 +1082,49 @@ export const AnalyticsDashboard: React.FC = () => {
                             </div>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════ */}
+            {/* TOP ITEMS BY SECTION                                   */}
+            {/* ═══════════════════════════════════════════════════════ */}
+            {sectionStats && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {[
+                        { title: 'Top Galerias', items: sectionStats.top_galleries, icon: <Image size={20} className="text-pink-400" />, color: 'text-pink-400', bg: 'bg-pink-500/10' },
+                        { title: 'Top Soluções', items: sectionStats.top_solutions, icon: <Wrench size={20} className="text-purple-400" />, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                        { title: 'Top Relatórios', items: sectionStats.top_reports, icon: <BarChart3 size={20} className="text-amber-400" />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                    ].map(section => (
+                        <div key={section.title} className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                {section.icon}
+                                <h3 className="font-bold text-white">{section.title}</h3>
+                                <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
+                                    {periodLabel(period)}
+                                </span>
+                            </div>
+                            {section.items.length > 0 ? (
+                                <div className="space-y-3">
+                                    {section.items.map((item, index) => (
+                                        <div key={item.name} className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-slate-500 w-5">#{index + 1}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm text-white truncate">{item.name}</p>
+                                            </div>
+                                            <span className={`text-xs font-bold ${section.color} ${section.bg} px-2 py-1 rounded`}>
+                                                {item.count}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <AdminEmptyState
+                                    icon={section.icon}
+                                    message="Nenhum clique registrado"
+                                />
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
 

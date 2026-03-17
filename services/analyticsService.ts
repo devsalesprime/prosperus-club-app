@@ -41,6 +41,7 @@ export type AnalyticsEventType =
     | 'TOOL_VIEW'          // Acesso a uma ferramenta específica
     | 'FILE_DOWNLOAD'      // Download de arquivo
     | 'REPORT_VIEW'        // Visualização de relatório
+    | 'GALLERY_VIEW'       // Visualização de galeria de fotos
     | 'ERROR';             // Erro capturado
 
 export interface AnalyticsEvent {
@@ -285,6 +286,21 @@ class AnalyticsService {
         this.trackEvent(userId, 'REPORT_VIEW', {
             report_name: reportName,
             ...metadata
+        });
+    }
+
+    trackGalleryView(userId: string | null, albumId: string, albumTitle: string): void {
+        this.trackEvent(userId, 'GALLERY_VIEW', {
+            album_id: albumId,
+            album_title: albumTitle
+        });
+    }
+
+    trackSolutionClick(userId: string | null, solutionId: string, solutionTitle: string): void {
+        this.trackEvent(userId, 'TOOL_VIEW', {
+            tool_id: solutionId,
+            tool_name: solutionTitle,
+            source: 'solutions_page'
         });
     }
 

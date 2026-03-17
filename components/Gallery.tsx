@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, Loader2, RefreshCw, Calendar, Image as ImageIcon, Heart, ExternalLink } from 'lucide-react';
 import { galleryService } from '../services/galleryService';
 import { favoriteService } from '../services/favoriteService';
+import { analyticsService } from '../services/analyticsService';
+import { useApp } from '../contexts/AppContext';
 import { GalleryAlbum } from '../types';
 
 /**
@@ -15,6 +17,7 @@ import { GalleryAlbum } from '../types';
 // Album List Component (Grid with Direct Access)
 // ============================================
 const GalleryList: React.FC = () => {
+    const { currentUser } = useApp();
     const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ const GalleryList: React.FC = () => {
 
     /** One-Click: abre a galeria direto no navegador nativo */
     const handleOpenGallery = (album: GalleryAlbum) => {
+        analyticsService.trackGalleryView(currentUser?.id || null, album.id, album.title);
         window.open(album.embedUrl, '_blank', 'noopener,noreferrer');
     };
 

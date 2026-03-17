@@ -5,6 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { Download, Loader2, ArrowLeft, FileText, FileCode, FileSpreadsheet, File, Eye, X } from 'lucide-react';
 import { ViewState } from '../types';
 import { toolsService, MemberProgressFile } from '../services/toolsService';
+import { analyticsService } from '../services/analyticsService';
+import { useApp } from '../contexts/AppContext';
 import { MemberFilesPage } from './MemberFilesPage';
 
 interface ProgressListPageProps {
@@ -12,6 +14,7 @@ interface ProgressListPageProps {
 }
 
 export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) => {
+    const { currentUser } = useApp();
     const [files, setFiles] = useState<MemberProgressFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
 
     // Fetch HTML content and create a blob URL with correct MIME type
     const handlePreview = async (file: MemberProgressFile) => {
+        analyticsService.trackReportView(currentUser?.id || null, file.title, { action: 'preview', file_type: file.file_type });
         setLoadingPreview(true);
         setPreviewTitle(file.title);
         try {
@@ -96,6 +100,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
     };
 
     const handleDownload = async (file: MemberProgressFile) => {
+        analyticsService.trackReportView(currentUser?.id || null, file.title, { action: 'download', file_type: file.file_type });
         try {
             const response = await fetch(file.file_url);
             const blob = await response.blob();

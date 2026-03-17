@@ -9,6 +9,8 @@ import React, { useEffect, useState } from 'react';
 import { ExternalLink, ArrowLeft, Wrench } from 'lucide-react';
 import { ViewState } from '../types';
 import { toolsService, ToolSolution } from '../services/toolsService';
+import { analyticsService } from '../services/analyticsService';
+import { useApp } from '../contexts/AppContext';
 
 interface SolutionsListPageProps {
     setView: (view: ViewState) => void;
@@ -66,6 +68,7 @@ function SolutionMemberCard({
     solution: ToolSolution;
     index: number;
 }) {
+    const { currentUser } = useApp();
     return (
         <div
             className="slp-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-yellow-600/20 transition-all duration-300"
@@ -110,6 +113,7 @@ function SolutionMemberCard({
                     href={solution.external_url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => analyticsService.trackSolutionClick(currentUser?.id || null, solution.id, solution.title)}
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-sm font-semibold text-white transition-all active:scale-[0.98]"
                 >
                     Acessar Ferramenta
