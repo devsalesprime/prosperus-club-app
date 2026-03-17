@@ -156,6 +156,7 @@ const TrendBadge: React.FC<{ value: number | null | undefined }> = ({ value }) =
 export const AnalyticsDashboard: React.FC = () => {
     const [period, setPeriod] = useState<Period>('30d');
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'engajamento' | 'business' | 'conteudo'>('engajamento');
 
     // Fase A states
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -276,6 +277,34 @@ export const AnalyticsDashboard: React.FC = () => {
             />
 
             {/* ═══════════════════════════════════════════════════════ */}
+            {/* TAB NAVIGATION                                          */}
+            {/* ═══════════════════════════════════════════════════════ */}
+            <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1">
+                {([
+                    { id: 'engajamento' as const, label: 'Engajamento', icon: <Activity size={16} /> },
+                    { id: 'business' as const, label: 'Business', icon: <DollarSign size={16} /> },
+                    { id: 'conteudo' as const, label: 'Conteúdo', icon: <Video size={16} /> },
+                ]).map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition ${
+                            activeTab === tab.id
+                                ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/20'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                        }`}
+                    >
+                        {tab.icon}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════ */}
+            {/* TAB: ENGAJAMENTO                                        */}
+            {/* ═══════════════════════════════════════════════════════ */}
+            {activeTab === 'engajamento' && (<>
+            {/* ═══════════════════════════════════════════════════════ */}
             {/* ENGAGEMENT KPIs (Fase A)                               */}
             {/* ═══════════════════════════════════════════════════════ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -335,9 +364,82 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
             </div>
 
+            {/* ACTIVITY CHART */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">Atividade por Dia</h2>
+                        <p className="text-sm text-slate-400">Últimos {periodLabel(period)}</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <span className="text-slate-400">Total</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <span className="text-slate-400">Page Views</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span className="text-slate-400">Mensagens</span>
+                        </div>
+                    </div>
+                </div>
+
+                {dailyActivity.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <AreaChart data={dailyActivity}>
+                            <defs>
+                                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
+                                </linearGradient>
+                                <linearGradient id="colorPageViews" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor={CHART_COLORS.secondary} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                            <XAxis dataKey="label" stroke={CHART_COLORS.text} tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickLine={false} />
+                            <YAxis stroke={CHART_COLORS.text} tick={{ fill: CHART_COLORS.text, fontSize: 11 }} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }} labelStyle={{ color: '#94a3b8' }} />
+                            <Area type="monotone" dataKey="total" stroke={CHART_COLORS.primary} fillOpacity={1} fill="url(#colorTotal)" strokeWidth={2} name="Total" />
+                            <Area type="monotone" dataKey="pageViews" stroke={CHART_COLORS.secondary} fillOpacity={1} fill="url(#colorPageViews)" strokeWidth={2} name="Page Views" />
+                            <Area type="monotone" dataKey="messages" stroke={CHART_COLORS.tertiary} fillOpacity={0} strokeWidth={2} name="Mensagens" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <AdminEmptyState icon={<BarChart3 size={48} />} message="Nenhum dado de atividade disponível" description="Os dados aparecerão aqui quando houver eventos registrados no período selecionado." />
+                )}
+            </div>
+
+            {/* TOTAL EVENTS FOOTER */}
+            <div className="bg-gradient-to-r from-yellow-600/10 to-yellow-600/5 border border-yellow-600/20 rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-slate-400 text-sm">Total de eventos registrados</p>
+                        <p className="text-3xl font-bold text-white">{(stats?.totalEvents || 0).toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-slate-400 text-sm">Período</p>
+                        <p className="text-lg font-bold text-yellow-500">Últimos {periodLabel(period)}</p>
+                        {stats?.trendEvents !== null && stats?.trendEvents !== undefined && (
+                            <div className={`flex items-center justify-end gap-1 mt-1 ${stats.trendEvents > 0 ? 'text-emerald-500' : stats.trendEvents < 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                {stats.trendEvents > 0 ? <TrendingUp size={14} /> : stats.trendEvents < 0 ? <TrendingDown size={14} /> : <Minus size={14} />}
+                                <span className="text-xs font-bold">{Math.abs(stats.trendEvents)}% vs período anterior</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+            </>)}
+
             {/* ═══════════════════════════════════════════════════════ */}
-            {/* BUSINESS INTELLIGENCE KPIs (Fase B)                    */}
+            {/* TAB: BUSINESS                                          */}
             {/* ═══════════════════════════════════════════════════════ */}
+            {activeTab === 'business' && (<>
+            {/* BI KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* BI KPI 1: Volume ROI Auditado */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-emerald-800/50 transition">
@@ -652,107 +754,14 @@ export const AnalyticsDashboard: React.FC = () => {
                 <AdminBenefitKpiCards period={days} />
                 <TopBenefitsTable limit={10} />
             </div>
+            </>)}
 
             {/* ═══════════════════════════════════════════════════════ */}
-            {/* ACTIVITY CHART (Fase A)                                */}
+            {/* TAB: CONTEÚDO                                          */}
             {/* ═══════════════════════════════════════════════════════ */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h2 className="text-lg font-bold text-white">Atividade por Dia</h2>
-                        <p className="text-sm text-slate-400">Últimos {periodLabel(period)}</p>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                            <span className="text-slate-400">Total</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                            <span className="text-slate-400">Page Views</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                            <span className="text-slate-400">Mensagens</span>
-                        </div>
-                    </div>
-                </div>
+            {activeTab === 'conteudo' && (<>
 
-                {dailyActivity.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={dailyActivity}>
-                            <defs>
-                                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="colorPageViews" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={CHART_COLORS.secondary} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={CHART_COLORS.secondary} stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-                            <XAxis
-                                dataKey="label"
-                                stroke={CHART_COLORS.text}
-                                tick={{ fill: CHART_COLORS.text, fontSize: 11 }}
-                                tickLine={false}
-                            />
-                            <YAxis
-                                stroke={CHART_COLORS.text}
-                                tick={{ fill: CHART_COLORS.text, fontSize: 11 }}
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#1e293b',
-                                    border: '1px solid #334155',
-                                    borderRadius: '8px',
-                                    color: '#fff'
-                                }}
-                                labelStyle={{ color: '#94a3b8' }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="total"
-                                stroke={CHART_COLORS.primary}
-                                fillOpacity={1}
-                                fill="url(#colorTotal)"
-                                strokeWidth={2}
-                                name="Total"
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="pageViews"
-                                stroke={CHART_COLORS.secondary}
-                                fillOpacity={1}
-                                fill="url(#colorPageViews)"
-                                strokeWidth={2}
-                                name="Page Views"
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="messages"
-                                stroke={CHART_COLORS.tertiary}
-                                fillOpacity={0}
-                                strokeWidth={2}
-                                name="Mensagens"
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <AdminEmptyState
-                        icon={<BarChart3 size={48} />}
-                        message="Nenhum dado de atividade disponível"
-                        description="Os dados aparecerão aqui quando houver eventos registrados no período selecionado."
-                    />
-                )}
-            </div>
-
-            {/* ═══════════════════════════════════════════════════════ */}
-            {/* BOTTOM GRID: Top Content + Event Breakdown (Fase A)    */}
-            {/* ═══════════════════════════════════════════════════════ */}
+            {/* Top Content + Event Breakdown */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Top Videos */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -975,45 +984,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </div>
             )}
 
-            {/* ═══════════════════════════════════════════════════════ */}
-            {/* TOTAL EVENTS FOOTER (Fase A)                           */}
-            {/* ═══════════════════════════════════════════════════════ */}
-            <div className="bg-gradient-to-r from-yellow-600/10 to-yellow-600/5 border border-yellow-600/20 rounded-xl p-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-slate-400 text-sm">Total de eventos registrados</p>
-                        <p className="text-3xl font-bold text-white">
-                            {(stats?.totalEvents || 0).toLocaleString('pt-BR')}
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-slate-400 text-sm">Período</p>
-                        <p className="text-lg font-bold text-yellow-500">
-                            Últimos {periodLabel(period)}
-                        </p>
-                        {stats?.trendEvents !== null && stats?.trendEvents !== undefined && (
-                            <div className={`flex items-center justify-end gap-1 mt-1 ${
-                                stats.trendEvents > 0
-                                    ? 'text-emerald-500'
-                                    : stats.trendEvents < 0
-                                        ? 'text-red-500'
-                                        : 'text-slate-400'
-                            }`}>
-                                {stats.trendEvents > 0 ? (
-                                    <TrendingUp size={14} />
-                                ) : stats.trendEvents < 0 ? (
-                                    <TrendingDown size={14} />
-                                ) : (
-                                    <Minus size={14} />
-                                )}
-                                <span className="text-xs font-bold">
-                                    {Math.abs(stats.trendEvents)}% vs período anterior
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            </>)}
         </div>
     );
 };

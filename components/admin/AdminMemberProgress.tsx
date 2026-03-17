@@ -3,6 +3,7 @@
 // Supports: Single upload and Bulk upload by email (multiple files)
 
 import React, { useEffect, useState, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
     Upload,
     Trash2,
@@ -17,12 +18,11 @@ import {
     Eye,
     X,
     Users,
-    BarChart3,
-    AlertCircle,
     Layers
 } from 'lucide-react';
 import { toolsService, MemberProgressFile } from '../../services/toolsService';
 import { supabase } from '../../lib/supabase';
+import { AdminPageHeader, AdminConfirmDialog } from './shared';
 
 interface Member {
     id: string;
@@ -72,9 +72,8 @@ export const AdminMemberProgress: React.FC = () => {
     const [previewMemberName, setPreviewMemberName] = useState('');
     const [loadingPreview, setLoadingPreview] = useState(false);
 
-    // Feedback state
-    const [success, setSuccess] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    // Confirm delete state
+    const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -87,20 +86,7 @@ export const AdminMemberProgress: React.FC = () => {
         };
     }, [previewUrl]);
 
-    // Auto-dismiss feedback
-    useEffect(() => {
-        if (success) {
-            const timer = setTimeout(() => setSuccess(null), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [success]);
 
-    useEffect(() => {
-        if (error) {
-            const timer = setTimeout(() => setError(null), 8000);
-            return () => clearTimeout(timer);
-        }
-    }, [error]);
 
     const loadData = async () => {
         try {
@@ -115,7 +101,7 @@ export const AdminMemberProgress: React.FC = () => {
             setFiles(filesData);
         } catch (err) {
             console.error('Failed to load data:', err);
-            setError('Falha ao carregar dados');
+            toast.error('Falha ao carregar dados');
         } finally {
             setLoading(false);
         }
@@ -127,12 +113,10 @@ export const AdminMemberProgress: React.FC = () => {
     const handleSingleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedMemberId || !fileTitle || !selectedFile) {
-            setError('Preencha todos os campos');
-            return;
+            toast.error('Preencha todos os campos');
         }
 
         setUploading(true);
-        setError(null);
         try {
             await toolsService.uploadProgressFile({
                 member_id: selectedMemberId,
@@ -141,7 +125,7 @@ export const AdminMemberProgress: React.FC = () => {
             });
 
             const memberName = members.find(m => m.id === selectedMemberId)?.name || 'Sócio';
-            setSuccess(`Arquivo enviado para ${memberName}!`);
+            toast.success(`Arquivo enviado para ${memberName}!`);
             setSelectedMemberId('');
             setFileTitle('');
             setSelectedFile(null);
@@ -149,7 +133,7 @@ export const AdminMemberProgress: React.FC = () => {
             loadData();
         } catch (err) {
             console.error('Failed to upload file:', err);
-            setError('Erro ao enviar arquivo');
+            toast.error('Erro ao enviar arquivo');
         } finally {
             setUploading(false);
         }
@@ -174,12 +158,12 @@ export const AdminMemberProgress: React.FC = () => {
 
     const handleBulkUpload = async () => {
         if (bulkFiles.length === 0 || !bulkTitle.trim()) {
-            setError('Selecione os arquivos e defina o título');
+            toast.error('Selecione os arquivos e defina o título');
             return;
         }
 
         setUploading(true);
-        setError(null);
+
         setBulkResults([]);
         setBulkProgress({ current: 0, total: bulkFiles.length });
 
@@ -247,9 +231,9 @@ export const AdminMemberProgress: React.FC = () => {
         const errorCount = results.filter(r => !r.success).length;
 
         if (successCount > 0) {
-            setSuccess(`${successCount} arquivo(s) enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}!`);
+            toast.success(`${successCount} arquivo(s) enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}!`);
         } else {
-            setError(`Nenhum arquivo foi enviado. ${errorCount} falha(s).`);
+            toast.error(`Nenhum arquivo foi enviado. ${errorCount} falha(s).`);
         }
 
         setUploading(false);
@@ -257,14 +241,13 @@ export const AdminMemberProgress: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este arquivo?')) return;
         try {
             await toolsService.deleteProgressFile(id);
-            setSuccess('Arquivo excluído');
+            toast.success('Arquivo excluído');
             loadData();
         } catch (err) {
             console.error('Failed to delete file:', err);
-            setError('Erro ao excluir arquivo');
+            toast.error('Erro ao excluir arquivo');
         }
     };
 
@@ -319,23 +302,19 @@ export const AdminMemberProgress: React.FC = () => {
 
     return (
         <div className="p-6 max-w-5xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 bg-gradient-to-br from-yellow-600 to-yellow-500 rounded-xl">
-                    <BarChart3 className="text-white" size={24} />
-                </div>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold text-white">Relatórios de Progresso</h1>
-                    <p className="text-slate-400 text-sm">Envie relatórios HTML, PDFs e planilhas para os sócios</p>
-                </div>
-                <button
-                    onClick={loadData}
-                    className="p-2.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
-                    title="Atualizar"
-                >
-                    <RefreshCw size={18} />
-                </button>
-            </div>
+            <AdminPageHeader
+                title="Relatórios de Progresso"
+                subtitle="Envie relatórios HTML, PDFs e planilhas para os sócios"
+                action={
+                    <button
+                        onClick={loadData}
+                        className="p-2.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition"
+                        title="Atualizar"
+                    >
+                        <RefreshCw size={18} />
+                    </button>
+                }
+            />
 
             {/* Stats Cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
@@ -353,21 +332,7 @@ export const AdminMemberProgress: React.FC = () => {
                 </div>
             </div>
 
-            {/* Feedback Messages */}
-            {success && (
-                <div className="flex items-center gap-2 p-3 mb-4 bg-green-900/20 border border-green-900/50 rounded-lg text-green-400 text-sm">
-                    <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    {success}
-                </div>
-            )}
-            {error && (
-                <div className="flex items-center gap-2 p-3 mb-4 bg-red-900/20 border border-red-900/50 rounded-lg text-red-400 text-sm">
-                    <AlertCircle size={16} className="shrink-0" />
-                    {error}
-                </div>
-            )}
+
 
             <div className="grid lg:grid-cols-5 gap-6">
                 {/* Upload Form - Left Column (2/5) */}
@@ -732,7 +697,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                 <Download size={16} />
                                             </a>
                                             <button
-                                                onClick={() => handleDelete(file.id)}
+                                                onClick={() => setConfirmDeleteId(file.id)}
                                                 className="p-2 hover:bg-red-900/30 text-red-400 rounded-lg transition"
                                                 title="Excluir"
                                             >
@@ -791,6 +756,20 @@ export const AdminMemberProgress: React.FC = () => {
                     </div>
                 </div>
             )}
+            {/* Confirm Delete Dialog */}
+            <AdminConfirmDialog
+                isOpen={!!confirmDeleteId}
+                onClose={() => setConfirmDeleteId(null)}
+                onConfirm={async () => {
+                    if (!confirmDeleteId) return;
+                    await handleDelete(confirmDeleteId);
+                    setConfirmDeleteId(null);
+                }}
+                title="Excluir Arquivo"
+                message="Tem certeza que deseja excluir este arquivo? Essa ação não pode ser desfeita."
+                confirmText="Excluir"
+                isDestructive
+            />
         </div>
     );
 };

@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, PlaySquare, RefreshCw, Search, X } from 'lucide-react';
+import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
     AdminPageHeader,
     AdminModal,
@@ -34,6 +34,8 @@ export const MembersModule: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'TEAM' | 'MEMBER'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 20;
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -165,6 +167,10 @@ export const MembersModule: React.FC = () => {
         }
     };
 
+    // Reset page when filters change (must be before early returns)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter]);
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -197,19 +203,56 @@ export const MembersModule: React.FC = () => {
         return matchesRole && matchesSearch;
     });
 
+    // ─── CSV Export ────────────────────────────────────────
+    const exportToCsv = () => {
+        const headers = ['Nome', 'Email', 'Empresa', 'Cargo', 'Perfil', 'Cadastro'];
+        const rows = filteredMembers.map(m => [
+            m.name || '',
+            m.email || '',
+            m.company || '',
+            m.job_title || '',
+            m.role || '',
+            m.created_at ? new Date(m.created_at).toLocaleDateString('pt-BR') : ''
+        ]);
+        const csvContent = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `socios_prosperus_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success(`${filteredMembers.length} membros exportados!`);
+    };
+
+    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PAGE_SIZE));
+    const paginatedMembers = filteredMembers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
                 title="Sócios"
                 subtitle={`${filteredMembers.length} de ${members.length} usuários`}
                 action={
-                    <button
-                        onClick={loadMembers}
-                        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
-                    >
-                        <RefreshCw size={16} />
-                        Atualizar
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={exportToCsv}
+                            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
+                            title="Exportar CSV"
+                        >
+                            <Download size={16} />
+                            CSV
+                        </button>
+                        <button
+                            onClick={loadMembers}
+                            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
+                        >
+                            <RefreshCw size={16} />
+                            Atualizar
+                        </button>
+                    </div>
                 }
             />
 
@@ -259,7 +302,7 @@ export const MembersModule: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {filteredMembers.map((member) => (
+                        {paginatedMembers.map((member) => (
                             <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
@@ -310,6 +353,34 @@ export const MembersModule: React.FC = () => {
                     </tbody>
                 </table>
             </AdminTable>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-2">
+                    <p className="text-xs text-slate-500">
+                        {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredMembers.length)} de {filteredMembers.length}
+                    </p>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <span className="text-sm text-slate-400 px-3">
+                            {currentPage} / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Edit Member Modal */}
             {isEditModalOpen && editingMember && (

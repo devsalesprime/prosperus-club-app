@@ -6,7 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
     Plus, Trash2, Eye, EyeOff, FileText, Image as ImageIcon,
-    Download, X, Upload, Loader2, FolderOpen
+    Download, X, Upload, Loader2, FolderOpen, Search
 } from 'lucide-react';
 import {
     uploadMemberFile,
@@ -222,6 +222,8 @@ export const AdminFilesModule: React.FC = () => {
     const [uploading, setUploading] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ id: string; path: string; title: string } | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [searchFiles, setSearchFiles] = useState('');
+    const [catFilter, setCatFilter] = useState('todos');
 
     // Load list when switching to lista tab
     useEffect(() => {
@@ -376,8 +378,84 @@ export const AdminFilesModule: React.FC = () => {
                             <FolderOpen size={48} className="mx-auto mb-3 text-slate-700" />
                             <p className="text-slate-400 text-sm">Nenhum arquivo publicado ainda.</p>
                         </div>
-                    ) : (
+                    ) : (() => {
+                        const term = searchFiles.toLowerCase().trim();
+                        const filteredFiles = files.filter(f => {
+                            const matchesCat = catFilter === 'todos' || f.category === catFilter;
+                            const matchesSearch = !term || f.title.toLowerCase().includes(term);
+                            return matchesCat && matchesSearch;
+                        });
+                        return filteredFiles.length === 0 && (searchFiles || catFilter !== 'todos') ? (
+                            <>
+                            {/* Filter bar */}
+                            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                                <div className="relative flex-1">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        type="text"
+                                        value={searchFiles}
+                                        onChange={(e) => setSearchFiles(e.target.value)}
+                                        placeholder="Buscar por título..."
+                                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/20 transition"
+                                    />
+                                    {searchFiles && (
+                                        <button onClick={() => setSearchFiles('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    <button
+                                        onClick={() => setCatFilter('todos')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${catFilter === 'todos' ? 'bg-yellow-500 text-slate-900 border-yellow-500' : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                                    >Todos</button>
+                                    {CATEGORIES.map(c => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => setCatFilter(c.id)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${catFilter === c.id ? 'bg-yellow-500 text-slate-900 border-yellow-500' : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                                        >{c.label}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="text-center py-12">
+                                <FolderOpen size={48} className="mx-auto mb-3 text-slate-700" />
+                                <p className="text-slate-400 text-sm">Nenhum arquivo encontrado com esses filtros.</p>
+                            </div>
+                            </>
+                        ) : (
                         <>
+                            {/* Filter bar */}
+                            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                                <div className="relative flex-1">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        type="text"
+                                        value={searchFiles}
+                                        onChange={(e) => setSearchFiles(e.target.value)}
+                                        placeholder="Buscar por título..."
+                                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/20 transition"
+                                    />
+                                    {searchFiles && (
+                                        <button onClick={() => setSearchFiles('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap">
+                                    <button
+                                        onClick={() => setCatFilter('todos')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${catFilter === 'todos' ? 'bg-yellow-500 text-slate-900 border-yellow-500' : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                                    >Todos</button>
+                                    {CATEGORIES.map(c => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => setCatFilter(c.id)}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${catFilter === c.id ? 'bg-yellow-500 text-slate-900 border-yellow-500' : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                                        >{c.label}</button>
+                                    ))}
+                                </div>
+                            </div>
                             <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
                                 <table className="w-full min-w-[600px] text-sm">
                                     <thead>
@@ -390,7 +468,7 @@ export const AdminFilesModule: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {files.map(file => (
+                                        {filteredFiles.map(file => (
                                             <tr key={file.id} className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition ${!file.is_visible ? 'opacity-50' : ''}`}>
                                                 <td className="px-5 py-3">
                                                     <div className="flex items-center gap-3">
@@ -441,11 +519,14 @@ export const AdminFilesModule: React.FC = () => {
                             </div>
 
                             <p className="text-slate-500 text-xs text-right mt-3">
-                                {files.length} arquivo{files.length !== 1 ? 's' : ''} ·{' '}
-                                {files.reduce((a, f) => a + f.download_count, 0)} downloads totais
+                                {searchFiles || catFilter !== 'todos'
+                                    ? `${filteredFiles.length} de ${files.length} arquivos`
+                                    : `${files.length} arquivo${files.length !== 1 ? 's' : ''}`}
+                                {' '}· {filteredFiles.reduce((a, f) => a + f.download_count, 0)} downloads
                             </p>
                         </>
-                    )}
+                    );
+                    })()}
                 </div>
             )}
         </div>
