@@ -49,8 +49,19 @@ export const VideoMaterialsList: React.FC<Props> = ({ videoId }) => {
         setTimeout(() => setDownloading(null), 1200);
     };
 
-    // Don't render if no materials (after loading completes)
-    if (!loading && materials.length === 0) return null;
+    // Show placeholder when no materials exist
+    if (!loading && materials.length === 0) {
+        return (
+            <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Paperclip size={14} color={GREY} />
+                    <span style={{ fontSize: 12, color: GREY }}>
+                        Nenhum material complementar disponível.
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ marginTop: 20 }}>

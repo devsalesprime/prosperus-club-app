@@ -1,10 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Video, VideoProgress, VideoCategory } from '../types';
 import { VideoCard } from './VideoCard';
-import { VideoPlayer } from './VideoPlayer';
-import { YouTubePlayer } from './YouTubePlayer';
-import { VimeoPlayer } from './VimeoPlayer';
-import { CursEducaPlayer } from './CursEducaPlayer';
+import { VideoPlayerModal } from './VideoPlayerModal';
 import { Play, Loader2 } from 'lucide-react';
 import { useAcademyData } from '../hooks/queries/useAcademyData';
 import { useQueryClient } from '@tanstack/react-query';
@@ -210,24 +207,13 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
             )}
 
             {/* ===== VIDEO PLAYER MODAL ===== */}
-            {selectedVideo && (() => {
-                const videoUrl = selectedVideo.videoUrl || '';
-                const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-                const isVimeo = videoUrl.includes('vimeo.com');
-
-                let player: React.ReactNode;
-                if (isYouTube) {
-                    player = <YouTubePlayer video={selectedVideo} userId={userId} onClose={handleCloseVideo} />;
-                } else if (isVimeo) {
-                    player = <VimeoPlayer video={selectedVideo} userId={userId} onClose={handleCloseVideo} />;
-                } else if (videoUrl.includes('curseduca.com')) {
-                    player = <CursEducaPlayer video={selectedVideo} userId={userId} onClose={handleCloseVideo} />;
-                } else {
-                    player = <VideoPlayer video={selectedVideo} userId={userId} onClose={handleCloseVideo} />;
-                }
-
-                return player;
-            })()}
+            {selectedVideo && (
+                <VideoPlayerModal
+                    video={selectedVideo}
+                    userId={userId}
+                    onClose={handleCloseVideo}
+                />
+            )}
 
             {/* ===== SCROLLBAR HIDE UTILITY ===== */}
             <style>{`
