@@ -256,128 +256,126 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             className="fixed inset-0 bg-black z-[70] flex flex-col"
             onMouseMove={handleMouseMove}
         >
-            {/* Header */}
-            <div
-                className={`absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-            >
+            {/* Header — normal flow, always visible */}
+            <div className="flex-shrink-0 bg-black/90 px-4 py-3 z-10">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-white font-bold text-lg truncate pr-4">{video.title}</h2>
+                    <div className="min-w-0 flex-1 pr-3">
+                        <h2 className="text-white font-bold text-lg truncate">{video.title}</h2>
+                        <p className="text-yellow-500 text-sm font-bold mt-0.5">
+                            {displayProgress}% concluído
+                        </p>
+                    </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/20 rounded-full transition shrink-0"
+                        className="p-2 hover:bg-white/20 rounded-full transition flex-shrink-0"
                     >
                         <X className="text-white" size={24} />
                     </button>
                 </div>
             </div>
 
-            {/* Video Player */}
-            <div className="flex-1 flex items-center justify-center bg-black p-4">
-                {isEmbed ? (
-                    <iframe
-                        src={getEmbedUrl(video.videoUrl!)}
-                        className="w-full max-w-7xl aspect-video rounded-lg"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                    />
-                ) : (
-                    <video
-                        ref={videoRef}
-                        src={video.videoUrl}
-                        className="w-full max-w-7xl aspect-video rounded-lg"
-                        onTimeUpdate={handleTimeUpdate}
-                        onEnded={handleVideoEnd}
-                        onPlay={() => setIsPlaying(true)}
-                        onPause={() => setIsPlaying(false)}
-                        onClick={togglePlay}
-                        controls
-                    />
-                )}
-            </div>
+            {/* Scrollable content — video + controls + materials */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+                {/* Video Player */}
+                <div className="w-full max-w-7xl mx-auto px-4 pt-2">
+                    {isEmbed ? (
+                        <iframe
+                            src={getEmbedUrl(video.videoUrl!)}
+                            className="w-full aspect-video rounded-lg"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <video
+                            ref={videoRef}
+                            src={video.videoUrl}
+                            className="w-full aspect-video rounded-lg"
+                            onTimeUpdate={handleTimeUpdate}
+                            onEnded={handleVideoEnd}
+                            onPlay={() => setIsPlaying(true)}
+                            onPause={() => setIsPlaying(false)}
+                            onClick={togglePlay}
+                            controls
+                        />
+                    )}
+                </div>
 
-            {/* Progress Bar (Universal - always shown) */}
-            <div className={`absolute bottom-20 left-4 right-4 z-10 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="bg-slate-800/80 backdrop-blur-sm rounded-full px-4 py-2">
-                    <div className="flex items-center gap-3">
-                        {/* Progress bar */}
-                        <div
-                            className="flex-1 h-2 bg-slate-700 rounded-full cursor-pointer hover:h-3 transition-all"
-                            onClick={!isEmbed ? handleSeek : undefined}
-                        >
+                {/* Controls section */}
+                <div className="w-full max-w-7xl mx-auto px-4 py-4">
+                    {/* Progress bar */}
+                    <div className="bg-slate-800/80 backdrop-blur-sm rounded-full px-4 py-2 mb-4">
+                        <div className="flex items-center gap-3">
                             <div
-                                className="h-full bg-yellow-500 rounded-full relative transition-all"
-                                style={{ width: `${displayProgress}%` }}
+                                className="flex-1 h-2 bg-slate-700 rounded-full cursor-pointer hover:h-3 transition-all"
+                                onClick={!isEmbed ? handleSeek : undefined}
                             >
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-yellow-400 rounded-full shadow-lg" />
+                                <div
+                                    className="h-full bg-yellow-500 rounded-full relative transition-all"
+                                    style={{ width: `${displayProgress}%` }}
+                                >
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-yellow-400 rounded-full shadow-lg" />
+                                </div>
                             </div>
+                            <span className="text-sm font-bold text-yellow-500 min-w-[4rem] text-right">
+                                {Math.round(displayProgress)}%
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Controls row */}
+                    <div className="flex items-center justify-between text-white flex-wrap gap-3 mb-4">
+                        {/* Left: Playback controls (MP4 only) */}
+                        <div className="flex items-center gap-4">
+                            {!isEmbed && (
+                                <>
+                                    <button onClick={togglePlay} className="hover:text-yellow-500 transition">
+                                        {isPlaying ? <Pause size={24} /> : <Play size={24} />}
+                                    </button>
+                                    <button onClick={toggleMute} className="hover:text-yellow-500 transition">
+                                        {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                                    </button>
+                                    <span className="text-sm">
+                                        {formatTime(currentTime)} / {formatTime(duration)}
+                                    </span>
+                                </>
+                            )}
+
+                            {/* CursEduca debug info */}
+                            {isCursEduca && cursEducaTracker.isListening && (
+                                <span className="text-xs text-slate-400">
+                                    🎧 Listening...
+                                </span>
+                            )}
                         </div>
 
-                        {/* Progress text */}
-                        <span className="text-sm font-bold text-yellow-500 min-w-[4rem] text-right">
-                            {Math.round(displayProgress)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
+                        {/* Right: Complete button + Fullscreen */}
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={handleMarkComplete}
+                                disabled={isCompleted || isMarkingComplete}
+                                className={`
+                                    flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                    ${isCompleted
+                                        ? 'bg-green-600 text-white cursor-default'
+                                        : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-yellow-500'
+                                    }
+                                    ${isMarkingComplete ? 'opacity-70' : ''}
+                                `}
+                            >
+                                {isMarkingComplete ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : isCompleted ? (
+                                    <CheckCircle size={18} />
+                                ) : (
+                                    <Circle size={18} />
+                                )}
+                                {isCompleted ? 'Concluído' : 'Marcar como visto'}
+                            </button>
 
-            {/* Controls Bottom Bar */}
-            <div
-                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 z-10 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-            >
-                <div className="flex items-center justify-between text-white max-w-7xl mx-auto">
-                    {/* Left: Playback controls (MP4 only) */}
-                    <div className="flex items-center gap-4">
-                        {!isEmbed && (
-                            <>
-                                <button onClick={togglePlay} className="hover:text-yellow-500 transition">
-                                    {isPlaying ? <Pause size={24} /> : <Play size={24} />}
-                                </button>
-                                <button onClick={toggleMute} className="hover:text-yellow-500 transition">
-                                    {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-                                </button>
-                                <span className="text-sm">
-                                    {formatTime(currentTime)} / {formatTime(duration)}
-                                </span>
-                            </>
-                        )}
-
-                        {/* CursEduca debug info */}
-                        {isCursEduca && cursEducaTracker.isListening && (
-                            <span className="text-xs text-slate-400">
-                                🎧 Listening...
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Right: Complete button + Fullscreen */}
-                    <div className="flex items-center gap-4">
-                        {/* Mark as Complete Button */}
-                        <button
-                            onClick={handleMarkComplete}
-                            disabled={isCompleted || isMarkingComplete}
-                            className={`
-                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
-                                ${isCompleted
-                                    ? 'bg-green-600 text-white cursor-default'
-                                    : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-yellow-500'
-                                }
-                                ${isMarkingComplete ? 'opacity-70' : ''}
-                            `}
-                        >
-                            {isMarkingComplete ? (
-                                <Loader2 size={18} className="animate-spin" />
-                            ) : isCompleted ? (
-                                <CheckCircle size={18} />
-                            ) : (
-                                <Circle size={18} />
-                            )}
-                            {isCompleted ? 'Concluído' : 'Marcar como visto'}
-                        </button>
-
-                        {/* Fullscreen */}
-                        <button onClick={toggleFullscreen} className="hover:text-yellow-500 transition">
-                            {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
-                        </button>
+                            <button onClick={toggleFullscreen} className="hover:text-yellow-500 transition">
+                                {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Materials */}

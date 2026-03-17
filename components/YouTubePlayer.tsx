@@ -239,36 +239,37 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
 
     return (
         <div className="fixed inset-0 bg-black z-[70] flex flex-col">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
+            {/* Header — normal flow, always visible */}
+            <div className="flex-shrink-0 bg-black/90 px-4 py-3 z-10">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-white font-bold text-lg">{video.title}</h2>
-                        <p className="text-yellow-500 text-sm font-bold mt-1">
+                    <div className="min-w-0 flex-1 pr-3">
+                        <h2 className="text-white font-bold text-lg truncate">{video.title}</h2>
+                        <p className="text-yellow-500 text-sm font-bold mt-0.5">
                             {displayProgress}% concluído
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/20 rounded-full transition"
+                        className="p-2 hover:bg-white/20 rounded-full transition flex-shrink-0"
                     >
                         <X className="text-white" size={24} />
                     </button>
                 </div>
             </div>
 
-            {/* YouTube Player */}
-            <div className="flex-1 flex items-center justify-center bg-black p-4 min-h-0">
-                <div
-                    ref={containerRef}
-                    id="youtube-player"
-                    className="w-full max-w-7xl aspect-video"
-                />
-            </div>
+            {/* Scrollable content — video + controls + materials */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+                {/* YouTube Player */}
+                <div className="w-full max-w-7xl mx-auto px-4 pt-2">
+                    <div
+                        ref={containerRef}
+                        id="youtube-player"
+                        className="w-full aspect-video"
+                    />
+                </div>
 
-            {/* Bottom Bar — Progress + Mark Complete + Materials */}
-            <div className="bg-gradient-to-t from-black/95 via-black/80 to-transparent px-4 pb-4 pt-6 z-10 overflow-y-auto max-h-[40vh]">
-                <div className="max-w-7xl mx-auto">
+                {/* Controls section */}
+                <div className="w-full max-w-7xl mx-auto px-4 py-4">
                     {/* Progress bar */}
                     <div className="w-full h-2 bg-slate-700 rounded-full mb-4">
                         <div
@@ -277,7 +278,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
                         />
                     </div>
 
-                    {/* Controls */}
+                    {/* Controls row */}
                     <div className="flex items-center justify-between text-white mb-4">
                         <span className="text-sm text-slate-400">
                             {displayProgress}% concluído
@@ -286,7 +287,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
                             onClick={handleManualComplete}
                             disabled={isCompleted || isMarkingComplete}
                             className={`
-                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex-shrink-0
                                 ${isCompleted
                                     ? 'bg-green-600 text-white cursor-default'
                                     : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-yellow-500'

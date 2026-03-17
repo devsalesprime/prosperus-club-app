@@ -160,39 +160,40 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
 
     return (
         <div className="fixed inset-0 bg-black z-[70] flex flex-col">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/80 to-transparent p-4 z-10">
+            {/* Header — normal flow, always visible */}
+            <div className="flex-shrink-0 bg-black/90 px-4 py-3 z-10">
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-white font-bold text-lg">{video.title}</h2>
-                        <p className="text-yellow-500 text-sm font-bold mt-1">
+                    <div className="min-w-0 flex-1 pr-3">
+                        <h2 className="text-white font-bold text-lg truncate">{video.title}</h2>
+                        <p className="text-yellow-500 text-sm font-bold mt-0.5">
                             {displayProgress}% concluído
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/20 rounded-full transition"
+                        className="p-2 hover:bg-white/20 rounded-full transition flex-shrink-0"
                     >
                         <X className="text-white" size={24} />
                     </button>
                 </div>
             </div>
 
-            {/* CursEduca Player */}
-            <div className="flex-1 flex items-center justify-center bg-black p-4">
-                <iframe
-                    ref={iframeRef}
-                    src={video.videoUrl}
-                    className="w-full max-w-7xl aspect-video rounded-lg"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                    allowFullScreen
-                    title={video.title}
-                />
-            </div>
+            {/* Scrollable content — video + controls + materials */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
+                {/* CursEduca Player */}
+                <div className="w-full max-w-7xl mx-auto px-4 pt-2">
+                    <iframe
+                        ref={iframeRef}
+                        src={video.videoUrl}
+                        className="w-full aspect-video rounded-lg"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        title={video.title}
+                    />
+                </div>
 
-            {/* Bottom Bar with Progress and Complete Button */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 z-10">
-                <div className="max-w-7xl mx-auto">
+                {/* Controls section */}
+                <div className="w-full max-w-7xl mx-auto px-4 py-4">
                     {/* Progress bar */}
                     <div className="w-full h-2 bg-slate-700 rounded-full mb-4">
                         <div
@@ -201,10 +202,10 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
                         />
                     </div>
 
-                    {/* Controls */}
-                    <div className="flex items-center justify-between text-white">
-                        <span className="text-sm text-slate-400">
-                            ⚠️ Se o progresso não atualizar automaticamente, use o botão ao lado
+                    {/* Controls row */}
+                    <div className="flex items-center justify-between text-white gap-3 flex-wrap">
+                        <span className="text-xs text-slate-400">
+                            ⚠️ Se o progresso não atualizar automaticamente, use o botão
                         </span>
 
                         {/* Mark as Complete Button */}
@@ -212,7 +213,7 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
                             onClick={handleManualComplete}
                             disabled={isCompleted || isMarkingComplete}
                             className={`
-                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex-shrink-0
                                 ${isCompleted
                                     ? 'bg-green-600 text-white cursor-default'
                                     : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-yellow-500'
