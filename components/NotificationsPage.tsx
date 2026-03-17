@@ -250,7 +250,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     ];
 
     return (
-        <div className="max-w-3xl mx-auto animate-in fade-in">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 animate-in fade-in">
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center gap-3 mb-1">
