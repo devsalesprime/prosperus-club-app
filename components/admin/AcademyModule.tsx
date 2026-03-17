@@ -4,9 +4,9 @@
 // Gerenciamento de vídeos/aulas + categorias com abas de navegação
 // Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image } from 'lucide-react';
+import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image, Search, Filter, Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Video, VideoCategory } from '../../types';
 import { VideoMaterialsUpload, PendingMaterial } from './VideoMaterialsUpload';
 import {
@@ -38,6 +38,14 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [pendingMaterials, setPendingMaterials] = useState<PendingMaterial[]>([]);
+
+    // ── Filter & Pagination state ─────────────────────
+    const [searchTitle, setSearchTitle] = useState('');
+    const [filterCategory, setFilterCategory] = useState<string>('');
+    const [filterDuration, setFilterDuration] = useState<string>('');
+    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+    const [pageSize, setPageSize] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Confirm Dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -127,7 +135,11 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                 if (pendingMaterials.length > 0) {
                     for (let i = 0; i < pendingMaterials.length; i++) {
                         const pm = pendingMaterials[i];
-                        await videoService.uploadVideoMaterial(newVideo.id, pm.file, pm.title, i);
+                        if (pm.type === 'link' && pm.url) {
+                            await videoService.addVideoMaterialLink(newVideo.id, pm.url, pm.title, i);
+                        } else if (pm.file) {
+                            await videoService.uploadVideoMaterial(newVideo.id, pm.file, pm.title, i);
+                        }
                     }
                 }
 
@@ -258,6 +270,72 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
         return video.category || 'Sem categoria';
     };
 
+    // ── Parse duration string "MM:SS" to total seconds ──
+    const parseDuration = (dur: string): number => {
+        const parts = dur.split(':').map(Number);
+        if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+        if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+        return 0;
+    };
+
+    // ── Filtered & sorted videos ──────────────────────
+    const filteredVideos = useMemo(() => {
+        let result = [...videos];
+
+        // Title search
+        if (searchTitle.trim()) {
+            const q = searchTitle.toLowerCase().trim();
+            result = result.filter(v => v.title.toLowerCase().includes(q));
+        }
+
+        // Category filter
+        if (filterCategory) {
+            result = result.filter(v => v.categoryId === filterCategory);
+        }
+
+        // Duration filter
+        if (filterDuration) {
+            result = result.filter(v => {
+                const secs = parseDuration(v.duration || '0:00');
+                switch (filterDuration) {
+                    case 'short':  return secs <= 300;       // ≤ 5min
+                    case 'medium': return secs > 300 && secs <= 900;  // 5-15min
+                    case 'long':   return secs > 900 && secs <= 1800; // 15-30min
+                    case 'extra':  return secs > 1800;       // > 30min
+                    default: return true;
+                }
+            });
+        }
+
+        // Sort by date (uses array index as proxy — videos come sorted from API)
+        if (sortOrder === 'oldest') {
+            result.reverse();
+        }
+
+        return result;
+    }, [videos, searchTitle, filterCategory, filterDuration, sortOrder]);
+
+    // ── Pagination ────────────────────────────────────
+    const totalPages = Math.max(1, Math.ceil(filteredVideos.length / pageSize));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const paginatedVideos = useMemo(() => {
+        const start = (safeCurrentPage - 1) * pageSize;
+        return filteredVideos.slice(start, start + pageSize);
+    }, [filteredVideos, safeCurrentPage, pageSize]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTitle, filterCategory, filterDuration, sortOrder, pageSize]);
+
+    const hasActiveFilters = searchTitle || filterCategory || filterDuration;
+    const clearFilters = () => {
+        setSearchTitle('');
+        setFilterCategory('');
+        setFilterDuration('');
+        setSortOrder('newest');
+    };
+
     // ============================================
     // RENDER
     // ============================================
@@ -316,14 +394,158 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             {/* ============================================ */}
             {activeTab === 'videos' && (
                 <>
-                    <AdminTable title="Vídeos" subtitle={`${videos.length} vídeo(s) cadastrado(s)`}>
+                    {/* ── Filter Bar ──────────────────────────── */}
+                    <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4 space-y-3">
+                        {/* Row 1: Search + Category + Duration */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            {/* Title search */}
+                            <div className="relative flex-1">
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar por título..."
+                                    value={searchTitle}
+                                    onChange={e => setSearchTitle(e.target.value)}
+                                    className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:border-yellow-600 outline-none transition"
+                                />
+                            </div>
+
+                            {/* Category */}
+                            <div className="relative">
+                                <FolderOpen size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <select
+                                    value={filterCategory}
+                                    onChange={e => setFilterCategory(e.target.value)}
+                                    className="pl-9 pr-8 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:border-yellow-600 outline-none transition appearance-none cursor-pointer min-w-[160px]"
+                                >
+                                    <option value="">Todas categorias</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Duration */}
+                            <div className="relative">
+                                <Clock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <select
+                                    value={filterDuration}
+                                    onChange={e => setFilterDuration(e.target.value)}
+                                    className="pl-9 pr-8 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:border-yellow-600 outline-none transition appearance-none cursor-pointer min-w-[150px]"
+                                >
+                                    <option value="">Qualquer duração</option>
+                                    <option value="short">Até 5 min</option>
+                                    <option value="medium">5 – 15 min</option>
+                                    <option value="long">15 – 30 min</option>
+                                    <option value="extra">Mais de 30 min</option>
+                                </select>
+                            </div>
+
+                            {/* Sort */}
+                            <div className="relative">
+                                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <select
+                                    value={sortOrder}
+                                    onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
+                                    className="pl-9 pr-8 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:border-yellow-600 outline-none transition appearance-none cursor-pointer min-w-[140px]"
+                                >
+                                    <option value="newest">Mais recentes</option>
+                                    <option value="oldest">Mais antigos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Row 2: Results count + clear + page size */}
+                        <div className="flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                                <Filter size={12} />
+                                <span>
+                                    {filteredVideos.length} de {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
+                                    {hasActiveFilters ? ' (filtrado)' : ''}
+                                </span>
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={clearFilters}
+                                        className="text-yellow-500 hover:text-yellow-400 underline transition text-xs"
+                                    >
+                                        Limpar filtros
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Page size selector */}
+                            <div className="flex items-center gap-2">
+                                <span>Exibir</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={e => setPageSize(Number(e.target.value))}
+                                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-xs focus:border-yellow-600 outline-none cursor-pointer"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={30}>30</option>
+                                    <option value={50}>50</option>
+                                </select>
+                                <span>por página</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Video Table ─────────────────────────── */}
+                    <AdminTable title="Vídeos" subtitle={`Página ${safeCurrentPage} de ${totalPages}`}>
                         <DataTable
                             columns={['Título', 'Categoria', 'Duração']}
-                            data={videos.map(v => ({ ...v, category: getCategoryName(v) }))}
+                            data={paginatedVideos.map(v => ({ ...v, category: getCategoryName(v) }))}
                             onEdit={(v: Video) => openVideoModal(v)}
                             onDelete={(id: string) => requestDeleteVideo(id)}
                         />
                     </AdminTable>
+
+                    {/* ── Pagination Controls ─────────────────── */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={safeCurrentPage <= 1}
+                                className="flex items-center gap-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white hover:bg-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={16} />
+                                Anterior
+                            </button>
+
+                            {/* Page numbers */}
+                            <div className="flex gap-1">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                                    .map((p, idx, arr) => (
+                                        <React.Fragment key={p}>
+                                            {idx > 0 && arr[idx - 1] !== p - 1 && (
+                                                <span className="px-2 py-2 text-slate-500 text-sm">…</span>
+                                            )}
+                                            <button
+                                                onClick={() => setCurrentPage(p)}
+                                                className={`min-w-[36px] py-2 rounded-lg text-sm font-medium transition ${
+                                                    p === safeCurrentPage
+                                                        ? 'bg-yellow-600 text-white shadow-lg'
+                                                        : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        </React.Fragment>
+                                    ))}
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={safeCurrentPage >= totalPages}
+                                className="flex items-center gap-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white hover:bg-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                Próximo
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Video Modal */}
                     {isVideoModalOpen && (

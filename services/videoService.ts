@@ -584,6 +584,39 @@ export const videoService = {
     },
 
     /**
+     * Add a link as material (admin only — no file upload)
+     */
+    async addVideoMaterialLink(
+        videoId: string,
+        url: string,
+        title: string,
+        order: number = 0
+    ): Promise<{ data: VideoMaterial | null; error: string | null }> {
+        try {
+            const { data, error } = await supabase
+                .from('video_materials')
+                .insert({
+                    video_id: videoId,
+                    title: title.trim(),
+                    file_url: url.trim(),
+                    file_path: '',
+                    file_type: 'link',
+                    file_size: 0,
+                    file_name: '',
+                    sort_order: order,
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { data, error: null };
+        } catch (err: any) {
+            console.error('addVideoMaterialLink error:', err);
+            return { data: null, error: err?.message ?? 'Erro ao adicionar link.' };
+        }
+    },
+
+    /**
      * Delete a material (admin only)
      */
     async deleteVideoMaterial(materialId: string, filePath: string): Promise<boolean> {
@@ -644,7 +677,7 @@ export interface VideoMaterial {
     title: string;
     file_url: string;
     file_path: string;
-    file_type: 'pdf' | 'pptx' | 'ppt' | 'image';
+    file_type: 'pdf' | 'pptx' | 'ppt' | 'image' | 'link';
     file_size: number;
     file_name: string;
     sort_order: number;

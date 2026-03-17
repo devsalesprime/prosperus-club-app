@@ -6,7 +6,7 @@
 // Supports "pending mode" (no videoId) where files are queued for later upload
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Paperclip, X, Upload } from 'lucide-react';
+import { Plus, Trash2, Paperclip, X, Upload, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { videoService, VideoMaterial } from '../../services/videoService';
 
 const GOLD   = '#FFDA71';
@@ -19,14 +19,16 @@ const ACCEPT = '.pdf,.ppt,.pptx,.jpg,.jpeg,.png,.webp';
 
 interface UploadItem {
     id: string;
+    type: 'file' | 'link';
     file: File | null;
+    url: string;
     title: string;
     status: 'idle' | 'uploading' | 'done' | 'error';
     errorMsg: string;
 }
 
-function makeItem(): UploadItem {
-    return { id: crypto.randomUUID(), file: null, title: '', status: 'idle', errorMsg: '' };
+function makeItem(type: 'file' | 'link' = 'file'): UploadItem {
+    return { id: crypto.randomUUID(), type, file: null, url: '', title: '', status: 'idle', errorMsg: '' };
 }
 
 function formatBytes(b: number) {
@@ -35,8 +37,10 @@ function formatBytes(b: number) {
 }
 
 export interface PendingMaterial {
-    file: File;
+    file?: File;
+    url?: string;
     title: string;
+    type: 'file' | 'link';
 }
 
 interface Props {
@@ -60,8 +64,13 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
     useEffect(() => {
         if (isPendingMode && onPendingChange) {
             const pending = items
-                .filter(i => i.file && i.title.trim())
-                .map(i => ({ file: i.file!, title: i.title.trim() }));
+                .filter(i => i.title.trim() && (i.type === 'link' ? i.url.trim() : i.file))
+                .map(i => ({
+                    type: i.type,
+                    file: i.type === 'file' ? i.file! : undefined,
+                    url: i.type === 'link' ? i.url.trim() : undefined,
+                    title: i.title.trim(),
+                }));
             onPendingChange(pending);
         }
     }, [items, isPendingMode]);
@@ -82,9 +91,9 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
             return next;
         });
 
-    const addItem = () => {
+    const addItem = (type: 'file' | 'link' = 'file') => {
         if (!showForm) setShowForm(true);
-        setItems(prev => [...prev, makeItem()]);
+        setItems(prev => [...prev, makeItem(type)]);
     };
 
     const handleFileSelect = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +106,11 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
 
     const handleUploadAll = async () => {
         if (isPendingMode) return; // Parent handles upload after video creation
-        const ready = items.filter(i => i.file && i.title.trim() && i.status !== 'done');
+        const ready = items.filter(i => {
+            if (i.status === 'done') return false;
+            if (!i.title.trim()) return false;
+            return i.type === 'link' ? i.url.trim() : !!i.file;
+        });
         if (!ready.length) return;
         setLoading(true);
 
@@ -105,12 +118,19 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
             const item = ready[i];
             updateItem(item.id, { status: 'uploading' });
 
-            const { error } = await videoService.uploadVideoMaterial(
-                videoId, item.file!, item.title.trim(), existing.length + i
-            );
+            let result: { error: string | null };
+            if (item.type === 'link') {
+                result = await videoService.addVideoMaterialLink(
+                    videoId!, item.url.trim(), item.title.trim(), existing.length + i
+                );
+            } else {
+                result = await videoService.uploadVideoMaterial(
+                    videoId!, item.file!, item.title.trim(), existing.length + i
+                );
+            }
 
-            if (error) {
-                updateItem(item.id, { status: 'error', errorMsg: error });
+            if (result.error) {
+                updateItem(item.id, { status: 'error', errorMsg: result.error });
             } else {
                 updateItem(item.id, { status: 'done' });
             }
@@ -133,8 +153,15 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
         await loadExisting();
     };
 
-    const readyCount = items.filter(i => i.file && i.title.trim() && i.status !== 'done').length;
-    const pendingCount = isPendingMode ? items.filter(i => i.file && i.title.trim()).length : 0;
+    const readyCount = items.filter(i => {
+        if (i.status === 'done') return false;
+        if (!i.title.trim()) return false;
+        return i.type === 'link' ? i.url.trim() : !!i.file;
+    }).length;
+    const pendingCount = isPendingMode ? items.filter(i => {
+        if (!i.title.trim()) return false;
+        return i.type === 'link' ? i.url.trim() : !!i.file;
+    }).length : 0;
 
     return (
         <div style={{
@@ -161,20 +188,35 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
                     )}
                 </div>
 
-                {/* Add button */}
-                <button
-                    onClick={addItem}
-                    disabled={loading}
-                    style={{
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '5px 12px', borderRadius: 8,
-                        border: `1px solid ${BORDER}`, background: 'transparent',
-                        color: GREY, fontSize: 12, cursor: 'pointer',
-                    }}
-                >
-                    <Plus size={13} color={GREY} />
-                    Adicionar
-                </button>
+                {/* Add buttons */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                        onClick={() => addItem('file')}
+                        disabled={loading}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 12px', borderRadius: 8,
+                            border: `1px solid ${BORDER}`, background: 'transparent',
+                            color: GREY, fontSize: 12, cursor: 'pointer',
+                        }}
+                    >
+                        <Plus size={13} color={GREY} />
+                        Adicionar
+                    </button>
+                    <button
+                        onClick={() => addItem('link')}
+                        disabled={loading}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 12px', borderRadius: 8,
+                            border: `1px solid ${BORDER}`, background: 'transparent',
+                            color: GREY, fontSize: 12, cursor: 'pointer',
+                        }}
+                    >
+                        <LinkIcon size={13} color={GREY} />
+                        + Link
+                    </button>
+                </div>
             </div>
 
             {/* Existing materials */}
@@ -194,9 +236,22 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
                             {mat.title}
                         </p>
                         <p style={{ fontSize: 11, color: GREY, margin: 0 }}>
-                            {mat.file_type.toUpperCase()} · {formatBytes(mat.file_size)}
+                            {mat.file_type === 'link'
+                                ? 'LINK'
+                                : `${mat.file_type.toUpperCase()} · ${formatBytes(mat.file_size)}`
+                            }
                         </p>
                     </div>
+                    {mat.file_type === 'link' && (
+                        <a
+                            href={mat.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+                        >
+                            <ExternalLink size={14} color="#3B82F6" />
+                        </a>
+                    )}
                     <button
                         onClick={() => handleDelete(mat)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
@@ -215,35 +270,65 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
                         background: CARD, borderRadius: 8,
                         border: `1px solid ${item.status === 'error' ? '#EF4444' : BORDER}`,
                     }}>
-                        {/* File selector */}
-                        {!item.file ? (
-                            <div
-                                onClick={() => fileInputRef.current?.click()}
-                                style={{
-                                    border: `1px dashed ${BORDER}`, borderRadius: 6,
-                                    padding: '12px', textAlign: 'center', cursor: 'pointer',
-                                    marginBottom: 8,
-                                }}
-                            >
-                                <Upload size={16} color={GREY} style={{ marginBottom: 4 }} />
-                                <p style={{ color: GREY, fontSize: 12, margin: 0 }}>Selecionar arquivo</p>
-                                <p style={{ color: '#5F7A8A', fontSize: 10, margin: '2px 0 0' }}>PDF · PPT · Imagens</p>
-                            </div>
-                        ) : (
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 8,
-                                padding: '6px 8px', background: NAVY, borderRadius: 6, marginBottom: 8,
+                        {/* Type badge */}
+                        <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{
+                                fontSize: 10, fontWeight: 700, color: item.type === 'link' ? '#3B82F6' : GOLD,
+                                background: item.type === 'link' ? '#3B82F620' : '#FFDA7120',
+                                padding: '2px 8px', borderRadius: 6, textTransform: 'uppercase',
                             }}>
-                                <span style={{ flex: 1, fontSize: 11, color: GREY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {item.file.name} · {formatBytes(item.file.size)}
-                                </span>
-                                <button
+                                {item.type === 'link' ? '🔗 Link' : '📎 Arquivo'}
+                            </span>
+                        </div>
+
+                        {/* File selector (only for file type) */}
+                        {item.type === 'file' && (
+                            !item.file ? (
+                                <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: GREY, fontSize: 11 }}
+                                    style={{
+                                        border: `1px dashed ${BORDER}`, borderRadius: 6,
+                                        padding: '12px', textAlign: 'center', cursor: 'pointer',
+                                        marginBottom: 8,
+                                    }}
                                 >
-                                    Trocar
-                                </button>
-                            </div>
+                                    <Upload size={16} color={GREY} style={{ marginBottom: 4 }} />
+                                    <p style={{ color: GREY, fontSize: 12, margin: 0 }}>Selecionar arquivo</p>
+                                    <p style={{ color: '#5F7A8A', fontSize: 10, margin: '2px 0 0' }}>PDF · PPT · Imagens</p>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: '6px 8px', background: NAVY, borderRadius: 6, marginBottom: 8,
+                                }}>
+                                    <span style={{ flex: 1, fontSize: 11, color: GREY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {item.file.name} · {formatBytes(item.file.size)}
+                                    </span>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: GREY, fontSize: 11 }}
+                                    >
+                                        Trocar
+                                    </button>
+                                </div>
+                            )
+                        )}
+
+                        {/* URL input (only for link type) */}
+                        {item.type === 'link' && (
+                            <input
+                                type="url"
+                                placeholder="https://exemplo.com/recurso"
+                                value={item.url}
+                                onChange={e => updateItem(item.id, { url: e.target.value })}
+                                disabled={loading}
+                                style={{
+                                    width: '100%', boxSizing: 'border-box',
+                                    background: NAVY, border: `1px solid ${BORDER}`,
+                                    borderRadius: 6, padding: '7px 10px',
+                                    color: '#FCF7F0', fontSize: 12, marginBottom: 8,
+                                }}
+                            />
                         )}
 
                         <input ref={fileInputRef} type="file" accept={ACCEPT}
@@ -301,7 +386,7 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
                 >
                     {loading
                         ? 'Enviando...'
-                        : `Enviar ${readyCount} material${readyCount !== 1 ? 'is' : ''}`
+                        : `Enviar ${readyCount} ${readyCount !== 1 ? 'materiais' : 'material'}`
                     }
                 </button>
             )}
@@ -309,7 +394,7 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
             {/* Pending mode info */}
             {isPendingMode && pendingCount > 0 && (
                 <p style={{ color: GOLD, fontSize: 11, margin: '8px 0 0', fontStyle: 'italic' }}>
-                    📎 {pendingCount} material{pendingCount !== 1 ? 'is' : ''} será{pendingCount !== 1 ? 'ão' : ''} enviado{pendingCount !== 1 ? 's' : ''} ao salvar o vídeo.
+                    📎 {pendingCount} {pendingCount !== 1 ? 'materiais' : 'material'} será{pendingCount !== 1 ? 'ão' : ''} salvo{pendingCount !== 1 ? 's' : ''} ao salvar o vídeo.
                 </p>
             )}
 

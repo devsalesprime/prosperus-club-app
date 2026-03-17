@@ -5,7 +5,7 @@
 // Replicates the pattern from EventDetailsModal → "Materiais complementares"
 
 import React, { useEffect, useState } from 'react';
-import { Download, FileText, Image, Paperclip } from 'lucide-react';
+import { Download, FileText, Image, Paperclip, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { videoService, VideoMaterial } from '../services/videoService';
 
 const GOLD   = '#FFDA71';
@@ -17,6 +17,7 @@ function getIcon(type: string) {
     if (type === 'pdf')       return <FileText size={16} color="#EF4444" />;
     if (type.includes('ppt')) return <FileText size={16} color="#F97316" />;
     if (type === 'image')     return <Image size={16} color="#3B82F6" />;
+    if (type === 'link')      return <LinkIcon size={16} color="#8B5CF6" />;
     return <Paperclip size={16} color={GREY} />;
 }
 
@@ -124,11 +125,14 @@ export const VideoMaterialsList: React.FC<Props> = ({ videoId }) => {
                             {mat.title}
                         </p>
                         <p style={{ fontSize: 11, color: GREY, margin: 0 }}>
-                            {mat.file_type.toUpperCase()} · {formatBytes(mat.file_size)}
+                            {mat.file_type === 'link'
+                                ? 'Link externo'
+                                : `${mat.file_type.toUpperCase()} · ${formatBytes(mat.file_size)}`
+                            }
                         </p>
                     </div>
 
-                    {/* Download button */}
+                    {/* Action button */}
                     <button
                         onClick={() => handleDownload(mat)}
                         disabled={downloading === mat.id}
@@ -136,15 +140,19 @@ export const VideoMaterialsList: React.FC<Props> = ({ videoId }) => {
                             flexShrink: 0,
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '7px 12px', borderRadius: 8,
-                            border: `1px solid ${GOLD}`, background: 'transparent',
-                            color: GOLD, fontSize: 12, fontWeight: 600,
+                            border: `1px solid ${mat.file_type === 'link' ? '#8B5CF6' : GOLD}`,
+                            background: 'transparent',
+                            color: mat.file_type === 'link' ? '#8B5CF6' : GOLD,
+                            fontSize: 12, fontWeight: 600,
                             cursor: downloading === mat.id ? 'not-allowed' : 'pointer',
                             opacity: downloading === mat.id ? 0.5 : 1,
                             WebkitTapHighlightColor: 'transparent',
                         }}
                     >
-                        <Download size={13} color={GOLD} />
-                        {downloading === mat.id ? '...' : 'Baixar'}
+                        {mat.file_type === 'link'
+                            ? <><ExternalLink size={13} /> {downloading === mat.id ? '...' : 'Abrir'}</>
+                            : <><Download size={13} /> {downloading === mat.id ? '...' : 'Baixar'}</>
+                        }
                     </button>
                 </div>
             ))}
