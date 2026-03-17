@@ -6,7 +6,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
     Plus, Trash2, Eye, EyeOff, FileText, Image as ImageIcon,
-    Download, X, Upload, Loader2, FolderOpen, Search
+    Download, X, Upload, Loader2, FolderOpen, Search,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import {
     uploadMemberFile,
@@ -224,6 +225,11 @@ export const AdminFilesModule: React.FC = () => {
     const [deleting, setDeleting] = useState(false);
     const [searchFiles, setSearchFiles] = useState('');
     const [catFilter, setCatFilter] = useState('todos');
+    const [filePage, setFilePage] = useState(1);
+    const [filePageSize, setFilePageSize] = useState(10);
+
+    // Reset page on filter change
+    useEffect(() => { setFilePage(1); }, [searchFiles, catFilter, filePageSize]);
 
     // Load list when switching to lista tab
     useEffect(() => {
@@ -468,7 +474,10 @@ export const AdminFilesModule: React.FC = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredFiles.map(file => (
+                                        {(() => {
+                                            const totalFilePages = Math.max(1, Math.ceil(filteredFiles.length / filePageSize));
+                                            const paginatedFiles = filteredFiles.slice((filePage - 1) * filePageSize, filePage * filePageSize);
+                                            return paginatedFiles.map(file => (
                                             <tr key={file.id} className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition ${!file.is_visible ? 'opacity-50' : ''}`}>
                                                 <td className="px-5 py-3">
                                                     <div className="flex items-center gap-3">
@@ -513,10 +522,47 @@ export const AdminFilesModule: React.FC = () => {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ));
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Pagination */}
+                            {filteredFiles.length > 0 && (
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 mt-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-500">Mostrar</span>
+                                        <select
+                                            value={filePageSize}
+                                            onChange={e => setFilePageSize(Number(e.target.value))}
+                                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-yellow-600/50 transition"
+                                        >
+                                            {[10, 20, 30].map(n => <option key={n} value={n}>{n}</option>)}
+                                        </select>
+                                        <span className="text-xs text-slate-500">por página</span>
+                                    </div>
+                                    {Math.ceil(filteredFiles.length / filePageSize) > 1 && (
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => setFilePage(p => Math.max(1, p - 1))}
+                                                disabled={filePage === 1}
+                                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <ChevronLeft size={16} />
+                                            </button>
+                                            <span className="text-sm text-slate-400 px-3">{filePage} / {Math.ceil(filteredFiles.length / filePageSize)}</span>
+                                            <button
+                                                onClick={() => setFilePage(p => Math.min(Math.ceil(filteredFiles.length / filePageSize), p + 1))}
+                                                disabled={filePage === Math.ceil(filteredFiles.length / filePageSize)}
+                                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <ChevronRight size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <p className="text-slate-500 text-xs text-right mt-3">
                                 {searchFiles || catFilter !== 'todos'

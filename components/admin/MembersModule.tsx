@@ -37,7 +37,7 @@ export const MembersModule: React.FC = () => {
     const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'TEAM' | 'MEMBER'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [lastActivityMap, setLastActivityMap] = useState<Record<string, string>>({});
-    const PAGE_SIZE = 20;
+    const [pageSize, setPageSize] = useState(20);
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -209,7 +209,7 @@ export const MembersModule: React.FC = () => {
 
     // Reset page when filters change (must be before early returns)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, pageSize]);
 
     if (loading) {
         return (
@@ -267,8 +267,8 @@ export const MembersModule: React.FC = () => {
         toast.success(`${filteredMembers.length} membros exportados!`);
     };
 
-    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / PAGE_SIZE));
-    const paginatedMembers = filteredMembers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+    const paginatedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     return (
         <div className="space-y-6">
@@ -412,12 +412,21 @@ export const MembersModule: React.FC = () => {
                 </table>
             </AdminTable>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between px-2">
-                    <p className="text-xs text-slate-500">
-                        {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredMembers.length)} de {filteredMembers.length}
-                    </p>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Mostrar</span>
+                        <select
+                            value={pageSize}
+                            onChange={e => setPageSize(Number(e.target.value))}
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-yellow-600/50 transition"
+                        >
+                            {[10, 20, 30, 50].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <span className="text-xs text-slate-500">
+                            {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredMembers.length)} de {filteredMembers.length}
+                        </span>
+                    </div>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

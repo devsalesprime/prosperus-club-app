@@ -23,6 +23,8 @@ import {
     UserX,
     Download,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Check,
     Loader2
 } from 'lucide-react';
@@ -103,6 +105,17 @@ export const EventsModule: React.FC = () => {
     const category = watch('category');
     const startDate = watch('date');
     const eventType = watch('type');
+
+    // ─── Filter & Pagination state ───────────────────────────────────────
+    const [evtSearch, setEvtSearch] = useState('');
+    const [evtCatFilter, setEvtCatFilter] = useState<'ALL' | 'ONLINE' | 'PRESENTIAL'>('ALL');
+    const [evtAudienceFilter, setEvtAudienceFilter] = useState<'ALL' | 'MEMBER' | 'TEAM' | 'PRIVATE'>('ALL');
+    const [evtSortOrder, setEvtSortOrder] = useState<'newest' | 'oldest'>('newest');
+    const [evtPage, setEvtPage] = useState(1);
+    const [evtPageSize, setEvtPageSize] = useState(10);
+
+    // Reset page on filter change
+    useEffect(() => { setEvtPage(1); }, [evtSearch, evtCatFilter, evtAudienceFilter, evtSortOrder, evtPageSize]);
 
     // Search members when type is PRIVATE
     const searchMembers = async (query: string) => {
@@ -345,17 +358,91 @@ export const EventsModule: React.FC = () => {
         pending: rsvpList.filter(r => r.status === 'PENDING').length,
     };
 
+    // ─── Filtered + paginated events ─────────────────────────────────────
+    const filteredEvents = (() => {
+        const term = evtSearch.toLowerCase().trim();
+        let result = events.filter(ev => {
+            const matchesSearch = !term || ev.title.toLowerCase().includes(term);
+            const matchesCat = evtCatFilter === 'ALL' || ev.category === evtCatFilter;
+            const matchesAudience = evtAudienceFilter === 'ALL' || ev.type === evtAudienceFilter;
+            return matchesSearch && matchesCat && matchesAudience;
+        });
+        result.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return evtSortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        });
+        return result;
+    })();
+    const evtTotalPages = Math.max(1, Math.ceil(filteredEvents.length / evtPageSize));
+    const paginatedEvents = filteredEvents.slice((evtPage - 1) * evtPageSize, evtPage * evtPageSize);
+    const isFiltered = evtSearch || evtCatFilter !== 'ALL' || evtAudienceFilter !== 'ALL';
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
                 title="Gestão de Eventos"
-                subtitle="Crie e gerencie eventos do clube"
+                subtitle={isFiltered ? `${filteredEvents.length} de ${events.length} eventos` : `${events.length} evento(s)`}
                 action={
                     <button onClick={() => openModal()} className="w-full sm:w-auto flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 font-bold transition shadow-lg">
                         <Plus size={18} /> Novo Evento
                     </button>
                 }
             />
+
+            {/* ─── Filter Bar ──────────────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        type="text"
+                        value={evtSearch}
+                        onChange={e => setEvtSearch(e.target.value)}
+                        placeholder="Buscar por título..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/20 transition"
+                    />
+                    {evtSearch && (
+                        <button onClick={() => setEvtSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+                <select
+                    value={evtCatFilter}
+                    onChange={e => setEvtCatFilter(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
+                >
+                    <option value="ALL">Todas categorias</option>
+                    <option value="PRESENTIAL">📍 Presencial</option>
+                    <option value="ONLINE">🖥️ Online</option>
+                </select>
+                <select
+                    value={evtAudienceFilter}
+                    onChange={e => setEvtAudienceFilter(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
+                >
+                    <option value="ALL">Todo público</option>
+                    <option value="MEMBER">Sócios</option>
+                    <option value="TEAM">Time</option>
+                    <option value="PRIVATE">🔒 Privado</option>
+                </select>
+                <select
+                    value={evtSortOrder}
+                    onChange={e => setEvtSortOrder(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
+                >
+                    <option value="newest">Mais recentes</option>
+                    <option value="oldest">Mais antigos</option>
+                </select>
+                {isFiltered && (
+                    <button
+                        onClick={() => { setEvtSearch(''); setEvtCatFilter('ALL'); setEvtAudienceFilter('ALL'); }}
+                        className="text-xs text-yellow-500 hover:text-yellow-400 whitespace-nowrap self-center"
+                    >
+                        Limpar filtros
+                    </button>
+                )}
+            </div>
 
             {/* Events Table */}
             <div className="bg-slate-900 border border-slate-800 overflow-hidden rounded-xl">
@@ -371,14 +458,14 @@ export const EventsModule: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
-                            {events.length === 0 ? (
+                            {paginatedEvents.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                                        Nenhum evento cadastrado
+                                        {isFiltered ? 'Nenhum evento encontrado com esses filtros.' : 'Nenhum evento cadastrado'}
                                     </td>
                                 </tr>
                             ) : (
-                                events.map((event) => (
+                                paginatedEvents.map((event) => (
                                     <React.Fragment key={event.id}>
                                         <tr className="hover:bg-slate-800/30 transition-colors">
                                             <td className="px-4 py-3 text-sm font-medium text-white">{event.title}</td>
@@ -541,6 +628,42 @@ export const EventsModule: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            {/* ─── Pagination ─────────────────────────────────────────────── */}
+            {filteredEvents.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Mostrar</span>
+                        <select
+                            value={evtPageSize}
+                            onChange={e => setEvtPageSize(Number(e.target.value))}
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-yellow-600/50 transition"
+                        >
+                            {[10, 20, 30].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <span className="text-xs text-slate-500">por página</span>
+                    </div>
+                    {evtTotalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setEvtPage(p => Math.max(1, p - 1))}
+                                disabled={evtPage === 1}
+                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-sm text-slate-400 px-3">{evtPage} / {evtTotalPages}</span>
+                            <button
+                                onClick={() => setEvtPage(p => Math.min(evtTotalPages, p + 1))}
+                                disabled={evtPage === evtTotalPages}
+                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {isModalOpen && (
                 <AdminModal title={editingId ? "Editar Evento" : "Novo Evento"} onClose={() => setIsModalOpen(false)}>

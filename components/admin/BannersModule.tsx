@@ -16,6 +16,10 @@ import {
     Clock,
     CheckCircle,
     AlertTriangle,
+    Search,
+    X,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { bannerService, Banner, BannerInput } from '../../services/bannerService';
 import {
@@ -65,6 +69,16 @@ export const BannersModule: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // ─── Filter & Pagination state ───────────────────────────────────────
+    const [bnrSearch, setBnrSearch] = useState('');
+    const [bnrStatus, setBnrStatus] = useState<'ALL' | 'Ativo' | 'Inativo' | 'Agendado' | 'Expirado'>('ALL');
+    const [bnrPlacement, setBnrPlacement] = useState<'ALL' | 'HOME' | 'EVENTS' | 'VIDEOS' | 'ARTICLES'>('ALL');
+    const [bnrPage, setBnrPage] = useState(1);
+    const [bnrPageSize, setBnrPageSize] = useState(10);
+
+    // Reset page on filter change
+    useEffect(() => { setBnrPage(1); }, [bnrSearch, bnrStatus, bnrPlacement, bnrPageSize]);
 
     // Confirm Dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -218,11 +232,25 @@ export const BannersModule: React.FC = () => {
         );
     }
 
+    // ─── Filtered + paginated banners ─────────────────────────────────────
+    const filteredBanners = (() => {
+        const term = bnrSearch.toLowerCase().trim();
+        return banners.filter(b => {
+            const matchesSearch = !term || b.title.toLowerCase().includes(term);
+            const matchesStatus = bnrStatus === 'ALL' || getStatusInfo(b).label === bnrStatus;
+            const matchesPlacement = bnrPlacement === 'ALL' || b.placement === bnrPlacement;
+            return matchesSearch && matchesStatus && matchesPlacement;
+        });
+    })();
+    const bnrTotalPages = Math.max(1, Math.ceil(filteredBanners.length / bnrPageSize));
+    const paginatedBanners = filteredBanners.slice((bnrPage - 1) * bnrPageSize, bnrPage * bnrPageSize);
+    const isBnrFiltered = bnrSearch || bnrStatus !== 'ALL' || bnrPlacement !== 'ALL';
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
                 title="Banners"
-                subtitle={`${banners.length} banner(s) cadastrado(s)`}
+                subtitle={isBnrFiltered ? `${filteredBanners.length} de ${banners.length} banners` : `${banners.length} banner(s) cadastrado(s)`}
                 action={
                     <button
                         onClick={() => openModal()}
@@ -233,6 +261,55 @@ export const BannersModule: React.FC = () => {
                     </button>
                 }
             />
+
+            {/* ─── Filter Bar ──────────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        type="text"
+                        value={bnrSearch}
+                        onChange={e => setBnrSearch(e.target.value)}
+                        placeholder="Buscar por título..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/20 transition"
+                    />
+                    {bnrSearch && (
+                        <button onClick={() => setBnrSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+                <select
+                    value={bnrStatus}
+                    onChange={e => setBnrStatus(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
+                >
+                    <option value="ALL">Todos status</option>
+                    <option value="Ativo">✅ Ativo</option>
+                    <option value="Inativo">⬜ Inativo</option>
+                    <option value="Agendado">🕐 Agendado</option>
+                    <option value="Expirado">🔴 Expirado</option>
+                </select>
+                <select
+                    value={bnrPlacement}
+                    onChange={e => setBnrPlacement(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
+                >
+                    <option value="ALL">Todos locais</option>
+                    <option value="HOME">Home</option>
+                    <option value="EVENTS">Eventos</option>
+                    <option value="VIDEOS">Academy</option>
+                    <option value="ARTICLES">Notícias</option>
+                </select>
+                {isBnrFiltered && (
+                    <button
+                        onClick={() => { setBnrSearch(''); setBnrStatus('ALL'); setBnrPlacement('ALL'); }}
+                        className="text-xs text-yellow-500 hover:text-yellow-400 whitespace-nowrap self-center"
+                    >
+                        Limpar filtros
+                    </button>
+                )}
+            </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -250,7 +327,7 @@ export const BannersModule: React.FC = () => {
             </div>
 
             {/* Banners Table */}
-            {banners.length === 0 ? (
+            {banners.length === 0 && !isBnrFiltered ? (
                 <AdminEmptyState
                     icon={<ImageIcon size={48} />}
                     message="Nenhum banner cadastrado"
@@ -265,6 +342,10 @@ export const BannersModule: React.FC = () => {
                         </button>
                     }
                 />
+            ) : paginatedBanners.length === 0 ? (
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center">
+                    <p className="text-slate-500 text-sm">Nenhum banner encontrado com esses filtros.</p>
+                </div>
             ) : (
                 <AdminTable>
                     <table className="w-full">
@@ -279,7 +360,7 @@ export const BannersModule: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
-                            {banners.map((banner) => {
+                            {paginatedBanners.map((banner) => {
                                 const status = getStatusInfo(banner);
                                 return (
                                     <tr key={banner.id} className="hover:bg-slate-800/50 transition">
@@ -341,6 +422,42 @@ export const BannersModule: React.FC = () => {
                         </tbody>
                     </table>
                 </AdminTable>
+            )}
+
+            {/* ─── Pagination ─────────────────────────────────────────── */}
+            {filteredBanners.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Mostrar</span>
+                        <select
+                            value={bnrPageSize}
+                            onChange={e => setBnrPageSize(Number(e.target.value))}
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-yellow-600/50 transition"
+                        >
+                            {[10, 20].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <span className="text-xs text-slate-500">por página</span>
+                    </div>
+                    {bnrTotalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setBnrPage(p => Math.max(1, p - 1))}
+                                disabled={bnrPage === 1}
+                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-sm text-slate-400 px-3">{bnrPage} / {bnrTotalPages}</span>
+                            <button
+                                onClick={() => setBnrPage(p => Math.min(bnrTotalPages, p + 1))}
+                                disabled={bnrPage === bnrTotalPages}
+                                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Modal - Using AdminModal */}

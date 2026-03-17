@@ -17,6 +17,8 @@ import {
     RefreshCw,
     Paperclip,
     FileText,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { notificationService, NotificationSegment } from '../../services/notificationService';
 import { AdminFileUpload } from './shared';
@@ -79,6 +81,9 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     // History state
     const [history, setHistory] = useState<NotificationHistory[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [histSegFilter, setHistSegFilter] = useState<'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN'>('ALL');
+    const [histPage, setHistPage] = useState(1);
+    const HIST_PAGE_SIZE = 5;
 
     // Security check
     if (userRole !== 'ADMIN' && userRole !== 'TEAM') {
@@ -99,7 +104,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     const loadHistory = async () => {
         try {
             setLoadingHistory(true);
-            const result = await notificationService.getNotificationHistory(1, 5);
+            const result = await notificationService.getNotificationHistory(1, 50);
             setHistory(result.data);
         } catch (err) {
             console.error('Error loading history:', err);
@@ -395,7 +400,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-bold text-white flex items-center gap-2">
                                 <History size={18} className="text-yellow-500" />
-                                Últimos Envios
+                                Histórico de Envios
                             </h2>
                             <button
                                 onClick={loadHistory}
@@ -406,46 +411,91 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                             </button>
                         </div>
 
+                        {/* Segment filter chips */}
+                        <div className="flex gap-1.5 mb-4 flex-wrap">
+                            {(['ALL', 'MEMBERS', 'TEAM', 'ADMIN'] as const).map(seg => (
+                                <button
+                                    key={seg}
+                                    onClick={() => { setHistSegFilter(seg); setHistPage(1); }}
+                                    className={`px-3 py-1 text-xs font-medium rounded-lg border transition ${histSegFilter === seg
+                                        ? 'bg-yellow-600 text-white border-yellow-600'
+                                        : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'
+                                    }`}
+                                >
+                                    {seg === 'ALL' ? 'Todos' : seg === 'MEMBERS' ? 'Sócios' : seg === 'TEAM' ? 'Time' : 'Admins'}
+                                </button>
+                            ))}
+                        </div>
+
                         {loadingHistory ? (
                             <div className="py-8 text-center">
                                 <Loader2 className="w-6 h-6 animate-spin mx-auto text-yellow-500" />
                             </div>
-                        ) : history.length === 0 ? (
-                            <div className="py-8 text-center text-slate-500">
-                                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm">Nenhum envio registrado</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {history.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition"
-                                    >
-                                        <div className="flex items-start justify-between gap-2 mb-1">
-                                            <h4 className="font-medium text-sm text-white truncate">
-                                                {item.title}
-                                            </h4>
-                                            <span className="text-xs text-slate-500 shrink-0">
-                                                {formatTime(item.sent_at)}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-slate-400 truncate mb-1">
-                                            {item.message}
-                                        </p>
-                                        <span className="inline-block text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full">
-                                            {getSegmentLabel(item.segment)}
-                                        </span>
-                                        {item.target_url && /\.(pdf|jpg|jpeg|png|webp|gif)$/i.test(item.target_url) && (
-                                            <span className="inline-block text-[10px] px-2 py-0.5 bg-yellow-600/20 text-yellow-400 rounded-full ml-1">
-                                                <Paperclip size={10} className="inline mr-0.5" />
-                                                {item.target_url.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Imagem'}
-                                            </span>
-                                        )}
+                        ) : (() => {
+                            const filteredHistory = histSegFilter === 'ALL'
+                                ? history
+                                : history.filter(h => h.segment === histSegFilter);
+                            const histTotalPages = Math.max(1, Math.ceil(filteredHistory.length / HIST_PAGE_SIZE));
+                            const paginatedHistory = filteredHistory.slice((histPage - 1) * HIST_PAGE_SIZE, histPage * HIST_PAGE_SIZE);
+
+                            return filteredHistory.length === 0 ? (
+                                <div className="py-8 text-center text-slate-500">
+                                    <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">{histSegFilter !== 'ALL' ? 'Nenhum envio para esse segmento.' : 'Nenhum envio registrado'}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-3">
+                                        {paginatedHistory.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition"
+                                            >
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <h4 className="font-medium text-sm text-white truncate">
+                                                        {item.title}
+                                                    </h4>
+                                                    <span className="text-xs text-slate-500 shrink-0">
+                                                        {formatTime(item.sent_at)}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-400 truncate mb-1">
+                                                    {item.message}
+                                                </p>
+                                                <span className="inline-block text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full">
+                                                    {getSegmentLabel(item.segment)}
+                                                </span>
+                                                {item.target_url && /\.(pdf|jpg|jpeg|png|webp|gif)$/i.test(item.target_url) && (
+                                                    <span className="inline-block text-[10px] px-2 py-0.5 bg-yellow-600/20 text-yellow-400 rounded-full ml-1">
+                                                        <Paperclip size={10} className="inline mr-0.5" />
+                                                        {item.target_url.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Imagem'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    {histTotalPages > 1 && (
+                                        <div className="flex items-center justify-center gap-1 mt-4">
+                                            <button
+                                                onClick={() => setHistPage(p => Math.max(1, p - 1))}
+                                                disabled={histPage === 1}
+                                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <ChevronLeft size={14} />
+                                            </button>
+                                            <span className="text-xs text-slate-400 px-2">{histPage} / {histTotalPages}</span>
+                                            <button
+                                                onClick={() => setHistPage(p => Math.min(histTotalPages, p + 1))}
+                                                disabled={histPage === histTotalPages}
+                                                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                            >
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
             </div>
