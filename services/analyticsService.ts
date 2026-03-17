@@ -38,6 +38,9 @@ export type AnalyticsEventType =
     | 'SEARCH'             // Busca realizada
     | 'LOGIN'              // Login realizado
     | 'LOGOUT'             // Logout realizado
+    | 'TOOL_VIEW'          // Acesso a uma ferramenta específica
+    | 'FILE_DOWNLOAD'      // Download de arquivo
+    | 'REPORT_VIEW'        // Visualização de relatório
     | 'ERROR';             // Erro capturado
 
 export interface AnalyticsEvent {
@@ -260,6 +263,28 @@ class AnalyticsService {
             error_message: errorMessage,
             error_stack: errorStack?.substring(0, 500), // Limit stack trace size
             timestamp: new Date().toISOString()
+        });
+    }
+
+    trackToolView(userId: string | null, toolId: string, toolName: string): void {
+        this.trackEvent(userId, 'TOOL_VIEW', {
+            tool_id: toolId,
+            tool_name: toolName
+        });
+    }
+
+    trackFileDownload(userId: string | null, fileId: string, fileName: string, fileType?: string): void {
+        this.trackEvent(userId, 'FILE_DOWNLOAD', {
+            file_id: fileId,
+            file_name: fileName,
+            file_type: fileType
+        });
+    }
+
+    trackReportView(userId: string | null, reportName: string, metadata?: Record<string, any>): void {
+        this.trackEvent(userId, 'REPORT_VIEW', {
+            report_name: reportName,
+            ...metadata
         });
     }
 
@@ -683,6 +708,32 @@ class AnalyticsService {
     }
 
     /**
+     * Get daily access metrics: total sessions + unique users (DAU)
+     * Uses RPC get_daily_access_metrics
+     */
+    async getDailyAccessMetrics(days: number = 30): Promise<DailyAccessMetrics[]> {
+        try {
+            const { data, error } = await supabase
+                .rpc('get_daily_access_metrics', { p_days: days });
+
+            if (error) {
+                if (isAbortError(error)) return [];
+                throw error;
+            }
+
+            return (data || []).map((row: any) => ({
+                date: String(row.activity_date || ''),
+                totalSessions: Number(row.total_sessions) || 0,
+                uniqueUsers: Number(row.unique_users) || 0,
+            }));
+        } catch (error) {
+            if (isAbortError(error)) return [];
+            logger.error('[Analytics] Error fetching daily access metrics:', error);
+            return [];
+        }
+    }
+
+    /**
      * Get top videos by view count
      * ✅ REFACTORED: Uses RPC with date filter — no more downloading ALL metadata
      */
@@ -967,6 +1018,12 @@ export interface DailyActivity {
     pageViews: number;
     videos: number;
     messages: number;
+}
+
+export interface DailyAccessMetrics {
+    date: string;
+    totalSessions: number;
+    uniqueUsers: number;
 }
 
 export interface TopContent {

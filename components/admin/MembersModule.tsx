@@ -6,7 +6,8 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity } from 'lucide-react';
+import { UserActivityDetail } from './UserActivityDetail';
 import {
     AdminPageHeader,
     AdminModal,
@@ -35,6 +36,7 @@ export const MembersModule: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'TEAM' | 'MEMBER'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
+    const [lastActivityMap, setLastActivityMap] = useState<Record<string, string>>({});
     const PAGE_SIZE = 20;
 
     // Edit Modal State
@@ -51,6 +53,9 @@ export const MembersModule: React.FC = () => {
         memberName: string;
         isLoading: boolean;
     }>({ isOpen: false, id: null, memberName: '', isLoading: false });
+
+    // Activity Detail state
+    const [activityMember, setActivityMember] = useState<ProfileRow | null>(null);
 
     const loadMembers = async () => {
         try {
@@ -74,6 +79,41 @@ export const MembersModule: React.FC = () => {
     };
 
     useEffect(() => { loadMembers(); }, []);
+
+    // Load last activity data
+    useEffect(() => {
+        if (members.length === 0) return;
+        const loadLastActivity = async () => {
+            try {
+                const { supabase } = await import('../../lib/supabase');
+                const { data } = await supabase.rpc('get_members_with_last_activity');
+                if (data) {
+                    const map: Record<string, string> = {};
+                    data.forEach((row: { user_id: string; last_seen: string }) => {
+                        map[row.user_id] = row.last_seen;
+                    });
+                    setLastActivityMap(map);
+                }
+            } catch (err) {
+                console.error('Error loading last activity:', err);
+            }
+        };
+        loadLastActivity();
+    }, [members]);
+
+    // Format relative time
+    const formatLastSeen = (isoDate: string | undefined): { text: string; color: string } => {
+        if (!isoDate) return { text: '—', color: 'text-slate-600' };
+        const now = Date.now();
+        const then = new Date(isoDate).getTime();
+        const diffMs = now - then;
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return { text: 'Hoje', color: 'text-emerald-400' };
+        if (diffDays === 1) return { text: 'Ontem', color: 'text-emerald-400' };
+        if (diffDays <= 7) return { text: `${diffDays}d atrás`, color: 'text-yellow-400' };
+        if (diffDays <= 30) return { text: `${diffDays}d atrás`, color: 'text-orange-400' };
+        return { text: `${diffDays}d atrás`, color: 'text-red-400' };
+    };
 
     const detectVideoPlatform = (url: string) => {
         if (!url || url.trim() === '') {
@@ -297,6 +337,7 @@ export const MembersModule: React.FC = () => {
                             <th className="px-6 py-4">Empresa</th>
                             <th className="px-6 py-4">Cargo</th>
                             <th className="px-6 py-4">Role</th>
+                            <th className="px-6 py-4">Último Acesso</th>
                             <th className="px-6 py-4">Vídeo Pitch</th>
                             <th className="px-6 py-4 text-right">Ações</th>
                         </tr>
@@ -315,6 +356,17 @@ export const MembersModule: React.FC = () => {
                                 <td className="px-6 py-4">{member.job_title || '-'}</td>
                                 <td className="px-6 py-4">{formatRole(member.role)}</td>
                                 <td className="px-6 py-4">
+                                    {(() => {
+                                        const { text, color } = formatLastSeen(lastActivityMap[member.id]);
+                                        return (
+                                            <span className={`inline-flex items-center gap-1 text-xs ${color}`}>
+                                                <Clock size={12} />
+                                                {text}
+                                            </span>
+                                        );
+                                    })()}
+                                </td>
+                                <td className="px-6 py-4">
                                     {member.pitch_video_url ? (
                                         <span className="inline-flex items-center gap-1 text-emerald-400 text-xs">
                                             <PlaySquare size={14} /> Configurado
@@ -325,6 +377,12 @@ export const MembersModule: React.FC = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center justify-end gap-1">
+                                        <AdminActionButton
+                                            icon={Activity}
+                                            onClick={() => setActivityMember(member)}
+                                            variant="primary"
+                                            title="Ver atividade"
+                                        />
                                         <AdminActionButton
                                             icon={Edit}
                                             onClick={() => handleEditMember(member)}
@@ -343,7 +401,7 @@ export const MembersModule: React.FC = () => {
                         ))}
                         {filteredMembers.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
+                                <td colSpan={8} className="px-6 py-8 text-center text-slate-600">
                                     {searchTerm || roleFilter !== 'ALL'
                                         ? 'Nenhum membro encontrado com esses filtros.'
                                         : 'Nenhum membro cadastrado.'}
@@ -449,6 +507,18 @@ export const MembersModule: React.FC = () => {
                 isDestructive
                 isLoading={confirmState.isLoading}
             />
+
+            {/* ============================================ */}
+            {/* USER ACTIVITY DETAIL MODAL */}
+            {/* ============================================ */}
+            {activityMember && (
+                <UserActivityDetail
+                    userId={activityMember.id}
+                    userName={activityMember.name || activityMember.email}
+                    userImage={activityMember.image_url || null}
+                    onClose={() => setActivityMember(null)}
+                />
+            )}
         </div>
     );
 };

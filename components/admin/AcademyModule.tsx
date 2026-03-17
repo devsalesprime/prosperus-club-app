@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image } from 'lucide-react';
 import { Video, VideoCategory } from '../../types';
+import { VideoMaterialsUpload, PendingMaterial } from './VideoMaterialsUpload';
 import {
     AdminPageHeader,
     AdminModal,
@@ -36,6 +37,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     const [isPartOfSeries, setIsPartOfSeries] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [pendingMaterials, setPendingMaterials] = useState<PendingMaterial[]>([]);
 
     // Confirm Dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -119,7 +121,16 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             if (editingVideo.id) {
                 await videoService.updateVideo(editingVideo.id, videoData);
             } else {
-                await videoService.createVideo(videoData);
+                const newVideo = await videoService.createVideo(videoData);
+
+                // Upload pending materials if any
+                if (pendingMaterials.length > 0) {
+                    for (let i = 0; i < pendingMaterials.length; i++) {
+                        const pm = pendingMaterials[i];
+                        await videoService.uploadVideoMaterial(newVideo.id, pm.file, pm.title, i);
+                    }
+                }
+
                 // 🔔 Notificar todos os sócios sobre novo vídeo (fire-and-forget)
                 import('../../services/notificationTriggers').then(({ notifyNewVideo }) => {
                     notifyNewVideo(videoData.title, '').catch(() => { });
@@ -128,6 +139,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setIsVideoModalOpen(false);
             setEditingVideo({});
             setIsPartOfSeries(false);
+            setPendingMaterials([]);
             await loadVideos();
             toast.success('Vídeo salvo com sucesso!');
         } catch (error) {
@@ -381,6 +393,13 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                                     )}
                                     <p className="text-xs text-slate-500">Use o mesmo ID de série para agrupar vídeos em um curso.</p>
                                 </div>
+
+                                {/* Materiais Complementares */}
+                                <VideoMaterialsUpload
+                                    videoId={editingVideo.id}
+                                    videoTitle={editingVideo.title || ''}
+                                    onPendingChange={setPendingMaterials}
+                                />
 
                                 <div className="flex justify-end pt-4 gap-3">
                                     <button type="button" onClick={() => setIsVideoModalOpen(false)} className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition" disabled={isLoading}>Cancelar</button>

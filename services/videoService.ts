@@ -505,6 +505,99 @@ export const videoService = {
 
         if (error) throw error;
         return (data || []).map(mapVideoFromDB);
+    },
+
+    // ============================================
+    // VIDEO MATERIALS (Complementary files)
+    // ============================================
+
+    /**
+     * List materials for a video
+     */
+    async getVideoMaterials(videoId: string): Promise<VideoMaterial[]> {
+        const { data, error } = await supabase
+            .from('video_materials')
+            .select('*')
+            .eq('video_id', videoId)
+            .order('sort_order', { ascending: true });
+
+        if (error) { console.error('getVideoMaterials error:', error); return []; }
+        return data ?? [];
+    },
+
+    /**
+     * Upload a material file (admin only)
+     */
+    async uploadVideoMaterial(
+        videoId: string,
+        file: File,
+        title: string,
+        order: number = 0
+    ): Promise<{ data: VideoMaterial | null; error: string | null }> {
+        try {
+            const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+            const type: VideoMaterial['file_type'] =
+                ext === 'pdf'  ? 'pdf'  :
+                ext === 'pptx' ? 'pptx' :
+                ext === 'ppt'  ? 'ppt'  :
+                file.type.startsWith('image/') ? 'image' : 'pdf';
+
+            const timestamp = Date.now();
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const path = `academy-materials/${videoId}/${timestamp}_${safeName}`;
+
+            const { data: storageData, error: storageErr } = await supabase.storage
+                .from('prosperus-files')
+                .upload(path, file, {
+                    contentType: file.type || 'application/octet-stream',
+                    upsert: false,
+                    cacheControl: '3600',
+                });
+
+            if (storageErr) throw storageErr;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('prosperus-files')
+                .getPublicUrl(storageData.path);
+
+            const { data, error: dbErr } = await supabase
+                .from('video_materials')
+                .insert({
+                    video_id: videoId,
+                    title: title.trim(),
+                    file_url: publicUrl,
+                    file_path: storageData.path,
+                    file_type: type,
+                    file_size: file.size,
+                    file_name: file.name,
+                    sort_order: order,
+                })
+                .select()
+                .single();
+
+            if (dbErr) throw dbErr;
+            return { data, error: null };
+        } catch (err: any) {
+            console.error('uploadVideoMaterial error:', err);
+            return { data: null, error: err?.message ?? 'Erro ao enviar material.' };
+        }
+    },
+
+    /**
+     * Delete a material (admin only)
+     */
+    async deleteVideoMaterial(materialId: string, filePath: string): Promise<boolean> {
+        try {
+            await supabase.storage.from('prosperus-files').remove([filePath]);
+            const { error } = await supabase
+                .from('video_materials')
+                .delete()
+                .eq('id', materialId);
+            return !error;
+        } catch (err) {
+            console.error('deleteVideoMaterial error:', err);
+            return false;
+        }
     }
 };
 
@@ -539,4 +632,21 @@ function mapCategoryFromDB(dbCategory: any): VideoCategory {
         coverImage: dbCategory.cover_image || undefined,
         createdAt: dbCategory.created_at || undefined
     };
+}
+
+// ============================================
+// VIDEO MATERIAL TYPE
+// ============================================
+
+export interface VideoMaterial {
+    id: string;
+    video_id: string;
+    title: string;
+    file_url: string;
+    file_path: string;
+    file_type: 'pdf' | 'pptx' | 'ppt' | 'image';
+    file_size: number;
+    file_name: string;
+    sort_order: number;
+    created_at: string;
 }

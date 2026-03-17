@@ -5,12 +5,16 @@ import React from 'react';
 import { GraduationCap, Wrench, TrendingUp, ArrowRight } from 'lucide-react';
 import { ViewState } from '../types';
 import { logger } from '../utils/logger';
+import { analyticsService } from '../services/analyticsService';
+import { useApp } from '../contexts/AppContext';
 
 interface ProsperusToolsPageProps {
     setView: (view: ViewState) => void;
 }
 
 export const ProsperusToolsPage: React.FC<ProsperusToolsPageProps> = ({ setView }) => {
+    const { currentUser } = useApp();
+    const userId = currentUser?.id || null;
     const sections = [
         {
             id: 'classes',
@@ -59,6 +63,7 @@ export const ProsperusToolsPage: React.FC<ProsperusToolsPageProps> = ({ setView 
                                 key={section.id}
                                 onClick={() => {
                                     logger.debug('[ProsperusTools] Clicked section:', section.id, 'navigating to:', section.view);
+                                    analyticsService.trackToolView(userId, section.id, section.title);
                                     setView(section.view);
                                 }}
                                 className="w-full group relative overflow-hidden rounded-2xl h-80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"

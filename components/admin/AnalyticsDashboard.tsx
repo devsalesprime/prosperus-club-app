@@ -45,12 +45,14 @@ import {
     Crown,
     UserX,
     CheckCircle2,
-    Download
+    Download,
+    LogIn
 } from 'lucide-react';
 import {
     analyticsService,
     DashboardStats,
     DailyActivity,
+    DailyAccessMetrics,
     TopContent,
     EventBreakdown,
     NetworkingFunnel,
@@ -173,6 +175,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const [attendance, setAttendance] = useState<EventAttendance | null>(null);
     const [fileStats, setFileStats] = useState<FileDownloadStat[]>([]);
     const [topDownloaders, setTopDownloaders] = useState<TopDownloader[]>([]);
+    const [accessMetrics, setAccessMetrics] = useState<DailyAccessMetrics[]>([]);
 
     const days = periodToDays(period);
 
@@ -195,9 +198,10 @@ export const AnalyticsDashboard: React.FC = () => {
                 analyticsService.getEventAttendanceRate(days)
             ]);
 
-            // Load file stats separately (non-blocking)
+            // Load file stats + access metrics separately (non-blocking)
             getFileDownloadStats(period).then(setFileStats).catch(console.error);
             getTopFileDownloaders(period).then(setTopDownloaders).catch(console.error);
+            analyticsService.getDailyAccessMetrics(days).then(setAccessMetrics).catch(console.error);
 
             setStats(statsData);
             setDailyActivity(activityData);
@@ -363,6 +367,66 @@ export const AnalyticsDashboard: React.FC = () => {
                     </p>
                 </div>
             </div>
+
+            {/* DAILY ACCESS METRICS (Total Sessions + DAU) */}
+            {accessMetrics.length > 0 && (() => {
+                const today = accessMetrics[accessMetrics.length - 1];
+                const yesterday = accessMetrics.length > 1 ? accessMetrics[accessMetrics.length - 2] : null;
+                const totalSessionsPeriod = accessMetrics.reduce((s, d) => s + d.totalSessions, 0);
+                const avgDau = Math.round(accessMetrics.reduce((s, d) => s + d.uniqueUsers, 0) / accessMetrics.length);
+                return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-cyan-500/10">
+                                    <LogIn size={24} className="text-cyan-500" />
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm mb-1">Acessos Hoje</p>
+                            <p className="text-3xl font-bold text-white">
+                                {today.totalSessions.toLocaleString('pt-BR')}
+                            </p>
+                            {yesterday && (
+                                <p className="text-xs text-slate-500 mt-1">Ontem: {yesterday.totalSessions}</p>
+                            )}
+                        </div>
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-teal-500/10">
+                                    <Users size={24} className="text-teal-500" />
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm mb-1">Usuários Únicos (DAU)</p>
+                            <p className="text-3xl font-bold text-white">
+                                {today.uniqueUsers.toLocaleString('pt-BR')}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">Média: {avgDau}/dia</p>
+                        </div>
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-indigo-500/10">
+                                    <Activity size={24} className="text-indigo-500" />
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm mb-1">Total Sessões ({periodLabel(period)})</p>
+                            <p className="text-3xl font-bold text-white">
+                                {totalSessionsPeriod.toLocaleString('pt-BR')}
+                            </p>
+                        </div>
+                        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-amber-500/10">
+                                    <Users size={24} className="text-amber-500" />
+                                </div>
+                            </div>
+                            <p className="text-slate-400 text-sm mb-1">DAU Médio ({periodLabel(period)})</p>
+                            <p className="text-3xl font-bold text-white">
+                                {avgDau.toLocaleString('pt-BR')}
+                            </p>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* ACTIVITY CHART */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
