@@ -25,6 +25,12 @@ import { eventService } from '../../../services/eventService';
 import { AdminModal, AdminFormInput } from '../shared';
 import { eventSchema } from './eventSchema';
 
+/** Convert a Date to the format required by datetime-local input (YYYY-MM-DDTHH:mm) in LOCAL time */
+const toLocalDatetimeInput = (d: Date): string => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 interface EventFormProps {
     event?: ClubEvent | null;
     onSaved: () => void;
@@ -53,8 +59,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
         defaultValues: {
             type: 'MEMBER',
             category: 'PRESENTIAL',
-            date: new Date().toISOString().slice(0, 16),
-            endDate: new Date(new Date().getTime() + 3600000).toISOString().slice(0, 16)
+            date: toLocalDatetimeInput(new Date()),
+            endDate: toLocalDatetimeInput(new Date(new Date().getTime() + 3600000))
         }
     });
 
@@ -73,8 +79,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
             setMemberSearch(event.targetMemberName || '');
             const formattedEvent = {
                 ...event,
-                date: event.date ? new Date(event.date).toISOString().slice(0, 16) : '',
-                endDate: event.endDate ? new Date(event.endDate).toISOString().slice(0, 16) : ''
+                date: event.date ? toLocalDatetimeInput(new Date(event.date)) : '',
+                endDate: event.endDate ? toLocalDatetimeInput(new Date(event.endDate)) : ''
             };
             Object.keys(formattedEvent).forEach(key => {
                 setValue(key as any, (formattedEvent as any)[key]);
@@ -124,7 +130,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
     // ============================================
 
     const addSession = () => {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = toLocalDatetimeInput(new Date()).slice(0, 10);
         setSessions([...sessions, { date: today, startTime: '09:00', endTime: '18:00' }]);
     };
 
