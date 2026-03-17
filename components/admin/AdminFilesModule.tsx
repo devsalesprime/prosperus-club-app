@@ -378,8 +378,8 @@ export const AdminFilesModule: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
-                                <table className="w-full text-sm">
+                            <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+                                <table className="w-full min-w-[600px] text-sm">
                                     <thead>
                                         <tr className="border-b border-slate-800 bg-slate-950">
                                             <th className="text-left text-xs text-slate-500 font-medium px-5 py-3">Arquivo</th>

@@ -246,7 +246,7 @@ export const MembersModule: React.FC = () => {
             </div>
 
             <AdminTable>
-                <table className="w-full text-left text-sm text-slate-400 whitespace-nowrap">
+                <table className="w-full min-w-[800px] text-left text-sm text-slate-400 whitespace-nowrap">
                     <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
                         <tr>
                             <th className="px-6 py-4">Usuário</th>

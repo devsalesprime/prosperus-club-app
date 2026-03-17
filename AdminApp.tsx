@@ -509,13 +509,13 @@ const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState) => vo
         <p className="text-slate-400">Visão geral do Prosperus Club</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* KPI Cards — horizontal scroll on mobile */}
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-4 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
         {kpiCards.map((kpi) => (
           <button
             key={kpi.label}
             onClick={() => setView(kpi.navigateTo)}
-            className={`flex flex-col items-start p-4 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-lg ${kpi.bgColor}`}
+            className={`flex flex-col items-start p-4 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-lg min-w-[140px] snap-start sm:min-w-0 ${kpi.bgColor}`}
           >
             <div className={`mb-3 ${kpi.color}`}>
               {kpi.icon}
@@ -535,12 +535,12 @@ const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState) => vo
       {/* Quick Actions */}
       <div>
         <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Ações Rápidas</h3>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
           {quickActions.map((action) => (
             <button
               key={action.label}
               onClick={() => setView(action.view)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r ${action.color} text-white text-sm font-semibold hover:opacity-90 transition shadow-lg hover:shadow-xl`}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r ${action.color} text-white text-sm font-semibold hover:opacity-90 transition shadow-lg hover:shadow-xl`}
             >
               {action.icon}
               {action.label}
@@ -553,7 +553,7 @@ const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState) => vo
       {navGroups.map((group) => (
         <div key={group.title}>
           <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">{group.title}</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 sm:gap-3">
             {group.items.map((card) => (
               <button
                 key={card.id}
@@ -944,12 +944,16 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans flex relative">
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 p-4 flex items-center justify-between">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-4 pb-3 flex items-center justify-between" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="text-white"><Menu size={24} /></button><img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Admin" className="h-8 w-auto" /></div>
       </div>
       {isSidebarOpen && <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
       <div className="fixed md:static inset-y-0 left-0 z-50"><AdminSidebar currentView={view} setView={setView} onLogout={onLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} /></div>
-      <main className="flex-1 min-h-screen bg-[#0f172a] w-full pt-20 md:pt-8 p-4 md:p-8 overflow-x-hidden md:ml-64"><div className="max-w-7xl mx-auto">{renderContent()}</div></main>
+      <style>{`
+        .admin-main-mobile { padding-top: calc(5rem + env(safe-area-inset-top, 0px)); }
+        @media (min-width: 768px) { .admin-main-mobile { padding-top: 2rem; } }
+      `}</style>
+      <main className="admin-main-mobile flex-1 min-h-screen bg-[#0f172a] w-full px-3 py-4 md:p-8 overflow-x-hidden"><div className="max-w-7xl mx-auto">{renderContent()}</div></main>
     </div>
   );
 };
