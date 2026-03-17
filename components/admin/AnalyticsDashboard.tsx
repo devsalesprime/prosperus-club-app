@@ -70,6 +70,7 @@ import {
 } from './shared';
 import { AdminBenefitKpiCards } from './AdminBenefitKpiCards';
 import { TopBenefitsTable } from './TopBenefitsTable';
+import { AnalyticsExclusions } from './AnalyticsExclusions';
 import { getFileDownloadStats, FileDownloadStat, getTopFileDownloaders, TopDownloader } from '../../services/filesService';
 
 // ============================================
@@ -236,6 +237,7 @@ export const AnalyticsDashboard: React.FC = () => {
     // ─── Period filter buttons ───────────────────────────────────────
     const PeriodFilter = (
         <div className="flex items-center gap-3">
+            <AnalyticsExclusions />
             <button
                 onClick={loadData}
                 disabled={isLoading}
