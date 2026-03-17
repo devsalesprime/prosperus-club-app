@@ -4,6 +4,7 @@ import { videoService } from '../services/videoService';
 import { analyticsService } from '../services/analyticsService';
 import { X, CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { VideoMaterialsList } from './VideoMaterialsList';
 
 interface CursEducaPlayerProps {
     video: Video;
@@ -229,6 +230,9 @@ export const CursEducaPlayer: React.FC<CursEducaPlayerProps> = ({ video, userId,
                             {isCompleted ? 'Concluído' : 'Marcar como visto'}
                         </button>
                     </div>
+
+                    {/* Materials */}
+                    <VideoMaterialsList videoId={video.id} />
                 </div>
             </div>
         </div>

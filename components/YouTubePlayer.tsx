@@ -2,8 +2,10 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Video } from '../types';
 import { VideoProgressTracker } from '../utils/videoProgress';
 import { videoService } from '../services/videoService';
-import { X } from 'lucide-react';
+import { analyticsService } from '../services/analyticsService';
+import { X, CheckCircle, Circle, Loader2 } from 'lucide-react';
 import { logger } from '../utils/logger';
+import { VideoMaterialsList } from './VideoMaterialsList';
 
 interface YouTubePlayerProps {
     video: Video;
@@ -52,6 +54,9 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
     const tracker = useRef(new VideoProgressTracker());
     const [displayProgress, setDisplayProgress] = useState(0);
     const [isReady, setIsReady] = useState(false);
+    const [isCompleted, setIsCompleted] = useState(false);
+    const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+    const [lastSavedProgress, setLastSavedProgress] = useState(0);
     const progressIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     // Extract YouTube video ID
@@ -74,6 +79,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
             if (progress) {
                 tracker.current.initialize(progress.progress);
                 setDisplayProgress(progress.progress);
+                setLastSavedProgress(progress.progress);
+                setIsCompleted(progress.progress >= 100);
             }
         };
         loadProgress();
@@ -169,7 +176,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
             // Save to database only at 10% increments
             if (tracker.current.shouldSaveProgress(progress)) {
                 const roundedProgress = tracker.current.roundToThreshold(progress);
-                videoService.updateProgress(userId, video.id, roundedProgress);
+                videoService.updateProgress(video.id, roundedProgress);
                 tracker.current.updateLastSaved(progress);
                 logger.debug(`Progress saved: ${roundedProgress}%`);
             }
@@ -178,7 +185,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
 
     const handleVideoEnd = () => {
         // Mark as 100% complete
-        videoService.updateProgress(userId, video.id, 100);
+        videoService.updateProgress(video.id, 100);
         tracker.current.updateLastSaved(100);
         setDisplayProgress(100);
 
@@ -188,6 +195,29 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
 
         if (onVideoEnd) {
             onVideoEnd();
+        }
+    };
+
+    // Manual completion
+    const handleManualComplete = async () => {
+        if (isCompleted || isMarkingComplete) return;
+        setIsMarkingComplete(true);
+        setIsCompleted(true);
+        setDisplayProgress(100);
+        try {
+            const success = await videoService.markAsCompleted(video.id, userId);
+            if (!success) {
+                setIsCompleted(false);
+                setDisplayProgress(lastSavedProgress);
+            } else {
+                analyticsService.trackVideoComplete(userId, video.id);
+            }
+        } catch (error) {
+            console.error('Failed to mark complete:', error);
+            setIsCompleted(false);
+            setDisplayProgress(lastSavedProgress);
+        } finally {
+            setIsMarkingComplete(false);
         }
     };
 
@@ -228,12 +258,56 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ video, userId, onC
             </div>
 
             {/* YouTube Player */}
-            <div className="flex-1 flex items-center justify-center bg-black p-4">
+            <div className="flex-1 flex items-center justify-center bg-black p-4 min-h-0">
                 <div
                     ref={containerRef}
                     id="youtube-player"
                     className="w-full max-w-7xl aspect-video"
                 />
+            </div>
+
+            {/* Bottom Bar — Progress + Mark Complete + Materials */}
+            <div className="bg-gradient-to-t from-black/95 via-black/80 to-transparent px-4 pb-4 pt-6 z-10 overflow-y-auto max-h-[40vh]">
+                <div className="max-w-7xl mx-auto">
+                    {/* Progress bar */}
+                    <div className="w-full h-2 bg-slate-700 rounded-full mb-4">
+                        <div
+                            className="h-full bg-yellow-500 rounded-full transition-all duration-300"
+                            style={{ width: `${displayProgress}%` }}
+                        />
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center justify-between text-white mb-4">
+                        <span className="text-sm text-slate-400">
+                            {displayProgress}% concluído
+                        </span>
+                        <button
+                            onClick={handleManualComplete}
+                            disabled={isCompleted || isMarkingComplete}
+                            className={`
+                                flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200
+                                ${isCompleted
+                                    ? 'bg-green-600 text-white cursor-default'
+                                    : 'bg-slate-700 hover:bg-slate-600 text-white border border-slate-600 hover:border-yellow-500'
+                                }
+                                ${isMarkingComplete ? 'opacity-70' : ''}
+                            `}
+                        >
+                            {isMarkingComplete ? (
+                                <Loader2 size={18} className="animate-spin" />
+                            ) : isCompleted ? (
+                                <CheckCircle size={18} />
+                            ) : (
+                                <Circle size={18} />
+                            )}
+                            {isCompleted ? 'Concluído' : 'Marcar como visto'}
+                        </button>
+                    </div>
+
+                    {/* Materials */}
+                    <VideoMaterialsList videoId={video.id} />
+                </div>
             </div>
         </div>
     );

@@ -5,7 +5,6 @@ import { VideoPlayer } from './VideoPlayer';
 import { YouTubePlayer } from './YouTubePlayer';
 import { VimeoPlayer } from './VimeoPlayer';
 import { CursEducaPlayer } from './CursEducaPlayer';
-import { VideoMaterialsList } from './VideoMaterialsList';
 import { Play, Loader2 } from 'lucide-react';
 import { useAcademyData } from '../hooks/queries/useAcademyData';
 import { useQueryClient } from '@tanstack/react-query';
@@ -227,13 +226,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
                     player = <VideoPlayer video={selectedVideo} userId={userId} onClose={handleCloseVideo} />;
                 }
 
-                return (
-                    <>
-                        {player}
-                        {/* Materiais complementares (rendered below the player overlay) */}
-                        <VideoMaterialsList videoId={selectedVideo.id} />
-                    </>
-                );
+                return player;
             })()}
 
             {/* ===== SCROLLBAR HIDE UTILITY ===== */}

@@ -20,6 +20,7 @@ import {
     Circle,
     Loader2
 } from 'lucide-react';
+import { VideoMaterialsList } from './VideoMaterialsList';
 
 interface VideoPlayerProps {
     video: Video;
@@ -378,6 +379,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                             {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
                         </button>
                     </div>
+
+                    {/* Materials */}
+                    <VideoMaterialsList videoId={video.id} />
                 </div>
             </div>
         </div>
