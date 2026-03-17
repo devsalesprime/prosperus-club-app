@@ -2,7 +2,7 @@
 // Admin module for sending notifications with individual user targeting
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Send, Users, Briefcase, Shield, Loader2, CheckCircle, AlertCircle, User, Search, X, Clock, CalendarDays } from 'lucide-react';
+import { Bell, Send, Users, Briefcase, Shield, Loader2, CheckCircle, AlertCircle, User, Search, X, Clock, CalendarDays, History, RefreshCw, ChevronLeft, ChevronRight, Paperclip } from 'lucide-react';
 import { notificationService, NotificationSegment, getScheduledNotifications, cancelScheduledNotification, ScheduledNotification } from '../services/notificationService';
 import { supabase } from '../lib/supabase';
 
@@ -35,6 +35,13 @@ export const AdminNotifications: React.FC = () => {
     const [scheduledTime, setScheduledTime] = useState('');
     const [scheduledList, setScheduledList] = useState<ScheduledNotification[]>([]);
     const [loadingScheduled, setLoadingScheduled] = useState(false);
+
+    // History state
+    const [history, setHistory] = useState<any[]>([]);
+    const [loadingHistory, setLoadingHistory] = useState(false);
+    const [histSegFilter, setHistSegFilter] = useState<'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN'>('ALL');
+    const [histPage, setHistPage] = useState(1);
+    const HIST_PAGE_SIZE = 5;
 
     // Debounced search
     const searchUsers = useCallback(async (query: string) => {
@@ -161,6 +168,21 @@ export const AdminNotifications: React.FC = () => {
     useEffect(() => {
         loadScheduledNotifications();
     }, [loadScheduledNotifications]);
+
+    // Load notification history
+    const loadHistory = useCallback(async () => {
+        try {
+            setLoadingHistory(true);
+            const result = await notificationService.getNotificationHistory(1, 50);
+            setHistory(result.data);
+        } catch (err) {
+            console.error('Error loading history:', err);
+        } finally {
+            setLoadingHistory(false);
+        }
+    }, []);
+
+    useEffect(() => { loadHistory(); }, [loadHistory]);
 
     const handleCancelScheduled = async (id: string) => {
         try {
@@ -523,7 +545,6 @@ export const AdminNotifications: React.FC = () => {
                     <li>• Notificações são marcadas como lidas automaticamente ao clicar</li>
                     <li>• Use "Usuário Individual" para enviar mensagens personalizadas</li>
                     <li>• Use "Agendar para depois" para envio futuro programado</li>
-                    <li>• Push notifications (navegador) serão implementadas em breve</li>
                 </ul>
             </div>
 
@@ -556,6 +577,107 @@ export const AdminNotifications: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* ─── Notification History ─── */}
+            <div className="mt-8 bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
+                <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <History className="text-yellow-500" size={18} />
+                        <h4 className="font-bold text-white text-sm">Histórico de Envios</h4>
+                    </div>
+                    <button
+                        onClick={loadHistory}
+                        disabled={loadingHistory}
+                        className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition"
+                    >
+                        <RefreshCw size={14} className={loadingHistory ? 'animate-spin' : ''} />
+                    </button>
+                </div>
+
+                {/* Segment filter chips */}
+                <div className="flex gap-1.5 p-4 pb-0 flex-wrap">
+                    {(['ALL', 'MEMBERS', 'TEAM', 'ADMIN'] as const).map(seg => (
+                        <button
+                            key={seg}
+                            onClick={() => { setHistSegFilter(seg); setHistPage(1); }}
+                            className={`px-3 py-1 text-xs font-medium rounded-lg border transition ${histSegFilter === seg
+                                ? 'bg-yellow-600 text-white border-yellow-600'
+                                : 'bg-transparent text-slate-400 border-slate-600 hover:border-slate-500'
+                            }`}
+                        >
+                            {seg === 'ALL' ? 'Todos' : seg === 'MEMBERS' ? 'Sócios' : seg === 'TEAM' ? 'Time' : 'Admins'}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="p-4">
+                    {loadingHistory ? (
+                        <div className="flex items-center justify-center py-6">
+                            <Loader2 size={20} className="animate-spin text-yellow-500" />
+                        </div>
+                    ) : (() => {
+                        const filteredHistory = histSegFilter === 'ALL'
+                            ? history
+                            : history.filter(h => h.segment === histSegFilter);
+                        const histTotalPages = Math.max(1, Math.ceil(filteredHistory.length / HIST_PAGE_SIZE));
+                        const paginatedHistory = filteredHistory.slice((histPage - 1) * HIST_PAGE_SIZE, histPage * HIST_PAGE_SIZE);
+
+                        return filteredHistory.length === 0 ? (
+                            <div className="text-center py-6 text-slate-500">
+                                <Bell size={24} className="mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">{histSegFilter !== 'ALL' ? 'Nenhum envio para esse segmento.' : 'Nenhum envio registrado'}</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-3">
+                                    {paginatedHistory.map((item: any) => (
+                                        <div
+                                            key={item.id}
+                                            className="p-3 bg-slate-900/60 rounded-lg hover:bg-slate-800 transition border border-slate-700/50"
+                                        >
+                                            <div className="flex items-start justify-between gap-2 mb-1">
+                                                <h4 className="font-medium text-sm text-white truncate">{item.title}</h4>
+                                                <span className="text-xs text-slate-500 shrink-0">
+                                                    {new Date(item.sent_at || item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-400 truncate mb-1">{item.message}</p>
+                                            <span className="inline-block text-[10px] px-2 py-0.5 bg-slate-700 text-slate-300 rounded-full">
+                                                {item.segment === 'ALL' ? 'Todos' : item.segment === 'MEMBERS' ? 'Sócios' : item.segment === 'TEAM' ? 'Time' : item.segment === 'ADMIN' ? 'Admins' : item.segment}
+                                            </span>
+                                            {item.target_url && /\.(pdf|jpg|jpeg|png|webp|gif)$/i.test(item.target_url) && (
+                                                <span className="inline-block text-[10px] px-2 py-0.5 bg-yellow-600/20 text-yellow-400 rounded-full ml-1">
+                                                    <Paperclip size={10} className="inline mr-0.5" />
+                                                    {item.target_url.toLowerCase().endsWith('.pdf') ? 'PDF' : 'Imagem'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                {histTotalPages > 1 && (
+                                    <div className="flex items-center justify-center gap-1 mt-4">
+                                        <button
+                                            onClick={() => setHistPage(p => Math.max(1, p - 1))}
+                                            disabled={histPage === 1}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronLeft size={14} />
+                                        </button>
+                                        <span className="text-xs text-slate-400 px-2">{histPage} / {histTotalPages}</span>
+                                        <button
+                                            onClick={() => setHistPage(p => Math.min(histTotalPages, p + 1))}
+                                            disabled={histPage === histTotalPages}
+                                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                        >
+                                            <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </div>
+            </div>
         </div>
     );
 };
