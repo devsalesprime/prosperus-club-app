@@ -274,10 +274,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </div>
             </div>
 
-            {/* Scrollable content — video + controls + materials */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-                {/* Video Player */}
-                <div className="w-full max-w-7xl mx-auto px-4 pt-2">
+            {/* Video area — flex-1 centers video vertically */}
+            <div className="flex-1 min-h-0 flex items-center justify-center px-4 py-2">
+                <div className="w-full max-w-7xl">
                     {isEmbed ? (
                         <iframe
                             src={getEmbedUrl(video.videoUrl!)}
@@ -299,11 +298,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         />
                     )}
                 </div>
+            </div>
 
-                {/* Controls section */}
-                <div className="w-full max-w-7xl mx-auto px-4 py-4">
+            {/* Controls — always visible at bottom */}
+            <div className="flex-shrink-0 bg-black border-t border-slate-800/50 px-4 py-3 overflow-y-auto max-h-[35vh]">
+                <div className="max-w-7xl mx-auto">
                     {/* Progress bar */}
-                    <div className="bg-slate-800/80 backdrop-blur-sm rounded-full px-4 py-2 mb-4">
+                    <div className="bg-slate-800/80 backdrop-blur-sm rounded-full px-4 py-2 mb-3">
                         <div className="flex items-center gap-3">
                             <div
                                 className="flex-1 h-2 bg-slate-700 rounded-full cursor-pointer hover:h-3 transition-all"
@@ -323,7 +324,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     </div>
 
                     {/* Controls row */}
-                    <div className="flex items-center justify-between text-white flex-wrap gap-3 mb-4">
+                    <div className="flex items-center justify-between text-white flex-wrap gap-3 mb-2">
                         {/* Left: Playback controls (MP4 only) */}
                         <div className="flex items-center gap-4">
                             {!isEmbed && (
@@ -340,7 +341,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                                 </>
                             )}
 
-                            {/* CursEduca debug info */}
                             {isCursEduca && cursEducaTracker.isListening && (
                                 <span className="text-xs text-slate-400">
                                     🎧 Listening...

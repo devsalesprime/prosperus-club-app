@@ -176,10 +176,9 @@ export const VimeoPlayer: React.FC<VimeoPlayerProps> = ({ video, userId, onClose
                 </div>
             </div>
 
-            {/* Scrollable content — video + controls + materials */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-                {/* Vimeo Player */}
-                <div className="w-full max-w-7xl mx-auto px-4 pt-2">
+            {/* Video area — flex-1 centers video vertically */}
+            <div className="flex-1 min-h-0 flex items-center justify-center px-4 py-2">
+                <div className="w-full max-w-7xl">
                     <iframe
                         ref={iframeRef}
                         src={`https://player.vimeo.com/video/${videoId}?autoplay=1`}
@@ -188,11 +187,13 @@ export const VimeoPlayer: React.FC<VimeoPlayerProps> = ({ video, userId, onClose
                         allowFullScreen
                     />
                 </div>
+            </div>
 
-                {/* Controls section */}
-                <div className="w-full max-w-7xl mx-auto px-4 py-4">
+            {/* Controls — always visible at bottom */}
+            <div className="flex-shrink-0 bg-black border-t border-slate-800/50 px-4 py-3 overflow-y-auto max-h-[35vh]">
+                <div className="max-w-7xl mx-auto">
                     {/* Progress bar */}
-                    <div className="w-full h-2 bg-slate-700 rounded-full mb-4">
+                    <div className="w-full h-2 bg-slate-700 rounded-full mb-3">
                         <div
                             className="h-full bg-yellow-500 rounded-full transition-all duration-300"
                             style={{ width: `${displayProgress}%` }}
@@ -200,7 +201,7 @@ export const VimeoPlayer: React.FC<VimeoPlayerProps> = ({ video, userId, onClose
                     </div>
 
                     {/* Controls row */}
-                    <div className="flex items-center justify-between text-white mb-4">
+                    <div className="flex items-center justify-between text-white mb-2">
                         <span className="text-sm text-slate-400">
                             {displayProgress}% concluído
                         </span>
