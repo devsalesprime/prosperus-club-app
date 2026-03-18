@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { CheckCircle, XCircle, DollarSign, Calendar, AlertTriangle, Filter, X } from 'lucide-react';
 import { AdminLoadingState, AdminEmptyState } from './shared';
 import { ResponsiveDataView } from '../layout/ResponsiveDataView';
+import { AdminBulkActionBar } from '../shared/AdminBulkActionBar';
 
 interface AuditDeal {
     id: string;
@@ -399,6 +400,26 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Floating Bulk Action Bar */}
+            <AdminBulkActionBar
+                count={selectedDeals.size}
+                onClear={() => setSelectedDeals(new Set())}
+                actions={[
+                    {
+                        label: 'Aprovar',
+                        icon: <CheckCircle size={14} />,
+                        variant: 'success',
+                        onClick: () => setShowBulkModal(true),
+                    },
+                    {
+                        label: 'Invalidar',
+                        icon: <XCircle size={14} />,
+                        variant: 'danger',
+                        onClick: () => setShowBulkModal(true),
+                    },
+                ]}
+            />
         </div>
     );
 };

@@ -36,7 +36,8 @@ import {
   FolderOpen,
   ChevronDown,
   PenTool,
-  Cog
+  Cog,
+  Search
 } from 'lucide-react';
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
@@ -59,6 +60,7 @@ import { MembersModule } from './components/admin/MembersModule';
 import { AcademyModule } from './components/admin/AcademyModule';
 import { GalleryModule } from './components/admin/GalleryModule';
 import { AdminFilesModule } from './components/admin/AdminFilesModule';
+import { AdminGlobalSearch } from './components/admin/layout/AdminGlobalSearch';
 
 // --- SHARED ADMIN COMPONENTS ---
 
@@ -912,6 +914,19 @@ const SettingsModule = () => {
 export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLogout: () => void }) => {
   const [view, setView] = useState<AdminViewState>(AdminViewState.DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Cmd+K / Ctrl+K global shortcut
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, []);
 
   useEffect(() => {
     if (currentUser.role === 'MEMBER') {
@@ -946,6 +961,7 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans flex relative">
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-4 pb-3 flex items-center justify-between" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-3"><button onClick={() => setIsSidebarOpen(true)} className="text-white"><Menu size={24} /></button><img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Admin" className="h-8 w-auto" /></div>
+        <button onClick={() => setIsSearchOpen(true)} className="flex items-center gap-2 text-slate-400 hover:text-white transition p-2"><Search size={20} /></button>
       </div>
       {isSidebarOpen && <div className="fixed inset-0 bg-black/80 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
       <div className="fixed md:static inset-y-0 left-0 z-50"><AdminSidebar currentView={view} setView={setView} onLogout={onLogout} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} /></div>
@@ -953,7 +969,21 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
         .admin-main-mobile { padding-top: calc(5rem + env(safe-area-inset-top, 0px)); }
         @media (min-width: 768px) { .admin-main-mobile { padding-top: 2rem; } }
       `}</style>
-      <main className="admin-main-mobile flex-1 min-h-screen bg-[#0f172a] w-full px-3 py-4 md:p-8 overflow-x-hidden"><div className="max-w-7xl mx-auto">{renderContent()}</div></main>
+      <main className="admin-main-mobile flex-1 min-h-screen bg-[#0f172a] w-full px-3 py-4 md:p-8 overflow-x-hidden">
+        {/* Desktop Search Bar */}
+        <div className="hidden md:flex max-w-7xl mx-auto mb-6">
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="flex items-center gap-3 w-full max-w-sm bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-400 hover:border-slate-600 hover:text-slate-300 transition"
+          >
+            <Search size={16} />
+            <span className="flex-1 text-left">Buscar...</span>
+            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-[10px] font-mono text-slate-400">⌘K</kbd>
+          </button>
+        </div>
+        <div className="max-w-7xl mx-auto">{renderContent()}</div>
+      </main>
+      <AdminGlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={setView} />
     </div>
   );
 };

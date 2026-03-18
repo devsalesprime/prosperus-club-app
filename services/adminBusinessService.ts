@@ -7,6 +7,7 @@
 import { supabase } from '../lib/supabase';
 import { Deal, DealStatus, RankingEntry } from '../types';
 import { isAbortError } from '../utils/isAbortError';
+import { auditLogService } from './auditLogService';
 
 export interface AdminDealFilters {
     status?: DealStatus[];
@@ -139,6 +140,14 @@ class AdminBusinessService {
             throw new Error(error.message || 'Erro ao auditar negócio');
         }
 
+        // Audit log (best-effort, fire-and-forget)
+        auditLogService.log({
+            action: 'AUDIT_DEAL',
+            entityType: 'deal',
+            entityId: dealId,
+            details: { decision, notes: notes.trim() },
+        });
+
         // Notify both parties about the audit result
         await this.notifyAuditResult(dealId, decision);
     }
@@ -220,6 +229,13 @@ class AdminBusinessService {
             console.error('Error bulk auditing deals:', error);
             throw new Error(error.message || 'Erro ao auditar negócios em lote');
         }
+
+        // Audit log for bulk operation (best-effort)
+        auditLogService.log({
+            action: 'BULK_AUDIT',
+            entityType: 'deal',
+            details: { decision, notes: notes.trim(), deal_ids: dealIds, count: dealIds.length },
+        });
 
         return data || 0;
     }
@@ -474,6 +490,14 @@ class AdminBusinessService {
                 feedback: `[Admin] ${notes.trim()}`
             })
             .eq('id', referralId);
+
+        // Audit log (best-effort)
+        auditLogService.log({
+            action: 'RESOLVE_REFERRAL',
+            entityType: 'referral',
+            entityId: referralId,
+            details: { decision, notes: notes.trim(), new_status: newStatus },
+        });
 
         if (error) {
             if (isAbortError(error)) return;
