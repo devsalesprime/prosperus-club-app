@@ -9,6 +9,7 @@ import {
     Users,
     UserCheck,
     Shield,
+    UserX,
     ExternalLink,
     Loader2,
     CheckCircle,
@@ -52,16 +53,16 @@ const SEGMENT_OPTIONS: { value: NotificationSegment; label: string; icon: React.
         description: 'Somente membros do clube'
     },
     {
-        value: 'TEAM',
-        label: 'Time Interno',
+        value: 'TEAM_ADMIN',
+        label: 'Equipe e Admins',
         icon: <Shield size={18} />,
-        description: 'Time e Administradores'
+        description: 'Time interno + Administradores'
     },
     {
-        value: 'ADMIN',
-        label: 'Apenas Admins',
-        icon: <Shield size={18} />,
-        description: 'Somente administradores'
+        value: 'INACTIVE_30D',
+        label: 'Inativos (+30 dias)',
+        icon: <UserX size={18} />,
+        description: 'Sócios sem atividade há 30+ dias'
     }
 ];
 
@@ -78,10 +79,14 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     const [success, setSuccess] = useState<{ count: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    // Audience reach count
+    const [reachCount, setReachCount] = useState<number | null>(null);
+    const [loadingCount, setLoadingCount] = useState(false);
+
     // History state
     const [history, setHistory] = useState<NotificationHistory[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
-    const [histSegFilter, setHistSegFilter] = useState<'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN'>('ALL');
+    const [histSegFilter, setHistSegFilter] = useState<'ALL' | 'MEMBERS' | 'TEAM_ADMIN' | 'INACTIVE_30D'>('ALL');
     const [histPage, setHistPage] = useState(1);
     const HIST_PAGE_SIZE = 5;
 
@@ -100,6 +105,22 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     useEffect(() => {
         loadHistory();
     }, []);
+
+    // Fetch reach count when segment changes
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingCount(true);
+        setReachCount(null);
+
+        notificationService.getSegmentCount(segment).then(count => {
+            if (!cancelled) {
+                setReachCount(count);
+                setLoadingCount(false);
+            }
+        });
+
+        return () => { cancelled = true; };
+    }, [segment]);
 
     const loadHistory = async () => {
         try {
@@ -292,6 +313,22 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                                     </button>
                                 ))}
                             </div>
+                            {/* Reach Preview */}
+                            <div className="mt-3 p-2.5 bg-slate-800/80 rounded-lg flex items-center gap-2">
+                                {loadingCount ? (
+                                    <Loader2 size={14} className="animate-spin text-yellow-500" />
+                                ) : (
+                                    <span className="text-yellow-500 text-sm">🎯</span>
+                                )}
+                                <span className="text-xs text-slate-300 font-medium">
+                                    Alcance estimado:{' '}
+                                    {loadingCount ? (
+                                        <span className="text-slate-500">calculando...</span>
+                                    ) : (
+                                        <span className="text-yellow-400 font-bold">{reachCount} usuário(s)</span>
+                                    )}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Error/Success Messages */}
@@ -312,7 +349,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={sending || !title.trim() || !message.trim()}
+                            disabled={sending || !title.trim() || !message.trim() || loadingCount}
                             className="w-full py-3 bg-gradient-to-r from-yellow-600 to-yellow-500 text-white font-bold 
                                      rounded-lg hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed
                                      flex items-center justify-center gap-2"
@@ -413,7 +450,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
 
                         {/* Segment filter chips */}
                         <div className="flex gap-1.5 mb-4 flex-wrap">
-                            {(['ALL', 'MEMBERS', 'TEAM', 'ADMIN'] as const).map(seg => (
+                            {(['ALL', 'MEMBERS', 'TEAM_ADMIN', 'INACTIVE_30D'] as const).map(seg => (
                                 <button
                                     key={seg}
                                     onClick={() => { setHistSegFilter(seg); setHistPage(1); }}
@@ -422,7 +459,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
                                         : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500'
                                     }`}
                                 >
-                                    {seg === 'ALL' ? 'Todos' : seg === 'MEMBERS' ? 'Sócios' : seg === 'TEAM' ? 'Time' : 'Admins'}
+                                    {seg === 'ALL' ? 'Todos' : seg === 'MEMBERS' ? 'Sócios' : seg === 'TEAM_ADMIN' ? 'Equipe' : 'Inativos'}
                                 </button>
                             ))}
                         </div>

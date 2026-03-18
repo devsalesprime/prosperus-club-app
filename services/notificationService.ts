@@ -26,7 +26,7 @@ export interface NotificationResult {
     hasMore: boolean;
 }
 
-export type NotificationSegment = 'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN' | 'INDIVIDUAL';
+export type NotificationSegment = 'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN' | 'TEAM_ADMIN' | 'INACTIVE_30D' | 'INDIVIDUAL';
 
 export interface ScheduledNotification {
     id: string;
@@ -608,18 +608,31 @@ class NotificationService {
 
             // For role-based segments, filter by role via profiles join
             if (segment !== 'ALL') {
-                const roleMap: Record<string, string> = { MEMBERS: 'MEMBER', TEAM: 'TEAM', ADMIN: 'ADMIN' };
-                const role = roleMap[segment];
-                if (role) {
+                let userIds: string[] = [];
+
+                if (segment === 'TEAM_ADMIN') {
                     const { data: profiles } = await supabase
                         .from('profiles')
                         .select('id')
-                        .eq('role', role);
-
-                    if (!profiles?.length) return;
-                    const userIds = profiles.map(p => p.id);
-                    query = query.in('user_id', userIds);
+                        .in('role', ['TEAM', 'ADMIN']);
+                    userIds = (profiles || []).map(p => p.id);
+                } else if (segment === 'INACTIVE_30D') {
+                    // For inactive, get IDs from the segmentation method
+                    userIds = await this.getUsersBySegment('INACTIVE_30D');
+                } else {
+                    const roleMap: Record<string, string> = { MEMBERS: 'MEMBER', TEAM: 'TEAM', ADMIN: 'ADMIN' };
+                    const role = roleMap[segment];
+                    if (role) {
+                        const { data: profiles } = await supabase
+                            .from('profiles')
+                            .select('id')
+                            .eq('role', role);
+                        userIds = (profiles || []).map(p => p.id);
+                    }
                 }
+
+                if (!userIds.length) return;
+                query = query.in('user_id', userIds);
             }
 
             const { data: subs } = await query;
@@ -647,6 +660,145 @@ class NotificationService {
         } catch (err) {
             // Never block notifications for push failures
             logger.debug('[Push] Segment push skipped');
+        }
+    }
+
+    // ================================================
+    // SEGMENTATION METHODS
+    // ================================================
+
+    /**
+     * Get user IDs that match a given audience segment.
+     * Used for targeted push and batch in-app notifications.
+     */
+    async getUsersBySegment(segment: NotificationSegment): Promise<string[]> {
+        try {
+            switch (segment) {
+                case 'ALL': {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('is_active', true);
+                    return (data || []).map(p => p.id);
+                }
+                case 'MEMBERS': {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('role', 'MEMBER')
+                        .eq('is_active', true);
+                    return (data || []).map(p => p.id);
+                }
+                case 'TEAM': {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('role', 'TEAM')
+                        .eq('is_active', true);
+                    return (data || []).map(p => p.id);
+                }
+                case 'ADMIN': {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('role', 'ADMIN')
+                        .eq('is_active', true);
+                    return (data || []).map(p => p.id);
+                }
+                case 'TEAM_ADMIN': {
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .in('role', ['TEAM', 'ADMIN'])
+                        .eq('is_active', true);
+                    return (data || []).map(p => p.id);
+                }
+                case 'INACTIVE_30D': {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const cutoff = thirtyDaysAgo.toISOString();
+
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('role', 'MEMBER')
+                        .eq('is_active', true)
+                        .lt('last_active_at', cutoff);
+                    return (data || []).map(p => p.id);
+                }
+                default:
+                    return [];
+            }
+        } catch (err) {
+            logger.error('[Segment] Error fetching users:', err);
+            return [];
+        }
+    }
+
+    /**
+     * Get the estimated count for a segment (lighter than full ID list).
+     * Uses head-only queries for performance.
+     */
+    async getSegmentCount(segment: NotificationSegment): Promise<number> {
+        try {
+            switch (segment) {
+                case 'ALL': {
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('is_active', true);
+                    return count || 0;
+                }
+                case 'MEMBERS': {
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('role', 'MEMBER')
+                        .eq('is_active', true);
+                    return count || 0;
+                }
+                case 'TEAM': {
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('role', 'TEAM')
+                        .eq('is_active', true);
+                    return count || 0;
+                }
+                case 'ADMIN': {
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('role', 'ADMIN')
+                        .eq('is_active', true);
+                    return count || 0;
+                }
+                case 'TEAM_ADMIN': {
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .in('role', ['TEAM', 'ADMIN'])
+                        .eq('is_active', true);
+                    return count || 0;
+                }
+                case 'INACTIVE_30D': {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const cutoff = thirtyDaysAgo.toISOString();
+                    const { count } = await supabase
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('role', 'MEMBER')
+                        .eq('is_active', true)
+                        .lt('last_active_at', cutoff);
+                    return count || 0;
+                }
+                default:
+                    return 0;
+            }
+        } catch (err) {
+            logger.error('[Segment] Error counting users:', err);
+            return 0;
         }
     }
 }
