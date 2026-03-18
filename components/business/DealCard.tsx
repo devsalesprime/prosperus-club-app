@@ -1,5 +1,6 @@
 // components/business/DealCard.tsx
-// Card de negócio individual - Prosperus Club App v2.5
+// Card de negócio premium — Prosperus Club App v3.0.1
+// Track 1: Visual upgrade com status borders, badges, e tipografia premium.
 
 import React, { useState } from 'react';
 import { Check, X, Clock, AlertCircle, Calendar, Loader2, Trash2, LucideIcon } from 'lucide-react';
@@ -17,12 +18,20 @@ interface DealCardProps {
     onDelete?: (dealId: string) => void;
 }
 
-const statusConfig: Record<DealStatus, { label: string; color: string; bg: string; icon: LucideIcon }> = {
-    PENDING: { label: 'Pendente', color: '#f59e0b', bg: '#fef3c7', icon: Clock },
-    CONFIRMED: { label: 'Confirmado', color: '#10b981', bg: '#d1fae5', icon: Check },
-    CONTESTED: { label: 'Contestado', color: '#ef4444', bg: '#fee2e2', icon: AlertCircle },
-    AUDITADO: { label: 'Auditado', color: '#3b82f6', bg: '#dbeafe', icon: Check },
-    INVALIDADO: { label: 'Invalidado', color: '#6b7280', bg: '#f3f4f6', icon: X }
+// ─── Status Config with border, badge, and icon colors ──────────
+
+const statusConfig: Record<DealStatus, {
+    label: string;
+    icon: LucideIcon;
+    border: string;
+    badgeBg: string;
+    badgeText: string;
+}> = {
+    PENDING:    { label: 'Pendente',    icon: Clock,       border: 'border-l-orange-500', badgeBg: 'bg-orange-500/10', badgeText: 'text-orange-400' },
+    CONFIRMED:  { label: 'Confirmado',  icon: Check,       border: 'border-l-green-500',  badgeBg: 'bg-green-500/10',  badgeText: 'text-green-400' },
+    CONTESTED:  { label: 'Contestado',  icon: AlertCircle, border: 'border-l-red-500',    badgeBg: 'bg-red-500/10',    badgeText: 'text-red-400' },
+    AUDITADO:   { label: 'Auditado',    icon: Check,       border: 'border-l-yellow-500', badgeBg: 'bg-yellow-500/10', badgeText: 'text-yellow-400' },
+    INVALIDADO: { label: 'Invalidado',  icon: X,           border: 'border-l-slate-500',  badgeBg: 'bg-slate-500/10',  badgeText: 'text-slate-400' },
 };
 
 const formatCurrency = (value: number) =>
@@ -70,185 +79,66 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, viewType, onStatusChan
     };
 
     const cardContent = (
-        <div className="deal-card">
-            <div className="deal-header">
+        <div className={`bg-slate-800/90 shadow-lg rounded-r-xl p-4 w-full relative border-l-4 ${config.border} border border-slate-700/50 transition-all hover:shadow-xl`}>
+            {/* Header: Avatar + Partner + Status Badge */}
+            <div className="flex items-center gap-3 mb-3">
                 <img
                     src={partner?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
                     alt={partner?.name}
-                    className="partner-avatar"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-slate-600 shrink-0"
                 />
-                <div className="partner-info">
-                    <span className="partner-name">{partner?.name || 'Sócio'}</span>
-                    <span className="deal-role">
-                        {viewType === 'sales' ? 'Comprador' : 'Vendedor'}
-                    </span>
+                <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold tracking-wide truncate">{partner?.name || 'Sócio'}</p>
+                    <p className="text-xs text-slate-400">{viewType === 'sales' ? 'Comprador' : 'Vendedor'}</p>
                 </div>
-                <div className="status-badge" style={{ background: config.bg, color: config.color }}>
-                    <StatusIcon size={14} />
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${config.badgeBg} ${config.badgeText}`}>
+                    <StatusIcon size={13} />
                     {config.label}
                 </div>
             </div>
 
-            <div className="deal-amount">
-                {formatCurrency(deal.amount)}
+            {/* Amount */}
+            <div className="mb-2">
+                <p className="text-[11px] text-slate-400 uppercase font-semibold tracking-wider">Volume</p>
+                <p className="text-xl font-extrabold text-white">{formatCurrency(deal.amount)}</p>
             </div>
 
-            <p className="deal-description">
-                {deal.description}
-            </p>
+            {/* Description */}
+            {deal.description && (
+                <p className="text-sm text-slate-300 leading-relaxed mb-3 line-clamp-2">{deal.description}</p>
+            )}
 
-            <div className="deal-date">
-                <Calendar size={14} />
+            {/* Date */}
+            <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                <Calendar size={13} />
                 {formatDate(deal.deal_date)}
             </div>
 
+            {/* Actions — only for purchases in PENDING */}
             {showActions && (
-                <div className="deal-actions">
+                <div className="flex gap-3 mt-4 pt-4 border-t border-slate-700/50">
                     <button
-                        className="btn-confirm"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
                         onClick={handleConfirm}
                         disabled={loading !== null}
                     >
-                        {loading === 'confirm' ? (
-                            <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                            <Check size={16} />
-                        )}
+                        {loading === 'confirm' ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
                         Confirmar
                     </button>
                     <button
-                        className="btn-contest"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-300 text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
                         onClick={handleContest}
                         disabled={loading !== null}
                     >
-                        {loading === 'contest' ? (
-                            <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                            <X size={16} />
-                        )}
+                        {loading === 'contest' ? <Loader2 className="animate-spin" size={16} /> : <X size={16} />}
                         Contestar
                     </button>
                 </div>
             )}
-
-            <style>{`
-                .deal-card {
-                    background: #1e293b;
-                    border-radius: 12px;
-                    padding: 16px;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    margin-bottom: 12px;
-                    border: 1px solid #334155;
-                }
-
-                .deal-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 12px;
-                }
-
-                .partner-avatar {
-                    width: 48px;
-                    height: 48px;
-                    border-radius: 50%;
-                    object-fit: cover;
-                }
-
-                .partner-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .partner-name {
-                    font-weight: 600;
-                    color: #f1f5f9;
-                }
-
-                .deal-role {
-                    font-size: 12px;
-                    color: #94a3b8;
-                }
-
-                .status-badge {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    padding: 6px 10px;
-                    border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: 600;
-                }
-
-                .deal-amount {
-                    font-size: 24px;
-                    font-weight: 700;
-                    color: #f1f5f9;
-                    margin-bottom: 8px;
-                }
-
-                .deal-description {
-                    color: #94a3b8;
-                    font-size: 14px;
-                    margin: 0 0 12px 0;
-                    line-height: 1.5;
-                }
-
-                .deal-date {
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                    color: #64748b;
-                    font-size: 13px;
-                }
-
-                .deal-actions {
-                    display: flex;
-                    gap: 12px;
-                    margin-top: 16px;
-                    padding-top: 16px;
-                    border-top: 1px solid #334155;
-                }
-
-                .btn-confirm, .btn-contest {
-                    flex: 1;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 6px;
-                    padding: 12px;
-                    border-radius: 8px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    font-size: 14px;
-                    border: none;
-                    transition: transform 0.2s;
-                }
-
-                .btn-confirm {
-                    background: #10b981;
-                    color: white;
-                }
-
-                .btn-contest {
-                    background: rgba(239, 68, 68, 0.15);
-                    color: #fca5a5;
-                }
-
-                .btn-confirm:hover, .btn-contest:hover {
-                    transform: translateY(-1px);
-                }
-
-                .btn-confirm:disabled, .btn-contest:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-            `}</style>
         </div>
     );
 
-    // If deletable: wrap with SwipeableItem
+    // If deletable: wrap with SwipeableItem (swipe preserved!)
     if (canDelete) {
         return (
             <>

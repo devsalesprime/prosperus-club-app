@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle, XCircle, DollarSign, Calendar, AlertTriangle, Filter, X } from 'lucide-react';
 import { AdminLoadingState, AdminEmptyState } from './shared';
+import { ResponsiveDataView } from '../layout/ResponsiveDataView';
 
 interface AuditDeal {
     id: string;
@@ -153,122 +154,152 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                 )}
             </div>
 
-            {/* Deals List */}
-            <div className="space-y-3">
-                {filteredDeals.length > 0 && (
-                    <div className="flex items-center gap-2 px-4">
-                        <input
-                            type="checkbox"
-                            checked={selectedDeals.size === filteredDeals.length && filteredDeals.length > 0}
-                            onChange={toggleAll}
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-yellow-600 focus:ring-yellow-600"
-                        />
-                        <span className="text-sm text-slate-400">Selecionar todos</span>
-                    </div>
-                )}
+            {/* Select all — works on both layouts */}
+            {filteredDeals.length > 0 && (
+                <div className="flex items-center gap-2 px-4">
+                    <input
+                        type="checkbox"
+                        checked={selectedDeals.size === filteredDeals.length && filteredDeals.length > 0}
+                        onChange={toggleAll}
+                        className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-yellow-600 focus:ring-yellow-600"
+                    />
+                    <span className="text-sm text-slate-400">Selecionar todos</span>
+                </div>
+            )}
 
-                {filteredDeals.map(deal => {
-                    const suspicious = isSuspicious(deal.id);
-
-                    return (
-                        <div
-                            key={deal.id}
-                            className={`bg-slate-900 border rounded-xl p-6 transition-colors ${suspicious
-                                ? 'border-red-500/50 bg-red-500/5'
-                                : 'border-slate-800 hover:border-slate-700'
-                                }`}
-                        >
-                            <div className="flex items-start gap-4">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedDeals.has(deal.id)}
-                                    onChange={() => toggleDeal(deal.id)}
-                                    className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-800 text-yellow-600 focus:ring-yellow-600"
-                                />
-
-                                <div className="flex-1">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-2">
-                                            {suspicious && (
-                                                <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-xs font-bold text-red-400">
-                                                    <AlertTriangle size={14} />
-                                                    SUSPEITO
-                                                </div>
-                                            )}
-                                            <span className="text-xs text-slate-500">
-                                                {formatDate(deal.deal_date)}
-                                            </span>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-bold text-yellow-500">
-                                                {formatCurrency(deal.amount)}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <img
-                                                src={deal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                                alt={deal.seller_name}
-                                                className="w-10 h-10 rounded-full object-cover border border-slate-700"
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="text-xs text-slate-500">Vendedor</p>
-                                                <p className="text-sm font-bold text-white truncate">{deal.seller_name}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-3">
-                                            <img
-                                                src={deal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                                alt={deal.buyer_name}
-                                                className="w-10 h-10 rounded-full object-cover border border-slate-700"
-                                            />
-                                            <div className="min-w-0">
-                                                <p className="text-xs text-slate-500">Comprador</p>
-                                                <p className="text-sm font-bold text-white truncate">{deal.buyer_name}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-slate-800/50 rounded-lg p-3 mb-3">
-                                        <p className="text-sm text-slate-300 line-clamp-2">{deal.description}</p>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => onAudit(deal.id, 'APPROVE', 'Negócio de alto valor aprovado após revisão')}
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors text-sm"
-                                        >
-                                            <CheckCircle size={16} />
-                                            Aprovar
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setRejectTargetDealId(deal.id);
-                                                setRejectNotes('');
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors text-sm"
-                                        >
-                                            <XCircle size={16} />
-                                            Invalidar
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })}
-
-                {filteredDeals.length === 0 && (
+            {/* Deals — Responsive: desktop = full cards, mobile = compact cards */}
+            <ResponsiveDataView
+                data={filteredDeals}
+                emptyState={
                     <AdminEmptyState
                         icon={<CheckCircle size={48} className="text-green-500" />}
                         message="Nenhum Negócio Pendente"
                         description="Todos os negócios de alto valor foram auditados!"
                     />
+                }
+                renderTable={() => (
+                    <div className="space-y-3">
+                        {filteredDeals.map(deal => {
+                            const suspicious = isSuspicious(deal.id);
+                            return (
+                                <div
+                                    key={deal.id}
+                                    className={`bg-slate-900 border rounded-xl p-6 transition-colors ${suspicious
+                                        ? 'border-red-500/50 bg-red-500/5'
+                                        : 'border-slate-800 hover:border-slate-700'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedDeals.has(deal.id)}
+                                            onChange={() => toggleDeal(deal.id)}
+                                            className="mt-1 w-4 h-4 rounded border-slate-700 bg-slate-800 text-yellow-600 focus:ring-yellow-600"
+                                        />
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    {suspicious && (
+                                                        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-xs font-bold text-red-400">
+                                                            <AlertTriangle size={14} />
+                                                            SUSPEITO
+                                                        </div>
+                                                    )}
+                                                    <span className="text-xs text-slate-500">{formatDate(deal.deal_date)}</span>
+                                                </div>
+                                                <p className="text-2xl font-bold text-yellow-500">{formatCurrency(deal.amount)}</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <img src={deal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={deal.seller_name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-slate-500">Vendedor</p>
+                                                        <p className="text-sm font-bold text-white truncate">{deal.seller_name}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <img src={deal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={deal.buyer_name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
+                                                    <div className="min-w-0">
+                                                        <p className="text-xs text-slate-500">Comprador</p>
+                                                        <p className="text-sm font-bold text-white truncate">{deal.buyer_name}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-slate-800/50 rounded-lg p-3 mb-3">
+                                                <p className="text-sm text-slate-300 line-clamp-2">{deal.description}</p>
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <button onClick={() => onAudit(deal.id, 'APPROVE', 'Negócio de alto valor aprovado após revisão')} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors text-sm">
+                                                    <CheckCircle size={16} /> Aprovar
+                                                </button>
+                                                <button onClick={() => { setRejectTargetDealId(deal.id); setRejectNotes(''); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors text-sm">
+                                                    <XCircle size={16} /> Invalidar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
-            </div>
+                renderCard={(deal) => {
+                    const suspicious = isSuspicious(deal.id);
+                    return (
+                        <div className={`bg-slate-800 rounded-lg p-4 border transition-colors ${suspicious ? 'border-red-500/50 bg-red-500/5' : 'border-slate-700'}`}>
+                            {/* Top row: checkbox + amount + suspicious */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedDeals.has(deal.id)}
+                                        onChange={() => toggleDeal(deal.id)}
+                                        className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-yellow-600 focus:ring-yellow-600"
+                                    />
+                                    {suspicious && (
+                                        <span className="px-1.5 py-0.5 bg-red-500/20 border border-red-500/30 rounded text-[10px] font-bold text-red-400">
+                                            SUSPEITO
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-lg font-extrabold text-yellow-500">{formatCurrency(deal.amount)}</p>
+                            </div>
+
+                            {/* Seller → Buyer inline */}
+                            <div className="flex items-center gap-2 mb-2">
+                                <img src={deal.seller_image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={deal.seller_name} className="w-8 h-8 rounded-full object-cover border border-slate-600" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] text-slate-500 uppercase">Vendedor</p>
+                                    <p className="text-xs font-bold text-white truncate">{deal.seller_name}</p>
+                                </div>
+                                <span className="text-slate-600 text-xs">→</span>
+                                <img src={deal.buyer_image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={deal.buyer_name} className="w-8 h-8 rounded-full object-cover border border-slate-600" />
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] text-slate-500 uppercase">Comprador</p>
+                                    <p className="text-xs font-bold text-white truncate">{deal.buyer_name}</p>
+                                </div>
+                            </div>
+
+                            {/* Description + Date */}
+                            <p className="text-xs text-slate-400 line-clamp-1 mb-2">{deal.description}</p>
+                            <p className="text-[10px] text-slate-500 mb-3">{formatDate(deal.deal_date)}</p>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                                <button onClick={() => onAudit(deal.id, 'APPROVE', 'Aprovado via mobile')} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-lg transition">
+                                    <CheckCircle size={14} /> Aprovar
+                                </button>
+                                <button onClick={() => { setRejectTargetDealId(deal.id); setRejectNotes(''); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition">
+                                    <XCircle size={14} /> Invalidar
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }}
+            />
 
             {/* Bulk Audit Modal */}
             {showBulkModal && (

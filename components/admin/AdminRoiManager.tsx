@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users, RefreshCw, Download } from 'lucide-react';
 import { AdminPageHeader, AdminLoadingState } from './shared';
 import { adminBusinessService } from '../../services/adminBusinessService';
 import AdminKpiCards from './AdminKpiCards';
@@ -136,14 +136,24 @@ export const AdminRoiManager: React.FC = () => {
                         title="ROI & Auditoria"
                         subtitle="Gestão de negócios e rankings oficiais"
                         action={
-                            <button
-                                onClick={loadData}
-                                disabled={loading}
-                                className="p-2 text-slate-400 hover:text-white transition disabled:opacity-50"
-                                title="Atualizar dados"
-                            >
-                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
+                                    title="Exportar Rankings CSV"
+                                >
+                                    <Download size={16} />
+                                    CSV
+                                </button>
+                                <button
+                                    onClick={loadData}
+                                    disabled={loading}
+                                    className="p-2 text-slate-400 hover:text-white transition disabled:opacity-50"
+                                    title="Atualizar dados"
+                                >
+                                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
                         }
                     />
                 </div>

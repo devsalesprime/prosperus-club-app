@@ -128,3 +128,40 @@ export function exportMembersVCard(members: ProfileData[]): void {
     const date = new Date().toISOString().split('T')[0];
     downloadFile(vcf, `prosperus-contacts-${date}.vcf`, 'text/vcard;charset=utf-8');
 }
+
+// ========== GENERIC CSV EXPORT ==========
+
+/**
+ * Universal CSV export — converts any array of objects to a CSV download.
+ * @param data Array of flat objects to export
+ * @param filename Download filename (without extension, date is appended)
+ * @param columnsMapping Optional map: { objectKey: 'Header Label PT-BR' }
+ *   If omitted, all keys from the first object are used as headers.
+ */
+export function exportToCSV(
+    data: Record<string, any>[],
+    filename: string,
+    columnsMapping?: Record<string, string>
+): void {
+    if (!data.length) return;
+
+    const escapeCSV = (val: any): string => {
+        const str = val === null || val === undefined ? '' : String(val);
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    // Determine columns: use mapping keys or all keys from first object
+    const keys = columnsMapping ? Object.keys(columnsMapping) : Object.keys(data[0]);
+    const headers = columnsMapping ? keys.map(k => columnsMapping[k]) : keys;
+
+    const rows = data.map(row =>
+        keys.map(key => escapeCSV(row[key])).join(',')
+    );
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const date = new Date().toISOString().split('T')[0];
+    downloadFile(csvContent, `${filename}_${date}.csv`, 'text/csv;charset=utf-8');
+}
