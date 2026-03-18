@@ -20,6 +20,27 @@ export const videoService = {
     },
 
     /**
+     * Fetch videos with server-side pagination.
+     * Returns `{ data, total }` for page-based navigation.
+     */
+    async listVideosPaginated(page: number = 1, limit: number = 10): Promise<{ data: Video[]; total: number }> {
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        const { data, error, count } = await supabase
+            .from('videos')
+            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, created_at', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (error) throw error;
+        return {
+            data: (data || []).map(mapVideoFromDB),
+            total: count || 0,
+        };
+    },
+
+    /**
      * Fetch videos by category
      */
     async getVideosByCategory(category: string): Promise<Video[]> {

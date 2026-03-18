@@ -1,13 +1,14 @@
 // ============================================
-// MEMBERS MODULE - Admin Component (Refactored)
+// MEMBERS MODULE - Admin Component (Refactored v2)
 // ============================================
 // Gerenciamento de membros com dados reais do Supabase
-// Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
+// v2: Todas as queries extraídas para adminMemberService (MVC)
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity, CalendarDays, BarChart3, Filter } from 'lucide-react';
 import { UserActivityDetail } from './UserActivityDetail';
+import { adminMemberService, MemberRow } from '../../services/adminMemberService';
 import {
     AdminPageHeader,
     AdminModal,
@@ -17,20 +18,9 @@ import {
     AdminConfirmDialog,
 } from './shared';
 
-interface ProfileRow {
-    id: string;
-    name: string;
-    email: string;
-    company: string | null;
-    job_title: string | null;
-    role: string;
-    image_url: string | null;
-    created_at: string;
-    pitch_video_url?: string | null;
-}
-
 export const MembersModule: React.FC = () => {
-    const [members, setMembers] = useState<ProfileRow[]>([]);
+    const [members, setMembers] = useState<MemberRow[]>([]);
+    const [totalMembers, setTotalMembers] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -49,7 +39,7 @@ export const MembersModule: React.FC = () => {
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingMember, setEditingMember] = useState<ProfileRow | null>(null);
+    const [editingMember, setEditingMember] = useState<MemberRow | null>(null);
     const [editFormData, setEditFormData] = useState({ pitch_video_url: '' });
     const [saving, setSaving] = useState(false);
     const [videoUrlStatus, setVideoUrlStatus] = useState<{ type: 'youtube' | 'vimeo' | 'drive' | 'loom' | 'invalid' | null; message: string }>({ type: null, message: '' });
@@ -63,20 +53,19 @@ export const MembersModule: React.FC = () => {
     }>({ isOpen: false, id: null, memberName: '', isLoading: false });
 
     // Activity Detail state
-    const [activityMember, setActivityMember] = useState<ProfileRow | null>(null);
+    const [activityMember, setActivityMember] = useState<MemberRow | null>(null);
+
+    // ============================================
+    // DATA LOADING — via adminMemberService
+    // ============================================
 
     const loadMembers = async () => {
         try {
             setLoading(true);
             setError(null);
-            const { supabase } = await import('../../lib/supabase');
-            const { data, error: fetchError } = await supabase
-                .from('profiles')
-                .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url')
-                .order('created_at', { ascending: false });
-
-            if (fetchError) throw fetchError;
-            setMembers(data || []);
+            const result = await adminMemberService.getMembers(currentPage, pageSize);
+            setMembers(result.data);
+            setTotalMembers(result.total);
         } catch (err: any) {
             if (err?.message?.includes('AbortError') || err?.code === 'ABORT_ERR') return;
             console.error('Error loading members:', err);
@@ -86,32 +75,19 @@ export const MembersModule: React.FC = () => {
         }
     };
 
-    useEffect(() => { loadMembers(); }, []);
+    useEffect(() => { loadMembers(); }, [currentPage, pageSize]);
 
     // Load last activity + active days data
     useEffect(() => {
         if (members.length === 0) return;
         const loadActivityData = async () => {
             try {
-                const { supabase } = await import('../../lib/supabase');
-                // Last activity
-                const { data: lastData } = await supabase.rpc('get_members_with_last_activity');
-                if (lastData) {
-                    const map: Record<string, string> = {};
-                    lastData.forEach((row: { user_id: string; last_seen: string }) => {
-                        map[row.user_id] = row.last_seen;
-                    });
-                    setLastActivityMap(map);
-                }
-                // Active days count
-                const { data: daysData } = await supabase.rpc('get_members_active_days_count');
-                if (daysData) {
-                    const dmap: Record<string, number> = {};
-                    daysData.forEach((row: { user_id: string; active_days: number }) => {
-                        dmap[row.user_id] = Number(row.active_days);
-                    });
-                    setActiveDaysMap(dmap);
-                }
+                const [lastAct, activeDays] = await Promise.all([
+                    adminMemberService.getMembersLastActivity(),
+                    adminMemberService.getMembersActiveDays(),
+                ]);
+                setLastActivityMap(lastAct);
+                setActiveDaysMap(activeDays);
             } catch (err) {
                 console.error('Error loading activity data:', err);
             }
@@ -123,19 +99,12 @@ export const MembersModule: React.FC = () => {
     useEffect(() => {
         const loadEvents = async () => {
             try {
-                const { supabase } = await import('../../lib/supabase');
-                const { data } = await supabase
-                    .from('club_events')
-                    .select('id, title, date')
-                    .order('date', { ascending: false })
-                    .limit(50);
-                if (data) {
-                    setEventsList(data.map(e => ({
-                        id: e.id,
-                        title: e.title,
-                        date: new Date(e.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-                    })));
-                }
+                const events = await adminMemberService.getEvents();
+                setEventsList(events.map(e => ({
+                    id: e.id,
+                    title: e.title,
+                    date: new Date(e.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                })));
             } catch (err) {
                 console.error('Error loading events:', err);
             }
@@ -151,15 +120,8 @@ export const MembersModule: React.FC = () => {
         }
         const loadAttendees = async () => {
             try {
-                const { supabase } = await import('../../lib/supabase');
-                const { data } = await supabase
-                    .from('event_rsvps')
-                    .select('user_id')
-                    .eq('event_id', eventFilter)
-                    .eq('status', 'CONFIRMED');
-                if (data) {
-                    setEventAttendees(new Set(data.map(r => r.user_id)));
-                }
+                const attendees = await adminMemberService.getEventAttendees(eventFilter);
+                setEventAttendees(attendees);
             } catch (err) {
                 console.error('Error loading attendees:', err);
             }
@@ -205,7 +167,7 @@ export const MembersModule: React.FC = () => {
         }
     };
 
-    const handleEditMember = (member: ProfileRow) => {
+    const handleEditMember = (member: MemberRow) => {
         setEditingMember(member);
         setEditFormData({ pitch_video_url: member.pitch_video_url || '' });
         detectVideoPlatform(member.pitch_video_url || '');
@@ -220,12 +182,9 @@ export const MembersModule: React.FC = () => {
         }
         try {
             setSaving(true);
-            const { supabase } = await import('../../lib/supabase');
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ pitch_video_url: editFormData.pitch_video_url || null, updated_at: new Date().toISOString() })
-                .eq('id', editingMember.id);
-            if (updateError) throw updateError;
+            await adminMemberService.updateMember(editingMember.id, {
+                pitch_video_url: editFormData.pitch_video_url || null,
+            });
             await loadMembers();
             setIsEditModalOpen(false);
             setEditingMember(null);
@@ -238,7 +197,7 @@ export const MembersModule: React.FC = () => {
         }
     };
 
-    const requestDeleteMember = (member: ProfileRow) => {
+    const requestDeleteMember = (member: MemberRow) => {
         setConfirmState({
             isOpen: true,
             id: member.id,
@@ -251,9 +210,7 @@ export const MembersModule: React.FC = () => {
         if (!confirmState.id) return;
         try {
             setConfirmState(prev => ({ ...prev, isLoading: true }));
-            const { supabase } = await import('../../lib/supabase');
-            const { error: deleteError } = await supabase.from('profiles').delete().eq('id', confirmState.id);
-            if (deleteError) throw deleteError;
+            await adminMemberService.deleteMember(confirmState.id);
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
             await loadMembers();
             toast.success('Membro removido com sucesso.');
@@ -307,6 +264,7 @@ export const MembersModule: React.FC = () => {
         );
     }
 
+    // Client-side filtering on the already-paginated results
     const term = searchTerm.toLowerCase().trim();
     const filteredMembers = members.filter(m => {
         const matchesRole = roleFilter === 'ALL' || m.role === roleFilter;
@@ -373,14 +331,14 @@ export const MembersModule: React.FC = () => {
         toast.success(`${filteredMembers.length} membros exportados!`);
     };
 
-    const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
-    const paginatedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    // Server-side pagination — totalPages based on server count
+    const totalPages = Math.max(1, Math.ceil(totalMembers / pageSize));
 
     return (
         <div className="space-y-6">
             <AdminPageHeader
                 title="Sócios"
-                subtitle={`${filteredMembers.length} de ${members.length} usuários`}
+                subtitle={`${totalMembers} usuários no total`}
                 action={
                     <div className="flex items-center gap-2">
                         <button
@@ -500,7 +458,7 @@ export const MembersModule: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {paginatedMembers.map((member) => (
+                        {filteredMembers.map((member) => (
                             <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
@@ -569,6 +527,7 @@ export const MembersModule: React.FC = () => {
                 </table>
             </AdminTable>
 
+            {/* ─── Server-Side Pagination Controls ─────────────────── */}
             {totalPages > 1 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
                     <div className="flex items-center gap-2">
@@ -581,7 +540,7 @@ export const MembersModule: React.FC = () => {
                             {[10, 20, 30, 50].map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                         <span className="text-xs text-slate-500">
-                            {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredMembers.length)} de {filteredMembers.length}
+                            Página {currentPage} de {totalPages} ({totalMembers} total)
                         </span>
                     </div>
                     <div className="flex items-center gap-1">

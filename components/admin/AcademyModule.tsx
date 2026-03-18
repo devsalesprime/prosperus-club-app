@@ -46,6 +46,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalVideos, setTotalVideos] = useState(0);
 
     // Confirm Dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -64,8 +65,9 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     const loadVideos = async () => {
         try {
             const { videoService } = await import('../../services/videoService');
-            const data = await videoService.listVideos();
-            setVideos(data);
+            const result = await videoService.listVideosPaginated(currentPage, pageSize);
+            setVideos(result.data);
+            setTotalVideos(result.total);
         } catch (error: any) {
             if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading videos:', error);
@@ -86,7 +88,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
 
     useEffect(() => {
         Promise.all([loadVideos(), loadCategories()]).finally(() => setInitialLoading(false));
-    }, []);
+    }, [currentPage, pageSize]);
 
     // ============================================
     // VIDEO CRUD
@@ -315,13 +317,13 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
         return result;
     }, [videos, searchTitle, filterCategory, filterDuration, sortOrder]);
 
-    // ── Pagination ────────────────────────────────────
-    const totalPages = Math.max(1, Math.ceil(filteredVideos.length / pageSize));
+    // ── Pagination (server-side count + client-side filter) ──
+    const totalPages = Math.max(1, Math.ceil(
+        filteredVideos.length > 0 ? totalVideos / pageSize : 1
+    ));
     const safeCurrentPage = Math.min(currentPage, totalPages);
-    const paginatedVideos = useMemo(() => {
-        const start = (safeCurrentPage - 1) * pageSize;
-        return filteredVideos.slice(start, start + pageSize);
-    }, [filteredVideos, safeCurrentPage, pageSize]);
+    // When using server-side pagination, the filteredVideos already represent one page
+    const paginatedVideos = filteredVideos;
 
     // Reset to page 1 when filters change
     useEffect(() => {
@@ -460,7 +462,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                             <div className="flex items-center gap-2">
                                 <Filter size={12} />
                                 <span>
-                                    {filteredVideos.length} de {videos.length} vídeo{videos.length !== 1 ? 's' : ''}
+                                    {filteredVideos.length} de {totalVideos} vídeo{totalVideos !== 1 ? 's' : ''}
                                     {hasActiveFilters ? ' (filtrado)' : ''}
                                 </span>
                                 {hasActiveFilters && (
