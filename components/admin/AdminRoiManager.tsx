@@ -4,6 +4,7 @@
 // Main admin interface for ROI audit and management
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users } from 'lucide-react';
 import { adminBusinessService } from '../../services/adminBusinessService';
 import AdminKpiCards from './AdminKpiCards';
@@ -90,7 +91,7 @@ export const AdminRoiManager: React.FC = () => {
             adminBusinessService.downloadCSV(csv, filename);
         } catch (error) {
             console.error('Error exporting CSV:', error);
-            alert('Erro ao exportar CSV');
+            toast.error('Erro ao exportar CSV');
         }
     };
 

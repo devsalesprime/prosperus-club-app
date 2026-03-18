@@ -4,7 +4,8 @@
 // General audit interface for high-value deals and bulk actions
 
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, DollarSign, Calendar, AlertTriangle, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { CheckCircle, XCircle, DollarSign, Calendar, AlertTriangle, Filter, X } from 'lucide-react';
 
 interface AuditDeal {
     id: string;
@@ -25,7 +26,7 @@ interface AuditDeal {
 
 interface AuditTabProps {
     deals: AuditDeal[];
-    suspiciousDeals: Deal[];
+    suspiciousDeals: AuditDeal[];
     loading: boolean;
     onAudit: (dealId: string, decision: 'APPROVE' | 'REJECT', notes: string) => Promise<void>;
     onBulkAudit: (dealIds: string[], decision: 'APPROVE' | 'REJECT', notes: string) => Promise<void>;
@@ -43,6 +44,10 @@ export const AuditTab: React.FC<AuditTabProps> = ({
     const [bulkNotes, setBulkNotes] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [minAmount, setMinAmount] = useState(10000);
+
+    // Reject flow — replaces native prompt()
+    const [rejectTargetDealId, setRejectTargetDealId] = useState<string | null>(null);
+    const [rejectNotes, setRejectNotes] = useState('');
 
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('pt-BR', {
@@ -83,7 +88,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
 
     const handleBulkAudit = async (decision: 'APPROVE' | 'REJECT') => {
         if (!bulkNotes.trim()) {
-            alert('Por favor, adicione uma justificativa');
+            toast('Por favor, adicione uma justificativa', { icon: '⚠️' });
             return;
         }
 
@@ -95,7 +100,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
             setBulkNotes('');
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Erro ao auditar negócios';
-            alert(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -249,8 +254,8 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                                         </button>
                                         <button
                                             onClick={() => {
-                                                const notes = prompt('Motivo da invalidação:');
-                                                if (notes) onAudit(deal.id, 'REJECT', notes);
+                                                setRejectTargetDealId(deal.id);
+                                                setRejectNotes('');
                                             }}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-colors text-sm"
                                         >
@@ -318,6 +323,54 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                                 className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-lg transition-colors"
                             >
                                 Invalidar Todos
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reject Reason Modal — replaces native prompt() */}
+            {rejectTargetDealId && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md">
+                        <div className="flex items-center justify-between p-5 pb-0">
+                            <h3 className="text-lg font-bold text-white">Motivo da Invalidação</h3>
+                            <button
+                                onClick={() => setRejectTargetDealId(null)}
+                                className="text-slate-500 hover:text-white transition p-1 rounded-lg hover:bg-slate-800"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5">
+                            <textarea
+                                value={rejectNotes}
+                                onChange={(e) => setRejectNotes(e.target.value)}
+                                placeholder="Explique o motivo da invalidação..."
+                                className="w-full h-28 bg-slate-800 border border-slate-700 rounded-lg p-4 text-white placeholder-slate-500 focus:outline-none focus:border-red-600 resize-none"
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex gap-3 px-5 py-4 border-t border-slate-800">
+                            <button
+                                onClick={() => setRejectTargetDealId(null)}
+                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (rejectNotes.trim() && rejectTargetDealId) {
+                                        onAudit(rejectTargetDealId, 'REJECT', rejectNotes.trim());
+                                        setRejectTargetDealId(null);
+                                    } else {
+                                        toast('Informe o motivo da invalidação', { icon: '⚠️' });
+                                    }
+                                }}
+                                disabled={!rejectNotes.trim()}
+                                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50"
+                            >
+                                Invalidar
                             </button>
                         </div>
                     </div>

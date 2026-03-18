@@ -1,7 +1,9 @@
 // ChatModerationDetail.tsx
 // Visualização detalhada de conversa com poderes de moderação
+// Refatorado: 4x alert() → toast
 
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
     ArrowLeft,
     Trash2,
@@ -102,7 +104,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
         } catch (err: unknown) {
             console.error('Error deleting message:', err);
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro ao deletar mensagem: ' + errorMessage);
+            toast.error('Erro ao deletar mensagem: ' + errorMessage);
         } finally {
             setDeletingMessageId(null);
         }
@@ -118,7 +120,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
         } catch (err: unknown) {
             console.error('Error restoring message:', err);
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro ao restaurar mensagem: ' + errorMessage);
+            toast.error('Erro ao restaurar mensagem: ' + errorMessage);
         } finally {
             setDeletingMessageId(null);
         }
@@ -181,13 +183,13 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
                 });
             }
 
-            alert(result.message);
+            toast.success(result.message);
             setShowBlockModal(false);
             setSelectedUserToBlock(null);
         } catch (err: unknown) {
             console.error('Error toggling user block:', err);
             const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-            alert('Erro: ' + errorMessage);
+            toast.error('Erro: ' + errorMessage);
         } finally {
             setBlockingUser(false);
         }

@@ -4,6 +4,7 @@
 // Priority queue for disputed deals requiring admin resolution
 
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { AlertTriangle, CheckCircle, XCircle, Mail, User, DollarSign, Calendar, MessageSquare } from 'lucide-react';
 
 interface ContestedDeal {
@@ -52,7 +53,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
         if (!selectedDeal) return;
 
         if (!auditNotes.trim()) {
-            alert('Por favor, adicione uma justificativa para a decisão');
+            toast('Por favor, adicione uma justificativa para a decisão', { icon: '⚠️' });
             return;
         }
 
@@ -63,7 +64,7 @@ export const ContestedDealsTab: React.FC<ContestedDealsTabProps> = ({ deals, loa
             setAuditNotes('');
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Erro ao auditar negócio';
-            alert(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }

@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Paperclip, X, Upload, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import { videoService, VideoMaterial } from '../../services/videoService';
+import { AdminConfirmDialog } from './shared/AdminConfirmDialog';
 
 const GOLD   = '#FFDA71';
 const NAVY   = '#031A2B';
@@ -55,6 +56,9 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
     const [items, setItems] = useState<UploadItem[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Delete confirmation — replaces native confirm()
+    const [materialToDelete, setMaterialToDelete] = useState<VideoMaterial | null>(null);
 
     useEffect(() => {
         if (videoId) loadExisting();
@@ -148,8 +152,13 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
     };
 
     const handleDelete = async (mat: VideoMaterial) => {
-        if (!confirm(`Remover "${mat.title}"?`)) return;
-        await videoService.deleteVideoMaterial(mat.id, mat.file_path);
+        setMaterialToDelete(mat);
+    };
+
+    const confirmDelete = async () => {
+        if (!materialToDelete) return;
+        await videoService.deleteVideoMaterial(materialToDelete.id, materialToDelete.file_path);
+        setMaterialToDelete(null);
         await loadExisting();
     };
 
@@ -404,6 +413,17 @@ export const VideoMaterialsUpload: React.FC<Props> = ({ videoId, videoTitle, onP
                     Nenhum material ainda. Clique em "Adicionar" para anexar PDFs ou apresentações.
                 </p>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <AdminConfirmDialog
+                isOpen={!!materialToDelete}
+                onClose={() => setMaterialToDelete(null)}
+                onConfirm={confirmDelete}
+                title="Remover material"
+                message={<>Tem certeza que deseja remover <strong className="text-white">"{materialToDelete?.title}"</strong>? Esta ação não pode ser desfeita.</>}
+                confirmText="Remover"
+                isDestructive
+            />
         </div>
     );
 };

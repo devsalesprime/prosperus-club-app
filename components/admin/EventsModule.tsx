@@ -4,6 +4,7 @@
 // Gerenciamento de eventos com formulário validado via Zod + react-hook-form
 
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -242,7 +243,7 @@ export const EventsModule: React.FC = () => {
 
             if (uploadError) {
                 console.error('Upload error:', uploadError);
-                alert('Erro no upload: ' + uploadError.message);
+                toast.error('Erro no upload: ' + uploadError.message);
                 return;
             }
 
@@ -262,7 +263,7 @@ export const EventsModule: React.FC = () => {
             setMaterials(updated);
         } catch (error: any) {
             console.error('Error uploading file:', error);
-            alert('Erro ao fazer upload: ' + error.message);
+            toast.error('Erro ao fazer upload: ' + error.message);
         } finally {
             setUploadingIndex(null);
         }
