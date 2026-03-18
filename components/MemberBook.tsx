@@ -26,7 +26,8 @@ import {
     Zap,
     ShoppingBag,
     HeartHandshake,
-    Layers
+    Layers,
+    Star
 } from 'lucide-react';
 import { profileService, ProfileData } from '../services/profileService';
 import { FavoriteButton } from './FavoriteButton';
@@ -598,11 +599,17 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                         </div>
 
                                         {/* Member info */}
-                                        <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">
+                                        <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors flex items-center justify-center gap-2">
                                             {member.name}
+                                            {member.role === 'ACCOUNT_MANAGER' && (
+                                                <span className="inline-flex items-center gap-1 bg-yellow-600/15 border border-yellow-600/30 text-yellow-400 px-2 py-0.5 rounded-full text-[10px] font-bold" title="Account Manager">
+                                                    <Star size={10} className="fill-yellow-400" />
+                                                    AM
+                                                </span>
+                                            )}
                                         </h3>
                                         <p className="text-yellow-500 font-medium text-sm mb-1">
-                                            {member.job_title || 'Sócio'}
+                                            {member.job_title || (member.role === 'ACCOUNT_MANAGER' ? 'Account Manager' : 'Sócio')}
                                         </p>
                                         <p className="text-slate-400 text-sm mb-2">
                                             {member.company && `@${member.company}`}

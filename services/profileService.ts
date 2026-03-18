@@ -9,7 +9,7 @@ export interface ProfileData {
     id: string;
     email: string;
     name: string;
-    role: 'ADMIN' | 'TEAM' | 'MEMBER';
+    role: 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER';
     company?: string;
     job_title?: string;
     image_url?: string;
@@ -165,7 +165,7 @@ class ProfileService {
                     let query = supabase
                         .from('profiles')
                         .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at')
-                        .eq('role', 'MEMBER');
+                        .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
                     // Exclude specific user if provided (e.g., logged-in user)
                     if (excludeUserId) {
@@ -200,7 +200,7 @@ class ProfileService {
             let queryBuilder = supabase
                 .from('profiles')
                 .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at')
-                .eq('role', 'MEMBER');
+                .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
             // Exclude specific user if provided (e.g., logged-in user)
             if (filters?.excludeUserId) {
@@ -262,7 +262,7 @@ class ProfileService {
                     'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at',
                     { count: 'exact', head: false }
                 )
-                .eq('role', 'MEMBER');
+                .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
             // Exclude specific user if provided
             if (filters?.excludeUserId) {

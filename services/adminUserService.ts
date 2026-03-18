@@ -9,7 +9,7 @@ export interface UserProfile {
     id: string;
     name: string;
     email: string;
-    role: 'ADMIN' | 'TEAM' | 'MEMBER';
+    role: 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER';
     company: string | null;
     job_title: string | null;
     image_url: string | null;

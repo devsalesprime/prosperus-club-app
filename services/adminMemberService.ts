@@ -154,7 +154,7 @@ class AdminMemberService {
     /**
      * Update a member's profile fields (e.g. pitch_video_url).
      */
-    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url'>>): Promise<void> {
+    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url' | 'role'>>): Promise<void> {
         const { error } = await supabase
             .from('profiles')
             .update({ ...updates, updated_at: new Date().toISOString() })

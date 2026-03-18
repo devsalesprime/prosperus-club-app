@@ -21,7 +21,8 @@ import {
     UploadCloud,
     Loader2,
     Search,
-    Users
+    Users,
+    Star
 } from 'lucide-react';
 import { ProfileData } from '../services/profileService';
 import { conversationService } from '../services/conversationService';
@@ -98,6 +99,8 @@ interface ProfilePreviewProps {
 
 export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose, currentUserId, onStartChat }) => {
     const isOwnProfile = currentUserId === profile.id;
+    const isCeoOrManager = profile.role === 'CEO' || profile.role === 'MANAGER';
+    const isAccountManager = profile.role === 'ACCOUNT_MANAGER';
     const [copied, setCopied] = useState(false);
     const [isStartingChat, setIsStartingChat] = useState(false);
     const [chatError, setChatError] = useState<string | null>(null);
@@ -242,7 +245,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                         Instagram
                                     </a>
                                 )}
-                                {profile.socials.whatsapp && (
+                                {profile.socials.whatsapp && !isCeoOrManager && (
                                     <a
                                         href={`https://wa.me/${profile.socials.whatsapp}`}
                                         target="_blank"
@@ -264,6 +267,14 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                         Website
                                     </a>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Account Manager Badge */}
+                        {isAccountManager && (
+                            <div className="inline-flex items-center gap-1.5 bg-yellow-600/15 border border-yellow-600/30 text-yellow-400 px-3 py-1 rounded-full text-sm font-semibold mt-2">
+                                <Star size={14} className="fill-yellow-400" />
+                                Account Manager
                             </div>
                         )}
                     </div>
@@ -461,28 +472,43 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                     {/* Contact Button */}
                     {!isOwnProfile && (
                         <div className="pt-6 border-t border-slate-800">
-                            <button
-                                onClick={handleStartChat}
-                                disabled={isStartingChat || !currentUserId}
-                                className={`w-full font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 ${isStartingChat
-                                    ? 'bg-slate-700 text-slate-400 cursor-wait'
-                                    : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                    }`}
-                            >
-                                {isStartingChat ? (
-                                    <>
-                                        <Loader2 size={18} className="animate-spin" />
-                                        Iniciando conversa...
-                                    </>
-                                ) : (
-                                    <>
-                                        <MessageCircle size={18} />
-                                        Enviar Mensagem
-                                    </>
-                                )}
-                            </button>
-                            {chatError && (
-                                <p className="text-red-400 text-xs text-center mt-2">{chatError}</p>
+                            {isCeoOrManager ? (
+                                /* CEO/MANAGER: Privacy notice instead of chat */
+                                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 text-center">
+                                    <p className="text-sm text-slate-400 font-medium">
+                                        🏢 Perfil da Diretoria
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Contato via suporte oficial
+                                    </p>
+                                </div>
+                            ) : (
+                                /* Regular members and Account Managers: show chat button */
+                                <>
+                                    <button
+                                        onClick={handleStartChat}
+                                        disabled={isStartingChat || !currentUserId}
+                                        className={`w-full font-bold py-3 rounded-lg transition flex items-center justify-center gap-2 ${isStartingChat
+                                            ? 'bg-slate-700 text-slate-400 cursor-wait'
+                                            : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                            }`}
+                                    >
+                                        {isStartingChat ? (
+                                            <>
+                                                <Loader2 size={18} className="animate-spin" />
+                                                Iniciando conversa...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MessageCircle size={18} />
+                                                Enviar Mensagem
+                                            </>
+                                        )}
+                                    </button>
+                                    {chatError && (
+                                        <p className="text-red-400 text-xs text-center mt-2">{chatError}</p>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}

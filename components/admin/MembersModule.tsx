@@ -24,7 +24,7 @@ export const MembersModule: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'TEAM' | 'MEMBER'>('ALL');
+    const [roleFilter, setRoleFilter] = useState<'ALL' | 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER'>('ALL');
     const [currentPage, setCurrentPage] = useState(1);
     const [lastActivityMap, setLastActivityMap] = useState<Record<string, string>>({});
     const [pageSize, setPageSize] = useState(20);
@@ -40,7 +40,7 @@ export const MembersModule: React.FC = () => {
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<MemberRow | null>(null);
-    const [editFormData, setEditFormData] = useState({ pitch_video_url: '' });
+    const [editFormData, setEditFormData] = useState({ pitch_video_url: '', role: '' });
     const [saving, setSaving] = useState(false);
     const [videoUrlStatus, setVideoUrlStatus] = useState<{ type: 'youtube' | 'vimeo' | 'drive' | 'loom' | 'invalid' | null; message: string }>({ type: null, message: '' });
 
@@ -169,7 +169,7 @@ export const MembersModule: React.FC = () => {
 
     const handleEditMember = (member: MemberRow) => {
         setEditingMember(member);
-        setEditFormData({ pitch_video_url: member.pitch_video_url || '' });
+        setEditFormData({ pitch_video_url: member.pitch_video_url || '', role: member.role || 'MEMBER' });
         detectVideoPlatform(member.pitch_video_url || '');
         setIsEditModalOpen(true);
     };
@@ -184,6 +184,7 @@ export const MembersModule: React.FC = () => {
             setSaving(true);
             await adminMemberService.updateMember(editingMember.id, {
                 pitch_video_url: editFormData.pitch_video_url || null,
+                role: editFormData.role || undefined,
             });
             await loadMembers();
             setIsEditModalOpen(false);
@@ -224,6 +225,9 @@ export const MembersModule: React.FC = () => {
     const formatRole = (role: string) => {
         switch (role) {
             case 'ADMIN': return <span className="text-red-400 font-bold">Admin</span>;
+            case 'CEO': return <span className="text-purple-400 font-bold">CEO</span>;
+            case 'MANAGER': return <span className="text-pink-400 font-bold">Gestora</span>;
+            case 'ACCOUNT_MANAGER': return <span className="text-yellow-400 font-bold">Account Manager</span>;
             case 'TEAM': return <span className="text-blue-400 font-bold">Time</span>;
             case 'MEMBER': return <span className="text-emerald-400 font-bold">Sócio</span>;
             default: return <span className="text-slate-400">{role}</span>;
@@ -387,6 +391,9 @@ export const MembersModule: React.FC = () => {
                 >
                     <option value="ALL">Todos os perfis</option>
                     <option value="MEMBER">Sócios</option>
+                    <option value="ACCOUNT_MANAGER">Account Managers</option>
+                    <option value="CEO">CEO</option>
+                    <option value="MANAGER">Gestora</option>
                     <option value="TEAM">Time</option>
                     <option value="ADMIN">Admins</option>
                 </select>
@@ -603,6 +610,26 @@ export const MembersModule: React.FC = () => {
                                 </p>
                             )}
                             <p className="text-xs text-slate-500">Cole aqui o link do vídeo de pitch do sócio.</p>
+                        </div>
+
+                        {/* Role Selector */}
+                        <div className="space-y-2">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                🎭 Função do Usuário
+                            </label>
+                            <select
+                                value={editFormData.role}
+                                onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 outline-none focus:border-yellow-600 transition"
+                            >
+                                <option value="MEMBER">Sócio</option>
+                                <option value="ACCOUNT_MANAGER">Account Manager</option>
+                                <option value="CEO">CEO</option>
+                                <option value="MANAGER">Gestora</option>
+                                <option value="TEAM">Time Interno</option>
+                                <option value="ADMIN">Administrador do Sistema</option>
+                            </select>
+                            <p className="text-xs text-slate-500">Define a função e regras de privacidade no app.</p>
                         </div>
 
                         {/* Actions */}

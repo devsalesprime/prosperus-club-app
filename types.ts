@@ -42,7 +42,7 @@ export enum AdminViewState {
 export interface Member {
   id: string;
   name: string;
-  role: 'ADMIN' | 'TEAM' | 'MEMBER';
+  role: 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER';
   company: string;
   jobTitle?: string; // HubSpot: jobtitle
   phone?: string; // HubSpot: phone or mobilephone

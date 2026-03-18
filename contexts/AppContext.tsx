@@ -447,7 +447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             id: member.id,
             email: session?.user?.email || '',
             name: member.name,
-            role: member.role as 'ADMIN' | 'TEAM' | 'MEMBER',
+            role: member.role as 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER',
             company: member.company || '',
             job_title: member.jobTitle || '',
             phone: member.phone || '',
