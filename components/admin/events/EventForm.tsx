@@ -4,9 +4,11 @@
 // Formulário completo de criação/edição de eventos
 // Inclui: Zod validation, sessões múltiplas, materiais com upload, member search
 // Refatorado: 2x alert() → toast
+// v3.0.1: Toggle "Notificar sócios?" + admin exclusion
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useApp } from '../../../contexts/AppContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -46,6 +48,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
     const [hasMultipleSessions, setHasMultipleSessions] = useState(false);
     const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
     const [saving, setSaving] = useState(false);
+    const [shouldNotify, setShouldNotify] = useState(true);
+    const { currentUser } = useApp();
 
     // Private event targeting
     const [targetMemberId, setTargetMemberId] = useState<string | null>(null);
@@ -222,21 +226,35 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                 const linkChanged = (eventData.link || '') !== (event.link || '');
 
                 if (dateChanged || locationChanged || linkChanged) {
-                    import('../../../services/notificationTriggers').then(({ notifyEventUpdated }) => {
-                        notifyEventUpdated({
-                            eventId: event.id,
-                            eventTitle: eventData.title || event.title,
-                            dateChanged,
-                            newDate: dateChanged ? eventData.date : undefined,
-                            locationChanged,
-                            newLocation: locationChanged ? eventData.location : undefined,
-                            linkChanged,
-                            newLink: linkChanged ? eventData.link : undefined,
-                        }).catch(() => { });
-                    });
+                    if (shouldNotify) {
+                        import('../../../services/notificationTriggers').then(({ notifyEventUpdated }) => {
+                            notifyEventUpdated({
+                                eventId: event.id,
+                                eventTitle: eventData.title || event.title,
+                                dateChanged,
+                                newDate: dateChanged ? eventData.date : undefined,
+                                locationChanged,
+                                newLocation: locationChanged ? eventData.location : undefined,
+                                linkChanged,
+                                newLink: linkChanged ? eventData.link : undefined,
+                                excludeUserId: currentUser?.id,
+                            }).catch(() => { });
+                        });
+                    }
                 }
             } else {
                 await eventService.createEvent(eventData);
+                // 🔔 Notificar sócios sobre novo evento
+                if (shouldNotify) {
+                    import('../../../services/notificationTriggers').then(({ notifyNewEvent }) => {
+                        notifyNewEvent(
+                            eventData.id || 'new',
+                            eventData.title,
+                            eventData.date,
+                            currentUser?.id
+                        ).catch(() => { });
+                    });
+                }
             }
             toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
             onSaved();
@@ -510,6 +528,24 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                             ))}
                         </div>
                     )}
+                </div>
+
+                {/* Notification Toggle */}
+                <div className="flex items-center gap-3 px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 select-none">
+                        <input
+                            type="checkbox"
+                            checked={shouldNotify}
+                            onChange={(e) => setShouldNotify(e.target.checked)}
+                            className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-yellow-600 focus:ring-yellow-600 focus:ring-offset-0 cursor-pointer"
+                        />
+                        🔔 Notificar sócios
+                    </label>
+                    <span className="text-[10px] text-slate-500">
+                        {shouldNotify
+                            ? (isEditing ? 'Notificará se data/local/link mudar' : 'Push + in-app serão enviados')
+                            : 'Salvar silenciosamente'}
+                    </span>
                 </div>
 
                 <div className="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-900 sticky bottom-0 -mx-6 -mb-6">

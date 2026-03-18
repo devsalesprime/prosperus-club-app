@@ -75,7 +75,8 @@ export async function notifyNewMessage(
 export async function notifyNewEvent(
     eventId: string,
     eventTitle: string,
-    eventDate: string
+    eventDate: string,
+    excludeUserId?: string
 ): Promise<void> {
     const { data: members } = await supabase
         .from('profiles')
@@ -84,6 +85,8 @@ export async function notifyNewEvent(
         .eq('is_active', true);
     if (!members?.length) return;
 
+    const recipients = excludeUserId ? members.filter(m => m.id !== excludeUserId) : members;
+
     const dateStr = new Date(eventDate).toLocaleDateString('pt-BR', {
         weekday: 'short',
         day: 'numeric',
@@ -91,9 +94,9 @@ export async function notifyNewEvent(
     });
 
     const BATCH = 20;
-    for (let i = 0; i < members.length; i += BATCH) {
+    for (let i = 0; i < recipients.length; i += BATCH) {
         await Promise.allSettled(
-            members.slice(i, i + BATCH).map((m) =>
+            recipients.slice(i, i + BATCH).map((m) =>
                 dispatchNotification({
                     userId: m.id,
                     type: 'event',
@@ -239,7 +242,8 @@ export async function notifyReport(
 
 export async function notifyNewArticle(
     articleId: string,
-    articleTitle: string
+    articleTitle: string,
+    excludeUserId?: string
 ): Promise<void> {
     const { data: members } = await supabase
         .from('profiles')
@@ -248,10 +252,12 @@ export async function notifyNewArticle(
         .eq('is_active', true);
     if (!members?.length) return;
 
+    const recipients = excludeUserId ? members.filter(m => m.id !== excludeUserId) : members;
+
     const BATCH = 20;
-    for (let i = 0; i < members.length; i += BATCH) {
+    for (let i = 0; i < recipients.length; i += BATCH) {
         await Promise.allSettled(
-            members.slice(i, i + BATCH).map((m) =>
+            recipients.slice(i, i + BATCH).map((m) =>
                 dispatchNotification({
                     userId: m.id,
                     type: 'article',
@@ -278,8 +284,8 @@ interface EventUpdatePayload {
     newLink?: string;
 }
 
-export async function notifyEventUpdated(payload: EventUpdatePayload): Promise<void> {
-    const { eventId, eventTitle, dateChanged, newDate, locationChanged, newLocation, linkChanged, newLink } = payload;
+export async function notifyEventUpdated(payload: EventUpdatePayload & { excludeUserId?: string }): Promise<void> {
+    const { eventId, eventTitle, dateChanged, newDate, locationChanged, newLocation, linkChanged, newLink, excludeUserId } = payload;
 
     // Só notifica se algo relevante mudou
     if (!dateChanged && !locationChanged && !linkChanged) return;
@@ -308,7 +314,7 @@ export async function notifyEventUpdated(payload: EventUpdatePayload): Promise<v
     const message = changes.join(' · ');
     const title = `⚠️ Evento atualizado: ${eventTitle}`;
 
-    const userIds = [...new Set(rsvps.map(r => r.user_id))]; // dedupe
+    const userIds = [...new Set(rsvps.map(r => r.user_id))].filter(id => id !== excludeUserId); // dedupe + exclude admin
 
     const BATCH = 20;
     for (let i = 0; i < userIds.length; i += BATCH) {

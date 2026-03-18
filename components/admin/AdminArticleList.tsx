@@ -4,9 +4,11 @@
 // Lista de artigos para o painel administrativo
 // Features: Tabela com status, views, ações de publicar/despublicar/excluir
 // Refatorado: alert→toast, confirm→AdminConfirmDialog, shared components
+// v3.0.1: Toggle "Notificar sócios?" + admin exclusion
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { useApp } from '../../contexts/AppContext';
 import {
     Plus,
     Edit,
@@ -41,6 +43,8 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [shouldNotify, setShouldNotify] = useState(true);
+    const { currentUser } = useApp();
 
     // Confirm Dialog state
     const [confirmState, setConfirmState] = useState<{
@@ -75,9 +79,11 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
             await articleService.publishArticle(article.id);
 
             // 🔔 Notificar sócios sobre novo artigo (fire-and-forget)
-            import('../../services/notificationTriggers').then(({ notifyNewArticle }) => {
-                notifyNewArticle(article.id, article.title).catch(() => { });
-            });
+            if (shouldNotify) {
+                import('../../services/notificationTriggers').then(({ notifyNewArticle }) => {
+                    notifyNewArticle(article.id, article.title, currentUser?.id).catch(() => { });
+                });
+            }
 
             await loadArticles();
             toast.success(`"${article.title}" publicado com sucesso!`);
@@ -186,6 +192,22 @@ export const AdminArticleList: React.FC<AdminArticleListProps> = ({ onEdit, onNe
                     </div>
                 }
             />
+
+            {/* Notification Toggle */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-lg">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 select-none">
+                    <input
+                        type="checkbox"
+                        checked={shouldNotify}
+                        onChange={(e) => setShouldNotify(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-yellow-600 focus:ring-yellow-600 focus:ring-offset-0 cursor-pointer"
+                    />
+                    🔔 Notificar sócios ao publicar
+                </label>
+                <span className="text-[10px] text-slate-500">
+                    {shouldNotify ? 'Push + in-app serão enviados' : 'Publicar silenciosamente'}
+                </span>
+            </div>
 
             {/* Error */}
             {error && (
