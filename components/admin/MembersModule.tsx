@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity } from 'lucide-react';
+import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity, CalendarDays, BarChart3, Filter } from 'lucide-react';
 import { UserActivityDetail } from './UserActivityDetail';
 import {
     AdminPageHeader,
@@ -38,6 +38,14 @@ export const MembersModule: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [lastActivityMap, setLastActivityMap] = useState<Record<string, string>>({});
     const [pageSize, setPageSize] = useState(20);
+
+    // ─── Advanced Filters ─────────────────────────────────────
+    const [lastAccessFilter, setLastAccessFilter] = useState<'ALL' | 'TODAY' | '7D' | '30D' | '60D' | '90D_PLUS'>('ALL');
+    const [activeDaysFilter, setActiveDaysFilter] = useState<'ALL' | '1_PLUS' | '5_PLUS' | '10_PLUS' | '20_PLUS'>('ALL');
+    const [activeDaysMap, setActiveDaysMap] = useState<Record<string, number>>({});
+    const [eventFilter, setEventFilter] = useState<string>('ALL');
+    const [eventsList, setEventsList] = useState<{ id: string; title: string; date: string }[]>([]);
+    const [eventAttendees, setEventAttendees] = useState<Set<string>>(new Set());
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -80,26 +88,84 @@ export const MembersModule: React.FC = () => {
 
     useEffect(() => { loadMembers(); }, []);
 
-    // Load last activity data
+    // Load last activity + active days data
     useEffect(() => {
         if (members.length === 0) return;
-        const loadLastActivity = async () => {
+        const loadActivityData = async () => {
             try {
                 const { supabase } = await import('../../lib/supabase');
-                const { data } = await supabase.rpc('get_members_with_last_activity');
-                if (data) {
+                // Last activity
+                const { data: lastData } = await supabase.rpc('get_members_with_last_activity');
+                if (lastData) {
                     const map: Record<string, string> = {};
-                    data.forEach((row: { user_id: string; last_seen: string }) => {
+                    lastData.forEach((row: { user_id: string; last_seen: string }) => {
                         map[row.user_id] = row.last_seen;
                     });
                     setLastActivityMap(map);
                 }
+                // Active days count
+                const { data: daysData } = await supabase.rpc('get_members_active_days_count');
+                if (daysData) {
+                    const dmap: Record<string, number> = {};
+                    daysData.forEach((row: { user_id: string; active_days: number }) => {
+                        dmap[row.user_id] = Number(row.active_days);
+                    });
+                    setActiveDaysMap(dmap);
+                }
             } catch (err) {
-                console.error('Error loading last activity:', err);
+                console.error('Error loading activity data:', err);
             }
         };
-        loadLastActivity();
+        loadActivityData();
     }, [members]);
+
+    // Load events list for filter dropdown
+    useEffect(() => {
+        const loadEvents = async () => {
+            try {
+                const { supabase } = await import('../../lib/supabase');
+                const { data } = await supabase
+                    .from('club_events')
+                    .select('id, title, date')
+                    .order('date', { ascending: false })
+                    .limit(50);
+                if (data) {
+                    setEventsList(data.map(e => ({
+                        id: e.id,
+                        title: e.title,
+                        date: new Date(e.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                    })));
+                }
+            } catch (err) {
+                console.error('Error loading events:', err);
+            }
+        };
+        loadEvents();
+    }, []);
+
+    // Load event attendees when event filter changes
+    useEffect(() => {
+        if (eventFilter === 'ALL') {
+            setEventAttendees(new Set());
+            return;
+        }
+        const loadAttendees = async () => {
+            try {
+                const { supabase } = await import('../../lib/supabase');
+                const { data } = await supabase
+                    .from('event_rsvps')
+                    .select('user_id')
+                    .eq('event_id', eventFilter)
+                    .eq('status', 'CONFIRMED');
+                if (data) {
+                    setEventAttendees(new Set(data.map(r => r.user_id)));
+                }
+            } catch (err) {
+                console.error('Error loading attendees:', err);
+            }
+        };
+        loadAttendees();
+    }, [eventFilter]);
 
     // Format relative time
     const formatLastSeen = (isoDate: string | undefined): { text: string; color: string } => {
@@ -209,7 +275,14 @@ export const MembersModule: React.FC = () => {
 
     // Reset page when filters change (must be before early returns)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, pageSize]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, roleFilter, pageSize, lastAccessFilter, activeDaysFilter, eventFilter]);
+
+    const hasAdvancedFilters = lastAccessFilter !== 'ALL' || activeDaysFilter !== 'ALL' || eventFilter !== 'ALL';
+    const clearAdvancedFilters = () => {
+        setLastAccessFilter('ALL');
+        setActiveDaysFilter('ALL');
+        setEventFilter('ALL');
+    };
 
     if (loading) {
         return (
@@ -240,7 +313,40 @@ export const MembersModule: React.FC = () => {
         const matchesSearch = !term || [
             m.name, m.email, m.company, m.job_title
         ].some(f => f?.toLowerCase().includes(term));
-        return matchesRole && matchesSearch;
+
+        // Último acesso
+        const matchesLastAccess = (() => {
+            if (lastAccessFilter === 'ALL') return true;
+            const lastSeen = lastActivityMap[m.id];
+            if (!lastSeen) return lastAccessFilter === '90D_PLUS';
+            const diffDays = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 86400000);
+            switch (lastAccessFilter) {
+                case 'TODAY': return diffDays === 0;
+                case '7D': return diffDays <= 7;
+                case '30D': return diffDays <= 30;
+                case '60D': return diffDays <= 60;
+                case '90D_PLUS': return diffDays > 90;
+                default: return true;
+            }
+        })();
+
+        // Dias ativo
+        const matchesActiveDays = (() => {
+            if (activeDaysFilter === 'ALL') return true;
+            const days = activeDaysMap[m.id] || 0;
+            switch (activeDaysFilter) {
+                case '1_PLUS': return days >= 1;
+                case '5_PLUS': return days >= 5;
+                case '10_PLUS': return days >= 10;
+                case '20_PLUS': return days >= 20;
+                default: return true;
+            }
+        })();
+
+        // Evento
+        const matchesEvent = eventFilter === 'ALL' || eventAttendees.has(m.id);
+
+        return matchesRole && matchesSearch && matchesLastAccess && matchesActiveDays && matchesEvent;
     });
 
     // ─── CSV Export ────────────────────────────────────────
@@ -326,6 +432,57 @@ export const MembersModule: React.FC = () => {
                     <option value="TEAM">Time</option>
                     <option value="ADMIN">Admins</option>
                 </select>
+            </div>
+
+            {/* ─── Advanced Filters Bar ─────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
+                    <Filter size={13} />
+                    <span>Filtros:</span>
+                </div>
+                <select
+                    value={lastAccessFilter}
+                    onChange={(e) => setLastAccessFilter(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[160px]"
+                >
+                    <option value="ALL">🕐 Último Acesso</option>
+                    <option value="TODAY">Hoje</option>
+                    <option value="7D">Últimos 7 dias</option>
+                    <option value="30D">Últimos 30 dias</option>
+                    <option value="60D">Últimos 60 dias</option>
+                    <option value="90D_PLUS">⚠ Inativos 90d+</option>
+                </select>
+                <select
+                    value={activeDaysFilter}
+                    onChange={(e) => setActiveDaysFilter(e.target.value as any)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[160px]"
+                >
+                    <option value="ALL">📊 Dias Ativo</option>
+                    <option value="1_PLUS">1+ dia ativo</option>
+                    <option value="5_PLUS">5+ dias ativos</option>
+                    <option value="10_PLUS">10+ dias ativos</option>
+                    <option value="20_PLUS">20+ dias ativos</option>
+                </select>
+                <select
+                    value={eventFilter}
+                    onChange={(e) => setEventFilter(e.target.value)}
+                    className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[200px] max-w-[300px]"
+                >
+                    <option value="ALL">📅 Presença em Evento</option>
+                    {eventsList.map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                            {ev.date} — {ev.title.length > 30 ? ev.title.slice(0, 30) + '…' : ev.title}
+                        </option>
+                    ))}
+                </select>
+                {hasAdvancedFilters && (
+                    <button
+                        onClick={clearAdvancedFilters}
+                        className="text-xs text-yellow-500 hover:text-yellow-400 whitespace-nowrap transition"
+                    >
+                        Limpar filtros
+                    </button>
+                )}
             </div>
 
             <AdminTable>
