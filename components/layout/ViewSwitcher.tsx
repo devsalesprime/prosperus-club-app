@@ -25,6 +25,7 @@ import { ProfilePreview } from '../ProfilePreview';
 import { DashboardHome } from '../dashboard/DashboardHome';
 import { MemberBook } from '../MemberBook';
 import { MobileAgendaView } from '../events/MobileAgendaView';
+import { YearlyAgendaView } from '../events/YearlyAgendaView';
 import { EventDetailsModal } from '../events/EventDetailsModal';
 import { BenefitStatsCard } from '../dashboard/BenefitStatsCard';
 import ProfileSection from '../ProfileSection';
@@ -157,21 +158,29 @@ export const ViewSwitcher: React.FC = () => {
                                     <div className="flex bg-slate-800 p-1 rounded-lg gap-1">
                                         <button
                                             onClick={() => setMobileView('LIST')}
-                                            className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'LIST' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                            className={`px-3 py-2 text-xs font-bold rounded transition-all ${mobileView === 'LIST' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                                         >
                                             <List size={14} className="inline mr-1" />Lista
                                         </button>
                                         <button
                                             onClick={() => setMobileView('MONTH')}
-                                            className={`px-4 py-2 text-xs font-bold rounded transition-all ${mobileView === 'MONTH' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                            className={`px-3 py-2 text-xs font-bold rounded transition-all ${mobileView === 'MONTH' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                                         >
                                             <CalendarIcon size={14} className="inline mr-1" />Mês
+                                        </button>
+                                        <button
+                                            onClick={() => setMobileView('YEAR')}
+                                            className={`px-3 py-2 text-xs font-bold rounded transition-all ${mobileView === 'YEAR' ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Ano
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {mobileView === 'LIST' ? (
+                            {mobileView === 'YEAR' ? (
+                                <YearlyAgendaView events={clubEvents} onSelectEvent={(event) => setSelectedEvent(event)} />
+                            ) : mobileView === 'LIST' ? (
                                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain agenda-scroll-area" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
                                     <MobileAgendaView
                                         events={clubEvents}
@@ -246,6 +255,8 @@ export const ViewSwitcher: React.FC = () => {
                                 </div>
                             )}
                         </>
+                    ) : mobileView === 'YEAR' ? (
+                        <YearlyAgendaView events={clubEvents} onSelectEvent={(event) => setSelectedEvent(event)} />
                     ) : (
                         <div className="h-full w-full overflow-hidden rounded-xl">
                             <Calendar
@@ -300,12 +311,18 @@ export const ViewSwitcher: React.FC = () => {
                                                 {['agenda', 'day', 'week', 'month'].map(v => (
                                                     <button
                                                         key={v}
-                                                        onClick={() => props.onView(v as any)}
+                                                        onClick={() => { setMobileView(v === 'agenda' ? 'LIST' : v === 'month' ? 'MONTH' : 'MONTH'); props.onView(v as any); }}
                                                         className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                                                     >
                                                         {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}
                                                     </button>
                                                 ))}
+                                                <button
+                                                    onClick={() => setMobileView('YEAR')}
+                                                    className="px-4 py-2 text-sm font-bold transition-all text-slate-400 hover:text-white hover:bg-slate-700"
+                                                >
+                                                    Ano
+                                                </button>
                                             </div>
                                         </div>
                                     )

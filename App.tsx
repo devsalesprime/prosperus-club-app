@@ -12,6 +12,7 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
+import { ViewState } from './types';
 import { AppLayout } from './components/layout/AppLayout';
 import { ViewSwitcher } from './components/layout/ViewSwitcher';
 import { LoginModal } from './components/auth/LoginModal';
@@ -58,11 +59,22 @@ const AppShell: React.FC = () => {
         setShowOnboarding,
         setIsAdmin,
         setSession,
+        setView,
         handleLoginSuccess,
         handleRoleSelection,
         tour,
         refreshProfile
     } = useApp();
+
+    // ─── Deep link interception (push notification → ?chat=ID) ────
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const chatId = params.get('chat');
+        if (chatId) {
+            setView(ViewState.MESSAGES);
+            window.history.replaceState({}, '', '/');
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ─── Push notification prompt (shows 5s after onboarding) ────
     const [showPushPrompt, setShowPushPrompt] = useState(false);

@@ -73,7 +73,7 @@ export async function notifyNewMessage(
                 user_id: recipientId,
                 title,
                 body,
-                url: `/chat?conversation=${conversationId}`,
+                url: `/?chat=${conversationId}`,
                 tag: `chat-${conversationId}`,
                 type: 'message',
             },

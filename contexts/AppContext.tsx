@@ -27,8 +27,8 @@ export interface AppContextType {
     isAdmin: boolean;
     setIsAdmin: (v: boolean) => void;
     isMobile: boolean;
-    mobileView: 'LIST' | 'MONTH';
-    setMobileView: (v: 'LIST' | 'MONTH') => void;
+    mobileView: 'LIST' | 'MONTH' | 'YEAR';
+    setMobileView: (v: 'LIST' | 'MONTH' | 'YEAR') => void;
 
     // User
     currentUser: Member | null;
@@ -172,7 +172,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [isMobile, setIsMobile] = useState(() =>
         typeof window !== 'undefined' && window.innerWidth < 768
     );
-    const [mobileView, setMobileView] = useState<'LIST' | 'MONTH'>('LIST');
+    const [mobileView, setMobileView] = useState<'LIST' | 'MONTH' | 'YEAR'>('LIST');
     const [calendarDefaultView, setCalendarDefaultView] = useState(() =>
         typeof window !== 'undefined' && window.innerWidth < 768 ? 'agenda' : 'month'
     );
