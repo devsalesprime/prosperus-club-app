@@ -42,7 +42,7 @@ import {
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
 import { eventService } from './services/eventService';
-import { AdminNotifications } from './components/AdminNotifications';
+import { AdminNotifications } from './components/notifications/AdminNotifications';
 import { ChatModerationList } from './components/admin/ChatModerationList';
 import { ChatModerationDetail } from './components/admin/ChatModerationDetail';
 import { AdminArticleList } from './components/admin/AdminArticleList';

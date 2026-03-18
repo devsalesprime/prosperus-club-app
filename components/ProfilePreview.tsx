@@ -27,7 +27,7 @@ import {
 import { ProfileData } from '../services/profileService';
 import { conversationService } from '../services/conversationService';
 import { analyticsService } from '../services/analyticsService';
-import { BenefitStatsCard } from './BenefitStatsCard';
+import { BenefitStatsCard } from './dashboard/BenefitStatsCard';
 import { ModalWrapper, ModalBody } from './ui/ModalWrapper';
 import { ModalHeader } from './ModalHeader';
 import { Avatar } from './ui/Avatar';

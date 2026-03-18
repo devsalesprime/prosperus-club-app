@@ -25,7 +25,7 @@ interface UsePullToRefreshReturn {
     /** Whether refresh is currently executing */
     isRefreshing: boolean;
     /** Bind props — spread on the scrollable container */
-    bind: ReturnType<typeof useDrag>;
+    bind: (...args: any[]) => any;
 }
 
 export function usePullToRefresh({

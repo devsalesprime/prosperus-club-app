@@ -19,26 +19,26 @@ import { profileService } from '../../services/profileService';
 import useAnalytics from '../../hooks/useAnalytics';
 
 // --- Static Imports (Critical Path) ---
-import { NewsList } from '../NewsList';
-import { ArticleReader } from '../ArticleReader';
+import { NewsList } from '../academy/NewsList';
+import { ArticleReader } from '../academy/ArticleReader';
 import { ProfilePreview } from '../ProfilePreview';
-import { DashboardHome } from '../DashboardHome';
+import { DashboardHome } from '../dashboard/DashboardHome';
 import { MemberBook } from '../MemberBook';
-import { MobileAgendaView } from '../MobileAgendaView';
-import { EventDetailsModal } from '../EventDetailsModal';
-import { BenefitStatsCard } from '../BenefitStatsCard';
+import { MobileAgendaView } from '../events/MobileAgendaView';
+import { EventDetailsModal } from '../events/EventDetailsModal';
+import { BenefitStatsCard } from '../dashboard/BenefitStatsCard';
 import ProfileSection from '../ProfileSection';
 
 // --- Lazy Imports (Code Splitting) ---
-const Academy = React.lazy(() => import('../Academy.tsx').then(m => ({ default: m.Academy })));
+const Academy = React.lazy(() => import('../academy/Academy.tsx').then(m => ({ default: m.Academy })));
 const ProsperusToolsPage = React.lazy(() => import('../../pages/ProsperusToolsPage').then(m => ({ default: m.ProsperusToolsPage })));
 const SolutionsListPage = React.lazy(() => import('../../pages/SolutionsListPage').then(m => ({ default: m.SolutionsListPage })));
 const ProgressListPage = React.lazy(() => import('../../pages/ProgressListPage').then(m => ({ default: m.ProgressListPage })));
-const MessagesView = React.lazy(() => import('../MessagesView.tsx').then(m => ({ default: m.MessagesView })));
-const NotificationsPage = React.lazy(() => import('../NotificationsPage.tsx').then(m => ({ default: m.NotificationsPage })));
+const MessagesView = React.lazy(() => import('../chat/MessagesView').then(m => ({ default: m.MessagesView })));
+const NotificationsPage = React.lazy(() => import('../notifications/NotificationsPage').then(m => ({ default: m.NotificationsPage })));
 const FavoritesPage = React.lazy(() => import('../FavoritesPage').then(m => ({ default: m.FavoritesPage })));
 const ProfileEdit = React.lazy(() => import('../ProfileEdit.tsx').then(m => ({ default: m.ProfileEdit })));
-const Gallery = React.lazy(() => import('../Gallery').then(m => ({ default: m.Gallery })));
+const Gallery = React.lazy(() => import('../gallery/Gallery').then(m => ({ default: m.Gallery })));
 const MyDealsScreen = React.lazy(() => import('../business/MyDealsScreen').then(m => ({ default: m.default })));
 const ReferralsScreen = React.lazy(() => import('../business/ReferralsScreen').then(m => ({ default: m.default })));
 const RankingsScreen = React.lazy(() => import('../business/RankingsScreen').then(m => ({ default: m.default })));

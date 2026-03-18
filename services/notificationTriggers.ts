@@ -47,6 +47,9 @@ async function dispatchNotification(params: NotificationParams): Promise<void> {
 }
 
 // ─── TIPO 1: Mensagem de chat ──────────────────────────────────────
+// NOTE: Chat messages do NOT go into user_notifications (sininho).
+// The chat system has its own unread count via the 'messages' table.
+// We only fire a push notification to the recipient's device.
 
 export async function notifyNewMessage(
     conversationId: string,
@@ -60,14 +63,22 @@ export async function notifyNewMessage(
         .eq('id', senderId)
         .single();
 
-    await dispatchNotification({
-        userId: recipientId,
-        type: 'message',
-        title: sender?.name || 'Nova mensagem',
-        message: content.length > 80 ? content.slice(0, 77) + '...' : content,
-        url: `/chat?conversation=${conversationId}`,
-        tag: `chat-${conversationId}`,
-    });
+    const title = sender?.name || 'Nova mensagem';
+    const body = content.length > 80 ? content.slice(0, 77) + '...' : content;
+
+    // Push-only (fire-and-forget) — no DB insert
+    supabase.functions
+        .invoke('send-push', {
+            body: {
+                user_id: recipientId,
+                title,
+                body,
+                url: `/chat?conversation=${conversationId}`,
+                tag: `chat-${conversationId}`,
+                type: 'message',
+            },
+        })
+        .catch((err: unknown) => logger.warn('Chat push non-critical error:', err));
 }
 
 // ─── TIPO 2: Novo evento na agenda ─────────────────────────────────

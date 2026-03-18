@@ -14,18 +14,18 @@ import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { ViewSwitcher } from './components/layout/ViewSwitcher';
-import { LoginModal } from './components/LoginModal';
-import { UpdatePasswordModal } from './components/UpdatePasswordModal';
-import { RoleSelector } from './components/RoleSelector';
-import { InstallPrompt } from './components/InstallPrompt';
-import { PushPermissionPrompt } from './components/PushPermissionPrompt';
-import { PushAutoSubscriber } from './components/PushAutoSubscriber';
+import { LoginModal } from './components/auth/LoginModal';
+import { UpdatePasswordModal } from './components/auth/UpdatePasswordModal';
+import { RoleSelector } from './components/auth/RoleSelector';
+import { InstallPrompt } from './components/push/InstallPrompt';
+import { PushPermissionPrompt } from './components/push/PushPermissionPrompt';
+import { PushAutoSubscriber } from './components/push/PushAutoSubscriber';
 import { UnreadCountProvider } from './contexts/UnreadCountContext';
 import { SupportDocsProvider } from './components/support/SupportDocsSheet';
 import { ProspToaster } from './utils/toast';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
-const OnboardingWizard = React.lazy(() => import('./components/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
+const OnboardingWizard = React.lazy(() => import('./components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
 const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default: m.AdminApp })));
 
 // Lazy loading fallback

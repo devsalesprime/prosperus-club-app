@@ -1,0 +1,930 @@
+// ChatWindow.tsx
+// Premium chat window with modern messaging UX
+// Features: gradient bubbles, date separators, auto-resize input, scroll FAB, animations
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download, Reply, Trash2 } from 'lucide-react';
+import { conversationService, Message, MessageType } from '../../services/conversationService';
+import { analyticsService } from '../../services/analyticsService';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useUnreadCountContext } from '../../contexts/UnreadCountContext';
+import { ImageLightbox } from './ImageLightbox';
+import { SwipeableItem } from '../ui/SwipeableItem';
+import { MessageContextMenu } from '../ui/MessageContextMenu';
+
+/**
+ * Clear OS-level push notifications for a specific conversation tag.
+ * MUST be fire-and-forget — never await in main flow.
+ * Has 2s timeout to prevent hanging if SW isn't ready.
+ */
+function clearPushNotifications(tag?: string): void {
+    if (!('serviceWorker' in navigator)) return;
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject('timeout'), 2000));
+    Promise.race([
+        navigator.serviceWorker.ready.then(reg =>
+            reg.getNotifications(tag ? { tag } : undefined)
+        ),
+        timeout
+    ])
+        .then((notifications: Notification[]) => notifications.forEach(n => n.close()))
+        .catch(() => { }); // Silent — never block UI
+}
+
+interface ChatWindowProps {
+    conversationId: string;
+    currentUserId: string;
+    otherUserName: string;
+    otherUserImage: string;
+    onBack: () => void;
+}
+
+// Extended message type for optimistic UI
+interface OptimisticMessage extends Message {
+    _isOptimistic?: boolean;
+    _failed?: boolean;
+}
+
+// Format timestamp for message bubbles (compact)
+const formatMessageTime = (timestamp: string) => {
+    try {
+        return format(new Date(timestamp), 'HH:mm');
+    } catch {
+        return '';
+    }
+};
+
+// Format date for separators
+const formatDateSeparator = (timestamp: string) => {
+    try {
+        const date = new Date(timestamp);
+        if (isToday(date)) return 'Hoje';
+        if (isYesterday(date)) return 'Ontem';
+        return format(date, "d 'de' MMMM", { locale: ptBR });
+    } catch {
+        return '';
+    }
+};
+
+export const ChatWindow: React.FC<ChatWindowProps> = ({
+    conversationId,
+    currentUserId,
+    otherUserName,
+    otherUserImage,
+    onBack
+}) => {
+    const [messages, setMessages] = useState<OptimisticMessage[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const [newMessage, setNewMessage] = useState('');
+    const [failedMessage, setFailedMessage] = useState<string | null>(null);
+    const [showScrollFab, setShowScrollFab] = useState(false);
+    const [newMsgCount, setNewMsgCount] = useState(0);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [filePreview, setFilePreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const [replyTo, setReplyTo] = useState<OptimisticMessage | null>(null);
+    const [contextMenuMsg, setContextMenuMsg] = useState<OptimisticMessage | null>(null);
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const isSubscribedRef = useRef(false);
+    const isNearBottomRef = useRef(true);
+    const { refreshUnreadCount } = useUnreadCountContext();
+
+    // Load initial messages and setup subscription
+    useEffect(() => {
+        let subscription: { unsubscribe: () => void } | null = null;
+
+        const initialize = async () => {
+            try {
+                setLoading(true);
+
+                // 1. Load existing messages
+                const data = await conversationService.getMessages(conversationId);
+                setMessages(data);
+
+                // 2. Mark as read
+                await conversationService.markMessagesAsRead(conversationId, currentUserId);
+
+                // 3. Refresh badge count immediately
+                refreshUnreadCount();
+
+                // 4. Clear OS push (fire-and-forget — never await)
+                clearPushNotifications(`chat-${conversationId}`);
+
+                // 4. Subscribe to new messages (Realtime)
+                subscription = conversationService.subscribeToConversation(
+                    conversationId,
+                    (newMsg) => {
+                        // Avoid duplicates
+                        setMessages(prev => {
+                            const exists = prev.some(m => m.id === newMsg.id);
+                            if (exists) {
+                                return prev.map(m =>
+                                    m.id === newMsg.id ? { ...newMsg, _isOptimistic: false, _failed: false } : m
+                                );
+                            }
+
+                            // New message from other user
+                            if (newMsg.sender_id !== currentUserId) {
+                                playNotificationSound();
+                                // If user scrolled up, show count
+                                if (!isNearBottomRef.current) {
+                                    setNewMsgCount(prev => prev + 1);
+                                }
+                            }
+
+                            return [...prev, newMsg];
+                        });
+
+                        // Mark as read if from other user
+                        if (newMsg.sender_id !== currentUserId) {
+                            conversationService.markMessagesAsRead(conversationId, currentUserId);
+                            clearPushNotifications(`chat-${conversationId}`);
+                        }
+                    }
+                );
+
+                isSubscribedRef.current = true;
+
+            } catch (error) {
+                console.error('Error initializing chat:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initialize();
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+                isSubscribedRef.current = false;
+            }
+        };
+    }, [conversationId, currentUserId]);
+
+    // Auto-scroll when messages change (only if near bottom)
+    useEffect(() => {
+        if (messages.length > 0 && isNearBottomRef.current) {
+            const behavior = loading ? 'auto' : 'smooth';
+            messagesEndRef.current?.scrollIntoView({ behavior });
+        }
+    }, [messages, loading]);
+
+    // Track scroll position for FAB
+    const handleScroll = useCallback(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const nearBottom = distanceFromBottom < 100;
+
+        isNearBottomRef.current = nearBottom;
+        setShowScrollFab(!nearBottom && messages.length > 5);
+
+        if (nearBottom) {
+            setNewMsgCount(0);
+        }
+    }, [messages.length]);
+
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setShowScrollFab(false);
+        setNewMsgCount(0);
+    }, []);
+
+    // Play notification sound
+    const playNotificationSound = useCallback(() => {
+        try {
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.1;
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (err) {
+            console.debug('Could not play notification sound:', err);
+        }
+    }, []);
+
+    // Auto-resize textarea
+    const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setNewMessage(e.target.value);
+        const textarea = e.target;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }, []);
+
+    // Handle send message with Optimistic UI
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newMessage.trim() || sending) return;
+
+        const messageContent = newMessage.trim();
+        setNewMessage('');
+        setFailedMessage(null);
+
+        // Reset textarea height
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+        }
+
+        // Create optimistic message
+        const optimisticId = `optimistic-${Date.now()}`;
+        const optimisticMessage: OptimisticMessage = {
+            id: optimisticId,
+            conversation_id: conversationId,
+            sender_id: currentUserId,
+            content: messageContent,
+            is_read: false,
+            created_at: new Date().toISOString(),
+            _isOptimistic: true,
+            _failed: false
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
+        isNearBottomRef.current = true; // Force scroll for own messages
+
+        try {
+            setSending(true);
+            const sentMessage = await conversationService.sendMessage(
+                conversationId,
+                currentUserId,
+                messageContent
+            );
+
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...sentMessage, _isOptimistic: false, _failed: false } : m
+            ));
+
+            // Analytics: track successful text message
+            analyticsService.trackMessageSent(currentUserId, conversationId);
+
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...m, _failed: true } : m
+            ));
+            setFailedMessage(messageContent);
+        } finally {
+            setSending(false);
+        }
+    };
+
+    // Handle Enter key: on desktop, Enter sends (Shift+Enter = newline)
+    // On mobile, Enter always inserts newline (user taps the send button)
+    const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile && e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage(e as any);
+        }
+    }, [newMessage, sending]);
+
+    // Retry failed message
+    const handleRetry = async (failedMsg: OptimisticMessage) => {
+        setMessages(prev => prev.filter(m => m.id !== failedMsg.id));
+        setNewMessage(failedMsg.content);
+        setFailedMessage(null);
+    };
+
+    const handleDismissFailed = (failedId: string) => {
+        setMessages(prev => prev.filter(m => m.id !== failedId));
+        setFailedMessage(null);
+    };
+
+    // ─── Swipe + long press for messages ─────────────────────────
+    const handleReplyTo = useCallback((msg: OptimisticMessage) => {
+        setReplyTo(msg);
+        textareaRef.current?.focus();
+    }, []);
+
+    const handleDeleteMessage = useCallback(async (msg: OptimisticMessage) => {
+        try {
+            await conversationService.deleteMessage(msg.id);
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+        } catch {
+            console.error('Failed to delete message');
+        }
+    }, []);
+
+    const handleLongPress = useCallback((msg: OptimisticMessage) => {
+        setContextMenuMsg(msg);
+    }, []);
+
+    const handleCopyMessage = useCallback(() => {
+        // Toast-like feedback could go here
+    }, []);
+
+    // --- MEDIA HANDLING ---
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file size (max 25MB)
+        if (file.size > 25 * 1024 * 1024) {
+            alert('Arquivo muito grande. Máximo permitido: 25MB.');
+            return;
+        }
+
+        setSelectedFile(file);
+
+        // Generate preview for images
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => setFilePreview(reader.result as string);
+            reader.readAsDataURL(file);
+        } else {
+            setFilePreview(null);
+        }
+
+        // Reset input so same file can be re-selected
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setFilePreview(null);
+    };
+
+    const handleSendMedia = async () => {
+        if (!selectedFile || uploading) return;
+
+        const file = selectedFile;
+        const isImage = file.type.startsWith('image/');
+
+        // Create optimistic message
+        const optimisticId = `optimistic-media-${Date.now()}`;
+        const optimisticMessage: OptimisticMessage = {
+            id: optimisticId,
+            conversation_id: conversationId,
+            sender_id: currentUserId,
+            content: isImage ? '📷 Enviando imagem...' : `📎 Enviando ${file.name}...`,
+            is_read: false,
+            message_type: isImage ? 'image' : 'file',
+            media_filename: file.name,
+            created_at: new Date().toISOString(),
+            _isOptimistic: true,
+            _failed: false
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
+        isNearBottomRef.current = true;
+        setSelectedFile(null);
+        setFilePreview(null);
+
+        try {
+            setUploading(true);
+            const sentMessage = await conversationService.sendMediaMessage(
+                conversationId,
+                currentUserId,
+                file,
+                newMessage.trim() || undefined
+            );
+
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...sentMessage, _isOptimistic: false, _failed: false } : m
+            ));
+            setNewMessage('');
+
+            // Analytics: track successful media message
+            analyticsService.trackMessageSent(currentUserId, conversationId);
+        } catch (error) {
+            console.error('Error sending media:', error);
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticId ? { ...m, _failed: true, content: `❌ Falha: ${file.name}` } : m
+            ));
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    // Format file size for display
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes}B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+    };
+
+    // Group messages with date separators
+    const messagesWithSeparators = useMemo(() => {
+        const result: Array<{ type: 'separator'; date: string } | { type: 'message'; message: OptimisticMessage; showAvatar: boolean }> = [];
+
+        messages.forEach((message, index) => {
+            const msgDate = new Date(message.created_at);
+            const prevDate = index > 0 ? new Date(messages[index - 1].created_at) : null;
+
+            // Add date separator if it's a new day
+            if (!prevDate || !isSameDay(msgDate, prevDate)) {
+                result.push({ type: 'separator', date: message.created_at });
+            }
+
+            const showAvatar =
+                index === 0 ||
+                messages[index - 1].sender_id !== message.sender_id ||
+                (prevDate && !isSameDay(msgDate, prevDate));
+
+            result.push({ type: 'message', message, showAvatar: !!showAvatar });
+        });
+
+        return result;
+    }, [messages]);
+
+    return createPortal(
+        <div
+            className="chat-window-root flex flex-col fixed inset-0 z-[60] md:relative md:z-40 md:inset-auto"
+            style={{
+                background: 'linear-gradient(180deg, #0f172a 0%, #0c1220 100%)',
+                paddingTop: 'env(safe-area-inset-top, 0)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0)',
+            }}
+        >
+            {/* Header */}
+            <div
+                className="px-4 py-3 flex items-center gap-3 border-b border-slate-800/50 shrink-0"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.9) 100%)',
+                    backdropFilter: 'blur(12px)',
+                }}
+            >
+                <button
+                    onClick={onBack}
+                    className="p-2 hover:bg-white/5 rounded-xl transition-all duration-200 text-slate-400 hover:text-white active:scale-95"
+                >
+                    <ArrowLeft size={20} />
+                </button>
+
+                {/* Avatar with gradient ring */}
+                <div className="relative">
+                    <div
+                        className="w-10 h-10 rounded-full p-[2px]"
+                        style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b, #fbbf24)' }}
+                    >
+                        <img
+                            src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                            alt={otherUserName}
+                            className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                        />
+                    </div>
+                    {/* Online dot */}
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-900">
+                        <div className="w-full h-full bg-emerald-400 rounded-full animate-ping opacity-75" style={{ animationDuration: '2s' }}></div>
+                    </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-white truncate text-sm">{otherUserName}</h2>
+                    <p className="text-[11px] text-emerald-400 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
+                        Online
+                    </p>
+                </div>
+            </div>
+
+            {/* Messages Area */}
+            <div
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto px-3 py-4 relative"
+                style={{
+                    backgroundImage: `radial-gradient(circle at 50% 50%, rgba(250,204,21,0.02) 0%, transparent 50%)`,
+                }}
+            >
+                {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="relative">
+                                <div className="w-12 h-12 rounded-full border-2 border-yellow-500/20"></div>
+                                <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-transparent border-t-yellow-500 animate-spin"></div>
+                            </div>
+                            <p className="text-slate-500 text-sm">Carregando mensagens...</p>
+                        </div>
+                    </div>
+                ) : messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                        <div
+                            className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(250,204,21,0.1), rgba(217,119,6,0.05))',
+                                border: '1px solid rgba(250,204,21,0.15)',
+                            }}
+                        >
+                            <MessageCircle className="w-10 h-10 text-yellow-500/60" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">Inicie a conversa</h3>
+                        <p className="text-slate-500 text-sm max-w-[240px]">
+                            Envie uma mensagem para {otherUserName} e comece o networking!
+                        </p>
+                    </div>
+                ) : (
+                    <>
+                        {messagesWithSeparators.map((item, index) => {
+                            if (item.type === 'separator') {
+                                return (
+                                    <div key={`sep-${item.date}`} className="flex items-center justify-center my-4">
+                                        <div
+                                            className="px-3 py-1 rounded-full text-[11px] font-medium text-slate-400"
+                                            style={{
+                                                background: 'rgba(30,41,59,0.8)',
+                                                backdropFilter: 'blur(8px)',
+                                                border: '1px solid rgba(51,65,85,0.5)',
+                                            }}
+                                        >
+                                            {formatDateSeparator(item.date)}
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            const { message, showAvatar } = item;
+                            const isOwn = message.sender_id === currentUserId;
+                            const isFailed = message._failed;
+                            const isOptimistic = message._isOptimistic && !isFailed;
+
+                            // Long press handlers
+                            const onMsgTouchStart = () => {
+                                longPressTimerRef.current = setTimeout(() => handleLongPress(message), 500);
+                            };
+                            const onMsgTouchEnd = () => {
+                                if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                            };
+
+                            return (
+                                <SwipeableItem
+                                    key={message.id}
+                                    rightActions={isOwn ? [
+                                        {
+                                            label: 'Deletar',
+                                            icon: <Trash2 size={16} />,
+                                            color: 'bg-red-500',
+                                            width: 72,
+                                            destructive: true,
+                                            onTrigger: () => handleDeleteMessage(message),
+                                        },
+                                    ] : []}
+                                    leftActions={[{
+                                        label: 'Responder',
+                                        icon: <Reply size={16} />,
+                                        color: 'bg-yellow-600',
+                                        width: 72,
+                                        destructive: true,
+                                        onTrigger: () => handleReplyTo(message),
+                                    }]}
+                                    disabled={isFailed || isOptimistic}
+                                >
+                                    <div
+                                        className={`flex gap-2 mb-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${showAvatar ? 'mt-3' : 'mt-0.5'}`}
+                                        style={{
+                                            animation: isOptimistic ? 'none' : index === messagesWithSeparators.length - 1 ? 'slideInUp 0.3s ease-out' : 'none',
+                                        }}
+                                        onTouchStart={onMsgTouchStart}
+                                        onTouchEnd={onMsgTouchEnd}
+                                        onTouchMove={onMsgTouchEnd}
+                                    >
+                                        {/* Avatar */}
+                                        <div className="w-7 shrink-0">
+                                            {!isOwn && showAvatar && (
+                                                <img
+                                                    src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                    alt={otherUserName}
+                                                    className="w-7 h-7 rounded-full object-cover border border-slate-700/50"
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Message Bubble */}
+                                        <div className={`max-w-[75%] flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                                            <div
+                                                className={`px-3 py-2 relative ${isFailed
+                                                    ? 'bg-red-900/40 border border-red-500/30'
+                                                    : isOwn
+                                                        ? ''
+                                                        : ''
+                                                    } ${isOptimistic ? 'opacity-60' : ''}`}
+                                                style={{
+                                                    ...(isFailed ? {} : isOwn
+                                                        ? {
+                                                            background: 'linear-gradient(135deg, #b45309, #d97706)',
+                                                            borderRadius: showAvatar ? '16px 16px 4px 16px' : '16px 4px 4px 16px',
+                                                            boxShadow: '0 2px 8px rgba(217,119,6,0.2)',
+                                                        }
+                                                        : {
+                                                            background: 'rgba(30,41,59,0.7)',
+                                                            backdropFilter: 'blur(8px)',
+                                                            border: '1px solid rgba(51,65,85,0.4)',
+                                                            borderRadius: showAvatar ? '16px 16px 16px 4px' : '4px 16px 16px 4px',
+                                                        }
+                                                    ),
+                                                    ...(isFailed ? { borderRadius: '16px' } : {}),
+                                                }}
+                                            >
+                                                {/* Deleted message */}
+                                                {(message as OptimisticMessage).is_deleted ? (
+                                                    <p className="text-[14px] leading-relaxed italic opacity-60 text-white">
+                                                        [Mensagem removida pelo moderador]
+                                                    </p>
+                                                ) : message.message_type === 'image' && message.media_url ? (
+                                                    /* Image message */
+                                                    <div className="space-y-1">
+                                                        <img
+                                                            src={message.media_url}
+                                                            alt={message.media_filename || 'Imagem'}
+                                                            className="max-w-[240px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setLightboxSrc(message.media_url!);
+                                                            }}
+                                                            loading="lazy"
+                                                        />
+                                                        {message.content && message.content !== '📷 Imagem' && (
+                                                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                                {message.content}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : message.message_type === 'file' && message.media_url ? (
+                                                    /* File message */
+                                                    <div className="space-y-1">
+                                                        <a
+                                                            href={message.media_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition hover:opacity-80 ${isOwn ? 'bg-amber-800/30' : 'bg-slate-700/40'}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <FileText size={20} className={isOwn ? 'text-amber-200' : 'text-slate-300'} />
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className={`text-[13px] font-medium truncate ${isOwn ? 'text-amber-100' : 'text-white'}`}>
+                                                                    {message.media_filename || 'Arquivo'}
+                                                                </p>
+                                                            </div>
+                                                            <Download size={16} className={isOwn ? 'text-amber-200/70' : 'text-slate-400'} />
+                                                        </a>
+                                                        {message.content && !message.content.startsWith('📎') && (
+                                                            <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                                {message.content}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    /* Text message */
+                                                    <p className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words ${isFailed ? 'text-red-200' : 'text-white'}`}>
+                                                        {message.content}
+                                                    </p>
+                                                )}
+
+                                                {/* Inline timestamp + status */}
+                                                <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                                                    <span className={`text-[10px] ${isOwn ? 'text-amber-200/60' : 'text-slate-500'}`}>
+                                                        {formatMessageTime(message.created_at)}
+                                                    </span>
+                                                    {isOwn && !isFailed && (
+                                                        <span className="text-amber-200/60">
+                                                            {isOptimistic ? (
+                                                                <Loader2 size={10} className="animate-spin" />
+                                                            ) : message.is_read ? (
+                                                                <CheckCheck size={12} className="text-sky-400" />
+                                                            ) : (
+                                                                <Check size={12} />
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Failed indicator */}
+                                                {isFailed && (
+                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-red-500/20">
+                                                        <AlertCircle size={12} className="text-red-400" />
+                                                        <span className="text-[11px] text-red-400">Falha</span>
+                                                        <button
+                                                            onClick={() => handleRetry(message)}
+                                                            className="text-[11px] text-yellow-500 hover:text-yellow-400 flex items-center gap-1 ml-auto"
+                                                        >
+                                                            <RefreshCw size={10} />
+                                                            Reenviar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDismissFailed(message.id)}
+                                                            className="text-[11px] text-slate-500 hover:text-slate-400"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </SwipeableItem>
+                            );
+                        })}
+                        <div ref={messagesEndRef} />
+                    </>
+                )}
+
+                {/* Scroll to Bottom FAB — absolute inside messages container */}
+                {showScrollFab && (
+                    <button
+                        onClick={scrollToBottom}
+                        className="absolute bottom-4 right-4 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90"
+                        style={{
+                            background: 'linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.95))',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(51,65,85,0.6)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        }}
+                    >
+                        <ChevronDown size={18} className="text-slate-300" />
+                        {newMsgCount > 0 && (
+                            <div
+                                className="absolute -top-2 -right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
+                                style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)' }}
+                            >
+                                {newMsgCount > 9 ? '9+' : newMsgCount}
+                            </div>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            {/* Input Area */}
+            <div
+                className="px-3 py-3 border-t border-slate-800/50 shrink-0"
+                style={{
+                    background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,1) 100%)',
+                    backdropFilter: 'blur(12px)',
+                }}
+            >
+                {/* Reply Quote Bar */}
+                {replyTo && (
+                    <div className="flex items-center gap-2 mb-2 mx-1 px-3 py-2 bg-slate-800/60 border-l-2 border-yellow-500 rounded-xl">
+                        <Reply size={14} className="text-yellow-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[11px] text-yellow-500 font-medium mb-0.5">
+                                {replyTo.sender_id === currentUserId ? 'Você' : otherUserName}
+                            </p>
+                            <p className="text-xs text-slate-400 truncate">
+                                {replyTo.content}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setReplyTo(null)}
+                            className="p-1 text-slate-500 hover:text-slate-300 transition shrink-0"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
+                {/* File Preview Bar */}
+                {selectedFile && (
+                    <div className="flex items-center gap-2 mb-2 px-2 py-2 bg-slate-800/60 border border-slate-700/50 rounded-xl">
+                        {filePreview ? (
+                            <img src={filePreview} alt="Preview" className="w-10 h-10 rounded-lg object-cover" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-lg bg-slate-700/50 flex items-center justify-center">
+                                <FileText size={20} className="text-slate-400" />
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs text-white truncate font-medium">{selectedFile.name}</p>
+                            <p className="text-[10px] text-slate-500">{formatFileSize(selectedFile.size)}</p>
+                        </div>
+                        <button
+                            onClick={handleRemoveFile}
+                            className="p-1 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition shrink-0"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
+
+                {/* Hidden file input — accepts all file types */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="*/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                />
+
+                <form onSubmit={selectedFile ? (e) => { e.preventDefault(); handleSendMedia(); } : handleSendMessage} className="flex items-end gap-2">
+                    {/* Attach Button */}
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={sending || uploading}
+                        className="rounded-full flex items-center justify-center transition-all duration-200 hover:bg-slate-700/60 active:scale-90 shrink-0 disabled:opacity-30"
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            minWidth: '40px',
+                            minHeight: '40px',
+                        }}
+                        title="Anexar arquivo"
+                    >
+                        <Paperclip size={20} className="text-slate-400" />
+                    </button>
+
+                    <div className="flex-1 relative">
+                        <textarea
+                            ref={textareaRef}
+                            value={newMessage}
+                            onChange={handleTextareaChange}
+                            onKeyDown={handleKeyDown}
+                            placeholder={selectedFile ? 'Adicionar legenda...' : 'Escreva aqui...'}
+                            disabled={sending || uploading}
+                            rows={1}
+                            maxLength={2000}
+                            className="w-full bg-slate-800/60 border border-slate-700/50 rounded-2xl px-4 py-2.5 text-white text-sm placeholder-slate-500 resize-none transition-all duration-200 focus:outline-none focus:border-yellow-600/50 focus:bg-slate-800/80 disabled:opacity-50"
+                            style={{
+                                minHeight: '40px',
+                                maxHeight: '120px',
+                                lineHeight: '1.4',
+                            }}
+                        />
+                        {newMessage.length > 1800 && (
+                            <span className={`absolute right-3 bottom-1.5 text-[10px] ${newMessage.length > 1950 ? 'text-red-400' : 'text-slate-600'
+                                }`}>
+                                {newMessage.length}/2000
+                            </span>
+                        )}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={(!newMessage.trim() && !selectedFile) || sending || uploading}
+                        className="rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 shrink-0"
+                        style={{
+                            width: '44px',
+                            height: '44px',
+                            minWidth: '44px',
+                            minHeight: '44px',
+                            background: (newMessage.trim() || selectedFile)
+                                ? 'linear-gradient(135deg, #b45309, #d97706)'
+                                : 'rgba(51,65,85,0.5)',
+                            boxShadow: (newMessage.trim() || selectedFile)
+                                ? '0 2px 12px rgba(217,119,6,0.3)'
+                                : 'none',
+                        }}
+                    >
+                        {(sending || uploading) ? (
+                            <Loader2 size={20} className="text-white animate-spin" />
+                        ) : (
+                            <Send size={20} className="text-white" />
+                        )}
+                    </button>
+                </form>
+            </div>
+
+            {/* Image Lightbox */}
+            {lightboxSrc && (
+                <ImageLightbox
+                    src={lightboxSrc}
+                    onClose={() => setLightboxSrc(null)}
+                />
+            )}
+
+            {/* Message Context Menu (Long Press) */}
+            {contextMenuMsg && (
+                <MessageContextMenu
+                    messageContent={contextMenuMsg.content}
+                    isOwnMessage={contextMenuMsg.sender_id === currentUserId}
+                    onClose={() => setContextMenuMsg(null)}
+                    onReply={() => handleReplyTo(contextMenuMsg)}
+                    onCopy={handleCopyMessage}
+                    onDelete={contextMenuMsg.sender_id === currentUserId
+                        ? () => handleDeleteMessage(contextMenuMsg)
+                        : undefined
+                    }
+                />
+            )}
+
+            {/* CSS Animation + Layout */}
+            <style>{`
+                @keyframes slideInUp {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @media (min-width: 768px) {
+                    .chat-window-root {
+                        height: 100% !important;
+                        position: relative !important;
+                    }
+                }
+            `}</style>
+        </div>,
+        document.body
+    );
+};

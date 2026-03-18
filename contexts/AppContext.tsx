@@ -15,7 +15,7 @@ import { articleService, Article as ServiceArticle } from '../services/articleSe
 import { bannerService, CarouselItem } from '../services/bannerService';
 import { cleanExpiredCache } from '../services/offlineStorage';
 import { useAppTour } from '../hooks/useAppTour';
-import { buildTourSteps } from '../components/AppTourSteps';
+import { buildTourSteps } from '../components/onboarding/AppTourSteps';
 import { logger } from '../utils/logger';
 import { analyticsService } from '../services/analyticsService';
 

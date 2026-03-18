@@ -2,7 +2,7 @@
 // Componente visual para exibir o ROI Tangível do sócio
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Handshake, Users, Loader2 } from 'lucide-react';
+import { TrendingUp, DollarSign, HeartHandshake, Users, Loader2 } from 'lucide-react';
 import { roiService, FinancialGrowth } from '../../services/roiService';
 
 interface RoiGrowthChartProps {
@@ -105,7 +105,7 @@ export const RoiGrowthChart: React.FC<RoiGrowthChartProps> = ({ userId }) => {
                 {/* Deals */}
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-blue-500/30 hover:border-blue-500/50 transition-colors">
                     <div className="flex items-center gap-2 mb-2">
-                        <Handshake className="text-blue-400" size={18} />
+                        <HeartHandshake className="text-blue-400" size={18} />
                         <span className="text-xs text-slate-400">Vendas Diretas</span>
                     </div>
                     <p className="text-xl font-bold text-white">{formatCurrency(growth.dealsRevenue)}</p>

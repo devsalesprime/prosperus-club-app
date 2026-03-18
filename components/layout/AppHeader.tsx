@@ -8,7 +8,7 @@ import React from 'react';
 import { Heart, MessageCircle, User } from 'lucide-react';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
-import { NotificationCenter } from '../NotificationCenter';
+import { NotificationCenter } from '../notifications/NotificationCenter';
 
 export const AppHeader: React.FC = () => {
     const { currentUser, setView, handleNotificationNavigate } = useApp();

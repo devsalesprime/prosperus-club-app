@@ -37,8 +37,8 @@ import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
 import { SupportWidget } from '../SupportWidget';
 import { OfflineBanner } from '../OfflineBanner';
-import { InstallPrompt } from '../InstallPrompt';
-import { AppTour } from '../AppTour';
+import { InstallPrompt } from '../push/InstallPrompt';
+import { AppTour } from '../onboarding/AppTour';
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isMobile, currentUser, tour, tourSteps, view, mobileView } = useApp();

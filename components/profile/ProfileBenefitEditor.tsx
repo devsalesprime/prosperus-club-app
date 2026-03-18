@@ -10,7 +10,7 @@ import {
     X,
 } from 'lucide-react';
 import { ExclusiveBenefit } from '../../services/profileService';
-import { BenefitStatsCard } from '../BenefitStatsCard';
+import { BenefitStatsCard } from '../dashboard/BenefitStatsCard';
 
 interface ProfileBenefitEditorProps {
     benefit: ExclusiveBenefit;

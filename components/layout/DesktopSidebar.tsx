@@ -24,8 +24,8 @@ import {
 } from 'lucide-react';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
-import { ChatIconWithBadge } from '../ChatIconWithBadge';
-import { NotificationCenter } from '../NotificationCenter';
+import { ChatIconWithBadge } from '../chat/ChatIconWithBadge';
+import { NotificationCenter } from '../notifications/NotificationCenter';
 
 export const DesktopSidebar: React.FC = () => {
     const {

@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import { Member, ViewState } from '../types';
 import { useApp } from '../contexts/AppContext';
-import { BenefitStatsCard } from './BenefitStatsCard';
-import { PushSettingsButton } from './PushSettingsButton';
+import { BenefitStatsCard } from './dashboard/BenefitStatsCard';
+import { PushSettingsButton } from './push/PushSettingsButton';
 
 interface ProfileSectionProps {
     currentUser: Member;
