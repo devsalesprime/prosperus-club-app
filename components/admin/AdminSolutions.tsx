@@ -21,7 +21,12 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import { toolsService, ToolSolution, CreateSolutionInput } from '../../services/toolsService';
-import { AdminConfirmDialog } from './shared';
+import {
+    AdminConfirmDialog,
+    AdminPageHeader,
+    AdminLoadingState,
+    AdminEmptyState as SharedAdminEmptyState,
+} from './shared';
 
 // ── Form state type ──
 interface SolutionFormState {
@@ -307,77 +312,6 @@ function SolutionFormModal({
     );
 }
 
-// ═════════════════════════════════════════════
-// SUBCOMPONENT: DeleteConfirmModal
-// ═════════════════════════════════════════════
-function DeleteConfirmModal({
-    title,
-    onConfirm,
-    onCancel,
-    loading,
-}: {
-    title: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-    loading: boolean;
-}) {
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm"
-            onClick={(e) => e.target === e.currentTarget && onCancel()}
-        >
-            <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-5" style={{ animation: 'adminSlideUp 200ms ease-out' }}>
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
-                    <AlertTriangle size={18} className="text-red-400" />
-                </div>
-                <h3 className="text-base font-bold text-white mb-1">Excluir solução?</h3>
-                <p className="text-sm text-slate-400 mb-5">
-                    <span className="text-white font-medium">"{title}"</span> será removida permanentemente.
-                </p>
-                <div className="flex gap-3">
-                    <button
-                        onClick={onCancel}
-                        className="flex-1 py-2.5 rounded-xl border border-slate-700 text-sm text-slate-400 hover:text-white transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={loading}
-                        className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-sm font-semibold text-red-400 transition-colors flex items-center justify-center gap-2"
-                    >
-                        {loading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                        {loading ? 'Excluindo...' : 'Excluir'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ═════════════════════════════════════════════
-// SUBCOMPONENT: AdminEmptyState
-// ═════════════════════════════════════════════
-function AdminEmptyState({ onAdd }: { onAdd: () => void }) {
-    return (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-                <Wrench size={22} className="text-slate-600" />
-            </div>
-            <div>
-                <p className="text-slate-300 font-semibold">Nenhuma solução cadastrada</p>
-                <p className="text-sm text-slate-500 mt-1">Crie a primeira solução para os sócios.</p>
-            </div>
-            <button
-                onClick={onAdd}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-colors active:scale-[0.97]"
-            >
-                <Plus size={14} />
-                Nova Solução
-            </button>
-        </div>
-    );
-}
 
 // ═════════════════════════════════════════════
 // MAIN COMPONENT: AdminSolutions v2.0
@@ -471,8 +405,12 @@ export const AdminSolutions: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center p-12">
-                <Loader2 className="animate-spin text-yellow-500" size={32} />
+            <div className="space-y-4">
+                <AdminPageHeader
+                    title="Soluções Externas"
+                    subtitle="Ferramentas e links externos para os sócios"
+                />
+                <AdminLoadingState message="Carregando soluções..." />
             </div>
         );
     }
@@ -480,27 +418,40 @@ export const AdminSolutions: React.FC = () => {
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-lg font-bold text-white">Soluções Externas</h2>
-                    <p className="text-xs text-slate-500 mt-0.5">Ferramentas e links externos para os sócios</p>
-                </div>
-                <button
-                    onClick={() => {
-                        setEditTarget(null);
-                        setShowModal(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-colors active:scale-[0.97]"
-                >
-                    <Plus size={15} />
-                    Nova Solução
-                </button>
-            </div>
+            <AdminPageHeader
+                title="Soluções Externas"
+                subtitle="Ferramentas e links externos para os sócios"
+                action={
+                    <button
+                        onClick={() => {
+                            setEditTarget(null);
+                            setShowModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-colors active:scale-[0.97]"
+                    >
+                        <Plus size={15} />
+                        Nova Solução
+                    </button>
+                }
+            />
 
             {/* Solutions list */}
             <div className="space-y-3">
                 {solutions.length === 0 ? (
-                    <AdminEmptyState onAdd={() => setShowModal(true)} />
+                    <SharedAdminEmptyState
+                        icon={<Wrench size={48} />}
+                        message="Nenhuma solução cadastrada"
+                        description="Crie a primeira solução para os sócios."
+                        action={
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-semibold transition-colors active:scale-[0.97]"
+                            >
+                                <Plus size={14} />
+                                Nova Solução
+                            </button>
+                        }
+                    />
                 ) : (
                     solutions
                         .sort((a, b) => a.sort_order - b.sort_order)

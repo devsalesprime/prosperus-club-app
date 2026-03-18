@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { CheckCircle, XCircle, DollarSign, Calendar, AlertTriangle, Filter, X } from 'lucide-react';
+import { AdminLoadingState, AdminEmptyState } from './shared';
 
 interface AuditDeal {
     id: string;
@@ -109,16 +110,7 @@ export const AuditTab: React.FC<AuditTabProps> = ({
     const filteredDeals = deals.filter(d => d.amount >= minAmount);
 
     if (loading) {
-        return (
-            <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                    <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-6 animate-pulse">
-                        <div className="h-6 bg-slate-800 rounded w-48 mb-4"></div>
-                        <div className="h-4 bg-slate-800 rounded w-full"></div>
-                    </div>
-                ))}
-            </div>
-        );
+        return <AdminLoadingState message="Carregando negócios para auditoria..." />;
     }
 
     return (
@@ -270,11 +262,11 @@ export const AuditTab: React.FC<AuditTabProps> = ({
                 })}
 
                 {filteredDeals.length === 0 && (
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center">
-                        <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-white mb-2">Nenhum Negócio Pendente</h3>
-                        <p className="text-slate-400">Todos os negócios de alto valor foram auditados!</p>
-                    </div>
+                    <AdminEmptyState
+                        icon={<CheckCircle size={48} className="text-green-500" />}
+                        message="Nenhum Negócio Pendente"
+                        description="Todos os negócios de alto valor foram auditados!"
+                    />
                 )}
             </div>
 

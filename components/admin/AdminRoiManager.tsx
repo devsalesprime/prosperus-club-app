@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users } from 'lucide-react';
+import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users, RefreshCw } from 'lucide-react';
+import { AdminPageHeader, AdminLoadingState } from './shared';
 import { adminBusinessService } from '../../services/adminBusinessService';
 import AdminKpiCards from './AdminKpiCards';
 import ContestedDealsTab from './ContestedDealsTab';
@@ -131,19 +132,28 @@ export const AdminRoiManager: React.FC = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-3 bg-yellow-500/20 rounded-xl">
-                            <TrendingUp size={32} className="text-yellow-500" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-white">ROI & Auditoria</h1>
-                            <p className="text-slate-400">Gestão de negócios e rankings oficiais</p>
-                        </div>
-                    </div>
+                    <AdminPageHeader
+                        title="ROI & Auditoria"
+                        subtitle="Gestão de negócios e rankings oficiais"
+                        action={
+                            <button
+                                onClick={loadData}
+                                disabled={loading}
+                                className="p-2 text-slate-400 hover:text-white transition disabled:opacity-50"
+                                title="Atualizar dados"
+                            >
+                                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                            </button>
+                        }
+                    />
                 </div>
 
                 {/* KPI Cards */}
-                {kpis && <AdminKpiCards kpis={kpis} loading={loading} />}
+                {loading && !kpis ? (
+                    <AdminLoadingState message="Carregando dados de ROI..." />
+                ) : (
+                    kpis && <AdminKpiCards kpis={kpis} loading={loading} />
+                )}
 
                 {/* Tabs */}
                 <div className="mb-6">
