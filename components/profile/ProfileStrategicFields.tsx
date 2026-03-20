@@ -98,7 +98,7 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
                 <div>
                     <label className="block text-xs text-slate-400 mb-2">
                         <Briefcase size={12} className="inline mr-1 text-yellow-500" />
-                        O que você vende/faz?
+                        Tem algum serviço, recurso ou produto que você está buscando agora?
                     </label>
                     <textarea
                         value={whatISell || ''}
@@ -113,7 +113,7 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
                 <div>
                     <label className="block text-xs text-slate-400 mb-2">
                         <Search size={12} className="inline mr-1 text-blue-400" />
-                        O que você precisa/compraria agora?
+                        O que consome com frequência?
                     </label>
                     <textarea
                         value={whatINeed || ''}

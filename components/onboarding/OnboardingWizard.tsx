@@ -140,7 +140,6 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         } else if (s === 4) {
             // Strategic profile
             if (!formData.what_i_sell?.trim()) errs.what_i_sell = 'Campo obrigatório';
-            if (!formData.what_i_need?.trim()) errs.what_i_need = 'Campo obrigatório';
             if (!(formData.partnership_interests && formData.partnership_interests.length >= 1)) errs.partnership_interests = 'Selecione pelo menos 1 setor';
             if (formData.partnership_interests && formData.partnership_interests.length > MAX_INTERESTS) errs.partnership_interests = `Máximo ${MAX_INTERESTS} setores`;
             if (formData.partnership_interests?.includes('Outros') && !customInterest.trim()) errs.custom_interest = 'Descreva qual área';
@@ -607,7 +606,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                     <Briefcase size={14} className="inline mr-1.5 -mt-0.5 text-yellow-500" />
-                    O que você leva para a mesa? <span className="text-yellow-500">*</span>
+                    Tem algum serviço, recurso ou produto que você está buscando agora? <span className="text-yellow-500">*</span>
                 </label>
                 <textarea
                     value={formData.what_i_sell || ''}
@@ -623,7 +622,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                     <Search size={14} className="inline mr-1.5 -mt-0.5 text-blue-400" />
-                    O que você precisa/compraria agora? <span className="text-yellow-500">*</span>
+                    O que consome com frequência? <span className="text-slate-500">(opcional)</span>
                 </label>
                 <textarea
                     value={formData.what_i_need || ''}
