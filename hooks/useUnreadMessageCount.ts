@@ -89,8 +89,15 @@ export const useUnreadMessageCount = (userId: string | null) => {
             )
             .subscribe();
 
+        // Refresh when app becomes visible (user returns from background)
+        const handleVisibility = () => {
+            if (!document.hidden) fetchUnreadCount();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
         return () => {
             supabase.removeChannel(channel);
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [userId]);
 

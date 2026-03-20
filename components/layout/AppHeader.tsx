@@ -9,9 +9,11 @@ import { Heart, MessageCircle, User } from 'lucide-react';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { NotificationCenter } from '../notifications/NotificationCenter';
+import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount';
 
 export const AppHeader: React.FC = () => {
     const { currentUser, setView, handleNotificationNavigate } = useApp();
+    const { unreadCount: unreadMessages } = useUnreadMessageCount(currentUser?.id ?? null);
 
     return (
         <header
@@ -34,11 +36,16 @@ export const AppHeader: React.FC = () => {
                         </button>
                         <button
                             onClick={() => setView(ViewState.MESSAGES)}
-                            className="p-2 text-prosperus-grey hover:text-prosperus-gold transition-colors"
+                            className="relative p-2 text-prosperus-grey hover:text-prosperus-gold transition-colors"
                             title="Chat"
                             data-tour-id="chat"
                         >
                             <MessageCircle size={22} />
+                            {unreadMessages > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-lg animate-in zoom-in duration-200">
+                                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                                </span>
+                            )}
                         </button>
                         <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
                     </>
