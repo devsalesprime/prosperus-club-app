@@ -75,6 +75,12 @@ export const useUnreadMessageCount = (userId: string | null) => {
                                 if (data) {
                                     setUnreadCount(prev => prev + 1);
                                     badgeService.updateBadge(userId);
+                                    
+                                    // Vibrate if app is open (iOS generally ignores this, but Android respects it. 
+                                    // Custom in-app sounds can also be played here if needed).
+                                    if (document.visibilityState === 'visible') {
+                                        navigator.vibrate?.([200, 100, 200]);
+                                    }
                                 }
                             }
                         } else if (eventType === 'UPDATE') {

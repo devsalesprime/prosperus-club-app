@@ -273,44 +273,38 @@ self.addEventListener('push', (event) => {
 
     // Ensure absolute URLs for icons (required by some mobile OS to show banners)
     // Using self.location.href ensures we resolve relative to wherever sw.js is hosted
+    // Resolve icons reliably against sw.js root
     const baseUrl = self.location.href;
-    let iconUrl;
-    try {
-        // If the backend sent an absolute URL (e.g. from Supabase Storage), use it.
-        // Otherwise, ignore the backend's relative path and force the local default-avatar.png
-        iconUrl = data.icon && data.icon.startsWith('http') 
-            ? data.icon 
-            : new URL('default-avatar.png', baseUrl).href;
-    } catch (e) {
-        iconUrl = new URL('default-avatar.png', baseUrl).href;
-    }
+    
+    // Icon options (banner image)
+    const fallbackIcon = new URL('icons/icon-192x192.png', baseUrl).href;
+    const iconUrl = data.icon && data.icon.startsWith('http') 
+        ? data.icon 
+        // For security, fallback local
+        : new URL(data.icon && !data.icon.startsWith('/app') ? data.icon : 'icons/icon-192x192.png', baseUrl).href;
+    
+    // Badge options (small OS maskable icon - REQUIRED FOR iOS)
+    const badgeUrl = new URL('icons/icon-72x72.png', baseUrl).href;
 
     // Build notification options
     const title = data.title || 'Prosperus Club';
-    // If no specific tag was given, use a unique tag to ensure banners stack/appear
-    const tagString = data.tag || ('prosperus-notification-' + Math.random().toString(36).slice(2, 9));
+    const tagString = data.tag || 'prosperus';
+
     const options = {
         body: data.body || data.message || '',
         icon: iconUrl,
-        badge: iconUrl,
+        badge: badgeUrl,
         tag: tagString,
-        renotify: true, // IMPORTANT: Forces sound/vibration/banner even if updating the same tag
-        vibrate: [200, 100, 200],
         data: {
             url: data.url || '/',
             type: data.type || 'notification'
-        },
+        }
     };
 
     // ALWAYS show — iOS needs this even when app is in foreground
+    // CRÍTICO: event.waitUntil obrigatório para iOS processar corretamente
     event.waitUntil(
-        Promise.all([
-            self.registration.showNotification(title, options),
-            // Set app badge (if supported by SW registration)
-            ('setAppBadge' in self.registration)
-                ? self.registration.setAppBadge().catch(() => {})
-                : Promise.resolve(),
-        ])
+        self.registration.showNotification(title, options)
     );
 });
 
