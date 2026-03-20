@@ -130,22 +130,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const validateStep = (s: number): Record<string, string> => {
         const errs: Record<string, string> = {};
         if (s === 1) {
-            // Photo step — dedicated
-            const hasRealPhoto = formData.image_url && !formData.image_url.includes('default-avatar');
-            if (!hasRealPhoto) errs.photo = 'Foto obrigatória para aparecer no Member Book';
+            // Photo step — optional (keeps default logo if not uploaded)
         } else if (s === 2) {
-            // Profile info
+            // Profile info — only name and company are required
             if (!formData.name?.trim()) errs.name = 'Nome é obrigatório';
             if (!formData.company?.trim()) errs.company = 'Empresa é obrigatória';
-            if (!formData.job_title?.trim()) errs.job_title = 'Cargo é obrigatório';
-            if (!formData.bio?.trim()) errs.bio = 'Conte sobre você';
         } else if (s === 3) {
-            // Social & tags
-            const liUser = getUsernameFromUrl(formData.socials?.linkedin || '', 'linkedin');
-            const igUser = getUsernameFromUrl(formData.socials?.instagram || '', 'instagram');
-            if (!liUser) errs.linkedin = 'LinkedIn é obrigatório';
-            if (!igUser) errs.instagram = 'Instagram é obrigatório';
-            if (!(formData.tags && formData.tags.length >= 1)) errs.tags = 'Selecione pelo menos 1 área';
+            // Social & tags — all optional
         } else if (s === 4) {
             // Strategic profile
             if (!formData.what_i_sell?.trim()) errs.what_i_sell = 'Campo obrigatório';
@@ -493,7 +484,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         <Briefcase size={14} className="inline mr-1.5 -mt-0.5" />
-                        Cargo <span className="text-yellow-500">*</span>
+                        Cargo
                     </label>
                     <input
                         type="text"
@@ -508,7 +499,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Sobre Você <span className="text-yellow-500">*</span>
+                    Sobre Você
                 </label>
                 <textarea
                     value={formData.bio || ''}
@@ -582,7 +573,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             <div>
                 <label className="block text-sm font-medium text-slate-300 mb-3">
                     <Tag size={14} className="inline mr-1.5 -mt-0.5" />
-                    Áreas de Interesse <span className="text-yellow-500">*</span> <span className="text-slate-500">(selecione pelo menos 1)</span>
+                    Áreas de Interesse <span className="text-slate-500">(opcional)</span>
                 </label>
                 <div className={`flex flex-wrap gap-2 ${errors.tags ? 'ring-1 ring-red-500/50 rounded-xl p-2 -m-2' : ''}`}>
                     {AVAILABLE_TAGS.map(tag => (
