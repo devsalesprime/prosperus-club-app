@@ -53,6 +53,10 @@ export const useUnreadMessageCount = (userId: string | null) => {
                     async (payload) => {
                         const newMessage = payload.new as any;
 
+                        // Broadcast to other hooks (useChatSubscription)
+                        // This avoids a second postgres_changes channel on the same table
+                        window.dispatchEvent(new CustomEvent('prosperus:new-message', { detail: newMessage }));
+
                         // Only count if message is not from current user
                         if (newMessage.sender_id !== userId) {
                             // Check if user is participant in this conversation
