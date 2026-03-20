@@ -272,12 +272,23 @@ self.addEventListener('push', (event) => {
     }
 
     // Ensure absolute URLs for icons (required by some mobile OS to show banners)
-    const baseUrl = self.location.origin;
-    const iconUrl = data.icon ? new URL(data.icon, baseUrl).href : new URL('/app/default-avatar.png', baseUrl).href;
+    // Using self.location.href ensures we resolve relative to wherever sw.js is hosted
+    const baseUrl = self.location.href;
+    let iconUrl;
+    try {
+        // If the backend sent an absolute URL (e.g. from Supabase Storage), use it.
+        // Otherwise, ignore the backend's relative path and force the local default-avatar.png
+        iconUrl = data.icon && data.icon.startsWith('http') 
+            ? data.icon 
+            : new URL('default-avatar.png', baseUrl).href;
+    } catch (e) {
+        iconUrl = new URL('default-avatar.png', baseUrl).href;
+    }
 
     // Build notification options
     const title = data.title || 'Prosperus Club';
-    const tagString = data.tag || 'prosperus-notification';
+    // If no specific tag was given, use a unique tag to ensure banners stack/appear
+    const tagString = data.tag || ('prosperus-notification-' + Math.random().toString(36).slice(2, 9));
     const options = {
         body: data.body || data.message || '',
         icon: iconUrl,

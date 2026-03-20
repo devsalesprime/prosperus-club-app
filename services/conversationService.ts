@@ -102,77 +102,61 @@ class ConversationService {
         conversationId: string,
         onNewMessage: (message: Message) => void
     ): { unsubscribe: () => void } {
-        logger.debug('🔌 Realtime: Subscribing to conversation via DOM event:', conversationId);
+        // UNIQUE channel name prevents "mismatch between server and client bindings"
+        const channelName = `chat-${conversationId}-${Math.random().toString(36).slice(2, 8)}`;
+        logger.debug('🔌 Realtime: Subscribing directly to conversation:', channelName);
 
-        // Uses prosperus:new-message DOM event from useUnreadMessageCount
-        // (single Realtime channel) to avoid mismatch errors
-        const handleNewMessage = async (event: Event) => {
-            const rawMessage = (event as CustomEvent).detail;
-            if (!rawMessage || rawMessage.conversation_id !== conversationId) return;
+        const channel = supabase
+            .channel(channelName)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Listen to both INSERT and UPDATE
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `conversation_id=eq.${conversationId}`
+                },
+                async (payload) => {
+                    const eventType = payload.eventType;
+                    const rawMessage = payload.new as any;
+                    
+                    if (!rawMessage || (eventType !== 'INSERT' && eventType !== 'UPDATE')) return;
 
-            logger.debug('📩 Realtime: New message received:', rawMessage);
+                    logger.debug(`📩 Realtime: Message ${eventType}:`, rawMessage);
 
-            // Hydrate with sender profile data
-            const senderProfile = await this.getSenderProfile(rawMessage.sender_id);
+                    // Hydrate with sender profile data
+                    const senderProfile = await this.getSenderProfile(rawMessage.sender_id);
 
-            const hydratedMessage: Message = {
-                id: rawMessage.id,
-                conversation_id: rawMessage.conversation_id,
-                sender_id: rawMessage.sender_id,
-                content: rawMessage.content,
-                is_read: rawMessage.is_read,
-                is_deleted: rawMessage.is_deleted,
-                message_type: rawMessage.message_type || 'text',
-                media_url: rawMessage.media_url,
-                media_filename: rawMessage.media_filename,
-                created_at: rawMessage.created_at,
-                sender: senderProfile || {
-                    id: rawMessage.sender_id,
-                    name: 'Sócio',
-                    image_url: ''
+                    const hydratedMessage: Message = {
+                        id: rawMessage.id,
+                        conversation_id: rawMessage.conversation_id,
+                        sender_id: rawMessage.sender_id,
+                        content: rawMessage.content,
+                        is_read: rawMessage.is_read,
+                        is_deleted: rawMessage.is_deleted,
+                        message_type: rawMessage.message_type || 'text',
+                        media_url: rawMessage.media_url,
+                        media_filename: rawMessage.media_filename,
+                        created_at: rawMessage.created_at,
+                        sender: senderProfile || {
+                            id: rawMessage.sender_id,
+                            name: 'Sócio',
+                            image_url: ''
+                        }
+                    };
+
+                    onNewMessage(hydratedMessage);
                 }
-            };
-
-            onNewMessage(hydratedMessage);
-        };
-
-        const handleMessageUpdated = async (event: Event) => {
-            const rawMessage = (event as CustomEvent).detail;
-            if (!rawMessage || rawMessage.conversation_id !== conversationId) return;
-
-            logger.debug('🔄 Realtime: Message updated:', rawMessage);
-
-            const senderProfile = await this.getSenderProfile(rawMessage.sender_id);
-
-            const hydratedMessage: Message = {
-                id: rawMessage.id,
-                conversation_id: rawMessage.conversation_id,
-                sender_id: rawMessage.sender_id,
-                content: rawMessage.content,
-                is_read: rawMessage.is_read,
-                is_deleted: rawMessage.is_deleted,
-                message_type: rawMessage.message_type || 'text',
-                media_url: rawMessage.media_url,
-                media_filename: rawMessage.media_filename,
-                created_at: rawMessage.created_at,
-                sender: senderProfile || {
-                    id: rawMessage.sender_id,
-                    name: 'Sócio',
-                    image_url: ''
-                }
-            };
-
-            onNewMessage(hydratedMessage);
-        };
-
-        window.addEventListener('prosperus:new-message', handleNewMessage);
-        window.addEventListener('prosperus:message-updated', handleMessageUpdated);
+            )
+            .subscribe((status, err) => {
+                if (status === 'SUBSCRIBED') logger.debug(`[Chat Realtime] ✅ Connected ${channelName}`);
+                if (status === 'CHANNEL_ERROR') logger.error(`[Chat Realtime] ❌ Error ${channelName}:`, err);
+            });
 
         return {
             unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from conversation:', conversationId);
-                window.removeEventListener('prosperus:new-message', handleNewMessage);
-                window.removeEventListener('prosperus:message-updated', handleMessageUpdated);
+                logger.debug('🔌 Realtime: Unsubscribing from conversation:', channelName);
+                supabase.removeChannel(channel);
             }
         };
     }
@@ -189,26 +173,35 @@ class ConversationService {
             return { unsubscribe: () => { } };
         }
 
-        logger.debug('🔌 Realtime: Subscribing to user conversations via DOM event, count:', conversationIds.length);
+        const channelName = `user-convs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
+        logger.debug('🔌 Realtime: Subscribing to user conversations:', channelName);
 
-        // Uses prosperus:new-message DOM event from useUnreadMessageCount
-        const handleNewMessage = (event: Event) => {
-            const newMsg = (event as CustomEvent).detail;
-            if (!newMsg) return;
+        const channel = supabase
+            .channel(channelName)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                },
+                (payload) => {
+                    const newMsg = payload.new as any;
+                    if (!newMsg) return;
 
-            // Only notify if message is in one of user's conversations and not from user
-            if (conversationIds.includes(newMsg.conversation_id) && newMsg.sender_id !== userId) {
-                logger.debug('📩 Realtime: New message in conversation:', newMsg.conversation_id);
-                onUpdate(newMsg.conversation_id);
-            }
-        };
-
-        window.addEventListener('prosperus:new-message', handleNewMessage);
+                    // Only notify if message is in one of user's conversations and not from user
+                    if (conversationIds.includes(newMsg.conversation_id) && newMsg.sender_id !== userId) {
+                        logger.debug('📩 Realtime: New message in conversation:', newMsg.conversation_id);
+                        onUpdate(newMsg.conversation_id);
+                    }
+                }
+            )
+            .subscribe();
 
         return {
             unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from user conversations');
-                window.removeEventListener('prosperus:new-message', handleNewMessage);
+                logger.debug('🔌 Realtime: Unsubscribing from user conversations:', channelName);
+                supabase.removeChannel(channel);
             }
         };
     }
@@ -225,28 +218,36 @@ class ConversationService {
             created_at: string;
         }) => void
     ): { unsubscribe: () => void } {
-        logger.debug('🔌 Realtime: Subscribing to all user messages via DOM event');
+        const channelName = `user-msgs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
+        logger.debug('🔌 Realtime: Subscribing to all user messages:', channelName);
 
-        // Uses prosperus:new-message DOM event from useUnreadMessageCount
-        const handleNewMessage = (event: Event) => {
-            const newMsg = (event as CustomEvent).detail;
-            if (!newMsg) return;
+        const channel = supabase
+            .channel(channelName)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                },
+                (payload) => {
+                    const newMsg = payload.new as any;
+                    if (!newMsg) return;
 
-            logger.debug('📩 Realtime: Message received for list update:', newMsg.conversation_id);
-            onNewMessage({
-                conversation_id: newMsg.conversation_id,
-                sender_id: newMsg.sender_id,
-                content: newMsg.content,
-                created_at: newMsg.created_at
-            });
-        };
-
-        window.addEventListener('prosperus:new-message', handleNewMessage);
+                    onNewMessage({
+                        conversation_id: newMsg.conversation_id,
+                        sender_id: newMsg.sender_id,
+                        content: newMsg.content,
+                        created_at: newMsg.created_at
+                    });
+                }
+            )
+            .subscribe();
 
         return {
             unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from all user messages');
-                window.removeEventListener('prosperus:new-message', handleNewMessage);
+                logger.debug('🔌 Realtime: Unsubscribing from all user messages:', channelName);
+                supabase.removeChannel(channel);
             }
         };
     }
