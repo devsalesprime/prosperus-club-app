@@ -46,11 +46,13 @@ export const useChatSubscription = (
                         event: 'INSERT',
                         schema: 'public',
                         table: 'messages',
-                        filter: `conversation_id=eq.${conversationId}`
                     },
                     (payload) => {
-                        logger.debug('📨 New message received:', payload.new);
-                        callbackRef.current(payload.new as Message);
+                        const raw = payload.new as Record<string, unknown>;
+                        // Realtime retorna snake_case (nome da coluna), não camelCase
+                        if (raw.conversation_id !== conversationId) return;
+                        logger.debug('📨 New message received:', raw);
+                        callbackRef.current(raw as unknown as Message);
                     }
                 )
                 .subscribe((status, err) => {
