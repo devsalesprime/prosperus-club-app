@@ -109,41 +109,47 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
     useEffect(() => {
         if (!selectedConversation) return;
 
-        logger.debug('🔌 AdminChatManager: Subscribing to conversation:', selectedConversation.id);
+        logger.debug('🔌 AdminChatManager: Listening to selected conversation:', selectedConversation.id);
 
-        const subscription = conversationService.subscribeToConversation(
-            selectedConversation.id,
-            (newMessage) => {
-                logger.debug('📩 AdminChatManager: Received message update:', newMessage);
+        const handleNewMessage = (event: Event) => {
+            const payload = (event as CustomEvent).detail;
+            const newMessage = payload.new ?? payload;
 
-                setMessages(prev => {
-                    const exists = prev.some(m => m.id === newMessage.id);
+            if (newMessage.conversation_id !== selectedConversation.id) return;
 
-                    const messageWithSender: MessageWithSender = {
-                        ...newMessage,
-                        is_deleted: newMessage.is_deleted || false,
-                        sender: newMessage.sender as any || {
-                            id: newMessage.sender_id,
-                            name: 'Sócio',
-                            email: '',
-                            image_url: null
-                        }
-                    };
+            logger.debug('📩 AdminChatManager: Received message update:', newMessage);
 
-                    if (exists) {
-                        return prev.map(m =>
-                            m.id === newMessage.id ? messageWithSender : m
-                        );
+            setMessages(prev => {
+                const exists = prev.some(m => m.id === newMessage.id);
+
+                const messageWithSender: MessageWithSender = {
+                    ...newMessage,
+                    is_deleted: newMessage.is_deleted || false,
+                    sender: newMessage.sender as any || {
+                        id: newMessage.sender_id,
+                        name: 'Sócio',
+                        email: '',
+                        image_url: null
                     }
+                };
 
-                    return [...prev, messageWithSender];
-                });
-            }
-        );
+                if (exists) {
+                    return prev.map(m =>
+                        m.id === newMessage.id ? messageWithSender : m
+                    );
+                }
+
+                return [...prev, messageWithSender];
+            });
+        };
+
+        window.addEventListener('prosperus:new-message', handleNewMessage);
+        window.addEventListener('prosperus:message-updated', handleNewMessage);
 
         return () => {
-            logger.debug('🧹 AdminChatManager: Unsubscribing from conversation');
-            subscription.unsubscribe();
+            logger.debug('🧹 AdminChatManager: Removing DOM event listener');
+            window.removeEventListener('prosperus:new-message', handleNewMessage);
+            window.removeEventListener('prosperus:message-updated', handleNewMessage);
         };
     }, [selectedConversation?.id]);
 

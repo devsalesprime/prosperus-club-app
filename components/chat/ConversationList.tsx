@@ -50,10 +50,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const [removingId, setRemovingId] = useState<string | null>(null);
     const [toast, setToast] = useState<string | null>(null);
 
-    // Load conversations and setup realtime subscription
+    // Load conversations and setup DOM events
     useEffect(() => {
-        let subscription: { unsubscribe: () => void } | null = null;
-
         const initialize = async () => {
             try {
                 setLoading(true);
@@ -61,59 +59,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
                 const data = await conversationService.getUserConversations(currentUserId);
                 setConversations(data);
-
-                subscription = conversationService.subscribeToUserMessages(
-                    currentUserId,
-                    async (payload) => {
-                        const { conversation_id, sender_id, content, created_at } = payload;
-
-                        setConversations(prevConversations => {
-                            const existingIndex = prevConversations.findIndex(
-                                c => c.id === conversation_id
-                            );
-
-                            if (existingIndex !== -1) {
-                                const updatedConversations = [...prevConversations];
-                                const conversation = { ...updatedConversations[existingIndex] };
-
-                                conversation.lastMessage = {
-                                    id: `temp-${Date.now()}`,
-                                    conversation_id,
-                                    sender_id,
-                                    content,
-                                    created_at,
-                                    is_read: false
-                                };
-
-                                conversation.updated_at = created_at;
-
-                                if (sender_id !== currentUserId && selectedConversationId !== conversation_id) {
-                                    conversation.unreadCount = (conversation.unreadCount || 0) + 1;
-                                }
-
-                                updatedConversations.splice(existingIndex, 1);
-                                return [conversation, ...updatedConversations];
-                            } else {
-                                conversationService.getConversationById(conversation_id, currentUserId)
-                                    .then(newConversation => {
-                                        if (newConversation) {
-                                            setConversations(prev => {
-                                                const alreadyExists = prev.some(c => c.id === conversation_id);
-                                                if (alreadyExists) return prev;
-                                                return [newConversation, ...prev];
-                                            });
-                                        }
-                                    })
-                                    .catch(err => console.error('Error fetching new conversation:', err));
-
-                                return prevConversations;
-                            }
-                        });
-                    }
-                );
-
-                isSubscribedRef.current = true;
-
             } catch (err) {
                 console.error('Error loading conversations:', err);
                 setError('Erro ao carregar conversas');
@@ -122,13 +67,64 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             }
         };
 
+        const handleNewMessage = (event: Event) => {
+            const payload = (event as CustomEvent).detail;
+            const newMsg = payload.new ?? payload;
+            
+            const { conversation_id, sender_id, content, created_at } = newMsg;
+
+            setConversations(prevConversations => {
+                const existingIndex = prevConversations.findIndex(
+                    c => c.id === conversation_id
+                );
+
+                if (existingIndex !== -1) {
+                    const updatedConversations = [...prevConversations];
+                    const conversation = { ...updatedConversations[existingIndex] };
+
+                    conversation.lastMessage = {
+                        id: `temp-${Date.now()}`,
+                        conversation_id,
+                        sender_id,
+                        content,
+                        created_at,
+                        is_read: false
+                    } as any;
+
+                    conversation.updated_at = created_at;
+
+                    if (sender_id !== currentUserId && selectedConversationId !== conversation_id) {
+                        conversation.unreadCount = (conversation.unreadCount || 0) + 1;
+                    }
+
+                    updatedConversations.splice(existingIndex, 1);
+                    return [conversation, ...updatedConversations];
+                } else {
+                    conversationService.getConversationById(conversation_id, currentUserId)
+                        .then(newConversation => {
+                            if (newConversation) {
+                                setConversations(prev => {
+                                    const alreadyExists = prev.some(c => c.id === conversation_id);
+                                    if (alreadyExists) return prev;
+                                    return [newConversation, ...prev];
+                                });
+                            }
+                        })
+                        .catch(err => console.error('Error fetching new conversation:', err));
+
+                    return prevConversations;
+                }
+            });
+        };
+
         initialize();
 
+        window.addEventListener('prosperus:new-message', handleNewMessage);
+        isSubscribedRef.current = true;
+
         return () => {
-            if (subscription) {
-                subscription.unsubscribe();
-                isSubscribedRef.current = false;
-            }
+            window.removeEventListener('prosperus:new-message', handleNewMessage);
+            isSubscribedRef.current = false;
         };
     }, [currentUserId]);
 

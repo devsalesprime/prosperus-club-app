@@ -102,63 +102,11 @@ class ConversationService {
         conversationId: string,
         onNewMessage: (message: Message) => void
     ): { unsubscribe: () => void } {
-        // UNIQUE channel name prevents "mismatch between server and client bindings"
-        const channelName = `chat-${conversationId}-${Math.random().toString(36).slice(2, 8)}`;
-        logger.debug('🔌 Realtime: Subscribing directly to conversation:', channelName);
-
-        const channel = supabase
-            .channel(channelName)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*', // Listen to both INSERT and UPDATE
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `conversation_id=eq.${conversationId}`
-                },
-                async (payload) => {
-                    const eventType = payload.eventType;
-                    const rawMessage = payload.new as any;
-                    
-                    if (!rawMessage || (eventType !== 'INSERT' && eventType !== 'UPDATE')) return;
-
-                    logger.debug(`📩 Realtime: Message ${eventType}:`, rawMessage);
-
-                    // Hydrate with sender profile data
-                    const senderProfile = await this.getSenderProfile(rawMessage.sender_id);
-
-                    const hydratedMessage: Message = {
-                        id: rawMessage.id,
-                        conversation_id: rawMessage.conversation_id,
-                        sender_id: rawMessage.sender_id,
-                        content: rawMessage.content,
-                        is_read: rawMessage.is_read,
-                        is_deleted: rawMessage.is_deleted,
-                        message_type: rawMessage.message_type || 'text',
-                        media_url: rawMessage.media_url,
-                        media_filename: rawMessage.media_filename,
-                        created_at: rawMessage.created_at,
-                        sender: senderProfile || {
-                            id: rawMessage.sender_id,
-                            name: 'Sócio',
-                            image_url: ''
-                        }
-                    };
-
-                    onNewMessage(hydratedMessage);
-                }
-            )
-            .subscribe((status, err) => {
-                if (status === 'SUBSCRIBED') logger.debug(`[Chat Realtime] ✅ Connected ${channelName}`);
-                if (status === 'CHANNEL_ERROR') logger.error(`[Chat Realtime] ❌ Error ${channelName}:`, err);
-            });
-
-        return {
-            unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from conversation:', channelName);
-                supabase.removeChannel(channel);
-            }
-        };
+        // DEPRECATED: usar window.addEventListener('prosperus:new-message')
+        // Este método cria um channel Supabase direto que causa WebSocket mismatch.
+        // Mantido apenas para não quebrar imports — não adicionar novos usos.
+        logger.warn('[DEPRECATED] subscribeToConversation: migrar para DOM events');
+        return { unsubscribe: () => {} };
     }
 
     /**
@@ -169,41 +117,8 @@ class ConversationService {
         conversationIds: string[],
         onUpdate: (conversationId: string) => void
     ): { unsubscribe: () => void } {
-        if (conversationIds.length === 0) {
-            return { unsubscribe: () => { } };
-        }
-
-        const channelName = `user-convs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
-        logger.debug('🔌 Realtime: Subscribing to user conversations:', channelName);
-
-        const channel = supabase
-            .channel(channelName)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                },
-                (payload) => {
-                    const newMsg = payload.new as any;
-                    if (!newMsg) return;
-
-                    // Only notify if message is in one of user's conversations and not from user
-                    if (conversationIds.includes(newMsg.conversation_id) && newMsg.sender_id !== userId) {
-                        logger.debug('📩 Realtime: New message in conversation:', newMsg.conversation_id);
-                        onUpdate(newMsg.conversation_id);
-                    }
-                }
-            )
-            .subscribe();
-
-        return {
-            unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from user conversations:', channelName);
-                supabase.removeChannel(channel);
-            }
-        };
+        logger.warn('[DEPRECATED] subscribeToUserConversations: migrar para DOM events');
+        return { unsubscribe: () => {} };
     }
 
     /**
@@ -218,38 +133,8 @@ class ConversationService {
             created_at: string;
         }) => void
     ): { unsubscribe: () => void } {
-        const channelName = `user-msgs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
-        logger.debug('🔌 Realtime: Subscribing to all user messages:', channelName);
-
-        const channel = supabase
-            .channel(channelName)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                },
-                (payload) => {
-                    const newMsg = payload.new as any;
-                    if (!newMsg) return;
-
-                    onNewMessage({
-                        conversation_id: newMsg.conversation_id,
-                        sender_id: newMsg.sender_id,
-                        content: newMsg.content,
-                        created_at: newMsg.created_at
-                    });
-                }
-            )
-            .subscribe();
-
-        return {
-            unsubscribe: () => {
-                logger.debug('🔌 Realtime: Unsubscribing from all user messages:', channelName);
-                supabase.removeChannel(channel);
-            }
-        };
+        logger.warn('[DEPRECATED] subscribeToUserMessages: migrar para DOM events');
+        return { unsubscribe: () => {} };
     }
 
     /**

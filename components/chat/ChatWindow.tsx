@@ -96,10 +96,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     const isNearBottomRef = useRef(true);
     const { refreshUnreadCount } = useUnreadCountContext();
 
-    // Load initial messages and setup subscription
+    // Load initial messages and setup DOM events
     useEffect(() => {
-        let subscription: { unsubscribe: () => void } | null = null;
-
         const initialize = async () => {
             try {
                 setLoading(true);
@@ -118,42 +116,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 // 4. Clear OS push (fire-and-forget — never await)
                 clearPushNotifications(`chat-${conversationId}`);
 
-                // 4. Subscribe to new messages (Realtime)
-                subscription = conversationService.subscribeToConversation(
-                    conversationId,
-                    (newMsg) => {
-                        // Avoid duplicates
-                        setMessages(prev => {
-                            const exists = prev.some(m => m.id === newMsg.id);
-                            if (exists) {
-                                return prev.map(m =>
-                                    m.id === newMsg.id ? { ...newMsg, _isOptimistic: false, _failed: false } : m
-                                );
-                            }
-
-                            // New message from other user
-                            if (newMsg.sender_id !== currentUserId) {
-                                playNotificationSound();
-                                // If user scrolled up, show count
-                                if (!isNearBottomRef.current) {
-                                    setNewMsgCount(prev => prev + 1);
-                                }
-                            }
-
-                            return [...prev, newMsg];
-                        });
-
-                        // Mark as read if from other user
-                        if (newMsg.sender_id !== currentUserId) {
-                            conversationService.markMessagesAsRead(conversationId, currentUserId);
-                            window.dispatchEvent(new Event('prosperus:messages-read'));
-                            clearPushNotifications(`chat-${conversationId}`);
-                        }
-                    }
-                );
-
-                isSubscribedRef.current = true;
-
             } catch (error) {
                 console.error('Error initializing chat:', error);
             } finally {
@@ -161,13 +123,64 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             }
         };
 
+        const handleNewMessage = (event: Event) => {
+            const payload = (event as CustomEvent).detail;
+            const newMsg = payload.new ?? payload;
+
+            if (newMsg.conversation_id !== conversationId) return;
+
+            setMessages(prev => {
+                const exists = prev.some(m => m.id === newMsg.id);
+                if (exists) {
+                    return prev.map(m =>
+                        m.id === newMsg.id ? { ...newMsg, _isOptimistic: false, _failed: false } : m
+                    );
+                }
+
+                if (newMsg.sender_id !== currentUserId) {
+                    playNotificationSound();
+                    if (!isNearBottomRef.current) {
+                        setNewMsgCount(prev => prev + 1);
+                    }
+                }
+
+                return [...prev, newMsg];
+            });
+
+            if (newMsg.sender_id !== currentUserId) {
+                conversationService.markMessagesAsRead(conversationId, currentUserId);
+                window.dispatchEvent(new Event('prosperus:messages-read'));
+                clearPushNotifications(`chat-${conversationId}`);
+            }
+        };
+
+        const handleMessageUpdated = (event: Event) => {
+            const payload = (event as CustomEvent).detail;
+            const updatedMsg = payload.new ?? payload;
+
+            if (updatedMsg.conversation_id !== conversationId) return;
+
+            setMessages(prev => {
+                const exists = prev.some(m => m.id === updatedMsg.id);
+                if (exists) {
+                    return prev.map(m =>
+                        m.id === updatedMsg.id ? { ...updatedMsg, _isOptimistic: false, _failed: false } : m
+                    );
+                }
+                return prev;
+            });
+        };
+
         initialize();
 
+        window.addEventListener('prosperus:new-message', handleNewMessage);
+        window.addEventListener('prosperus:message-updated', handleMessageUpdated);
+        isSubscribedRef.current = true;
+
         return () => {
-            if (subscription) {
-                subscription.unsubscribe();
-                isSubscribedRef.current = false;
-            }
+            window.removeEventListener('prosperus:new-message', handleNewMessage);
+            window.removeEventListener('prosperus:message-updated', handleMessageUpdated);
+            isSubscribedRef.current = false;
         };
     }, [conversationId, currentUserId]);
 
