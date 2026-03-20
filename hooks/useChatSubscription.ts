@@ -1,56 +1,98 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Message } from '../types';
 import { logger } from '../utils/logger';
 
 /**
- * Hook para escutar novas mensagens em uma conversa específica via Supabase Realtime
- * 
+ * Hook para escutar novas mensagens em uma conversa específica via Supabase Realtime.
+ * Inclui:
+ *  - Status handler (SUBSCRIBED, CHANNEL_ERROR, TIMED_OUT)
+ *  - Reconexão automática após erro/timeout
+ *  - Reconexão ao retornar online (troca WiFi → 4G)
+ *
  * @param conversationId - ID da conversa atual
  * @param onNewMessage - Callback chamado quando nova mensagem é recebida
- * 
- * @example
- * ```tsx
- * const [messages, setMessages] = useState<Message[]>([]);
- * 
- * useChatSubscription(currentConversationId, (newMessage) => {
- *   setMessages(prev => {
- *     if (prev.some(m => m.id === newMessage.id)) return prev;
- *     return [...prev, newMessage];
- *   });
- * });
- * ```
  */
 export const useChatSubscription = (
     conversationId: string | null,
     onNewMessage: (message: Message) => void
 ) => {
+    // Ref estável para sempre ter o callback mais recente sem re-subscribe
+    const callbackRef = useRef(onNewMessage);
+    callbackRef.current = onNewMessage;
+
     useEffect(() => {
         if (!conversationId) return;
 
-        logger.debug('🔌 Subscribing to conversation:', conversationId);
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+        let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+        let isCleanedUp = false;
 
-        const channel = supabase
-            .channel(`messages:${conversationId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `conversation_id=eq.${conversationId}`
-                },
-                (payload) => {
-                    logger.debug('📨 New message received:', payload.new);
-                    onNewMessage(payload.new as Message);
-                }
-            )
-            .subscribe();
+        const setupChannel = () => {
+            // Limpar canal anterior se existir
+            if (channel) {
+                supabase.removeChannel(channel);
+                channel = null;
+            }
+            if (isCleanedUp) return;
 
-        // Cleanup: Unsubscribe ao desmontar ou trocar conversa
-        return () => {
-            logger.debug('🔌 Unsubscribing from conversation:', conversationId);
-            supabase.removeChannel(channel);
+            logger.debug('[Chat Realtime] 🔌 Subscribing to conversation:', conversationId);
+
+            channel = supabase
+                .channel(`messages:${conversationId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'messages',
+                        filter: `conversation_id=eq.${conversationId}`
+                    },
+                    (payload) => {
+                        logger.debug('📨 New message received:', payload.new);
+                        callbackRef.current(payload.new as Message);
+                    }
+                )
+                .subscribe((status, err) => {
+                    // ─── CRÍTICO: monitorar status do channel ───────────
+                    if (status === 'SUBSCRIBED') {
+                        logger.debug('[Chat Realtime] ✅ Conectado à conversa:', conversationId);
+                    }
+                    if (status === 'CHANNEL_ERROR') {
+                        logger.error('[Chat Realtime] ❌ Erro no channel:', err);
+                        if (!isCleanedUp) {
+                            reconnectTimer = setTimeout(setupChannel, 3000);
+                        }
+                    }
+                    if (status === 'TIMED_OUT') {
+                        logger.warn('[Chat Realtime] ⏱️ Timeout — reconectando...');
+                        if (!isCleanedUp) {
+                            reconnectTimer = setTimeout(setupChannel, 2000);
+                        }
+                    }
+                    if (status === 'CLOSED') {
+                        logger.debug('[Chat Realtime] 🔒 Channel fechado');
+                    }
+                });
         };
-    }, [conversationId, onNewMessage]);
+
+        setupChannel();
+
+        // ─── Reconexão ao voltar online (troca de rede no celular) ─────
+        const handleOnline = () => {
+            logger.info('[Chat Realtime] 📶 Online — reconectando canal...');
+            setupChannel();
+        };
+        window.addEventListener('online', handleOnline);
+
+        return () => {
+            isCleanedUp = true;
+            window.removeEventListener('online', handleOnline);
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            if (channel) {
+                logger.debug('[Chat Realtime] 🔌 Unsubscribing from conversation:', conversationId);
+                supabase.removeChannel(channel);
+            }
+        };
+    }, [conversationId]);
 };

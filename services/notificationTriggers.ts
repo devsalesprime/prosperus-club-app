@@ -31,8 +31,8 @@ async function dispatchNotification(params: NotificationParams): Promise<void> {
     });
     if (error) logger.error('Notification insert error:', error);
 
-    // 2. Push notification (fire-and-forget)
-    supabase.functions
+    // 2. Push notification (await to prevent browser from aborting)
+    await supabase.functions
         .invoke('send-push', {
             body: {
                 user_id: params.userId,
