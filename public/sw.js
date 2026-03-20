@@ -13,7 +13,7 @@
 // clients.claim() → assume controle sem reload
 
 // ⚡ VERSÃO AUTOMÁTICA - Atualizada a cada build pelo Vite plugin
-const CACHE_VERSION = '__BUILD_TIMESTAMP__';
+const CACHE_VERSION = 'v3-ios-rescue-01';
 const STATIC_CACHE_NAME = `prosperus-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `prosperus-dynamic-${CACHE_VERSION}`;
 const API_CACHE_NAME = `prosperus-api-${CACHE_VERSION}`;
@@ -262,50 +262,37 @@ self.addEventListener('push', (event) => {
         data = { title: 'Prosperus Club', body: event.data.text() };
     }
 
-    // Notify the open app to refresh badge count via BroadcastChannel
+    // Tenta avisar o app aberto (não afeta o push se falhar)
     try {
         const ch = new BroadcastChannel('prosperus-push');
         ch.postMessage({ type: 'PUSH_RECEIVED', data });
         ch.close();
-    } catch (e) {
-        // BroadcastChannel not supported — app will refresh on next focus
-    }
+    } catch (e) {}
 
-    // Ensure absolute URLs for icons (required by some mobile OS to show banners)
-    // Using self.location.href ensures we resolve relative to wherever sw.js is hosted
-    // Resolve icons reliably against sw.js root
-    const baseUrl = self.location.href;
-    
-    // Icon options (banner image)
-    const fallbackIcon = new URL('icons/icon-192x192.png', baseUrl).href;
-    const iconUrl = data.icon && data.icon.startsWith('http') 
-        ? data.icon 
-        // For security, fallback local
-        : new URL(data.icon && !data.icon.startsWith('/app') ? data.icon : 'icons/icon-192x192.png', baseUrl).href;
-    
-    // Badge options (small OS maskable icon - REQUIRED FOR iOS)
-    const badgeUrl = new URL('icons/icon-72x72.png', baseUrl).href;
-
-    // Build notification options
     const title = data.title || 'Prosperus Club';
-    const tagString = data.tag || 'prosperus';
-
     const options = {
         body: data.body || data.message || '',
-        icon: iconUrl,
-        badge: badgeUrl,
-        tag: tagString,
+        icon: data.icon || '/app/default-avatar.png',
+        badge: '/app/default-avatar.png',
+        tag: data.tag || 'prosperus-notification',
+        vibrate: [200, 100, 200],
+        // REQUIREINTERACTION REMOVIDO PARA SALVAR O IOS
         data: {
             url: data.url || '/',
             type: data.type || 'notification'
-        }
+        },
     };
 
-    // ALWAYS show — iOS needs this even when app is in foreground
-    // CRÍTICO: event.waitUntil obrigatório para iOS processar corretamente
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
+    // A promessa principal DEVE ser apenas mostrar a notificação (Regra de Ouro do iOS)
+    const showNotificationPromise = self.registration.showNotification(title, options);
+
+    // O Badge corre por fora, sem travar a notificação principal
+    if ('setAppBadge' in self.registration && data.badgeCount !== undefined) {
+        // Tentativa segura de atualizar o badge
+        self.registration.setAppBadge(data.badgeCount).catch(err => console.log('Badge falhou no iOS:', err));
+    }
+
+    event.waitUntil(showNotificationPromise);
 });
 
 // ============================================
