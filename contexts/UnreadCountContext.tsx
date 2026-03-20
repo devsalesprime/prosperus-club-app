@@ -8,21 +8,29 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { useUnreadMessageCount } from '../hooks/useUnreadMessageCount';
 
 interface UnreadCountContextType {
     unreadCount: number;
+    unreadMessages: number;
     refreshUnreadCount: () => Promise<void>;
     markAllRead: () => Promise<void>;
 }
 
 const UnreadCountContext = createContext<UnreadCountContextType>({
     unreadCount: 0,
+    unreadMessages: 0,
     refreshUnreadCount: async () => { },
     markAllRead: async () => { },
 });
 
 export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNode }> = ({ userId, children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // ─── Singleton do channel de mensagens ────────────────────────────
+    // Centralizado aqui para garantir 1 único WebSocket para messages.
+    // AppHeader e ChatIconWithBadge consomem via contexto, sem criar channels extras.
+    const { unreadCount: unreadMessages } = useUnreadMessageCount(userId ?? null);
 
     const refreshUnreadCount = useCallback(async () => {
         if (!userId) return;
@@ -117,7 +125,7 @@ export const UnreadCountProvider: React.FC<{ userId?: string; children: ReactNod
     }, [userId, refreshUnreadCount]);
 
     return (
-        <UnreadCountContext.Provider value={{ unreadCount, refreshUnreadCount, markAllRead }}>
+        <UnreadCountContext.Provider value={{ unreadCount, unreadMessages, refreshUnreadCount, markAllRead }}>
             {children}
         </UnreadCountContext.Provider>
     );

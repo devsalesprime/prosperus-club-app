@@ -1,7 +1,7 @@
 // Chat icon with unread message badge
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
-import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount';
+import { useUnreadCount } from '../../contexts/UnreadCountContext';
 
 interface ChatIconWithBadgeProps {
     userId: string;
@@ -18,7 +18,7 @@ export const ChatIconWithBadge: React.FC<ChatIconWithBadgeProps> = ({
     className = '',
     children
 }) => {
-    const { unreadCount } = useUnreadMessageCount(userId);
+    const { unreadMessages: unreadCount } = useUnreadCount();
 
     return (
         <>

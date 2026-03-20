@@ -9,11 +9,11 @@ import { Heart, MessageCircle, User } from 'lucide-react';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { NotificationCenter } from '../notifications/NotificationCenter';
-import { useUnreadMessageCount } from '../../hooks/useUnreadMessageCount';
+import { useUnreadCount } from '../../contexts/UnreadCountContext';
 
 export const AppHeader: React.FC = () => {
     const { currentUser, setView, handleNotificationNavigate } = useApp();
-    const { unreadCount: unreadMessages } = useUnreadMessageCount(currentUser?.id ?? null);
+    const { unreadMessages } = useUnreadCount();
 
     return (
         <header
