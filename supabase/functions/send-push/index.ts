@@ -84,7 +84,11 @@ serve(async (req) => {
             try {
                 await webpush.sendNotification(
                     { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-                    payload
+                    payload,
+                    {
+                        urgency: 'high',
+                        topic: pushType,
+                    }
                 )
                 sent++
                 console.log('✅ Enviado:', sub.id)
