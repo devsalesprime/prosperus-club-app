@@ -95,9 +95,14 @@ export const useUnreadMessageCount = (userId: string | null) => {
         };
         document.addEventListener('visibilitychange', handleVisibility);
 
+        // Listen for explicit mark-as-read signals from ChatWindow
+        const handleMessagesRead = () => fetchUnreadCount();
+        window.addEventListener('prosperus:messages-read', handleMessagesRead);
+
         return () => {
             supabase.removeChannel(channel);
             document.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('prosperus:messages-read', handleMessagesRead);
         };
     }, [userId]);
 

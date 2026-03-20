@@ -702,20 +702,19 @@ class ConversationService {
             if (error) throw error;
             if (!data) throw new Error('Failed to send message');
 
-            // ─── Push + in-app notification (fire-and-forget) ───
-            // Find recipient and send notification via centralized trigger
-            (async () => {
-                try {
-                    const { data: participants } = await supabase
-                        .from('conversation_participants')
-                        .select('user_id')
-                        .eq('conversation_id', conversationId)
-                        .neq('user_id', senderId);
-                    if (participants?.length) {
-                        await notifyNewMessage(conversationId, senderId, participants[0].user_id, content.trim());
-                    }
-                } catch { /* Never block message delivery */ }
-            })();
+            // ─── Push notification — MUST await to avoid browser aborting ───
+            // We await the push call so the browser doesn't cancel the request.
+            // The try/catch ensures a push failure never blocks message delivery.
+            try {
+                const { data: participants } = await supabase
+                    .from('conversation_participants')
+                    .select('user_id')
+                    .eq('conversation_id', conversationId)
+                    .neq('user_id', senderId);
+                if (participants?.length) {
+                    await notifyNewMessage(conversationId, senderId, participants[0].user_id, content.trim());
+                }
+            } catch { /* Never block message delivery */ }
 
             return data;
         } catch (error) {

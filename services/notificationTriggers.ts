@@ -66,8 +66,8 @@ export async function notifyNewMessage(
     const title = sender?.name || 'Nova mensagem';
     const body = content.length > 80 ? content.slice(0, 77) + '...' : content;
 
-    // Push-only (fire-and-forget) — no DB insert
-    supabase.functions
+    // AWAIT é obrigatório para evitar o Network Abort do navegador!
+    await supabase.functions
         .invoke('send-push', {
             body: {
                 user_id: recipientId,
@@ -78,7 +78,7 @@ export async function notifyNewMessage(
                 type: 'message',
             },
         })
-        .catch((err: unknown) => logger.warn('Chat push non-critical error:', err));
+        .catch(err => console.error('Push falhou:', err));
 }
 
 // ─── TIPO 2: Novo evento na agenda ─────────────────────────────────

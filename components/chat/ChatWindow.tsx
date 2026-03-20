@@ -111,8 +111,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 // 2. Mark as read
                 await conversationService.markMessagesAsRead(conversationId, currentUserId);
 
-                // 3. Refresh badge count immediately
+                // 3. Refresh badge count immediately (notifications bell + message badge)
                 refreshUnreadCount();
+                window.dispatchEvent(new Event('prosperus:messages-read'));
 
                 // 4. Clear OS push (fire-and-forget — never await)
                 clearPushNotifications(`chat-${conversationId}`);
@@ -145,6 +146,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         // Mark as read if from other user
                         if (newMsg.sender_id !== currentUserId) {
                             conversationService.markMessagesAsRead(conversationId, currentUserId);
+                            window.dispatchEvent(new Event('prosperus:messages-read'));
                             clearPushNotifications(`chat-${conversationId}`);
                         }
                     }
