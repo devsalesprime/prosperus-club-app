@@ -41,55 +41,51 @@ export const useUnreadMessageCount = (userId: string | null) => {
             }
             if (isCleanedUp) return;
 
+            // CRÍTICO: Canal único por instância do hook para evitar "mismatch between server and client bindings"
+            // Se AppHeader e ChatIcon usarem o mesmo nome, eles duplicam bindings no mesmo canal!
+            const channelName = `unread-msgs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
+
             channel = supabase
-                .channel(`unread-messages:${userId}`)
+                .channel(channelName)
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT',
+                        event: '*', // Consolida INSERT e UPDATE em um único binding
                         schema: 'public',
                         table: 'messages',
                     },
                     async (payload) => {
-                        const newMessage = payload.new as any;
+                        const eventType = payload.eventType;
+                        const messageRecord = payload.new as any;
 
-                        // Broadcast to other hooks (useChatSubscription)
-                        // This avoids a second postgres_changes channel on the same table
-                        window.dispatchEvent(new CustomEvent('prosperus:new-message', { detail: newMessage }));
+                        if (eventType === 'INSERT') {
+                            // Broadcast to other hooks (useChatSubscription)
+                            window.dispatchEvent(new CustomEvent('prosperus:new-message', { detail: messageRecord }));
 
-                        // Only count if message is not from current user
-                        if (newMessage.sender_id !== userId) {
-                            // Check if user is participant in this conversation
-                            const { data } = await supabase
-                                .from('conversation_participants')
-                                .select('conversation_id')
-                                .eq('user_id', userId)
-                                .eq('conversation_id', newMessage.conversation_id)
-                                .single();
+                            // Only count if message is not from current user
+                            if (messageRecord.sender_id !== userId) {
+                                // Check if user is participant in this conversation
+                                const { data } = await supabase
+                                    .from('conversation_participants')
+                                    .select('conversation_id')
+                                    .eq('user_id', userId)
+                                    .eq('conversation_id', messageRecord.conversation_id)
+                                    .single();
 
-                            if (data) {
-                                setUnreadCount(prev => prev + 1);
-                                // Update PWA badge with combined count
-                                badgeService.updateBadge(userId);
+                                if (data) {
+                                    setUnreadCount(prev => prev + 1);
+                                    badgeService.updateBadge(userId);
+                                }
                             }
-                        }
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'UPDATE',
-                        schema: 'public',
-                        table: 'messages',
-                    },
-                    async (payload) => {
-                        const updatedMessage = payload.new as any;
+                        } else if (eventType === 'UPDATE') {
+                            window.dispatchEvent(new CustomEvent('prosperus:message-updated', { detail: messageRecord }));
 
-                        // Refresh count when a message from another user is updated (mark-as-read)
-                        if (updatedMessage.sender_id !== userId) {
-                            logger.debug('🔄 Badge: Refreshing count due to message update');
-                            // Small delay to ensure DB is updated
-                            setTimeout(() => fetchUnreadCount(), 100);
+                            // Refresh count when a message from another user is updated (mark-as-read)
+                            if (messageRecord.sender_id !== userId) {
+                                logger.debug('🔄 Badge: Refreshing count due to message update');
+                                // Small delay to ensure DB is updated
+                                setTimeout(() => fetchUnreadCount(), 100);
+                            }
                         }
                     }
                 )
