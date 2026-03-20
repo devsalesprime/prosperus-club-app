@@ -271,15 +271,20 @@ self.addEventListener('push', (event) => {
         // BroadcastChannel not supported — app will refresh on next focus
     }
 
+    // Ensure absolute URLs for icons (required by some mobile OS to show banners)
+    const baseUrl = self.location.origin;
+    const iconUrl = data.icon ? new URL(data.icon, baseUrl).href : new URL('/app/default-avatar.png', baseUrl).href;
+
     // Build notification options
     const title = data.title || 'Prosperus Club';
+    const tagString = data.tag || 'prosperus-notification';
     const options = {
         body: data.body || data.message || '',
-        icon: data.icon || '/app/default-avatar.png',
-        badge: '/app/default-avatar.png',
-        tag: data.tag || 'prosperus-notification',
+        icon: iconUrl,
+        badge: iconUrl,
+        tag: tagString,
+        renotify: true, // IMPORTANT: Forces sound/vibration/banner even if updating the same tag
         vibrate: [200, 100, 200],
-        requireInteraction: data.type === 'message',
         data: {
             url: data.url || '/',
             type: data.type || 'notification'
