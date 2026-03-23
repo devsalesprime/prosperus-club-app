@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
 
@@ -44,15 +44,15 @@ interface Props { userId: string }
  * 6. Re-verifica ao retornar ao foreground (visibilitychange)
  */
 export function PushAutoSubscriber({ userId }: Props) {
-    const isRunning = useRef(false);
-
     useEffect(() => {
         if (!userId) return;
 
+        const sessionKey = `push-subscribing-${userId}`;
+
         async function autoSubscribe() {
-            // Prevent concurrent runs
-            if (isRunning.current) return;
-            isRunning.current = true;
+            // Prevent concurrent runs (using sessionStorage to survive StrictMode remounts)
+            if (sessionStorage.getItem(sessionKey)) return;
+            sessionStorage.setItem(sessionKey, '1');
 
             try {
                 const platform = getDevicePlatform();
@@ -162,7 +162,7 @@ export function PushAutoSubscriber({ userId }: Props) {
 
                 logger.info(`[PushAuto] ✅ ${platform} salvo com sucesso!`);
             } finally {
-                isRunning.current = false;
+                sessionStorage.removeItem(sessionKey);
             }
         }
 
@@ -182,6 +182,8 @@ export function PushAutoSubscriber({ userId }: Props) {
 
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility);
+            // Limpar o flag ao desmontar para permitir nova tentativa no próximo mount
+            sessionStorage.removeItem(sessionKey);
         };
     }, [userId]);
 
