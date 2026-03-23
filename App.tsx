@@ -160,12 +160,22 @@ const AppShell: React.FC = () => {
     // ─── Guard 7: Admin Panel (BEFORE onboarding — Admin/Team skip wizard + tour) ──
     if (isAdmin) {
         return (
-            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
-                <AdminApp
-                    currentUser={currentUser}
-                    onLogout={() => { setIsAdmin(false); setSession(null); }}
-                />
-            </Suspense>
+            <UnreadCountProvider userId={currentUser.id}>
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
+                    <AdminApp
+                        currentUser={currentUser}
+                        onLogout={() => { setIsAdmin(false); setSession(null); }}
+                    />
+                    {/* Admins also need to auto-subscribe and sync their push token */}
+                    <PushAutoSubscriber userId={currentUser.id} />
+                    {showPushPrompt && (
+                        <PushPermissionPrompt
+                            userId={currentUser.id}
+                            onDismiss={() => setShowPushPrompt(false)}
+                        />
+                    )}
+                </Suspense>
+            </UnreadCountProvider>
         );
     }
 

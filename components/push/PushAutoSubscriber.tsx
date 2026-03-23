@@ -90,15 +90,10 @@ export function PushAutoSubscriber({ userId }: Props) {
                     return;
                 }
 
-                // Se 'default', solicitar ativamente:
-                if (permission === 'default') {
-                    logger.info('[PushAuto] Solicitando permissão...');
-                    permission = await Notification.requestPermission();
-                    logger.info('[PushAuto] Resultado permissão:', permission);
-                }
-
+                // Se 'default', NÃO solicitar ativamente aqui pois causa erro de falta de interação do usuário (DOM Exception).
+                // A solicitação ativa deve ser feita EXCLUSIVAMENTE pelo componente <PushPermissionPrompt /> via clique do usuário.
                 if (permission !== 'granted') {
-                    logger.debug('[PushAuto] Permissão não concedida');
+                    logger.debug('[PushAuto] Permissão não concedida (atual: ' + permission + '). Aguardando interação do usuário no prompt.');
                     return;
                 }
 
