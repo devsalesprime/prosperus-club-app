@@ -151,13 +151,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-            <div className="relative w-full max-w-sm flex flex-col items-center max-h-[95vh] overflow-y-auto">
+        <div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in"
+            style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px) 16px' }}
+        >
+            <div className="relative w-full max-w-sm flex flex-col items-center max-h-full overflow-y-auto">
 
                 {/* ── CLOSE BUTTON ── */}
                 <button
                     onClick={onClose}
-                    className="absolute -top-2 right-0 z-20 w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition shadow-lg"
+                    className="absolute top-0 right-0 z-20 w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition shadow-lg"
                 >
                     <X size={18} className="text-white" />
                 </button>

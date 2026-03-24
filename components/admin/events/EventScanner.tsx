@@ -103,7 +103,10 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
     return createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col bg-slate-950/95 backdrop-blur-md">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900 absolute top-0 w-full z-10 shadow-lg">
+            <div
+                className="flex items-center justify-between px-4 pb-4 border-b border-slate-800 bg-slate-900 absolute top-0 w-full z-10 shadow-lg"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+            >
                 <h2 className="text-white font-bold text-lg">Scanner de Recepção</h2>
                 <button
                     onClick={onClose}
@@ -114,7 +117,10 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
             </div>
 
             {/* Scanner Area */}
-            <div className="flex-1 relative flex flex-col items-center justify-center pt-16 pb-8 px-4">
+            <div
+                className="flex-1 relative flex flex-col items-center justify-center px-4"
+                style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 72px)', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+            >
                 
                 {/* STATE: SCANNING — Camera active */}
                 {scannerState === 'SCANNING' && (

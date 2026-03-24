@@ -92,8 +92,11 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
 
     if (loading) {
         return (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                <div className="bg-slate-900 rounded-2xl w-full max-w-5xl h-[85vh] border border-slate-700 flex items-center justify-center">
+            <div
+                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px) 16px' }}
+            >
+                <div className="bg-slate-900 rounded-2xl w-full max-w-5xl max-h-full border border-slate-700 flex items-center justify-center min-h-[300px]">
                     <AdminLoadingState message="Calculando auditoria do evento..." />
                 </div>
             </div>
@@ -105,8 +108,11 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
     const scoreStyle = getScoreStyle(stats.attendanceScore);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-950 rounded-2xl w-full max-w-6xl h-[90vh] border border-slate-800 flex flex-col shadow-2xl overflow-hidden">
+        <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 8px) 8px calc(env(safe-area-inset-bottom, 0px) + 8px) 8px' }}
+        >
+            <div className="bg-slate-950 rounded-2xl w-full max-w-6xl max-h-full border border-slate-800 flex flex-col shadow-2xl overflow-hidden">
                 
                 {/* ── HEADER ── */}
                 <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900 flex-shrink-0">
