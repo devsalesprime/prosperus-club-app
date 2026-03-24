@@ -223,8 +223,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     const [rsvpToast, setRsvpToast] = useState<string | null>(null);
     const [confirmedCount, setConfirmedCount] = useState(0);
 
-    // ── Ticket State ──
-    const [ticketCode, setTicketCode] = useState<string | null>(null);
+    // ── Ticket State (V2) ──
+    const [rsvpId, setRsvpId] = useState<string | null>(null);
+    const [hasTickets, setHasTickets] = useState(false);
     const [memberName, setMemberName] = useState<string>('');
     const [isTicketOpen, setIsTicketOpen] = useState(false);
 
@@ -240,12 +241,20 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             try {
                 const { data } = await supabase
                     .from('event_rsvps')
-                    .select(`status, ticket_code, profile:profiles!user_id(name)`)
+                    .select(`id, status, ticket_code, profile:profiles!user_id(name)`)
                     .eq('event_id', event.id)
                     .eq('user_id', userId)
                     .maybeSingle();
                 setRsvpStatus(data?.status || 'NONE');
-                setTicketCode(data?.ticket_code || null);
+                setRsvpId(data?.id || null);
+                // V2: Check if tickets exist in the new table
+                if (data?.id && data?.status === 'CONFIRMED') {
+                    const { count } = await supabase
+                        .from('event_tickets')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('rsvp_id', data.id);
+                    setHasTickets((count || 0) > 0);
+                }
                 if (data?.profile) {
                     setMemberName((data.profile as any).name || '');
                 }
@@ -651,7 +660,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                         <Check size={16} className="shrink-0" />
                                         <span>Presença Confirmada</span>
                                     </div>
-                                    {ticketCode && (
+                                    {rsvpId && (
                                         <button
                                             onClick={() => setIsTicketOpen(true)}
                                             className="w-full mt-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-4 rounded-xl shadow border border-slate-700 transition active:scale-[0.98] text-sm"
@@ -723,11 +732,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 }
             `}</style>
             
-            {ticketCode && (
+            {rsvpId && (
                 <TicketModal
                     isOpen={isTicketOpen}
                     onClose={() => setIsTicketOpen(false)}
-                    ticketCode={ticketCode}
+                    rsvpId={rsvpId}
+                    eventId={event.id}
                     event={event}
                     memberName={memberName}
                 />

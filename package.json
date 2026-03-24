@@ -21,6 +21,7 @@
     "@use-gesture/react": "^10.3.1",
     "@yudiel/react-qr-scanner": "^2.1.2",
     "date-fns": "2.30.0",
+    "html-to-image": "^1.11.13",
     "lucide-react": "0.294.0",
     "qrcode.react": "^4.2.0",
     "react": "18.2.0",

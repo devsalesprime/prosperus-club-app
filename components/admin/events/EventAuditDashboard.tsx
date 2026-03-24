@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Users, CheckCircle, AlertTriangle, Trophy, Search, Clock, User, Download } from 'lucide-react';
-import { getEventAuditStats, EventAuditStats } from '../../../services/rsvpService';
+import { X, Users, CheckCircle, AlertTriangle, Trophy, Search, Clock, User, Download, Users2, CalendarDays } from 'lucide-react';
+import { getEventAuditStatsV2, EventAuditStatsV2, TicketWithProfile } from '../../../services/ticketService';
 import { AdminLoadingState } from '../shared';
 
 interface EventAuditDashboardProps {
@@ -10,15 +10,15 @@ interface EventAuditDashboardProps {
 }
 
 export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventId, eventTitle, onClose }) => {
-    const [stats, setStats] = useState<EventAuditStats | null>(null);
+    const [stats, setStats] = useState<EventAuditStatsV2 | null>(null);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<'ALL' | 'PRESENT' | 'ABSENT'>('ALL');
+    const [filter, setFilter] = useState<'ALL' | 'PRESENT' | 'ABSENT' | 'MEMBER' | 'GUEST'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const data = await getEventAuditStats(eventId);
+                const data = await getEventAuditStatsV2(eventId);
                 setStats(data);
             } catch (error) {
                 console.error('Failed to load audit stats', error);
@@ -31,17 +31,23 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
 
     const filteredAttendees = useMemo(() => {
         if (!stats) return [];
-        let list = stats.attendeesList;
+        let list = stats.ticketsList;
 
-        if (filter === 'PRESENT') list = list.filter(r => r.check_in_status === true);
-        if (filter === 'ABSENT') list = list.filter(r => !r.check_in_status);
+        if (filter === 'PRESENT') list = list.filter(t => t.check_in_status === true);
+        if (filter === 'ABSENT') list = list.filter(t => !t.check_in_status);
+        if (filter === 'MEMBER') list = list.filter(t => t.owner_type === 'MEMBER');
+        if (filter === 'GUEST') list = list.filter(t => t.owner_type === 'GUEST');
 
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
-            list = list.filter(r => 
-                r.profile.name?.toLowerCase().includes(term) ||
-                r.profile.company?.toLowerCase().includes(term)
-            );
+            list = list.filter(t => {
+                const profile = (t.rsvp as any)?.profile;
+                return (
+                    t.owner_name?.toLowerCase().includes(term) ||
+                    profile?.name?.toLowerCase().includes(term) ||
+                    profile?.company?.toLowerCase().includes(term)
+                );
+            });
         }
         
         return list;
@@ -55,22 +61,25 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
 
     const handleExportCsv = () => {
         if (!stats) return;
-        // BOM (Byte Order Mark) para garantir que o Excel reconheça UTF-8 com acentos
         const BOM = '\uFEFF';
-        const header = 'Nome;Empresa;Cargo;Data Confirmação;Status;Horário Check-in\n';
-        const rows = stats.attendeesList.map(r => {
-            const name = r.profile?.name || 'Sem nome';
-            const company = r.profile?.company || '';
-            const jobTitle = r.profile?.job_title || '';
-            const confirmedDate = new Date(r.confirmed_at).toLocaleDateString('pt-BR');
-            const status = r.check_in_status ? 'Presente' : 'Ausente';
-            const checkInTime = r.check_in_status && r.updated_at
-                ? new Date(r.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        const header = 'Nome;Tipo;Empresa;Cargo;Data Ingresso;Status;Horário Check-in\n';
+        const rows = stats.ticketsList.map(t => {
+            const profile = (t.rsvp as any)?.profile;
+            const name = t.owner_name || profile?.name || 'Sem nome';
+            const type = t.owner_type === 'GUEST' ? 'Convidado' : 'Sócio';
+            const company = profile?.company || '';
+            const jobTitle = profile?.job_title || '';
+            const ticketDate = t.event_date
+                ? new Date(t.event_date + 'T12:00:00').toLocaleDateString('pt-BR')
                 : '-';
-            return `"${name}";"${company}";"${jobTitle}";"${confirmedDate}";"${status}";"${checkInTime}"`;
+            const status = t.check_in_status ? 'Presente' : 'Ausente';
+            const checkInTime = t.check_in_status && t.updated_at
+                ? new Date(t.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                : '-';
+            return `"${name}";"${type}";"${company}";"${jobTitle}";"${ticketDate}";"${status}";"${checkInTime}"`;
         }).join('\n');
 
-        const summary = `\n\n"--- RESUMO ---"\n"Confirmados";"${stats.totalRSVPs}"\n"Presentes";"${stats.totalCheckedIn}"\n"Ausentes";"${stats.totalNoShows}"\n"High Score";"${stats.attendanceScore}%"`;
+        const summary = `\n\n"--- RESUMO ---"\n"Total Ingressos";"${stats.totalTickets}"\n"Sócios";"${stats.memberTickets}"\n"Convidados";"${stats.guestTickets}"\n"Presentes";"${stats.totalCheckedIn}"\n"Pendentes";"${stats.totalPending}"\n"High Score";"${stats.attendanceScore}%"`;
 
         const blob = new Blob([BOM + header + rows + summary], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -125,55 +134,69 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
                 {/* ── BODY ── */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-8">
                     
-                    {/* KPI CARDS (ETAPA 2) */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Card 1: Confirmados */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col items-start transition hover:border-slate-700">
-                            <div className="flex items-center gap-2 text-slate-400 mb-2">
-                                <Users size={16} />
-                                <span className="text-xs font-bold uppercase tracking-wider">Confirmados</span>
+                    {/* KPI CARDS */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {/* Total Ingressos */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col items-start transition hover:border-slate-700">
+                            <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+                                <Users size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Ingressos</span>
                             </div>
-                            <span className="text-3xl font-bold text-white">{stats.totalRSVPs}</span>
-                            <span className="text-xs text-slate-500 mt-1">Total de RSVPs</span>
+                            <span className="text-2xl font-bold text-white">{stats.totalTickets}</span>
                         </div>
 
-                        {/* Card 2: Presentes */}
-                        <div className="bg-emerald-900/10 border border-emerald-900/30 rounded-xl p-5 flex flex-col items-start transition hover:border-emerald-500/30">
-                            <div className="flex items-center gap-2 text-emerald-500 mb-2">
-                                <CheckCircle size={16} />
-                                <span className="text-xs font-bold uppercase tracking-wider">Presentes</span>
+                        {/* Sócios */}
+                        <div className="bg-blue-900/10 border border-blue-900/30 rounded-xl p-4 flex flex-col items-start transition hover:border-blue-500/30">
+                            <div className="flex items-center gap-1.5 text-blue-400 mb-1.5">
+                                <User size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Sócios</span>
                             </div>
-                            <span className="text-3xl font-bold text-white">{stats.totalCheckedIn}</span>
-                            <span className="text-xs text-emerald-500/60 mt-1">Escaneados na porta</span>
+                            <span className="text-2xl font-bold text-white">{stats.memberTickets}</span>
                         </div>
 
-                        {/* Card 3: Ausentes */}
-                        <div className="bg-orange-900/10 border border-orange-900/30 rounded-xl p-5 flex flex-col items-start transition hover:border-orange-500/30">
-                            <div className="flex items-center gap-2 text-orange-500 mb-2">
-                                <AlertTriangle size={16} />
-                                <span className="text-xs font-bold uppercase tracking-wider">Ausentes</span>
+                        {/* Convidados */}
+                        <div className="bg-purple-900/10 border border-purple-900/30 rounded-xl p-4 flex flex-col items-start transition hover:border-purple-500/30">
+                            <div className="flex items-center gap-1.5 text-purple-400 mb-1.5">
+                                <Users2 size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Convidados</span>
                             </div>
-                            <span className="text-3xl font-bold text-white">{stats.totalNoShows}</span>
-                            <span className="text-xs text-orange-500/60 mt-1">Não compareceram</span>
+                            <span className="text-2xl font-bold text-white">{stats.guestTickets}</span>
                         </div>
 
-                        {/* Card 4: High Score 🏆 */}
-                        <div className={`rounded-xl p-5 flex flex-col items-start transition shadow-lg border ${scoreStyle.bg}`}>
-                            <div className={`flex items-center gap-2 mb-2 ${scoreStyle.color}`}>
-                                <Trophy size={16} />
-                                <span className="text-xs font-bold uppercase tracking-wider">High Score</span>
+                        {/* Presentes */}
+                        <div className="bg-emerald-900/10 border border-emerald-900/30 rounded-xl p-4 flex flex-col items-start transition hover:border-emerald-500/30">
+                            <div className="flex items-center gap-1.5 text-emerald-500 mb-1.5">
+                                <CheckCircle size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Presentes</span>
                             </div>
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-4xl font-extrabold ${scoreStyle.color}`}>{stats.attendanceScore}%</span>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded border ${scoreStyle.bg} ${scoreStyle.color}`}>
+                            <span className="text-2xl font-bold text-white">{stats.totalCheckedIn}</span>
+                        </div>
+
+                        {/* Ausentes */}
+                        <div className="bg-orange-900/10 border border-orange-900/30 rounded-xl p-4 flex flex-col items-start transition hover:border-orange-500/30">
+                            <div className="flex items-center gap-1.5 text-orange-500 mb-1.5">
+                                <AlertTriangle size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Pendentes</span>
+                            </div>
+                            <span className="text-2xl font-bold text-white">{stats.totalPending}</span>
+                        </div>
+
+                        {/* High Score 🏆 */}
+                        <div className={`rounded-xl p-4 flex flex-col items-start transition shadow-lg border ${scoreStyle.bg}`}>
+                            <div className={`flex items-center gap-1.5 mb-1.5 ${scoreStyle.color}`}>
+                                <Trophy size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">High Score</span>
+                            </div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className={`text-2xl font-extrabold ${scoreStyle.color}`}>{stats.attendanceScore}%</span>
+                                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${scoreStyle.bg} ${scoreStyle.color}`}>
                                     {scoreStyle.label}
                                 </span>
                             </div>
-                            <span className={`text-xs mt-1 ${scoreStyle.color} opacity-70`}>Taxa de Comparecimento</span>
                         </div>
                     </div>
 
-                    {/* ATTENDEES TABLE FILTERS (ETAPA 3) */}
+                    {/* FILTERS */}
                     <div className="space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -191,40 +214,41 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
                                         type="text" 
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        placeholder="Buscar membro ou empresa..."
+                                        placeholder="Buscar nome ou empresa..."
                                         className="w-full sm:w-64 pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition-colors"
                                     />
                                 </div>
 
-                                {/* Segmented Control */}
-                                <div className="flex items-center bg-slate-900 p-1 rounded-lg border border-slate-800 w-full sm:w-auto">
-                                    <button 
-                                        onClick={() => setFilter('ALL')}
-                                        className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'ALL' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                    >
-                                        Todos
-                                    </button>
-                                    <button 
-                                        onClick={() => setFilter('PRESENT')}
-                                        className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'PRESENT' ? 'bg-emerald-600/20 text-emerald-400 shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                    >
-                                        Presentes
-                                    </button>
-                                    <button 
-                                        onClick={() => setFilter('ABSENT')}
-                                        className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === 'ABSENT' ? 'bg-orange-600/20 text-orange-400 shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                                    >
-                                        Ausentes
-                                    </button>
+                                {/* Segmented Control — with MEMBER/GUEST filters */}
+                                <div className="flex items-center bg-slate-900 p-1 rounded-lg border border-slate-800 w-full sm:w-auto flex-wrap">
+                                    {(['ALL', 'PRESENT', 'ABSENT', 'MEMBER', 'GUEST'] as const).map(f => {
+                                        const labels: Record<string, string> = { ALL: 'Todos', PRESENT: 'Presentes', ABSENT: 'Pendentes', MEMBER: 'Sócios', GUEST: 'Convidados' };
+                                        const activeStyles: Record<string, string> = {
+                                            ALL: 'bg-slate-700 text-white shadow',
+                                            PRESENT: 'bg-emerald-600/20 text-emerald-400 shadow',
+                                            ABSENT: 'bg-orange-600/20 text-orange-400 shadow',
+                                            MEMBER: 'bg-blue-600/20 text-blue-400 shadow',
+                                            GUEST: 'bg-purple-600/20 text-purple-400 shadow',
+                                        };
+                                        return (
+                                            <button
+                                                key={f}
+                                                onClick={() => setFilter(f)}
+                                                className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filter === f ? activeStyles[f] : 'text-slate-400 hover:text-slate-200'}`}
+                                            >
+                                                {labels[f]}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
 
-                        {/* LISTING */}
+                        {/* TABLE */}
                         {filteredAttendees.length === 0 ? (
                             <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center text-center">
                                 <Users size={32} className="text-slate-600 mb-3" />
-                                <p className="text-slate-400 text-sm">Nenhum membro encontrado com os filtros atuais.</p>
+                                <p className="text-slate-400 text-sm">Nenhum registro encontrado com os filtros atuais.</p>
                             </div>
                         ) : (
                             <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
@@ -232,57 +256,82 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
                                     <table className="w-full text-left text-sm whitespace-nowrap">
                                         <thead className="bg-slate-950 text-slate-400 uppercase text-xs font-bold tracking-wider">
                                             <tr>
-                                                <th className="px-6 py-4">Membro</th>
+                                                <th className="px-6 py-4">Nome</th>
+                                                <th className="px-6 py-4">Tipo</th>
+                                                <th className="px-6 py-4">Data Ingresso</th>
                                                 <th className="px-6 py-4">Empresa / Cargo</th>
-                                                <th className="px-6 py-4">Status de Presença</th>
+                                                <th className="px-6 py-4">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/50">
-                                            {filteredAttendees.map(rsvp => (
-                                                <tr key={rsvp.id} className="hover:bg-slate-800/30 transition-colors">
-                                                    
-                                                    {/* Member Info */}
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-700">
-                                                                {rsvp.profile?.image_url ? (
-                                                                    <img src={rsvp.profile.image_url} alt={rsvp.profile.name} className="w-full h-full object-cover" />
+                                            {filteredAttendees.map(ticket => {
+                                                const profile = (ticket.rsvp as any)?.profile;
+                                                return (
+                                                    <tr key={ticket.id} className="hover:bg-slate-800/30 transition-colors">
+                                                        
+                                                        {/* Name */}
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-full bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-700">
+                                                                    {profile?.image_url ? (
+                                                                        <img src={profile.image_url} alt={ticket.owner_name} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <User size={16} className="text-slate-500" />
+                                                                    )}
+                                                                </div>
+                                                                <p className="font-bold text-white">{ticket.owner_name || profile?.name || 'Sem nome'}</p>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Type Badge */}
+                                                        <td className="px-6 py-4">
+                                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                                                                ticket.owner_type === 'GUEST'
+                                                                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                                                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                                            }`}>
+                                                                {ticket.owner_type === 'GUEST' ? (
+                                                                    <><Users2 size={11} /> Convidado</>
                                                                 ) : (
-                                                                    <User size={16} className="text-slate-500" />
+                                                                    <><User size={11} /> Sócio</>
                                                                 )}
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-white">{rsvp.profile?.name || 'Sem nome'}</p>
-                                                                <p className="text-xs text-slate-500">
-                                                                    Confirmou em: {new Date(rsvp.confirmed_at).toLocaleDateString()}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
+                                                            </span>
+                                                        </td>
 
-                                                    {/* Company */}
-                                                    <td className="px-6 py-4">
-                                                        <p className="text-slate-300 font-medium">{rsvp.profile?.company || '-'}</p>
-                                                        <p className="text-xs text-slate-500">{rsvp.profile?.job_title || '-'}</p>
-                                                    </td>
+                                                        {/* Ticket Date */}
+                                                        <td className="px-6 py-4">
+                                                            {ticket.event_date && (
+                                                                <span className="inline-flex items-center gap-1 text-slate-300 text-xs">
+                                                                    <CalendarDays size={12} className="text-slate-500" />
+                                                                    {new Date(ticket.event_date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                </span>
+                                                            )}
+                                                        </td>
 
-                                                    {/* Status Badge */}
-                                                    <td className="px-6 py-4">
-                                                        {rsvp.check_in_status ? (
-                                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold leading-none">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                                                Entrou às {rsvp.updated_at ? new Date(rsvp.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---'}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full text-xs font-bold leading-none">
-                                                                <Clock size={12} />
-                                                                Pendente
-                                                            </div>
-                                                        )}
-                                                    </td>
+                                                        {/* Company */}
+                                                        <td className="px-6 py-4">
+                                                            <p className="text-slate-300 font-medium">{profile?.company || '-'}</p>
+                                                            <p className="text-xs text-slate-500">{profile?.job_title || '-'}</p>
+                                                        </td>
 
-                                                </tr>
-                                            ))}
+                                                        {/* Status Badge */}
+                                                        <td className="px-6 py-4">
+                                                            {ticket.check_in_status ? (
+                                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-bold leading-none">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                    Entrou às {ticket.updated_at ? new Date(ticket.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full text-xs font-bold leading-none">
+                                                                    <Clock size={12} />
+                                                                    Pendente
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

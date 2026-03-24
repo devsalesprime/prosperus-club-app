@@ -173,9 +173,25 @@ export interface EventRSVP {
   notes?: string;
   created_at: string;
   updated_at: string;
-  // Step 1: Ingressos QR Code
+  // V1 (legacy, mantido para compatibilidade)
   ticket_code?: string;
   check_in_status?: boolean;
+}
+
+export type TicketOwnerType = 'MEMBER' | 'GUEST';
+
+export interface EventTicket {
+  id: string;
+  rsvp_id: string;
+  event_id: string;
+  owner_type: TicketOwnerType;
+  owner_name: string;
+  owner_role?: string; // ex: "Social Media", "Staff", "Assessor"
+  event_date: string; // YYYY-MM-DD
+  ticket_code: string; // UUID
+  check_in_status: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Category {
