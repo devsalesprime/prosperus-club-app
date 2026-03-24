@@ -307,3 +307,46 @@ export async function getEventAuditStatsV2(eventId: string): Promise<EventAuditS
         ticketsList: tickets,
     };
 }
+
+// ─── SILENT VIRTUAL CHECK-IN ───────────────────────────────────────
+// Registers attendance for virtual events without blocking the user.
+// Called fire-and-forget before redirecting to Zoom.
+
+export async function registerSilentVirtualCheckIn(
+    eventId: string,
+    userId: string
+): Promise<void> {
+    try {
+        // Update the RSVP's check_in status
+        const { error } = await supabase
+            .from('event_rsvps')
+            .update({
+                check_in_status: true,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('event_id', eventId)
+            .eq('user_id', userId)
+            .eq('status', 'CONFIRMED');
+
+        if (error) {
+            console.error('[SilentCheckIn] Error updating RSVP:', error);
+        }
+
+        // Also update event_tickets if they exist
+        const { data: tickets } = await supabase
+            .from('event_tickets')
+            .select('id')
+            .eq('event_id', eventId)
+            .eq('owner_type', 'MEMBER')
+            .eq('check_in_status', false);
+
+        if (tickets && tickets.length > 0) {
+            await supabase
+                .from('event_tickets')
+                .update({ check_in_status: true, updated_at: new Date().toISOString() })
+                .in('id', tickets.map(t => t.id));
+        }
+    } catch (err) {
+        console.error('[SilentCheckIn] Exception:', err);
+    }
+}

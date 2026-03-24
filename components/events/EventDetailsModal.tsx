@@ -33,6 +33,7 @@ import { ClubEvent, EventSession } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { registerSilentVirtualCheckIn } from '../../services/ticketService';
 import ConfirmedAttendeesSection from './ConfirmedAttendeesSection';
 import TicketModal from './TicketModal';
 
@@ -539,29 +540,53 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                         </div>
                     )}
 
-                    {/* ═══ ONLINE LINK ═══ */}
-                    {event.link && (
-                        <div className="px-4 py-3">
-                            <a
-                                href={event.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-emerald-500/30 transition-colors group"
-                            >
-                                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Video size={15} className="text-emerald-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs text-slate-500 mb-0.5">Link da Reunião</p>
-                                    <p className="text-sm text-emerald-400 truncate">{event.link}</p>
-                                    {event.meetingPassword && (
-                                        <p className="text-xs text-slate-500 mt-0.5">Senha: {event.meetingPassword}</p>
-                                    )}
-                                </div>
-                                <ExternalLink size={14} className="text-slate-600 flex-shrink-0" />
-                            </a>
-                        </div>
-                    )}
+                    {/* ═══ ONLINE LINK (time-locked + silent check-in) ═══ */}
+                    {event.link && (() => {
+                        const eventStart = new Date(event.date);
+                        const unlockTime = new Date(eventStart.getTime() - 15 * 60 * 1000);
+                        const isLinkUnlocked = new Date() >= unlockTime;
+
+                        return (
+                            <div className="px-4 py-3">
+                                {isLinkUnlocked ? (
+                                    <a
+                                        href={event.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={() => {
+                                            // Silent check-in when confirmed member clicks
+                                            if (userId && rsvpStatus === 'CONFIRMED') {
+                                                registerSilentVirtualCheckIn(event.id, userId);
+                                            }
+                                        }}
+                                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:border-emerald-500/30 transition-colors group"
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                            <Video size={15} className="text-emerald-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-slate-500 mb-0.5">Link da Reunião</p>
+                                            <p className="text-sm text-emerald-400 truncate">{event.link}</p>
+                                            {event.meetingPassword && (
+                                                <p className="text-xs text-slate-500 mt-0.5">Senha: {event.meetingPassword}</p>
+                                            )}
+                                        </div>
+                                        <ExternalLink size={14} className="text-slate-600 flex-shrink-0" />
+                                    </a>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/30 border border-slate-700/30">
+                                        <div className="w-8 h-8 rounded-lg bg-slate-700/30 flex items-center justify-center flex-shrink-0">
+                                            <Video size={15} className="text-slate-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs text-slate-600 mb-0.5">Link da Reunião</p>
+                                            <p className="text-sm text-slate-500">🔒 Disponível 15 min antes do evento</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* ═══ MATERIALS ═══ */}
                     {event.materials && event.materials.length > 0 && (
@@ -651,7 +676,9 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                         <Check size={16} className="shrink-0" />
                                         <span>Presença Confirmada</span>
                                     </div>
-                                    {rsvpId && (
+
+                                    {/* === PRESENCIAL EVENT: Ticket Button === */}
+                                    {event.category !== 'ONLINE' && rsvpId && (
                                         <button
                                             onClick={() => setIsTicketOpen(true)}
                                             className="w-full mt-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-4 rounded-xl shadow border border-slate-700 transition active:scale-[0.98] text-sm"
@@ -659,6 +686,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                             🎟️ Ver meu Ingresso
                                         </button>
                                     )}
+
                                     <button
                                         onClick={handleCancelRsvp}
                                         disabled={rsvpLoading}
