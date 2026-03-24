@@ -34,6 +34,7 @@ import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ConfirmedAttendeesSection from './ConfirmedAttendeesSection';
+import TicketModal from './TicketModal';
 
 type RsvpStatus = 'NONE' | 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'WAITLIST' | 'CANCELLED';
 
@@ -222,6 +223,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
     const [rsvpToast, setRsvpToast] = useState<string | null>(null);
     const [confirmedCount, setConfirmedCount] = useState(0);
 
+    // ── Ticket State ──
+    const [ticketCode, setTicketCode] = useState<string | null>(null);
+    const [memberName, setMemberName] = useState<string>('');
+    const [isTicketOpen, setIsTicketOpen] = useState(false);
+
     // ── Swipe-down dismiss gesture ──
     const { offsetY, backdropOpacity, isDragging, bind: swipeBind, transition: swipeTransition } = useSwipeDismiss({
         onDismiss: onClose,
@@ -234,11 +240,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             try {
                 const { data } = await supabase
                     .from('event_rsvps')
-                    .select('status')
+                    .select(`status, ticket_code, profile:profiles!user_id(name)`)
                     .eq('event_id', event.id)
                     .eq('user_id', userId)
                     .maybeSingle();
                 setRsvpStatus(data?.status || 'NONE');
+                setTicketCode(data?.ticket_code || null);
+                if (data?.profile) {
+                    setMemberName((data.profile as any).name || '');
+                }
 
                 const { count } = await supabase
                     .from('event_rsvps')
@@ -404,7 +414,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     className="flex-1 overflow-y-auto overscroll-contain"
                     style={{
                         WebkitOverflowScrolling: 'touch',
-                        paddingBottom: userId ? '100px' : '24px',
+                        paddingBottom: '24px',
                     }}
                 >
 
@@ -595,15 +605,15 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                             </div>
                         </>
                     )}
+
+                    {/* ═══ CONFIRMED ATTENDEES ═══ */}
+                    <ConfirmedAttendeesSection eventId={event.id} />
                 </div>
 
-                {/* ═══ CONFIRMED ATTENDEES ═══ */}
-                <ConfirmedAttendeesSection eventId={event.id} />
-
-                {/* ═══ RSVP STICKY FOOTER ═══ */}
+                {/* ═══ RSVP STATIC FOOTER ═══ */}
                 {userId && (
-                    <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent pt-8 rounded-b-none">
-                        <div className="flex flex-col items-center gap-2">
+                    <div className="flex-none bg-slate-900 border-t border-slate-800 p-4 relative z-10">
+                        <div className="flex flex-col items-center gap-3">
 
                             {/* NONE: Confirmar Presença */}
                             {rsvpStatus === 'NONE' && (
@@ -641,10 +651,18 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                                         <Check size={16} className="shrink-0" />
                                         <span>Presença Confirmada</span>
                                     </div>
+                                    {ticketCode && (
+                                        <button
+                                            onClick={() => setIsTicketOpen(true)}
+                                            className="w-full mt-1 flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3.5 px-4 rounded-xl shadow border border-slate-700 transition active:scale-[0.98] text-sm"
+                                        >
+                                            🎟️ Ver meu Ingresso
+                                        </button>
+                                    )}
                                     <button
                                         onClick={handleCancelRsvp}
                                         disabled={rsvpLoading}
-                                        className="text-xs text-slate-500 hover:text-red-400 transition underline py-1"
+                                        className="text-xs text-slate-500 hover:text-red-400 transition underline py-1 mt-1"
                                     >
                                         Cancelar presença
                                     </button>
@@ -704,6 +722,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
+            
+            {ticketCode && (
+                <TicketModal
+                    isOpen={isTicketOpen}
+                    onClose={() => setIsTicketOpen(false)}
+                    ticketCode={ticketCode}
+                    event={event}
+                    memberName={memberName}
+                />
+            )}
         </div>,
         document.body
     );

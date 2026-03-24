@@ -4,6 +4,7 @@ import fs from 'fs';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 
 /**
  * Vite plugin that stamps __BUILD_TIMESTAMP__ into sw.js during build.
@@ -43,6 +44,7 @@ export default defineConfig(({ mode }) => {
       css: false,
     },
     plugins: [
+      basicSsl(),
       react(),
       VitePWA({
         // generateSW creates a Workbox SW, but we DON'T register it

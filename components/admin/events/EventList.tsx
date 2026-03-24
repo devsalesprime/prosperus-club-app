@@ -19,6 +19,7 @@ import {
     X,
     ChevronLeft,
     ChevronRight,
+    BarChart3,
 } from 'lucide-react';
 import { ClubEvent, EventCategory } from '../../../types';
 import { eventService } from '../../../services/eventService';
@@ -28,6 +29,7 @@ import {
     AdminConfirmDialog,
     AdminEmptyState,
 } from '../shared';
+import { EventAuditDashboard } from './EventAuditDashboard';
 
 // Category badge sub-component (inlined to avoid .ts/.tsx extension conflict)
 const CategoryBadge = ({ category }: { category: EventCategory }) => {
@@ -58,6 +60,9 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
         title: string;
         isLoading: boolean;
     }>({ isOpen: false, id: null, title: '', isLoading: false });
+
+    // --- AUDIT DASHBOARD STATE ---
+    const [auditEvent, setAuditEvent] = useState<{ id: string; title: string } | null>(null);
 
     // --- RSVP MANAGEMENT STATE ---
     const [expandedRsvpEventId, setExpandedRsvpEventId] = useState<string | null>(null);
@@ -333,6 +338,12 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                                     <td className="px-4 py-3">
                                         <div className="flex items-center justify-end gap-1">
                                             <AdminActionButton
+                                                icon={BarChart3}
+                                                onClick={() => setAuditEvent({ id: event.id, title: event.title })}
+                                                variant="ghost"
+                                                title="Auditoria"
+                                            />
+                                            <AdminActionButton
                                                 icon={Users}
                                                 onClick={() => toggleRsvpPanel(event.id)}
                                                 variant={expandedRsvpEventId === event.id ? 'primary' : 'ghost'}
@@ -530,6 +541,15 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 isDestructive
                 isLoading={confirmState.isLoading}
             />
+
+            {/* AUDIT DASHBOARD MODAL */}
+            {auditEvent && (
+                <EventAuditDashboard
+                    eventId={auditEvent.id}
+                    eventTitle={auditEvent.title}
+                    onClose={() => setAuditEvent(null)}
+                />
+            )}
         </>
     );
 };

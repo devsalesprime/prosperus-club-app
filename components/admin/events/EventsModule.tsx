@@ -5,12 +5,13 @@
 // All logic delegated to EventList and EventForm submodules
 
 import React, { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, QrCode } from 'lucide-react';
 import { ClubEvent } from '../../../types';
 import { eventService } from '../../../services/eventService';
 import { AdminPageHeader, AdminLoadingState } from '../shared';
 import { EventList } from './EventList';
 import { EventForm } from './EventForm';
+import { EventScanner } from './EventScanner';
 
 type ViewMode = 'list' | 'form';
 
@@ -19,6 +20,7 @@ export const EventsModule: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState<ViewMode>('list');
     const [editingEvent, setEditingEvent] = useState<ClubEvent | null>(null);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     const refreshEvents = async () => {
         try {
@@ -69,12 +71,20 @@ export const EventsModule: React.FC = () => {
                 title="Gestão de Eventos"
                 subtitle={`${events.length} evento(s) cadastrado(s)`}
                 action={
-                    <button
-                        onClick={handleNew}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 font-bold transition shadow-lg"
-                    >
-                        <Plus size={18} /> Novo Evento
-                    </button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                            onClick={() => setIsScannerOpen(true)}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg px-4 py-2 font-bold transition shadow-lg"
+                        >
+                            <QrCode size={18} /> Scanner
+                        </button>
+                        <button
+                            onClick={handleNew}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg px-4 py-2 font-bold transition shadow-lg"
+                        >
+                            <Plus size={18} /> Novo Evento
+                        </button>
+                    </div>
                 }
             />
 
@@ -91,6 +101,11 @@ export const EventsModule: React.FC = () => {
                     onCancel={handleCancel}
                 />
             )}
+
+            <EventScanner 
+                isOpen={isScannerOpen} 
+                onClose={() => setIsScannerOpen(false)} 
+            />
         </div>
     );
 };

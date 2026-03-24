@@ -163,6 +163,21 @@ export interface ClubEvent {
   end?: Date;
 }
 
+export interface EventRSVP {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'CONFIRMED' | 'PENDING' | 'CANCELLED' | 'WAITLIST' | 'REJECTED';
+  confirmed_at?: string;
+  cancelled_at?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Step 1: Ingressos QR Code
+  ticket_code?: string;
+  check_in_status?: boolean;
+}
+
 export interface Category {
   id: string;
   name: string;
