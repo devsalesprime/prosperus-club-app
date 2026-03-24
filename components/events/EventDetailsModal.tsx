@@ -225,7 +225,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
 
     // ── Ticket State (V2) ──
     const [rsvpId, setRsvpId] = useState<string | null>(null);
-    const [hasTickets, setHasTickets] = useState(false);
     const [memberName, setMemberName] = useState<string>('');
     const [isTicketOpen, setIsTicketOpen] = useState(false);
 
@@ -247,14 +246,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                     .maybeSingle();
                 setRsvpStatus(data?.status || 'NONE');
                 setRsvpId(data?.id || null);
-                // V2: Check if tickets exist in the new table
-                if (data?.id && data?.status === 'CONFIRMED') {
-                    const { count } = await supabase
-                        .from('event_tickets')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('rsvp_id', data.id);
-                    setHasTickets((count || 0) > 0);
-                }
                 if (data?.profile) {
                     setMemberName((data.profile as any).name || '');
                 }

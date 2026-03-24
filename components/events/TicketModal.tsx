@@ -69,7 +69,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
     // ── Swipe gesture ──
     const [dragX, setDragX] = useState(0);
-    const bindSwipe = useDrag(({ movement: [mx], last, cancel }) => {
+    const bindSwipe = useDrag(({ movement: [mx], last }) => {
         if (tickets.length <= 1) return;
         if (!last) {
             setDragX(mx);
