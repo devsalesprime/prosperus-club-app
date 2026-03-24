@@ -34,6 +34,7 @@ export default defineConfig(async ({ mode }) => {
   const devPlugins: Plugin[] = [];
   if (mode === 'development') {
     try {
+      // @ts-ignore — optional dev dependency, gracefully handled by try/catch
       const { default: basicSsl } = await import('@vitejs/plugin-basic-ssl');
       devPlugins.push(basicSsl());
     } catch { /* Ignora se não estiver instalado */ }
