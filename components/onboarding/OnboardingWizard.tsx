@@ -799,7 +799,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <p className="text-sm font-bold text-yellow-500 uppercase">O que você pode fazer agora:</p>
                     <div className="flex items-center gap-3 text-slate-300 text-sm">
                         <Check size={16} className="text-green-500 shrink-0" />
-                        Explorar o Member Book e conectar-se
+                        Explorar o Member's Book e conectar-se
                     </div>
                     <div className="flex items-center gap-3 text-slate-300 text-sm">
                         <Check size={16} className="text-green-500 shrink-0" />

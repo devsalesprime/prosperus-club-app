@@ -79,7 +79,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
             {/* Header */}
             <ModalHeader
                 title="Editar Perfil"
-                subtitle="Mantenha suas informações atualizadas no Member Book"
+                subtitle="Mantenha suas informações atualizadas no Member's Book"
                 onClose={onCancel}
                 actions={
                     <>
@@ -126,7 +126,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     />
                     {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
                         <p className="text-xs text-center -mt-3 mb-2" style={{ color: '#CA9A43' }}>
-                            ⚠ Sem foto, você não aparece em destaque no Member Book
+                            ⚠ Sem foto, você não aparece em destaque no Member's Book
                         </p>
                     )}
 

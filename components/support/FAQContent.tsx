@@ -117,10 +117,10 @@ const FAQ_DATA: FAQSection[] = [
     },
     {
         emoji: '👥',
-        title: 'Sócios (Member Book)',
+        title: 'Sócios (Member\'s Book)',
         items: [
             {
-                q: 'O que é o Member Book?',
+                q: 'O que é o Member\'s Book?',
                 a: 'É o diretório de todos os sócios do clube. Você pode buscar por nome, empresa ou expertise, filtrar por área de atuação e ver o perfil completo de cada sócio.',
             },
             {

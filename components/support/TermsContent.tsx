@@ -70,7 +70,7 @@ export function TermsContent() {
             <Section num="2." title="O que é a Plataforma">
                 <p>
                     Plataforma exclusiva para membros associados do clube, com:
-                    Dashboard, Agenda, Academy, Member Book, Business Core,
+                    Dashboard, Agenda, Academy, Member's Book, Business Core,
                     Chat, Notificações, Galeria, Artigos e Tools Hub.
                 </p>
             </Section>

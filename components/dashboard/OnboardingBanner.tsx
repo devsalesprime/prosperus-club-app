@@ -51,7 +51,7 @@ export const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ currentUser,
                     </div>
 
                     <p className="text-sm text-slate-300 mb-3">
-                        Seu perfil está incompleto. Complete as informações para aparecer no <strong>Member Book</strong> e se conectar com outros membros.
+                        Seu perfil está incompleto. Complete as informações para aparecer no <strong>Member's Book</strong> e se conectar com outros membros.
                     </p>
 
                     {/* Progress Bar */}

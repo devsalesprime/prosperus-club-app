@@ -90,7 +90,7 @@ export function PrivacyContent() {
             <Section title="3. Como Usamos seus Dados">
                 <Table rows={[
                     ['Autenticação', 'Execução de contrato'],
-                    ['Exibição no Member Book', 'Consentimento'],
+                    ['Exibição no Member\'s Book', 'Consentimento'],
                     ['Registro de negócios', 'Execução de contrato'],
                     ['Push notifications', 'Consentimento'],
                     ['Analytics de uso', 'Legítimo interesse'],

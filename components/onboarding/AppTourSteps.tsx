@@ -55,7 +55,7 @@ export function buildTourSteps(
             icon: '🤝',
             title: 'Conecte-se com sócios',
             description:
-                'O Member Book mostra automaticamente quem tem perfil compatível com o seu. Negócios acontecem aqui.',
+                'O Member\'s Book mostra automaticamente quem tem perfil compatível com o seu. Negócios acontecem aqui.',
             tooltipPosition: 'top',
             highlightPadding: 10,
         },
