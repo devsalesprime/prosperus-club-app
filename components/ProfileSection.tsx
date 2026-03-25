@@ -5,7 +5,7 @@
 import React from 'react';
 import {
     X, Settings, Eye, LogOut,
-    Linkedin, Instagram, Phone, Globe, HelpCircle
+    Linkedin, Instagram, Phone, Globe, HelpCircle, Cake
 } from 'lucide-react';
 import { Member, ViewState } from '../types';
 import { useApp } from '../contexts/AppContext';
@@ -63,6 +63,24 @@ const ProfileSection: React.FC<ProfileSectionProps> = ({
                         {currentUser.description && (
                             <p className="text-slate-400 text-sm mt-3 max-w-md">{currentUser.description}</p>
                         )}
+
+                        {/* Birthday (read-only from CRM) */}
+                        {currentUser.birth_date && (() => {
+                            try {
+                                const [year, month, day] = currentUser.birth_date!.split('-').map(Number);
+                                if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) return null;
+                                const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                                const formatted = `${day} de ${months[month - 1]}`;
+                                return (
+                                    <div className="flex items-center gap-2 mt-3 text-sm text-slate-400">
+                                        <Cake size={15} className="text-yellow-500" />
+                                        <span>{formatted}</span>
+                                    </div>
+                                );
+                            } catch {
+                                return null;
+                            }
+                        })()}
 
                         {/* Tags */}
                         {currentUser.tags && currentUser.tags.length > 0 && (

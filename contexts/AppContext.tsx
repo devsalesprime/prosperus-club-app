@@ -138,6 +138,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             partnership_interests: profile.partnership_interests,
             pitch_video_url: profile.pitch_video_url,
             exclusiveBenefit: profile.exclusive_benefit || undefined,
+            birth_date: profile.birth_date || undefined,
         };
     };
 
@@ -464,7 +465,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             pitch_video_url: member.pitch_video_url || undefined,
             what_i_sell: member.what_i_sell || undefined,
             what_i_need: member.what_i_need || undefined,
-            partnership_interests: member.partnership_interests || undefined
+            partnership_interests: member.partnership_interests || undefined,
+            birth_date: member.birth_date || undefined
         };
     };
 

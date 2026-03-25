@@ -72,6 +72,9 @@ export interface Member {
     code?: string;
     active?: boolean;
   };
+
+  // HubSpot CRM sync
+  birth_date?: string | null; // Data de aniversário (via Deal)
 }
 
 export interface Video {
