@@ -39,7 +39,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [resetEmailSent, setResetEmailSent] = useState(false);
     const [profileData, setProfileData] = useState<{
-        fullName?: string; jobTitle?: string; company?: string; phone?: string;
+        fullName?: string; jobTitle?: string; company?: string; phone?: string; birthDate?: string | null;
     } | null>(null);
 
     // ── Refs ──────────────────────────────────────────────────
@@ -205,6 +205,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                             job_title: profileData?.jobTitle || '',
                             company: profileData?.company || '',
                             phone: profileData?.phone || '',
+                            birth_date: profileData?.birthDate || null,
                         },
                     },
                 });

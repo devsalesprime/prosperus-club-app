@@ -115,7 +115,7 @@ Deno.serve(async (req: Request) => {
                     const dealId = dealAssociation.id
 
                     // Fetch deal details with properties (including profile data)
-                    const dealDetailsUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=dealstage,closedate,amount,comprovante_de_pagamento_arq,cargo_do_contato,numero_de_telefone,dealname`
+                    const dealDetailsUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=dealstage,closedate,amount,comprovante_de_pagamento_arq,cargo_do_contato,numero_de_telefone,dealname,data_de_nascimento__socio_principal`
 
                     const dealDetailsResponse = await fetch(dealDetailsUrl, {
                         method: 'GET',
@@ -145,20 +145,32 @@ Deno.serve(async (req: Request) => {
                         const hasPaymentProof = paymentProof && paymentProof.trim() !== ''
 
                         if (isClosedWon && hasPaymentProof) {
-                            // Extract profile data from Deal properties
                             const firstName = contact.properties.firstname || ''
                             const lastName = contact.properties.lastname || ''
                             const fullName = `${firstName} ${lastName}`.trim() || contact.properties.email
                             const jobTitle = dealDetails.properties.cargo_do_contato || ''
                             const company = dealDetails.properties.dealname || ''
                             const phone = dealDetails.properties.numero_de_telefone || ''
+                            
+                            // Extract birth date
+                            const rawBirthDate = dealDetails.properties.data_de_nascimento__socio_principal || ''
+                            let birthDate = null
+                            if (rawBirthDate) {
+                                if (/^\d{13,}$/.test(rawBirthDate)) {
+                                    const d = new Date(Number(rawBirthDate))
+                                    birthDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+                                } else if (/^\d{4}-\d{2}-\d{2}/.test(rawBirthDate)) {
+                                    birthDate = rawBirthDate.substring(0, 10)
+                                }
+                            }
 
                             console.log('✅ Validation PASSED for:', contact.properties.email)
                             console.log('📋 Profile Data:', {
                                 fullName,
                                 jobTitle,
                                 company,
-                                phone
+                                phone,
+                                birthDate
                             })
 
                             return new Response(
@@ -172,7 +184,8 @@ Deno.serve(async (req: Request) => {
                                         email: contact.properties.email,
                                         jobTitle,
                                         company,
-                                        phone
+                                        phone,
+                                        birthDate
                                     }
                                 }),
                                 { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
