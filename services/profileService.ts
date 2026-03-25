@@ -166,7 +166,7 @@ class ProfileService {
                 async () => {
                     let query = supabase
                         .from('profiles')
-                        .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at')
+                        .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at')
                         .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
                     // Exclude specific user if provided (e.g., logged-in user)
@@ -201,7 +201,7 @@ class ProfileService {
         try {
             let queryBuilder = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at')
                 .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
             // Exclude specific user if provided (e.g., logged-in user)
@@ -261,7 +261,7 @@ class ProfileService {
             let queryBuilder = supabase
                 .from('profiles')
                 .select(
-                    'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, created_at',
+                    'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at',
                     { count: 'exact', head: false }
                 )
                 .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
@@ -400,7 +400,7 @@ class ProfileService {
                 .from('profiles')
                 .update(cleanUpdates)
                 .eq('id', userId)
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at, updated_at')
                 .single();
 
             if (error) {

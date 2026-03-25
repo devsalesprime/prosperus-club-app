@@ -18,10 +18,10 @@ const corsHeaders = {
 }
 
 // ─── Check HubSpot deal status for a contact email ──────────────
-async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolean; situacao: string }> {
+async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolean; situacao: string; birthDate: string | null }> {
     if (!HUBSPOT_API_KEY) {
         console.warn('⚠️ HUBSPOT_API_KEY not set — skipping deal check')
-        return { isActive: true, situacao: 'unknown' }
+        return { isActive: true, situacao: 'unknown', birthDate: null }
     }
 
     try {
@@ -46,13 +46,13 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
 
         if (!searchRes.ok) {
             console.error('❌ HubSpot contact search failed:', searchRes.status)
-            return { isActive: true, situacao: 'api_error' }
+            return { isActive: true, situacao: 'api_error', birthDate: null }
         }
 
         const searchData = await searchRes.json()
         if (!searchData.results || searchData.results.length === 0) {
             console.log(`⚠️ Contact not found in HubSpot: ${email}`)
-            return { isActive: true, situacao: 'not_in_hubspot' }
+            return { isActive: true, situacao: 'not_in_hubspot', birthDate: null }
         }
 
         const contactId = searchData.results[0].id
@@ -65,7 +65,7 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
 
         if (!assocRes.ok) {
             console.error('❌ HubSpot deals association failed:', assocRes.status)
-            return { isActive: true, situacao: 'api_error' }
+            return { isActive: true, situacao: 'api_error', birthDate: null }
         }
 
         const assocData = await assocRes.json()
@@ -73,13 +73,13 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
 
         if (dealIds.length === 0) {
             console.log(`⚠️ No deals found for contact ${contactId}`)
-            return { isActive: false, situacao: 'no_deals' }
+            return { isActive: false, situacao: 'no_deals', birthDate: null }
         }
 
         // 3. Check situacao_do_negocio on each deal — if ANY deal is "ativo", user is active
         for (const dealId of dealIds) {
             const dealRes = await fetch(
-                `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio`,
+                `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio,data_de_nascimento__socio_principal`,
                 { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
             )
 
@@ -91,19 +91,30 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
             console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${situacao}'`)
 
             if (ACTIVE_STATUSES.includes(situacao)) {
-                return { isActive: true, situacao }
+                // Also extract birth date from this deal
+                const rawBirthDate = dealData.properties?.data_de_nascimento__socio_principal || ''
+                let birthDate: string | null = null
+                if (rawBirthDate) {
+                    if (/^\d{13,}$/.test(rawBirthDate)) {
+                        const d = new Date(Number(rawBirthDate))
+                        birthDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+                    } else if (/^\d{4}-\d{2}-\d{2}/.test(rawBirthDate)) {
+                        birthDate = rawBirthDate.substring(0, 10)
+                    }
+                }
+                return { isActive: true, situacao, birthDate }
             }
         }
 
         // No active deals found — user should be blocked
         const lastSituacao = 'cancelado/congelado/finalizado/inadimplente'
         console.log(`🚫 No active deals found for ${email}`)
-        return { isActive: false, situacao: lastSituacao }
+        return { isActive: false, situacao: lastSituacao, birthDate: null }
 
     } catch (err) {
         console.error('❌ HubSpot check error:', err)
         // On error, don't block — fail open
-        return { isActive: true, situacao: 'check_error' }
+        return { isActive: true, situacao: 'check_error', birthDate: null }
     }
 }
 
@@ -170,6 +181,15 @@ Deno.serve(async (req: Request) => {
             const hubspotResult = await checkHubSpotDealStatus(normalizedEmail)
             isActive = hubspotResult.isActive
             situacao = hubspotResult.situacao
+
+            // Sync birth_date from HubSpot Deal (best-effort)
+            if (hubspotResult.birthDate) {
+                await supabaseAdmin
+                    .from('profiles')
+                    .update({ birth_date: hubspotResult.birthDate })
+                    .eq('id', profile.id)
+                console.log(`🎂 Synced birth_date for ${normalizedEmail}: ${hubspotResult.birthDate}`)
+            }
         }
 
         console.log(`📊 Real-time status for ${normalizedEmail}: is_active=${isActive} (situacao: ${situacao})`)
