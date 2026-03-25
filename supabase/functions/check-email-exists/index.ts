@@ -173,23 +173,24 @@ Deno.serve(async (req: Request) => {
         let isActive: boolean
         let situacao: string
 
+        const hubspotResult = await checkHubSpotDealStatus(normalizedEmail)
+        
         if (isAdminOrTeam) {
             isActive = true
             situacao = 'admin_bypass'
-            console.log(`👑 Admin/Team user ${normalizedEmail} — bypassing HubSpot check`)
+            console.log(`👑 Admin/Team user ${normalizedEmail} — bypassing HubSpot check, but synced properties anyway`)
         } else {
-            const hubspotResult = await checkHubSpotDealStatus(normalizedEmail)
             isActive = hubspotResult.isActive
             situacao = hubspotResult.situacao
+        }
 
-            // Sync birth_date from HubSpot Deal (best-effort)
-            if (hubspotResult.birthDate) {
-                await supabaseAdmin
-                    .from('profiles')
-                    .update({ birth_date: hubspotResult.birthDate })
-                    .eq('id', profile.id)
-                console.log(`🎂 Synced birth_date for ${normalizedEmail}: ${hubspotResult.birthDate}`)
-            }
+        // Sync birth_date from HubSpot Deal (best-effort) for EVERYONE
+        if (hubspotResult.birthDate) {
+            await supabaseAdmin
+                .from('profiles')
+                .update({ birth_date: hubspotResult.birthDate })
+                .eq('id', profile.id)
+            console.log(`🎂 Synced birth_date for ${normalizedEmail}: ${hubspotResult.birthDate}`)
         }
 
         console.log(`📊 Real-time status for ${normalizedEmail}: is_active=${isActive} (situacao: ${situacao})`)
