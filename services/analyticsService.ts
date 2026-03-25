@@ -306,16 +306,29 @@ class AnalyticsService {
 
     /**
      * Flush queue to database
+     * Skips if no valid session exists (prevents 401 after logout/block)
      */
     async flush(): Promise<void> {
         if (this.queue.length === 0 || this.isProcessing) return;
+
+        // Guard: check if there is a valid session before attempting insert
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                // No session — silently discard queued events
+                this.queue = [];
+                return;
+            }
+        } catch {
+            this.queue = [];
+            return;
+        }
 
         this.isProcessing = true;
         const eventsToSend = [...this.queue];
         this.queue = [];
 
         try {
-            // Use upsert for better performance
             const { error } = await supabase
                 .from('analytics_events')
                 .insert(eventsToSend.map(e => ({
@@ -329,10 +342,12 @@ class AnalyticsService {
                 })));
 
             if (error) {
-                // Log but don't throw - silent fail
                 logger.debug('[Analytics] Error sending events:', error.message);
-                // Re-queue failed events (up to a limit)
-                if (this.queue.length < 50) {
+                // Do NOT re-queue on auth errors (401/403) — session is dead
+                const isAuthError = error.message?.includes('401') ||
+                    error.message?.includes('403') ||
+                    error.code === 'PGRST301';
+                if (!isAuthError && this.queue.length < 50) {
                     this.queue = [...eventsToSend, ...this.queue];
                 }
             }
