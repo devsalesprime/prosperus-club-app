@@ -7,6 +7,7 @@
 import { supabase } from '../lib/supabase';
 import { isAbortError } from '../utils/isAbortError';
 import { auditLogService } from './auditLogService';
+import { logger } from '../utils/logger';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return { data: [], total: 0 };
-            console.error('Error loading members:', error);
+            logger.error('Error loading members:', error);
             throw new Error(error.message || 'Erro ao carregar membros');
         }
 
@@ -81,7 +82,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return {};
-            console.error('Error loading last activity:', error);
+            logger.error('Error loading last activity:', error);
             return {};
         }
 
@@ -100,7 +101,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return {};
-            console.error('Error loading active days:', error);
+            logger.error('Error loading active days:', error);
             return {};
         }
 
@@ -123,7 +124,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error loading events:', error);
+            logger.error('Error loading events:', error);
             return [];
         }
 
@@ -146,7 +147,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return new Set();
-            console.error('Error loading attendees:', error);
+            logger.error('Error loading attendees:', error);
             return new Set();
         }
 
@@ -165,7 +166,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return;
-            console.error('Error updating member:', error);
+            logger.error('Error updating member:', error);
             throw new Error(error.message || 'Erro ao atualizar membro');
         }
 
@@ -195,7 +196,7 @@ class AdminMemberService {
 
         if (error) {
             if (isAbortError(error)) return;
-            console.error('Error deleting member:', error);
+            logger.error('Error deleting member:', error);
             throw new Error(error.message || 'Erro ao remover membro');
         }
 

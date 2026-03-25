@@ -6,6 +6,7 @@
 // Admin has broader access than member search — no RLS filter on role.
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 // ─── Result Types ────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ class AdminSearchService {
 
             return { members, events, deals };
         } catch (err) {
-            console.error('[AdminSearch] Error:', err);
+            logger.error('[AdminSearch] Error:', err);
             return EMPTY;
         }
     }

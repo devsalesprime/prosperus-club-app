@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import toast from 'react-hot-toast';
 import {
   LayoutDashboard,
@@ -42,25 +42,39 @@ import {
 import { AdminViewState, Member, ClubEvent, Video, Article, Category, SupportConfig, EventCategory, PushNotification, Conversation, Message, EventMaterial } from './types';
 import { dataService } from './services/mockData';
 import { eventService } from './services/eventService';
-import { AdminNotifications } from './components/notifications/AdminNotifications';
-import { ChatModerationList } from './components/admin/ChatModerationList';
-import { ChatModerationDetail } from './components/admin/ChatModerationDetail';
-import { AdminArticleList } from './components/admin/AdminArticleList';
-import { AdminArticleEditor } from './components/admin/AdminArticleEditor';
-import { Article as ServiceArticle } from './services/articleService';
-import { AnalyticsDashboard } from './components/admin/AnalyticsDashboard';
-import { BannersModule } from './components/admin/BannersModule';
-import { AppSettingsModule } from './components/admin/AppSettingsModule';
-import { AdminChatManager } from './components/AdminChatManager';
-import { AdminRoiManager } from './components/admin/AdminRoiManager';
-import { AdminSolutions } from './components/admin/AdminSolutions';
-import { AdminMemberProgress } from './components/admin/AdminMemberProgress';
-import { EventsModule } from './components/admin/events';
-import { MembersModule } from './components/admin/MembersModule';
-import { AcademyModule } from './components/admin/AcademyModule';
-import { GalleryModule } from './components/admin/GalleryModule';
-import { AdminFilesModule } from './components/admin/AdminFilesModule';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { AdminGlobalSearch } from './components/admin/layout/AdminGlobalSearch';
+
+// ─── Lazy Loaded Admin Modules (Code Splitting) ────────────────
+const AdminNotifications = React.lazy(() => import('./components/notifications/AdminNotifications').then(m => ({ default: m.AdminNotifications })));
+const ChatModerationList = React.lazy(() => import('./components/admin/ChatModerationList').then(m => ({ default: m.ChatModerationList })));
+const ChatModerationDetail = React.lazy(() => import('./components/admin/ChatModerationDetail').then(m => ({ default: m.ChatModerationDetail })));
+const AdminArticleList = React.lazy(() => import('./components/admin/AdminArticleList').then(m => ({ default: m.AdminArticleList })));
+const AdminArticleEditor = React.lazy(() => import('./components/admin/AdminArticleEditor').then(m => ({ default: m.AdminArticleEditor })));
+const AnalyticsDashboard = React.lazy(() => import('./components/admin/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
+const BannersModule = React.lazy(() => import('./components/admin/BannersModule').then(m => ({ default: m.BannersModule })));
+const AppSettingsModule = React.lazy(() => import('./components/admin/AppSettingsModule').then(m => ({ default: m.AppSettingsModule })));
+const AdminChatManager = React.lazy(() => import('./components/AdminChatManager').then(m => ({ default: m.AdminChatManager })));
+const AdminRoiManager = React.lazy(() => import('./components/admin/AdminRoiManager').then(m => ({ default: m.AdminRoiManager })));
+const AdminSolutions = React.lazy(() => import('./components/admin/AdminSolutions').then(m => ({ default: m.AdminSolutions })));
+const AdminMemberProgress = React.lazy(() => import('./components/admin/AdminMemberProgress').then(m => ({ default: m.AdminMemberProgress })));
+const EventsModule = React.lazy(() => import('./components/admin/events').then(m => ({ default: m.EventsModule })));
+const MembersModule = React.lazy(() => import('./components/admin/MembersModule').then(m => ({ default: m.MembersModule })));
+const AcademyModule = React.lazy(() => import('./components/admin/AcademyModule').then(m => ({ default: m.AcademyModule })));
+const GalleryModule = React.lazy(() => import('./components/admin/GalleryModule').then(m => ({ default: m.GalleryModule })));
+const AdminFilesModule = React.lazy(() => import('./components/admin/AdminFilesModule').then(m => ({ default: m.AdminFilesModule })));
+
+import { Article as ServiceArticle } from './services/articleService';
+
+// Admin loading fallback
+const AdminLazyFallback = () => (
+    <div className="flex items-center justify-center p-12 min-h-[300px]">
+        <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm text-slate-400">Carregando módulo...</span>
+        </div>
+    </div>
+);
 
 // --- SHARED ADMIN COMPONENTS ---
 
@@ -981,7 +995,13 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
             <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-[10px] font-mono text-slate-400">⌘K</kbd>
           </button>
         </div>
-        <div className="max-w-7xl mx-auto">{renderContent()}</div>
+        <div className="max-w-7xl mx-auto">
+          <ErrorBoundary moduleName="painel administrativo">
+            <Suspense fallback={<AdminLazyFallback />}>
+              {renderContent()}
+            </Suspense>
+          </ErrorBoundary>
+        </div>
       </main>
       <AdminGlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} onNavigate={setView} />
     </div>

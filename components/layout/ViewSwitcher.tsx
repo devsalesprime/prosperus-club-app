@@ -5,6 +5,7 @@
 // All heavy components use React.lazy() for code splitting.
 
 import React, { Suspense } from 'react';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Calendar, Views, View, Navigate } from 'react-big-calendar';
 import { localizer } from '../../utils/calendarUtils.tsx';
 import {
@@ -82,6 +83,7 @@ export const ViewSwitcher: React.FC = () => {
     useAnalytics({ userId: currentUser?.id || null, currentView: view });
 
     return (
+        <ErrorBoundary moduleName="aplicativo">
         <Suspense fallback={<LazyFallback />}>
             {view === ViewState.DASHBOARD && (
                 <DashboardHome
@@ -451,5 +453,6 @@ export const ViewSwitcher: React.FC = () => {
                 />
             )}
         </Suspense>
+        </ErrorBoundary>
     );
 };

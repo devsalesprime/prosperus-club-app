@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { Deal, DealStatus, RankingEntry } from '../types';
 import { isAbortError } from '../utils/isAbortError';
 import { auditLogService } from './auditLogService';
+import { logger } from '../utils/logger';
 
 export interface AdminDealFilters {
     status?: DealStatus[];
@@ -105,7 +106,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return { data: [], total: 0 };
-            console.error('Error fetching deals:', error);
+            logger.error('Error fetching deals:', error);
             throw new Error('Erro ao buscar negócios');
         }
 
@@ -136,7 +137,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return;
-            console.error('Error auditing deal:', error);
+            logger.error('Error auditing deal:', error);
             throw new Error(error.message || 'Erro ao auditar negócio');
         }
 
@@ -202,7 +203,7 @@ class AdminBusinessService {
                 });
             } catch { /* push best-effort */ }
         } catch (err) {
-            console.error('Failed to notify audit result:', err);
+            logger.error('Failed to notify audit result:', err);
         }
     }
 
@@ -226,7 +227,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return 0;
-            console.error('Error bulk auditing deals:', error);
+            logger.error('Error bulk auditing deals:', error);
             throw new Error(error.message || 'Erro ao auditar negócios em lote');
         }
 
@@ -251,7 +252,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error fetching contested deals:', error);
+            logger.error('Error fetching contested deals:', error);
             throw new Error('Erro ao buscar negócios contestados');
         }
 
@@ -270,7 +271,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error fetching high-value deals:', error);
+            logger.error('Error fetching high-value deals:', error);
             throw new Error('Erro ao buscar negócios de alto valor');
         }
 
@@ -289,7 +290,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error fetching official rankings:', error);
+            logger.error('Error fetching official rankings:', error);
             throw new Error('Erro ao buscar rankings oficiais');
         }
 
@@ -314,7 +315,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return { totalVolume: 0, avgTicket: 0, dealsCount: 0, confirmedCount: 0, auditedCount: 0, contestedCount: 0, invalidatedCount: 0, pendingCount: 0, highValueCount: 0 };
-            console.error('Error fetching admin KPIs:', error);
+            logger.error('Error fetching admin KPIs:', error);
             throw new Error('Erro ao buscar KPIs administrativos');
         }
 
@@ -343,7 +344,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error fetching suspicious deals:', error);
+            logger.error('Error fetching suspicious deals:', error);
             throw new Error('Erro ao buscar negócios suspeitos');
         }
 
@@ -400,7 +401,7 @@ class AdminBusinessService {
             .single();
 
         if (error) {
-            console.error('Error fetching deal:', error);
+            logger.error('Error fetching deal:', error);
             return null;
         }
 
@@ -445,7 +446,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return [];
-            console.error('Error fetching contested referrals:', error);
+            logger.error('Error fetching contested referrals:', error);
             throw new Error('Erro ao buscar indicações contestadas');
         }
 
@@ -501,7 +502,7 @@ class AdminBusinessService {
 
         if (error) {
             if (isAbortError(error)) return;
-            console.error('Error resolving contested referral:', error);
+            logger.error('Error resolving contested referral:', error);
             throw new Error(error.message || 'Erro ao resolver indicação contestada');
         }
 
@@ -547,7 +548,7 @@ class AdminBusinessService {
                 } catch { /* push best-effort */ }
             }
         } catch (err) {
-            console.error('Failed to notify referral resolution:', err);
+            logger.error('Failed to notify referral resolution:', err);
         }
     }
 }

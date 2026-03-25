@@ -5,6 +5,7 @@
 // Best-effort: never throws — failures are logged silently.
 
 import { supabase } from '../lib/supabase';
+import { logger } from '../utils/logger';
 
 export interface AuditLogEntry {
     action: string;         // e.g. 'AUDIT_DEAL', 'BULK_AUDIT', 'RESOLVE_REFERRAL'
@@ -31,7 +32,7 @@ class AuditLogService {
                 details: entry.details || {},
             });
         } catch (err) {
-            console.error('[AuditLog] Failed to write:', err);
+            logger.error('[AuditLog] Failed to write:', err);
             // Best-effort: never block the main operation
         }
     }
@@ -54,7 +55,7 @@ class AuditLogService {
 
             await supabase.from('admin_audit_log').insert(rows);
         } catch (err) {
-            console.error('[AuditLog] Failed to write batch:', err);
+            logger.error('[AuditLog] Failed to write batch:', err);
         }
     }
 }
