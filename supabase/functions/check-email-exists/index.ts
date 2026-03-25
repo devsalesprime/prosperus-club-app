@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
         // 1. Check if email exists in profiles table
         const { data: profile, error } = await supabaseAdmin
             .from('profiles')
-            .select('id, is_active, hubspot_contact_id')
+            .select('id, is_active, hubspot_contact_id, role')
             .eq('email', normalizedEmail)
             .maybeSingle()
 
@@ -156,8 +156,21 @@ Deno.serve(async (req: Request) => {
             )
         }
 
-        // 2. Profile exists — check REAL-TIME deal status from HubSpot
-        const { isActive, situacao } = await checkHubSpotDealStatus(normalizedEmail)
+        // 2. ADMIN/TEAM users bypass HubSpot check — they are always active
+        const isAdminOrTeam = profile.role === 'ADMIN' || profile.role === 'TEAM'
+
+        let isActive: boolean
+        let situacao: string
+
+        if (isAdminOrTeam) {
+            isActive = true
+            situacao = 'admin_bypass'
+            console.log(`👑 Admin/Team user ${normalizedEmail} — bypassing HubSpot check`)
+        } else {
+            const hubspotResult = await checkHubSpotDealStatus(normalizedEmail)
+            isActive = hubspotResult.isActive
+            situacao = hubspotResult.situacao
+        }
 
         console.log(`📊 Real-time status for ${normalizedEmail}: is_active=${isActive} (situacao: ${situacao})`)
 
