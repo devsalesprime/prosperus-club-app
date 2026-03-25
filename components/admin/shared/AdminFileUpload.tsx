@@ -31,6 +31,8 @@ interface AdminFileUploadProps {
     hint?: string;
     /** Compact mode (no drag zone, just button) */
     compact?: boolean;
+    /** Override default upload behavior */
+    customUploader?: (file: File, onProgress: (p: number) => void) => Promise<{ success: boolean; url?: string; error?: string }>;
 }
 
 export const AdminFileUpload: React.FC<AdminFileUploadProps> = ({
@@ -41,6 +43,7 @@ export const AdminFileUpload: React.FC<AdminFileUploadProps> = ({
     label = 'Arquivo',
     hint = 'JPG, PNG, WebP, GIF ou PDF. Máx 10MB.',
     compact = false,
+    customUploader,
 }) => {
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -55,7 +58,13 @@ export const AdminFileUpload: React.FC<AdminFileUploadProps> = ({
         setUploading(true);
         setProgress(0);
 
-        const result: UploadResult = await uploadService.uploadFile(file, (p) => setProgress(p));
+        let result: { success: boolean; url?: string; error?: string };
+        
+        if (customUploader) {
+            result = await customUploader(file, (p) => setProgress(p));
+        } else {
+            result = await uploadService.uploadFile(file, (p) => setProgress(p));
+        }
 
         if (result.success && result.url) {
             onUploaded(result.url);

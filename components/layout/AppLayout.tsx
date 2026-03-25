@@ -39,6 +39,7 @@ import { SupportWidget } from '../SupportWidget';
 import { OfflineBanner } from '../OfflineBanner';
 import { InstallPrompt } from '../push/InstallPrompt';
 import { AppTour } from '../onboarding/AppTour';
+import { BirthdayGreetingModal } from '../ui/BirthdayGreetingModal';
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isMobile, currentUser, tour, tourSteps, view, mobileView } = useApp();
@@ -109,6 +110,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                 )}
             </div>
 
+            <BirthdayGreetingModal />
             <InstallPrompt />
 
             {tour.isActive && (

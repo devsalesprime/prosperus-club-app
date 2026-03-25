@@ -63,6 +63,7 @@ const MembersModule = React.lazy(() => import('./components/admin/MembersModule'
 const AcademyModule = React.lazy(() => import('./components/admin/AcademyModule').then(m => ({ default: m.AcademyModule })));
 const GalleryModule = React.lazy(() => import('./components/admin/GalleryModule').then(m => ({ default: m.GalleryModule })));
 const AdminFilesModule = React.lazy(() => import('./components/admin/AdminFilesModule').then(m => ({ default: m.AdminFilesModule })));
+const AdminBirthdaysModule = React.lazy(() => import('./components/admin/AdminBirthdaysModule').then(m => ({ default: m.AdminBirthdaysModule })));
 
 import { Article as ServiceArticle } from './services/articleService';
 
@@ -123,6 +124,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     items: [
       { id: AdminViewState.EVENTS, label: 'Eventos', icon: <Calendar size={18} /> },
       { id: AdminViewState.MEMBERS, label: 'Sócios', icon: <Users size={18} /> },
+      { id: AdminViewState.BIRTHDAYS, label: 'Aniversariantes', icon: <Calendar size={18} /> },
       { id: AdminViewState.TOOLS_PROGRESS, label: 'Relatórios', icon: <Upload size={18} /> },
       { id: AdminViewState.TOOLS_SOLUTIONS, label: 'Soluções', icon: <Wrench size={18} /> },
       { id: AdminViewState.ROI_AUDIT, label: 'ROI & Auditoria', icon: <TrendingUp size={18} /> },
@@ -956,6 +958,7 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
       case AdminViewState.NOTIFICATIONS: return <AdminNotifications />;
       case AdminViewState.MESSAGES: return <MessagesModerationModule />;
       case AdminViewState.EVENTS: return <EventsModule />;
+      case AdminViewState.BIRTHDAYS: return <AdminBirthdaysModule />;
       case AdminViewState.VIDEOS: return <AcademyModule DataTable={DataTable} />;
       case AdminViewState.TOOLS_SOLUTIONS: return <AdminSolutions />;
       case AdminViewState.TOOLS_PROGRESS: return <AdminMemberProgress />;

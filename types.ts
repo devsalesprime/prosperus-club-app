@@ -36,6 +36,7 @@ export enum AdminViewState {
   MESSAGES = 'MESSAGES', // Novo (Moderação)
   ROI_AUDIT = 'ROI_AUDIT', // Business Core Admin
   MEMBER_FILES = 'MEMBER_FILES', // Arquivos do Sócio
+  BIRTHDAYS = 'BIRTHDAYS', // Aniversários e Homenagens
   SETTINGS = 'SETTINGS'
 }
 
