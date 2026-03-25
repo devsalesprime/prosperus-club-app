@@ -12,6 +12,7 @@ import {
     Mail,
     Eye,
     Gift,
+    Cake,
     Ticket,
     Copy,
     Check,
@@ -278,6 +279,30 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                             </div>
                         )}
                     </div>
+
+                    {/* ========================================= */}
+                    {/* SECTION 1.5: BIRTHDAY (from HubSpot CRM - read-only) */}
+                    {/* ========================================= */}
+                    {profile.birth_date && (() => {
+                        try {
+                            // Parse date UTC-safe to prevent timezone day-shift
+                            const [year, month, day] = profile.birth_date!.split('-').map(Number);
+                            if (!year || !month || !day || isNaN(year) || isNaN(month) || isNaN(day)) return null;
+                            const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                            const formatted = `${day} de ${months[month - 1]}`;
+                            return (
+                                <div className="flex items-center gap-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3">
+                                    <Cake size={18} className="text-yellow-500 flex-shrink-0" />
+                                    <span className="text-sm text-slate-300">
+                                        <span className="text-slate-500 mr-1">Aniversário:</span>
+                                        <span className="font-semibold text-slate-200">{formatted}</span>
+                                    </span>
+                                </div>
+                            );
+                        } catch {
+                            return null;
+                        }
+                    })()}
 
                     {/* ========================================= */}
                     {/* SECTION 2: BIO */}

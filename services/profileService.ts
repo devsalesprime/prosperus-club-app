@@ -33,6 +33,7 @@ export interface ProfileData {
     partnership_interests?: string[];   // ONB-FLD-003: Setores de interesse
     member_since?: string;             // HUB-SYNC-008: Data de entrada no clube
     phone?: string;
+    birth_date?: string | null;        // HUB-SYNC: Data de aniversário (via Deal)
 }
 
 // Exclusive Benefit type - cada sócio pode oferecer um benefício ao clube

@@ -273,16 +273,15 @@ async function handleContactDeleted(objectId: string) {
 async function handleDealPropertyChange(eventData: any) {
     const dealId = String(eventData.objectId)
     const propertyName = eventData.propertyName || ''
-    const propertyValue = (eventData.propertyValue || '').toLowerCase()
+    const propertyValue = (eventData.propertyValue || '')
 
-    // Only react to situacao_do_negocio changes
-    if (propertyName !== 'situacao_do_negocio') {
-        console.log(`⏭️ Deal property '${propertyName}' ignored (not situacao_do_negocio)`)
+    // Properties we react to on Deal objects
+    const HANDLED_PROPERTIES = ['situacao_do_negocio', 'data_de_nascimento__socio_principal']
+
+    if (!HANDLED_PROPERTIES.includes(propertyName)) {
+        console.log(`⏭️ Deal property '${propertyName}' ignored`)
         return { success: true, action: 'ignored_property', dealId, propertyName }
     }
-
-    const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue)
-    console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
 
     // Fetch associated contacts from HubSpot
     const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_API_KEY') || HUBSPOT_CLIENT_SECRET
@@ -309,55 +308,129 @@ async function handleDealPropertyChange(eventData: any) {
 
     console.log(`👥 Deal ${dealId} associated with ${contactIds.length} contact(s): ${contactIds.join(', ')}`)
 
-    // Fetch contact emails from HubSpot to match with our profiles
-    const updatedEmails: string[] = []
+    // ── Handle situacao_do_negocio ──
+    if (propertyName === 'situacao_do_negocio') {
+        const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue.toLowerCase())
+        console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
 
-    for (const contactId of contactIds) {
-        try {
-            const contactRes = await fetch(
-                `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
-                {
-                    headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+        const updatedEmails: string[] = []
+
+        for (const contactId of contactIds) {
+            try {
+                const contactRes = await fetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
+                    {
+                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                    }
+                )
+
+                if (!contactRes.ok) {
+                    console.warn(`⚠️ Failed to fetch contact ${contactId}`)
+                    continue
                 }
-            )
 
-            if (!contactRes.ok) {
-                console.warn(`⚠️ Failed to fetch contact ${contactId}`)
-                continue
+                const contact = await contactRes.json()
+                const email = contact.properties?.email
+                if (!email) continue
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        is_active: isActive,
+                        updated_at: new Date().toISOString()
+                    })
+                    .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
+
+                if (updateError) {
+                    console.error(`❌ Failed to update profile for ${email}:`, updateError)
+                } else {
+                    updatedEmails.push(email)
+                    console.log(`✅ Profile updated: ${email} → is_active: ${isActive}`)
+                }
+            } catch (err) {
+                console.error(`❌ Error processing contact ${contactId}:`, err)
             }
+        }
 
-            const contact = await contactRes.json()
-            const email = contact.properties?.email
-            if (!email) continue
-
-            // Update profile in Supabase
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    is_active: isActive,
-                    updated_at: new Date().toISOString()
-                })
-                .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
-
-            if (updateError) {
-                console.error(`❌ Failed to update profile for ${email}:`, updateError)
-            } else {
-                updatedEmails.push(email)
-                console.log(`✅ Profile updated: ${email} → is_active: ${isActive}`)
-            }
-        } catch (err) {
-            console.error(`❌ Error processing contact ${contactId}:`, err)
+        return {
+            success: true,
+            action: 'deal_status_updated',
+            dealId,
+            situacao: propertyValue,
+            isActive,
+            updatedEmails
         }
     }
 
-    return {
-        success: true,
-        action: 'deal_status_updated',
-        dealId,
-        situacao: propertyValue,
-        isActive,
-        updatedEmails
+    // ── Handle data_de_nascimento__socio_principal ──
+    if (propertyName === 'data_de_nascimento__socio_principal') {
+        // HubSpot sends dates as YYYY-MM-DD or as a timestamp at midnight UTC
+        let birthDateStr: string | null = null
+
+        if (propertyValue) {
+            // If it looks like a timestamp (all digits), convert UTC-safe
+            if (/^\d{13,}$/.test(propertyValue)) {
+                const d = new Date(Number(propertyValue))
+                birthDateStr = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+            } else if (/^\d{4}-\d{2}-\d{2}/.test(propertyValue)) {
+                // Already YYYY-MM-DD format — extract just the date part
+                birthDateStr = propertyValue.substring(0, 10)
+            } else {
+                console.warn(`⚠️ Unexpected birth_date format: ${propertyValue}`)
+            }
+        }
+
+        console.log(`🎂 Deal ${dealId}: birth_date = '${birthDateStr}'`)
+
+        const updatedEmails: string[] = []
+
+        for (const contactId of contactIds) {
+            try {
+                const contactRes = await fetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
+                    {
+                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                    }
+                )
+
+                if (!contactRes.ok) {
+                    console.warn(`⚠️ Failed to fetch contact ${contactId}`)
+                    continue
+                }
+
+                const contact = await contactRes.json()
+                const email = contact.properties?.email
+                if (!email) continue
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        birth_date: birthDateStr,
+                        updated_at: new Date().toISOString()
+                    })
+                    .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
+
+                if (updateError) {
+                    console.error(`❌ Failed to update birth_date for ${email}:`, updateError)
+                } else {
+                    updatedEmails.push(email)
+                    console.log(`✅ birth_date updated: ${email} → ${birthDateStr}`)
+                }
+            } catch (err) {
+                console.error(`❌ Error processing contact ${contactId}:`, err)
+            }
+        }
+
+        return {
+            success: true,
+            action: 'deal_birth_date_updated',
+            dealId,
+            birthDate: birthDateStr,
+            updatedEmails
+        }
     }
+
+    return { success: true, action: 'no_op', dealId }
 }
 
 // ─── Main Handler ────────────────────────────────────────────────
