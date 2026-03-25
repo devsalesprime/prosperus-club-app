@@ -8,6 +8,7 @@ import {
     Building2,
     Phone,
     FileText,
+    Calendar,
 } from 'lucide-react';
 import { ProfileUpdateData } from '../../services/profileService';
 
@@ -85,6 +86,21 @@ export const ProfileBasicFields: React.FC<ProfileBasicFieldsProps> = ({
                             onChange={(e) => onChange('phone', e.target.value)}
                             placeholder="+55 11 99999-9999"
                             className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-white mb-2">
+                        Data de Aniversário
+                    </label>
+                    <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="date"
+                            value={formData.birth_date || ''}
+                            onChange={(e) => onChange('birth_date', e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition [color-scheme:dark]"
                         />
                     </div>
                 </div>

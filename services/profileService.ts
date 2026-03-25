@@ -66,6 +66,7 @@ export interface ProfileUpdateData {
     what_i_need?: string;
     partnership_interests?: string[];
     phone?: string;
+    birth_date?: string | null;
 }
 
 class ProfileService {
