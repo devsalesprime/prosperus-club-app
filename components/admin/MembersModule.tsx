@@ -6,9 +6,10 @@
 
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity, CalendarDays, BarChart3, Filter } from 'lucide-react';
+import { Edit, Trash2, PlaySquare, RefreshCw, Search, X, Download, ChevronLeft, ChevronRight, Clock, Activity, CalendarDays, BarChart3, Filter, Shield, UserCheck, UserX } from 'lucide-react';
 import { UserActivityDetail } from './UserActivityDetail';
 import { adminMemberService, MemberRow } from '../../services/adminMemberService';
+import { AdminBulkActionBar } from '../shared/AdminBulkActionBar';
 import {
     AdminPageHeader,
     AdminModal,
@@ -54,6 +55,11 @@ export const MembersModule: React.FC = () => {
 
     // Activity Detail state
     const [activityMember, setActivityMember] = useState<MemberRow | null>(null);
+
+    // ─── Bulk Selection State ──────────────────────────────────
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkRoleModalOpen, setBulkRoleModalOpen] = useState(false);
+    const [bulkRole, setBulkRole] = useState('MEMBER');
 
     // ============================================
     // DATA LOADING — via adminMemberService
@@ -338,6 +344,55 @@ export const MembersModule: React.FC = () => {
     // Server-side pagination — totalPages based on server count
     const totalPages = Math.max(1, Math.ceil(totalMembers / pageSize));
 
+    // ─── Bulk Selection Handlers ───────────────────────────────
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === filteredMembers.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(filteredMembers.map(m => m.id)));
+        }
+    };
+
+    const handleBulkRole = async () => {
+        if (selectedIds.size === 0) return;
+        setBulkRoleModalOpen(false);
+        const ids = Array.from(selectedIds);
+        await toast.promise(
+            adminMemberService.bulkUpdateRole(ids, bulkRole),
+            {
+                loading: `Alterando role de ${ids.length} membros...`,
+                success: (r) => `${r.success} alterados${r.failed ? `, ${r.failed} falharam` : ''}`,
+                error: 'Erro na operação em lote',
+            }
+        );
+        setSelectedIds(new Set());
+        loadMembers();
+    };
+
+    const handleBulkActivate = async (activate: boolean) => {
+        if (selectedIds.size === 0) return;
+        const ids = Array.from(selectedIds);
+        const label = activate ? 'Ativando' : 'Desativando';
+        await toast.promise(
+            adminMemberService.bulkToggleActive(ids, activate),
+            {
+                loading: `${label} ${ids.length} membros...`,
+                success: (r) => `${r.success} ${activate ? 'ativados' : 'desativados'}${r.failed ? `, ${r.failed} falharam` : ''}`,
+                error: 'Erro na operação em lote',
+            }
+        );
+        setSelectedIds(new Set());
+        loadMembers();
+    };
+
     return (
         <div className="space-y-6">
             <AdminPageHeader
@@ -454,6 +509,15 @@ export const MembersModule: React.FC = () => {
                 <table className="w-full min-w-[800px] text-left text-sm text-slate-400 whitespace-nowrap">
                     <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
                         <tr>
+                            <th className="px-3 py-4 w-10">
+                                <input
+                                    type="checkbox"
+                                    checked={filteredMembers.length > 0 && selectedIds.size === filteredMembers.length}
+                                    onChange={toggleSelectAll}
+                                    className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-yellow-500 focus:ring-yellow-600/20 cursor-pointer"
+                                    title="Selecionar todos"
+                                />
+                            </th>
                             <th className="px-6 py-4">Usuário</th>
                             <th className="px-6 py-4">Email</th>
                             <th className="px-6 py-4">Empresa</th>
@@ -466,7 +530,15 @@ export const MembersModule: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-800">
                         {filteredMembers.map((member) => (
-                            <tr key={member.id} className="hover:bg-slate-800/50 transition-colors">
+                            <tr key={member.id} className={`hover:bg-slate-800/50 transition-colors ${selectedIds.has(member.id) ? 'bg-yellow-900/10' : ''}`}>
+                                <td className="px-3 py-4 w-10">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.has(member.id)}
+                                        onChange={() => toggleSelect(member.id)}
+                                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-yellow-500 focus:ring-yellow-600/20 cursor-pointer"
+                                    />
+                                </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <img src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={member.name} className="w-10 h-10 rounded-full object-cover border border-slate-700" />
@@ -523,7 +595,7 @@ export const MembersModule: React.FC = () => {
                         ))}
                         {filteredMembers.length === 0 && (
                             <tr>
-                                <td colSpan={8} className="px-6 py-8 text-center text-slate-600">
+                                <td colSpan={9} className="px-6 py-8 text-center text-slate-600">
                                     {searchTerm || roleFilter !== 'ALL'
                                         ? 'Nenhum membro encontrado com esses filtros.'
                                         : 'Nenhum membro cadastrado.'}
@@ -670,6 +742,62 @@ export const MembersModule: React.FC = () => {
                     userImage={activityMember.image_url || null}
                     onClose={() => setActivityMember(null)}
                 />
+            )}
+
+            {/* ============================================ */}
+            {/* BULK ACTION BAR (floating) */}
+            {/* ============================================ */}
+            <AdminBulkActionBar
+                count={selectedIds.size}
+                onClear={() => setSelectedIds(new Set())}
+                actions={[
+                    {
+                        label: 'Alterar Role',
+                        icon: <Shield size={14} />,
+                        variant: 'primary',
+                        onClick: () => setBulkRoleModalOpen(true),
+                    },
+                    {
+                        label: 'Ativar',
+                        icon: <UserCheck size={14} />,
+                        variant: 'success',
+                        onClick: () => handleBulkActivate(true),
+                    },
+                    {
+                        label: 'Desativar',
+                        icon: <UserX size={14} />,
+                        variant: 'danger',
+                        onClick: () => handleBulkActivate(false),
+                    },
+                ]}
+            />
+
+            {/* Bulk Role Change Modal */}
+            {bulkRoleModalOpen && (
+                <AdminModal title={`Alterar Role de ${selectedIds.size} membros`} onClose={() => setBulkRoleModalOpen(false)}>
+                    <div className="space-y-4">
+                        <select
+                            value={bulkRole}
+                            onChange={(e) => setBulkRole(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 outline-none focus:border-yellow-600 transition"
+                        >
+                            <option value="MEMBER">Sócio</option>
+                            <option value="ACCOUNT_MANAGER">Account Manager</option>
+                            <option value="CEO">CEO</option>
+                            <option value="MANAGER">Gestora</option>
+                            <option value="TEAM">Time Interno</option>
+                            <option value="ADMIN">Administrador</option>
+                        </select>
+                        <div className="flex justify-end gap-3">
+                            <button onClick={() => setBulkRoleModalOpen(false)} className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition">
+                                Cancelar
+                            </button>
+                            <button onClick={handleBulkRole} className="px-4 py-2 rounded-lg bg-yellow-600 text-white font-medium hover:bg-yellow-500 transition">
+                                Aplicar
+                            </button>
+                        </div>
+                    </div>
+                </AdminModal>
             )}
         </div>
     );

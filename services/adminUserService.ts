@@ -4,6 +4,7 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 import { isAbortError } from '../utils/isAbortError';
+import { auditLogService } from './auditLogService';
 
 export interface UserProfile {
     id: string;
@@ -139,9 +140,20 @@ class AdminUserService {
             throw new Error('Update failed: no rows affected. Check RLS policies on profiles table.');
         }
 
-        // Log de auditoria (console)
-        const action = newBlockedStatus ? 'BLOCKED' : 'UNBLOCKED';
-        logger.info(`📝 AUDIT: Admin ${adminId} ${action} user ${userId} (${currentProfile.name}) at ${new Date().toISOString()}${reason ? ` - Reason: ${reason}` : ''}`);
+        // Log de auditoria persistente (banco)
+        const action = newBlockedStatus ? 'BLOCK_USER' : 'UNBLOCK_USER';
+        logger.info(`📝 AUDIT: Admin ${adminId} ${action} user ${userId} (${currentProfile.name})`);
+        auditLogService.log({
+            action,
+            entityType: 'member',
+            entityId: userId,
+            details: {
+                memberName: currentProfile.name,
+                previousStatus: isCurrentlyBlocked ? 'blocked' : 'active',
+                newStatus: newBlockedStatus ? 'blocked' : 'active',
+                reason: reason || null,
+            },
+        });
 
         return {
             success: true,

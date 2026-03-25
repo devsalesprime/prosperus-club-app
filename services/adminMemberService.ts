@@ -6,6 +6,7 @@
 
 import { supabase } from '../lib/supabase';
 import { isAbortError } from '../utils/isAbortError';
+import { auditLogService } from './auditLogService';
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export interface MemberRow {
     image_url: string | null;
     created_at: string;
     pitch_video_url?: string | null;
+    is_active?: boolean;
 }
 
 export interface MemberListResult {
@@ -55,7 +57,7 @@ class AdminMemberService {
 
         const { data, error, count } = await supabase
             .from('profiles')
-            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url', { count: 'exact' })
+            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url, is_active', { count: 'exact' })
             .order('created_at', { ascending: false })
             .range(from, to);
 
@@ -152,9 +154,10 @@ class AdminMemberService {
     }
 
     /**
-     * Update a member's profile fields (e.g. pitch_video_url).
+     * Update a member's profile fields (e.g. pitch_video_url, role).
+     * Audit-logged.
      */
-    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url' | 'role'>>): Promise<void> {
+    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url' | 'role'>>,): Promise<void> {
         const { error } = await supabase
             .from('profiles')
             .update({ ...updates, updated_at: new Date().toISOString() })
@@ -165,12 +168,26 @@ class AdminMemberService {
             console.error('Error updating member:', error);
             throw new Error(error.message || 'Erro ao atualizar membro');
         }
+
+        auditLogService.log({
+            action: 'UPDATE_MEMBER',
+            entityType: 'member',
+            entityId: memberId,
+            details: { updates },
+        });
     }
 
     /**
-     * Delete a member profile.
+     * Delete a member profile. Audit-logged.
      */
     async deleteMember(memberId: string): Promise<void> {
+        // Fetch name before deleting for audit trail
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', memberId)
+            .single();
+
         const { error } = await supabase
             .from('profiles')
             .delete()
@@ -181,7 +198,88 @@ class AdminMemberService {
             console.error('Error deleting member:', error);
             throw new Error(error.message || 'Erro ao remover membro');
         }
+
+        auditLogService.log({
+            action: 'DELETE_MEMBER',
+            entityType: 'member',
+            entityId: memberId,
+            details: {
+                memberName: profile?.name || 'unknown',
+                memberEmail: profile?.email || 'unknown',
+            },
+        });
+    }
+
+    // ─── Bulk Operations ──────────────────────────────────────────
+
+    /**
+     * Update role for multiple members at once.
+     */
+    async bulkUpdateRole(memberIds: string[], newRole: string): Promise<{ success: number; failed: number }> {
+        let success = 0;
+        let failed = 0;
+
+        await Promise.all(
+            memberIds.map(async (id) => {
+                try {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ role: newRole, updated_at: new Date().toISOString() })
+                        .eq('id', id);
+                    if (error) throw error;
+                    success++;
+                } catch {
+                    failed++;
+                }
+            })
+        );
+
+        auditLogService.logBatch(
+            memberIds.map(id => ({
+                action: 'BULK_UPDATE_ROLE',
+                entityType: 'member',
+                entityId: id,
+                details: { newRole },
+            }))
+        );
+
+        return { success, failed };
+    }
+
+    /**
+     * Toggle is_active for multiple members at once.
+     */
+    async bulkToggleActive(memberIds: string[], isActive: boolean): Promise<{ success: number; failed: number }> {
+        let success = 0;
+        let failed = 0;
+
+        await Promise.all(
+            memberIds.map(async (id) => {
+                try {
+                    const { error } = await supabase
+                        .from('profiles')
+                        .update({ is_active: isActive, updated_at: new Date().toISOString() })
+                        .eq('id', id);
+                    if (error) throw error;
+                    success++;
+                } catch {
+                    failed++;
+                }
+            })
+        );
+
+        auditLogService.logBatch(
+            memberIds.map(id => ({
+                action: isActive ? 'BULK_ACTIVATE' : 'BULK_DEACTIVATE',
+                entityType: 'member',
+                entityId: id,
+                details: { isActive },
+            }))
+        );
+
+        return { success, failed };
     }
 }
 
 export const adminMemberService = new AdminMemberService();
+
