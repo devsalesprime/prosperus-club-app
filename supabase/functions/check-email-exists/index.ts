@@ -6,7 +6,7 @@
 // Uses SUPABASE_SERVICE_ROLE_KEY (server-side only — never exposed to client)
 // Deployment: supabase functions deploy check-email-exists
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',

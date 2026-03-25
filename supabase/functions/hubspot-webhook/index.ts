@@ -17,7 +17,7 @@
  * - contact.deletion → Soft-delete: is_active = false
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!

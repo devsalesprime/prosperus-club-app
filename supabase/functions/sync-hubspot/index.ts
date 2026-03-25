@@ -14,7 +14,7 @@
  * 3. Save hubspot_contact_id back to Supabase
  */
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
