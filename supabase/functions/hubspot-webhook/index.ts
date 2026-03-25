@@ -3,7 +3,7 @@
 /**
  * Supabase Edge Function: hubspot-webhook
  * 
- * Purpose: Receive webhooks from HubSpot when contacts are created, updated, or deleted
+ * Purpose: Receive webhooks from HubSpot when contacts/deals are created, updated, or deleted
  * Direction: HubSpot → App (inbound)
  * 
  * Security:
@@ -15,6 +15,7 @@
  * - contact.creation → Create Supabase Auth user + profile
  * - contact.propertyChange → Update profile fields, lifecycle determines is_active
  * - contact.deletion → Soft-delete: is_active = false
+ * - deal.propertyChange → When situacao_do_negocio changes, update associated contacts' is_active
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
@@ -265,6 +266,100 @@ async function handleContactDeleted(objectId: string) {
     return { success: true, action: 'deactivated', email }
 }
 
+// ─── Deal Property Changed ──────────────────────────────────────
+// situacao_do_negocio lives on the Deal object, not Contact.
+// When it changes, we fetch the deal's associated contacts and update is_active.
+
+async function handleDealPropertyChange(eventData: any) {
+    const dealId = String(eventData.objectId)
+    const propertyName = eventData.propertyName || ''
+    const propertyValue = (eventData.propertyValue || '').toLowerCase()
+
+    // Only react to situacao_do_negocio changes
+    if (propertyName !== 'situacao_do_negocio') {
+        console.log(`⏭️ Deal property '${propertyName}' ignored (not situacao_do_negocio)`)
+        return { success: true, action: 'ignored_property', dealId, propertyName }
+    }
+
+    const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue)
+    console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
+
+    // Fetch associated contacts from HubSpot
+    const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_API_KEY') || HUBSPOT_CLIENT_SECRET
+    const assocRes = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/deals/${dealId}/associations/contacts`,
+        {
+            headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+        }
+    )
+
+    if (!assocRes.ok) {
+        const errText = await assocRes.text()
+        console.error('❌ Failed to fetch deal associations:', errText)
+        return { success: false, reason: `HubSpot associations API error: ${assocRes.status}` }
+    }
+
+    const assocData = await assocRes.json()
+    const contactIds: string[] = (assocData.results || []).map((r: any) => String(r.id))
+
+    if (contactIds.length === 0) {
+        console.log(`⚠️ Deal ${dealId} has no associated contacts`)
+        return { success: true, action: 'no_contacts', dealId }
+    }
+
+    console.log(`👥 Deal ${dealId} associated with ${contactIds.length} contact(s): ${contactIds.join(', ')}`)
+
+    // Fetch contact emails from HubSpot to match with our profiles
+    const updatedEmails: string[] = []
+
+    for (const contactId of contactIds) {
+        try {
+            const contactRes = await fetch(
+                `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
+                {
+                    headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                }
+            )
+
+            if (!contactRes.ok) {
+                console.warn(`⚠️ Failed to fetch contact ${contactId}`)
+                continue
+            }
+
+            const contact = await contactRes.json()
+            const email = contact.properties?.email
+            if (!email) continue
+
+            // Update profile in Supabase
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    is_active: isActive,
+                    updated_at: new Date().toISOString()
+                })
+                .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
+
+            if (updateError) {
+                console.error(`❌ Failed to update profile for ${email}:`, updateError)
+            } else {
+                updatedEmails.push(email)
+                console.log(`✅ Profile updated: ${email} → is_active: ${isActive}`)
+            }
+        } catch (err) {
+            console.error(`❌ Error processing contact ${contactId}:`, err)
+        }
+    }
+
+    return {
+        success: true,
+        action: 'deal_status_updated',
+        dealId,
+        situacao: propertyValue,
+        isActive,
+        updatedEmails
+    }
+}
+
 // ─── Main Handler ────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -324,6 +419,9 @@ Deno.serve(async (req: Request) => {
                 results.push(result)
             } else if (type.includes('contact.deletion')) {
                 const result = await handleContactDeleted(String(event.objectId))
+                results.push(result)
+            } else if (type.includes('deal.propertyChange')) {
+                const result = await handleDealPropertyChange(event)
                 results.push(result)
             } else {
                 console.log(`⏭️ Ignored event type: ${type}`)
