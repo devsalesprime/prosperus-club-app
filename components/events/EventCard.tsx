@@ -106,7 +106,7 @@ const HeroCard: React.FC<{ event: ClubEvent; onClick: () => void; onViewAgenda?:
                         <Video size={16} className="mr-1.5 shrink-0 text-emerald-400" />
                     )}
                     <span className="truncate font-medium">
-                        {event.location || event.link || 'Link disponível após inscrição'}
+                        {event.location || (event.category !== 'PRESENTIAL' ? 'Evento Online' : 'Local a confirmar')}
                     </span>
                 </div>
             </div>

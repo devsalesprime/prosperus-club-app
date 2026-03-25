@@ -18,6 +18,7 @@ type LoginStep =
     | 'password'       // Known user with password → login
     | 'first-access'   // HubSpot user, no password yet → create
     | 'not-found'      // Email not in profiles AND not in HubSpot
+    | 'blocked'        // User exists but is_active=false (situação ≠ Ativo)
     | 'forgot';        // Password recovery view
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,6 +50,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     // Cleanup debounce on unmount
     useEffect(() => () => clearTimeout(debounceRef.current), []);
 
+    // Check if user was kicked out due to is_active=false
+    useEffect(() => {
+        const blockedEmail = localStorage.getItem('prosperus_blocked_email');
+        if (blockedEmail) {
+            localStorage.removeItem('prosperus_blocked_email');
+            setEmail(blockedEmail);
+            setStep('blocked');
+        }
+    }, []);
+
     if (!isOpen) return null;
 
     // ── Auto-check email (debounced) ──────────────────────────
@@ -70,6 +81,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             if (fnError) throw fnError;
 
             if (data?.exists) {
+                // Check if account is blocked
+                if (data.is_active === false) {
+                    setStep('blocked');
+                    return;
+                }
+
                 // User found in profiles
                 // has_password defaults to true for backward compatibility
                 // (old edge function returns only { exists } without has_password)
@@ -353,7 +370,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                     w-full bg-slate-950 rounded-xl px-4 py-3.5 pr-10
                                     text-white placeholder-slate-600
                                     focus:outline-none transition-all
-                                    border ${step === 'not-found'
+                                    border ${step === 'not-found' || step === 'blocked'
                                         ? 'border-red-500/50'
                                         : showPasswordFields
                                             ? 'border-emerald-500/50'
@@ -369,7 +386,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 {showPasswordFields && (
                                     <span className="text-emerald-400 text-base leading-none">✓</span>
                                 )}
-                                {step === 'not-found' && (
+                                {(step === 'not-found' || step === 'blocked') && (
                                     <span className="text-red-400 text-base leading-none">✕</span>
                                 )}
                             </div>
@@ -436,6 +453,28 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                                 </button>
                             )}
                         </div>
+
+                        {/* ── Blocked user message ──────────────── */}
+                        {step === 'blocked' && (
+                            <div className="text-center py-4 animate-in fade-in duration-200">
+                                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-3">
+                                    <p className="text-sm text-red-400 font-semibold mb-1">
+                                        🚫 E-mail bloqueado na plataforma
+                                    </p>
+                                    <p className="text-xs text-slate-400">
+                                        Favor entrar em contato com o suporte:
+                                    </p>
+                                </div>
+                                <a
+                                    href="https://wa.me/5511918236211"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-5 py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/20"
+                                >
+                                    💬 Falar com o Suporte
+                                </a>
+                            </div>
+                        )}
 
                         {/* ── Not found message ────────────────── */}
                         {step === 'not-found' && (

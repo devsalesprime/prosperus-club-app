@@ -49,6 +49,8 @@ const AppShell: React.FC = () => {
     const {
         authContextLoading,
         isPasswordRecovery,
+        isBlocked,
+        blockedEmail,
         session,
         showRoleSelector,
         pendingUser,
@@ -62,6 +64,7 @@ const AppShell: React.FC = () => {
         setView,
         handleLoginSuccess,
         handleRoleSelection,
+        handleLogout,
         tour,
         refreshProfile
     } = useApp();
@@ -92,6 +95,46 @@ const AppShell: React.FC = () => {
             tour.checkPendingReplay();
         }
     }, [currentUser, showOnboarding, authContextLoading]);
+
+    // ─── Guard 0: Blocked User ───────────────────────
+    if (isBlocked) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+                <div className="bg-slate-900 border border-slate-700 w-full max-w-md p-8 rounded-2xl shadow-2xl text-center">
+                    <img
+                        src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg"
+                        alt="Prosperus Logo"
+                        className="h-12 mx-auto mb-6"
+                    />
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-5 mb-6">
+                        <p className="text-lg text-red-400 font-semibold mb-2">
+                            🚫 E-mail bloqueado na plataforma
+                        </p>
+                        {blockedEmail && (
+                            <p className="text-sm text-slate-500 mb-3 font-mono">{blockedEmail}</p>
+                        )}
+                        <p className="text-sm text-slate-400">
+                            Favor entrar em contato com o suporte:
+                        </p>
+                    </div>
+                    <a
+                        href="https://wa.me/5511918236211"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-900/20 mb-4 w-full justify-center"
+                    >
+                        💬 Falar com o Suporte
+                    </a>
+                    <button
+                        onClick={handleLogout}
+                        className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                        Sair da conta
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // ─── Guard 1: Auth Loading ───────────────────────
     if (authContextLoading) {

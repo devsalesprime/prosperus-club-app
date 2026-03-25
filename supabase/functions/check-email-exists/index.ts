@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
         // 1. Check if email exists in profiles table
         const { data: profile, error } = await supabaseAdmin
             .from('profiles')
-            .select('id')
+            .select('id, is_active')
             .eq('email', normalizedEmail)
             .maybeSingle()
 
@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
         }
 
         return new Response(
-            JSON.stringify({ exists: true, has_password: hasPassword }),
+            JSON.stringify({ exists: true, has_password: hasPassword, is_active: profile.is_active !== false }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
 

@@ -22,6 +22,7 @@ export interface ProfileData {
     };
     tags?: string[];
     is_featured?: boolean;
+    is_active?: boolean; // Access control: false = blocked
     exclusive_benefit?: ExclusiveBenefit | null;
     has_completed_onboarding?: boolean;
     pitch_video_url?: string; // URL do vídeo de pitch (YouTube, Vimeo, Drive, Loom)
@@ -90,7 +91,7 @@ class ProfileService {
             // Create query promise
             const queryPromise = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, is_active, exclusive_benefit, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, created_at, updated_at')
                 .eq('id', userId)
                 .single();
 

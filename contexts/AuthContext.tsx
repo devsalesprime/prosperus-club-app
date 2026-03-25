@@ -14,6 +14,8 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     isPasswordRecovery: boolean;
+    isBlocked: boolean;
+    blockedEmail: string | null;
     refreshProfile: () => Promise<void>;
     logout: () => Promise<void>;
     resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -31,6 +33,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [userProfile, setUserProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
     const mountedRef = useRef(true);
     const profileCacheRef = useRef<ProfileData | null>(null);
     const sessionUserIdRef = useRef<string | null>(null);
@@ -44,6 +48,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (!mountedRef.current) return;
 
             if (profile) {
+                // ── ACCESS GATE: Block inactive users ──
+                if (profile.is_active === false) {
+                    logger.warn('🚫 AuthContext: User blocked (is_active=false):', profile.email);
+                    setIsBlocked(true);
+                    setBlockedEmail(profile.email);
+                    setUserProfile(null);
+                    profileCacheRef.current = null;
+                    return;
+                }
+
                 logger.debug('✅ AuthContext: Profile loaded:', profile.name);
                 setUserProfile(profile);
                 profileCacheRef.current = profile;
@@ -123,6 +137,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUserProfile(null);
             profileCacheRef.current = null;
             setIsPasswordRecovery(false);
+            setIsBlocked(false);
+            setBlockedEmail(null);
         } catch (error) {
             logger.error('❌ AuthContext: Error during logout:', error);
         }
@@ -256,6 +272,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setUserProfile(null);
                 profileCacheRef.current = null;
                 setIsPasswordRecovery(false);
+                setIsBlocked(false);
+                setBlockedEmail(null);
             }
         });
 
@@ -273,6 +291,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading,
         isAuthenticated: !!session && !!userProfile,
         isPasswordRecovery,
+        isBlocked,
+        blockedEmail,
         refreshProfile,
         logout,
         resetPassword,

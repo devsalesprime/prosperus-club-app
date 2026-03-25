@@ -92,6 +92,8 @@ export interface AppContextType {
     authContextLoading: boolean;
     isAuthenticated: boolean;
     isPasswordRecovery: boolean;
+    isBlocked: boolean;
+    blockedEmail: string | null;
     refreshProfile: (() => Promise<void>) | undefined;
 }
 
@@ -112,7 +114,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoading: authContextLoading,
         isAuthenticated,
         refreshProfile,
-        isPasswordRecovery
+        isPasswordRecovery,
+        isBlocked,
+        blockedEmail
     } = useAuth();
 
     // ─── Profile Conversion ──────────────────────────
@@ -507,7 +511,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         calendarDefaultView,
         tour, tourSteps,
         authContextLoading, isAuthenticated,
-        isPasswordRecovery, refreshProfile
+        isPasswordRecovery, isBlocked, blockedEmail, refreshProfile
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -27,8 +27,8 @@ const APP_URL = Deno.env.get('APP_URL') || 'https://app.prosperusclub.com.br'
 // Supabase client with service role (bypasses RLS)
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
-// Lifecycle stages that indicate an active member
-const ACTIVE_LIFECYCLE_STAGES = ['customer', 'evangelist', 'other']
+// Business statuses from custom HubSpot property 'situacao_do_negocio'
+const ACTIVE_BUSINESS_STATUSES = ['ativo']
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -96,7 +96,7 @@ async function handleContactCreatedOrUpdated(eventData: any) {
     // Fetch full contact from HubSpot API
     const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_API_KEY') || HUBSPOT_CLIENT_SECRET
     const contactRes = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${objectId}?properties=email,firstname,lastname,company,jobtitle,phone,lifecyclestage`,
+        `https://api.hubapi.com/crm/v3/objects/contacts/${objectId}?properties=email,firstname,lastname,company,jobtitle,phone,lifecyclestage,situacao_do_negocio`,
         {
             headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
         }
@@ -118,15 +118,15 @@ async function handleContactCreatedOrUpdated(eventData: any) {
     const company = props.company || ''
     const jobTitle = props.jobtitle || ''
     const phone = props.phone || ''
-    const lifecycle = (props.lifecyclestage || '').toLowerCase()
-    const isActive = ACTIVE_LIFECYCLE_STAGES.includes(lifecycle)
+    const situacao = (props.situacao_do_negocio || '').toLowerCase()
+    const isActive = ACTIVE_BUSINESS_STATUSES.includes(situacao)
     const hubspotId = String(contact.id)
 
     if (!email) {
         return { success: false, reason: 'Contact has no email' }
     }
 
-    console.log('📋 Processing contact:', { email, fullName, lifecycle, isActive, hubspotId })
+    console.log('📋 Processing contact:', { email, fullName, situacao, isActive, hubspotId })
 
     // Check if profile already exists by hubspot_contact_id or email
     const { data: existingProfile } = await supabase
