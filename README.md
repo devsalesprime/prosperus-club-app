@@ -1,114 +1,183 @@
 <div align="center">
-  <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus Club Logo" width="120" />
-  <h1>Prosperus Club App</h1>
-  <p><strong>Plataforma Premium e Exclusiva para Membros de Clubes de Negócios</strong></p>
-  <p><i>Versão 3.2.0 — "The Golden Crown"</i></p>
+
+# 👑 Prosperus Club App
+
+**Plataforma Digital Premium e Exclusiva para Membros de Clubes de Negócios**
+
+[![Version](https://img.shields.io/badge/version-3.2.0-CA9A43?style=for-the-badge&logo=rocket&logoColor=white)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-031A2B?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.2-031A2B?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-031A2B?style=for-the-badge&logo=tailwindcss&logoColor=38B2AC)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+
+O **Prosperus Club App** é um *Progressive Web App* (PWA) de alto padrão, arquitetado para orquestrar o ecossistema de um clube de negócios fechado. A plataforma resolve a dor da fragmentação corporativa, centralizando networking, consumo de conteúdo, eventos e rastreabilidade financeira em um ambiente unificado, seguro e com design *premium*.
+
 </div>
 
 ---
 
-## 🌟 Visão Geral
+## 📱 1. Visão Geral do Produto
 
-O **Prosperus Club App** é uma Progressive Web App (PWA) de alto nível projetada para proporcionar uma experiência de elite aos seus sócios. Focada em performance, segurança e usabilidade *Mobile-First*, a plataforma engloba desde networking inteligente (Member's Book, Chat Online) até ferramentas financeiras (Calculadora de ROI, Central de Indicações) e gestão da diretoria (Painel Admin).
+O sistema é estruturado em duas frentes com controles estritos de acesso via *Row-Level Security* (RLS) e hierarquia de papéis (`MEMBER`, `TEAM`, `ADMIN`):
 
-A arquitetura do projeto é orientada à **Clean Architecture** e ao design **Premium Dark Mode**, pautado no princípio de "Zero Fricção" e *Optimistic UI*.
+### 🤵 Experiência do Sócio (Member App)
+* **Hub de Negócios (Business Core):** Funil completo para envio/recebimento de Indicações (*Referrals*) e registro de Negócios Fechados (*Deals*) auditados, gerando Rankings de performance em tempo real.
+* **Networking Premium:** Diretório de membros com busca avançada, perfis ricos e Chat 1-a-1 em tempo real com *typing indicators* e recibos de leitura.
+* **Eventos & Agenda:** Calendário interativo com RSVP de um clique, ingressos digitais via QR Code e check-in silencioso integrado ao Zoom para eventos virtuais.
+* **Academy & Conteúdo:** Player multimídia nativo (YouTube, Vimeo, CursEduca) com tracking de progresso, biblioteca de arquivos e portal de Artigos.
+* **Aha Moments (UX Emocional):** Homenagens de aniversário em *Full-Screen* (Formato Stories) com transições *Optimistic UI*, sincronizadas nativamente com o CRM.
 
----
-
-## 🏗️ Stack Tecnológica
-
-* **Frontend:** React 18.2, TypeScript 5.8
-* **Styling & UI:** Tailwind CSS v4, Lucide React, React Hot Toast
-* **Build Tool:** Vite 6, vite-plugin-pwa
-* **State & Data Fetching:** React Context API, React Query v5
-* **Backend as a Service:** Supabase (PostgreSQL, Auth, Storage, Realtime)
-* **Serverless Functions:** Deno (Supabase Edge Functions)
-* **Integrações:** HubSpot CRM (Webhooks), Web Push Notifications, Zoom
-
----
-
-## 🚀 Novidades da Versão 3.2.0 (The Golden Crown)
-
-Esta versão focou em **Performance Extrema (WPO), Compliance e Experiência do Sócio**.
-
-* **Performance em Escala (FCP e LCP Instantâneos):** 
-  Implementação rigorosa de Code Splitting com `React.lazy`, extração de dependências pesadas (`manualChunks` no Rollup/Vite) e *Edge Transformations* do Supabase (conversão on-the-fly para formato `WebP`), mitigando completamente o bloqueio da Main Thread.
-* **Sistema de Celebração Premium:** 
-  Homenagens automáticas aos sócios na data do aniversário. O *app* apresenta um cartão fullscreen animado de felicitações, perfeitamente sincronizado em tempo real (UTC-safe).
-* **Smart Login Flow:** 
-  Identificação inteligente no banco nativo utilizando *debounce* associado à sincronização "3-Way" com os pipelines do HubSpot CRM.
-* **Architecture Compliance (Zero Type Errors):** 
-  Separação estrita de responsabilidades (SoC). Nenhuma *query* ao banco de dados reside na UI; 100% dos fluxos de dados estão isolados em `/services`. Auditoria estrita contra a inferência `any` garantindo robustez de *Enterprise-Grade*.
+### 🛡️ Experiência da Diretoria (Admin Dashboard)
+* **Smart Login & Compliance:** Acesso validado em tempo real com o CRM (HubSpot). Sócios inativos ou inadimplentes perdem acesso automaticamente (`situacao_do_negocio`).
+* **Analytics & BI Avançado:** Painéis interativos construídos com `Recharts` detalhando engajamento por benefício, ROI auditado, taxa de *churn*, acessos diários e funil de vendas.
+* **Gestão em Massa (Bulk Actions):** Produtividade multiplicada em 10x com ações em lote para alterar cargos, ativar ou inativar dezenas de usuários simultaneamente.
+* **Exportação Universal:** Geração de relatórios CSV nativos com codificação UTF-8 BOM (garantindo 100% de compatibilidade com acentuação no MS Excel).
+* **Comunicação Direcionada:** Motor de envio de *Push Notifications* segmentadas por comportamento (ex: "Apenas Ativos", "Risco de Churn") ou cargo.
+* **Trilha de Auditoria:** Tabela persistente de logs (`admin_audit_log`) rastreando todas as ações críticas da equipe para compliance absoluto.
+* **Omnisearch:** Busca global no cabeçalho (*Typeahead*) para localizar rapidamente Sócios, Negócios e Eventos.
 
 ---
 
-## 💻 Padrões de Desenvolvimento e Engenharia
+## 🏗️ 2. Arquitetura de Software (Clean Architecture)
 
-Para manter a governança arquitetural, todo código desse repositório deve respeitar rigorosamente as seguintes diretrizes documentadas e aplicadas pela nossa IA em contexto portátil (`./.context/*`):
+A base de código foi refatorada para seguir rigorosamente o princípio de **Separação de Conceitos (Separation of Concerns - SoC)**. A regra de ouro do repositório é: **A camada visual (UI) não possui conhecimento sobre a infraestrutura de dados ou queries de banco.**
 
-1. **Zero Queries na View:** Todo o código pertencente à manipulação do Supabase localiza-se estritamente na pasta `services/`.
-2. **Escrita Typesafe Strict:** É proibida a tipagem `any` global ou bypass estático. 
-3. **Design System Source of Truth:** Valores *hardcoded* para cores hexadecimais não são permitidos. Os tokens oficiais via `@theme` no Tailwind (`bg-prosperus-navy`, `text-prosperus-gold`) definem o Dark Mode luxuoso da interface em toda a stack, centralizados através de `docs/DESIGN_SYSTEM.md`.
-4. **Mobile-first Nativo:** No Admin, não utilizamos *scroll horizontal* para tabelas. Toda renderização grande (como o `<AdminTable />`) deve colapsar de forma graciosa (responsiva) para interações baseadas no polegar (`Cards`).
-5. **UI sem Fricção e Acessível:** Nativos da web como alertas intrusivos (`alert()`, `confirm()`) são vetados, e todos os retornos do sistema fluem a partir do gerenciamento de Toast (*react-hot-toast*) e diálogos em modal desenhados para não interferir na navegação do cliente.
-
----
-
-## 📁 Estrutura de Diretórios (Clean Architecture)
-
-A organização das pastas obedece à *Separation of Concerns* (SoC) para isolar lógica de negócios da camada de apresentação:
+### 📂 Estrutura de Diretórios
 
 ```text
 prosperus-club-app/
-├── components/           # Componentes puramente visuais (UI). Nenhuma regra de DB aqui.
-│   ├── admin/            # Telas exclusivas da administração
-│   ├── chat/             # Chat online Realtime
-│   ├── financeiro/      # Relatórios Financeiros e Calculadoras
-│   ├── layout/          # Layout principal e ViewSwitcher (Lazy Loaded)
-│   └── ui/              # Componentes genéricos (Botões, Modais, Tooltips)
-├── services/            # Camada lógica (Data Layer). Interação EXCLUSIVA com o Supabase.
-├── hooks/               # Custom React Hooks para estados complexos agregados
-├── utils/               # Utilitários puros (Formatação, Otimização WebP, Date-Fns)
-├── contexts/            # Gerenciamento de estado global da sessão e mensagens
-├── docs/                # Single Source of Truth para guidelines (DESIGN_SYSTEM.md)
-├── scripts/             # Ferramentas autônomas e scripts de build
-├── supabase/
-│   ├── functions/       # Edge Functions (Deno) integradas com Webhooks e HubSpot
-│   └── migrations/      # Controle rigososo de versão do banco de dados (schema)
-├── tests/               # Cobertura de Testes end-to-end, components e mocks vitais
-└── .context/            # Memória Portátil da IA contendo histórico arquitetural e ADRs
+├── 📁 .context/            # 🤖 DOTCONTEXT: Memória e regras persistentes para IAs
+├── 📁 docs/                # 📄 Documentação (DESIGN_SYSTEM.md etc)
+├── 📁 src/                 # Código Fonte Frontend principal
+│   ├── 📁 components/      # 🧩 Camada de Apresentação (UI Layer). Nenhuma regra de DB aqui.
+│   │   ├── 📁 admin/       # Telas exclusivas da administração (Lazy Loaded)
+│   │   ├── 📁 chat/        # Chat online Realtime
+│   │   ├── 📁 financeiro/  # Relatórios Financeiros e Calculadoras
+│   │   ├── 📁 layout/      # Estruturas base (Sidebar, BottomNav, ViewSwitcher)
+│   │   └── 📁 ui/          # Primitivos padronizados, Error Boundaries e Modais
+│   ├── 📁 contexts/        # 📦 Estado Global (Auth, App, UnreadCount)
+│   ├── 📁 hooks/           # 🎣 Custom Hooks (React Query, Gestures, Realtime, Paginação)
+│   ├── 📁 services/        # ⚙️ Camada de Dados (APIs). Interação EXCLUSIVA com o Supabase
+│   ├── 📁 utils/           # 🧰 Utilitários genéricos e formatações
+│   └── 📄 types.ts         # 🏷️ Interfaces Estritas do TypeScript (Zero `any`)
+├── 📁 scripts/             # Ferramentas autônomas e scripts de build
+├── 📁 supabase/            # Infraestrutura Backend-as-a-Code
+│   ├── 📁 functions/       # 🌩️ Edge Functions Serverless em Deno
+│   └── 📁 migrations/      # 🗄️ Controle rigoroso de versão do banco de dados (schema)
+└── 📄 vite.config.ts       # ⚡ Configuração de Build, PWA e Otimização
+```
+
+### 🧠 Padrões Técnicos Inegociáveis (ADRs)
+
+*   **Zero Queries na UI:** É estritamente proibido utilizar `supabase.from()` dentro de arquivos `.tsx`. Toda a comunicação com o banco reside na pasta `services/`.
+*   **Zero any:** O projeto opera com tipagem estrita. O build exige validação `tsc --noEmit` sem erros.
+*   **Design System & Tailwind v4:** As cores oficiais (Navy, Card, Border, Gold) estão mapeadas via tokens CSS na diretiva `@theme`. O uso de hexadecimais soltos é proibido.
+*   **Mobile-First Real:** O scroll horizontal é proibido. O painel administrativo colapsa tabelas (`<AdminTable>`) em estruturas flexíveis de Cards em resoluções mobile (`md:hidden`).
+*   **Zero Alertas Nativos:** Interrupções como `window.alert()` ou `window.confirm()` são banidas. A plataforma utiliza `react-hot-toast` e modais padronizados (`<AdminConfirmDialog>`).
+*   **Sanitização de Logs:** É proibido o uso de `console.log`/`error` no frontend de produção. Todo log passa pelo utilitário `utils/logger.ts`.
+
+---
+
+## ⚡ 3. Web Performance Optimization (WPO)
+
+O aplicativo foi agressivamente otimizado (Fases 1, 2 e 4 de WPO) para atingir pontuações máximas no Lighthouse, mitigando o TBT (*Total Blocking Time*) e o FCP (*First Contentful Paint*):
+
+*   **Code Splitting & Lazy Loading:** O roteador administrativo (`AdminApp.tsx`) importa dinamicamente suas 17+ rotas via `React.lazy()` e `<Suspense>`, garantindo um bundle inicial microscópico.
+*   **Isolamento de Vendors (`manualChunks`):** Bibliotecas pesadas e imutáveis (React, Supabase, Lucide, Recharts) são extraídas no build do Vite, permitindo cache de longo prazo na CDN e aliviando a Main Thread.
+*   **Anti-FOUC (Flash of Unstyled Content):** Injeção de Resource Hints (`preconnect`, `dns-prefetch`) e tokens nativos diretamente no `index.html` para zerar a tela branca de carregamento.
+*   **Edge Image Transformation (LCP):** Imagens e avatares hospedados no Supabase Storage são transformados dinamicamente no servidor em formato WebP com dimensões exatas (ex: `48x48`), combinados com `loading="lazy"`.
+*   **Resiliência (Error Boundaries):** Falhas isoladas de renderização são capturadas por `<ErrorBoundary>` class-based, oferecendo opções de *fallback* (Tentar Novamente / Recarregar) em vez de crashar a aplicação inteira.
+
+---
+
+## 🔄 4. Integração CRM & Backend (Supabase + HubSpot)
+
+A plataforma opera sob os preceitos de Zero Trust e sincronização 3-Way:
+
+*   **Smart Login Flow:** Toda tentativa de login consulta a API do HubSpot. Se o campo `situacao_do_negocio` constar inativo, o acesso é bloqueado em tempo real (com bypass para admins).
+*   **Webhooks Real-Time:** Alterações no CRM (ex: alteração de data de nascimento) disparam webhooks que atualizam o banco do app em milissegundos. Tratamento UTC-Safe implementado para evitar bugs de *day-shift* (fuso horário).
+*   **Supabase Edge Functions:** Scripts Serverless em TypeScript/Deno garantem a execução segura de disparos de Push, Webhooks e validação de email sem expor chaves ao frontend.
+*   **Row-Level Security (RLS):** Banco de dados PostgreSQL protegido por dezenas de políticas rigorosas, garantindo que membros só vejam o que lhes é permitido e blindando as rotas da Diretoria.
+
+---
+
+## 🛠️ 5. Stack Tecnológica
+
+| Categoria | Tecnologia |
+| :--- | :--- |
+| **Frontend Core** | React 18.2, TypeScript 5.8, Vite 6 |
+| **Estilização & UI** | Tailwind CSS v4, Lucide React (Ícones), React Hot Toast |
+| **PWA & Offline** | vite-plugin-pwa, Workbox, Web Push API |
+| **Data Fetching** | React Query v5 (`@tanstack/react-query`) |
+| **Backend (BaaS)** | Supabase (PostgreSQL, Auth, Storage, Realtime) |
+| **Serverless** | Supabase Edge Functions (Deno) |
+| **Bibliotecas** | `react-hook-form` + zod, `recharts`, `react-big-calendar`, `date-fns` |
+| **Integrações** | HubSpot CRM, Zoom, CursEduca |
+
+---
+
+## 🚀 6. Setup e Desenvolvimento Local
+
+### Pré-requisitos
+*   Node.js (v18+)
+*   NPM ou Yarn
+*   Supabase CLI instalado globalmente (`npm i -g supabase`)
+
+### Passos de Instalação
+
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/sua-org/prosperus-club-app.git
+    cd prosperus-club-app
+    ```
+
+2.  **Instale as dependências:**
+    ```bash
+    npm install
+    ```
+
+3.  **Configure as Variáveis de Ambiente:**
+    Crie um arquivo `.env` (ou `.env.local`) na raiz do projeto baseado no `.env.example`:
+    ```env
+    VITE_SUPABASE_URL=sua_url_do_projeto
+    VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+    ```
+
+4.  **Inicie o Servidor de Desenvolvimento:**
+    ```bash
+    npm run dev
+    ```
+    O aplicativo estará rodando em `http://localhost:5173`.
+
+### Comandos Úteis e Deploy
+
+```bash
+# Verifica tipagem estrita (Garante Zero Erros TypeScript)
+npx tsc --noEmit
+
+# Gera o build otimizado para produção (Nginx/VPS)
+npm run build
+
+# Deploy das Edge Functions (Supabase)
+supabase login
+supabase functions deploy hubspot-webhook --no-verify-jwt
+supabase functions deploy login-socio --no-verify-jwt
+supabase functions deploy check-email-exists --no-verify-jwt
+supabase functions deploy send-push --no-verify-jwt
 ```
 
 ---
 
-## 🚥 Como Executar o Projeto Localmente
+## 🤖 7. AI Context Ready (DotContext)
 
-1. **Clone o repositório:**
-   ```bash
-   git clone https://github.com/seu-usuario/prosperus-club-app.git
-   cd prosperus-club-app
-   ```
+Este repositório está instrumentado com o padrão **DotContext** através da pasta oculta `.context/`. 
 
-2. **Instale as dependências:**
-   ```bash
-   npm install
-   ```
+Ao abrir este projeto em IDEs assistidas por IA (Cursor, Windsurf, GitHub Copilot), o agente inteligente lerá automaticamente as regras arquiteturais (`rules.md`), a identidade visual (`DESIGN_SYSTEM.md`), a persona do Tech Lead (`soul.md`) e o estado atual do progresso (`progress.md`). 
 
-3. **Configure as Variáveis de Ambiente:**
-   Copie `.env.example` para `.env` e preencha as credenciais do seu projeto Supabase:
-   ```env
-   VITE_SUPABASE_URL="sua-url-do-supabase"
-   VITE_SUPABASE_ANON_KEY="sua-chave-anon"
-   ```
-
-4. **Inicie o Servidor de Desenvolvimento:**
-   ```bash
-   npm run dev
-   ```
-   *O aplicativo estará disponível em `http://localhost:5173/`.*
+Isso garante que novos códigos gerados sigam estritamente o princípio de Clean Architecture, utilizem os componentes compartilhados corretos e não introduzam dívidas técnicas ou alucinações.
 
 ---
 
 <div align="center">
-    <p>Construído com inteligência, alta performance e <b>Resolução Estruturada</b>. 🌌🪙</p>
+  <p><em>Proprietário — © Prosperus Club. Todos os direitos reservados.</em></p>
 </div>
