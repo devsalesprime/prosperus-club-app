@@ -54,6 +54,33 @@ Para manter a governança arquitetural, todo código desse repositório deve res
 
 ---
 
+## 📁 Estrutura de Diretórios (Clean Architecture)
+
+A organização das pastas obedece à *Separation of Concerns* (SoC) para isolar lógica de negócios da camada de apresentação:
+
+```text
+prosperus-club-app/
+├── components/           # Componentes puramente visuais (UI). Nenhuma regra de DB aqui.
+│   ├── admin/            # Telas exclusivas da administração
+│   ├── chat/             # Chat online Realtime
+│   ├── financeiro/      # Relatórios Financeiros e Calculadoras
+│   ├── layout/          # Layout principal e ViewSwitcher (Lazy Loaded)
+│   └── ui/              # Componentes genéricos (Botões, Modais, Tooltips)
+├── services/            # Camada lógica (Data Layer). Interação EXCLUSIVA com o Supabase.
+├── hooks/               # Custom React Hooks para estados complexos agregados
+├── utils/               # Utilitários puros (Formatação, Otimização WebP, Date-Fns)
+├── contexts/            # Gerenciamento de estado global da sessão e mensagens
+├── docs/                # Single Source of Truth para guidelines (DESIGN_SYSTEM.md)
+├── scripts/             # Ferramentas autônomas e scripts de build
+├── supabase/
+│   ├── functions/       # Edge Functions (Deno) integradas com Webhooks e HubSpot
+│   └── migrations/      # Controle rigososo de versão do banco de dados (schema)
+├── tests/               # Cobertura de Testes end-to-end, components e mocks vitais
+└── .context/            # Memória Portátil da IA contendo histórico arquitetural e ADRs
+```
+
+---
+
 ## 🚥 Como Executar o Projeto Localmente
 
 1. **Clone o repositório:**
