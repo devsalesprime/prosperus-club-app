@@ -1,0 +1,18 @@
+[module]
+name = "prosperus-club-context"
+version = "3.2.0"
+description = "Contexto central e portátil da IA para o Prosperus Club App"
+
+[permissions]
+read = ["**/*"]
+write = ["components/**/*", "services/**/*", "hooks/**/*", "utils/**/*", "supabase/**/*", ".context/memory/**/*"]
+
+[routes]
+project = "project.toml"
+persona = "soul.md"
+rules = "rules.md"
+ignore = ".contextignore"
+memory = "memory/"
+specs = "specs/"
+skills = "skills/"
+design_system = "../docs/DESIGN_SYSTEM.md"
