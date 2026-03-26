@@ -4,6 +4,7 @@ import fs from 'fs';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import tailwindcss from '@tailwindcss/vite';
 
 /**
  * Vite plugin that stamps __BUILD_TIMESTAMP__ into sw.js during build.
@@ -54,6 +55,7 @@ export default defineConfig(async ({ mode }) => {
       css: false,
     },
     plugins: [
+      tailwindcss(),
       ...devPlugins,
       react(),
       VitePWA({

@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  --color-prosperus-navy: #031A2B;
+  --color-prosperus-card: #0D2E44;
+  --color-prosperus-border: #123F5B;
+  --color-prosperus-gold: #FFDA71;
+  --color-prosperus-gold-dark: #CA9A43;
+  --color-prosperus-white: #FCF7F0;
+  --color-prosperus-grey: #A8B4BC;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-prosperus-navy);
+    color: var(--color-prosperus-white);
+  }
+}
