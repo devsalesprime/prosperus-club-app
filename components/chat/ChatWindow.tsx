@@ -13,6 +13,7 @@ import { useUnreadCountContext } from '../../contexts/UnreadCountContext';
 import { ImageLightbox } from './ImageLightbox';
 import { SwipeableItem } from '../ui/SwipeableItem';
 import { MessageContextMenu } from '../ui/MessageContextMenu';
+import { getOptimizedImageUrl } from '../../utils/imageUtils';
 
 /**
  * Clear OS-level push notifications for a specific conversation tag.
@@ -488,8 +489,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                         style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b, #fbbf24)' }}
                     >
                         <img
-                            src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                            src={getOptimizedImageUrl(otherUserImage, 96) || `${import.meta.env.BASE_URL}default-avatar.svg`}
                             alt={otherUserName}
+                            loading="lazy"
+                            width={40}
+                            height={40}
                             className="w-full h-full rounded-full object-cover border-2 border-slate-900"
                         />
                     </div>
@@ -612,8 +616,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                                         <div className="w-7 shrink-0">
                                             {!isOwn && showAvatar && (
                                                 <img
-                                                    src={otherUserImage || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                    src={getOptimizedImageUrl(otherUserImage, 48) || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                     alt={otherUserName}
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    width={28}
+                                                    height={28}
                                                     className="w-7 h-7 rounded-full object-cover border border-slate-700/50"
                                                 />
                                             )}

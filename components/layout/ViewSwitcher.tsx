@@ -19,17 +19,16 @@ import { useApp } from '../../contexts/AppContext';
 import { profileService } from '../../services/profileService';
 import useAnalytics from '../../hooks/useAnalytics';
 
-// --- Static Imports (Critical Path) ---
-import { NewsList } from '../academy/NewsList';
-import { ArticleReader } from '../academy/ArticleReader';
-import { ProfilePreview } from '../ProfilePreview';
-import { DashboardHome } from '../dashboard/DashboardHome';
-import { MemberBook } from '../MemberBook';
-import { MobileAgendaView } from '../events/MobileAgendaView';
-import { YearlyAgendaView } from '../events/YearlyAgendaView';
-import { EventDetailsModal } from '../events/EventDetailsModal';
-import { BenefitStatsCard } from '../dashboard/BenefitStatsCard';
-import ProfileSection from '../ProfileSection';
+// --- Lazy Imports (Code Splitting) ---
+const NewsList = React.lazy(() => import('../academy/NewsList').then(m => ({ default: m.NewsList })));
+const ArticleReader = React.lazy(() => import('../academy/ArticleReader').then(m => ({ default: m.ArticleReader })));
+const ProfilePreview = React.lazy(() => import('../ProfilePreview').then(m => ({ default: m.ProfilePreview })));
+const DashboardHome = React.lazy(() => import('../dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
+const MemberBook = React.lazy(() => import('../MemberBook').then(m => ({ default: m.MemberBook })));
+const MobileAgendaView = React.lazy(() => import('../events/MobileAgendaView').then(m => ({ default: m.MobileAgendaView })));
+const YearlyAgendaView = React.lazy(() => import('../events/YearlyAgendaView').then(m => ({ default: m.YearlyAgendaView })));
+const EventDetailsModal = React.lazy(() => import('../events/EventDetailsModal').then(m => ({ default: m.EventDetailsModal })));
+const ProfileSection = React.lazy(() => import('../ProfileSection').then(m => ({ default: m.default })));
 
 // --- Lazy Imports (Code Splitting) ---
 const Academy = React.lazy(() => import('../academy/Academy.tsx').then(m => ({ default: m.Academy })));
@@ -50,15 +49,7 @@ import { supabase } from '../../lib/supabase';
 
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// Lazy loading spinner
-const LazyFallback = () => (
-    <div className="flex items-center justify-center p-8 min-h-[200px]">
-        <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-sm text-slate-400">Carregando...</span>
-        </div>
-    </div>
-);
+
 
 export const ViewSwitcher: React.FC = () => {
     const {
@@ -84,7 +75,6 @@ export const ViewSwitcher: React.FC = () => {
 
     return (
         <ErrorBoundary moduleName="aplicativo">
-        <Suspense fallback={<LazyFallback />}>
             {view === ViewState.DASHBOARD && (
                 <DashboardHome
                     currentUser={currentUser!}
@@ -452,7 +442,6 @@ export const ViewSwitcher: React.FC = () => {
                     currentUserId={currentUser.id}
                 />
             )}
-        </Suspense>
         </ErrorBoundary>
     );
 };

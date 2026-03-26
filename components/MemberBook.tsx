@@ -37,6 +37,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { calculateMatch, MatchResult } from '../utils/matchEngine';
 import { COPY } from '../utils/copy';
 import { CardSkeleton } from './ui/CardSkeleton';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 // ─── Match Badge Config ───────────────────────────────────────────
 const MATCH_CONFIG = {
@@ -465,9 +466,14 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                 >
                                     <div className="flex items-start justify-between mb-3">
                                         <img
-                                            src={profile.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                            src={getOptimizedImageUrl(profile.image_url, 96) || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                             alt={profile.name}
+                                            loading="lazy"
+                                            decoding="async"
+                                            width={48}
+                                            height={48}
                                             className="w-12 h-12 rounded-xl object-cover bg-slate-800"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                         />
                                         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-600/15 border border-yellow-600/30">
                                             <Zap size={10} className="text-yellow-500" />
@@ -535,9 +541,11 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                     {/* Banner Header */}
                                     <div className="relative h-24 w-full">
                                         <img
-                                            src={(member as any).banner_url || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
+                                            src={getOptimizedImageUrl((member as any).banner_url, 800) || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
                                             alt=""
-                                            className="w-full h-full object-cover"
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover bg-prosperus-navy"
                                         />
                                         <div className="absolute inset-0 bg-black/20" />
 
@@ -565,9 +573,14 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                         {/* Avatar with badges */}
                                         <div className="relative mb-4">
                                             <img
-                                                src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                src={getOptimizedImageUrl(member.image_url, 200) || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                 alt={member.name}
-                                                className="w-24 h-24 rounded-full border-4 border-slate-900 object-cover group-hover:border-yellow-600/50 transition-colors shadow-lg"
+                                                loading="lazy"
+                                                decoding="async"
+                                                width={96}
+                                                height={96}
+                                                className="w-24 h-24 rounded-full border-4 border-slate-900 object-cover group-hover:border-yellow-600/50 transition-colors shadow-lg bg-slate-800"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                             />
                                             {/* Online indicator */}
                                             <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-slate-900 rounded-full"></div>

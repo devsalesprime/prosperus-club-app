@@ -10,6 +10,7 @@ import { ptBR } from 'date-fns/locale';
 import { COPY } from '../../utils/copy';
 import { SwipeableItem } from '../ui/SwipeableItem';
 import { DeleteConfirmSheet } from '../ui/DeleteConfirmSheet';
+import { getOptimizedImageUrl } from '../../utils/imageUtils';
 
 interface ConversationListProps {
     currentUserId: string;
@@ -399,9 +400,14 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                                                     }}
                                                 >
                                                     <img
-                                                        src={otherUser?.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                                        src={getOptimizedImageUrl(otherUser?.image_url, 96) || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                                         alt={otherUser?.name || 'Usuário'}
-                                                        className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        width={48}
+                                                        height={48}
+                                                        className="w-full h-full rounded-full object-cover border-2 border-slate-900 bg-slate-800"
+                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                                     />
                                                 </div>
 

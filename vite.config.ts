@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 import path from 'path';
 import fs from 'fs';
-import { defineConfig, loadEnv, Plugin } from 'vite';
+import { defineConfig, loadEnv, Plugin, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
@@ -41,7 +41,7 @@ export default defineConfig(async ({ mode }) => {
     } catch { /* Ignora se não estiver instalado */ }
   }
 
-  return {
+  const config: UserConfig = {
     base: '/app/',
     server: {
       port: 3000,
@@ -296,6 +296,33 @@ export default defineConfig(async ({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
+    },
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-query': ['@tanstack/react-query'],
+            'vendor-icons': ['lucide-react'],
+            'vendor-date': ['date-fns'],
+          }
+        }
+      },
+      minify: 'esbuild',
+      target: 'es2020',
+      cssCodeSplit: true,
+    },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        '@supabase/supabase-js',
+        '@tanstack/react-query',
+        'lucide-react',
+      ]
     }
   };
+  return config;
 });

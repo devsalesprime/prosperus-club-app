@@ -51,6 +51,22 @@
   <link rel="manifest" href="/app/manifest.webmanifest" />
 
   <title>Prosperus Club</title>
+
+  <!-- Performance Resource Hints -->
+  <link rel="preconnect" href="https://ptvsctwwonvirdwprugv.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://ptvsctwwonvirdwprugv.supabase.co">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <style>
+    /* Prevent white flash during JS bundle parsing */
+    html, body, #root {
+      background: #031A2B;
+      min-height: 100dvh;
+      margin: 0;
+    }
+  </style>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/react-big-calendar@1.8.5/lib/css/react-big-calendar.css" rel="stylesheet">
   <style>

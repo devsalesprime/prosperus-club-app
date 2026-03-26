@@ -29,11 +29,24 @@ import { ProspToaster } from './utils/toast';
 const OnboardingWizard = React.lazy(() => import('./components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
 const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default: m.AdminApp })));
 
-// Lazy loading fallback
-const LazyFallback = () => (
-    <div className="flex items-center justify-center p-8 min-h-[200px]">
-        <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-    </div>
+// Skeleton do app enquanto carrega
+const AppSkeleton = () => (
+  <div style={{
+    minHeight: '100dvh',
+    background: '#031A2B',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}>
+    <div style={{
+      width: 40, height: 40,
+      border: '2px solid #123F5B',
+      borderTop: '2px solid #FFDA71',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite',
+    }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+  </div>
 );
 
 // Background decoration shared by auth screens
@@ -204,7 +217,7 @@ const AppShell: React.FC = () => {
     if (isAdmin) {
         return (
             <UnreadCountProvider userId={currentUser.id}>
-                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><AppSkeleton /></div>}>
                     <AdminApp
                         currentUser={currentUser}
                         onLogout={() => { setIsAdmin(false); setSession(null); }}
@@ -225,7 +238,7 @@ const AppShell: React.FC = () => {
     // ─── Guard 8: Onboarding Wizard (MEMBER only) ────
     if (showOnboarding && userProfile && !userProfile.has_completed_onboarding) {
         return (
-            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><LazyFallback /></div>}>
+            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><AppSkeleton /></div>}>
                 <>
                     <div className="min-h-screen bg-slate-950" />
                     <OnboardingWizard
@@ -248,7 +261,9 @@ const AppShell: React.FC = () => {
     return (
         <UnreadCountProvider userId={session?.user?.id}>
             <AppLayout>
-                <ViewSwitcher />
+                <Suspense fallback={<AppSkeleton />}>
+                    <ViewSwitcher />
+                </Suspense>
                 {/* Always mounted — silently saves push subscription */}
                 {currentUser && <PushAutoSubscriber userId={currentUser.id} />}
                 {/* Permission prompt — only when permission is 'default' */}
