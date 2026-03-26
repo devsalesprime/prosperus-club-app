@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/prosperus-icon-512.png" alt="Prosperus Club Logo" width="120" />
+  <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus Club Logo" width="120" />
   <h1>Prosperus Club App</h1>
   <p><strong>Plataforma Premium e Exclusiva para Membros de Clubes de Negócios</strong></p>
   <p><i>Versão 3.2.0 — "The Golden Crown"</i></p>
