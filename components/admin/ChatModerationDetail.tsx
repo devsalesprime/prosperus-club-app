@@ -14,12 +14,12 @@ import {
     ShieldCheck,
     X,
     Loader2,
-    MessageCircle,
     Ban,
     UserCheck,
     Send,
     Headphones
 } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { adminChatService, MessageWithSender, ConversationWithParticipants } from '../../services/adminChatService';
 import { adminUserService, UserProfile } from '../../services/adminUserService';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -306,7 +306,7 @@ export const ChatModerationDetail: React.FC<ChatModerationDetailProps> = ({
                     </div>
                 ) : messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <MessageCircle size={48} className="mb-3 opacity-50" />
+                        <IconChat size={48} className="mb-3 opacity-50" />
                         <p>Nenhuma mensagem nesta conversa</p>
                     </div>
                 ) : (

@@ -8,7 +8,7 @@ import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
 interface AdminActionButtonProps {
-    icon: LucideIcon;
+    icon: React.ElementType;
     onClick: () => void;
     variant?: 'primary' | 'danger' | 'ghost';
     disabled?: boolean;

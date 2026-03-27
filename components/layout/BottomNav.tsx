@@ -1,22 +1,23 @@
 import React from 'react';
-import {
-    LayoutDashboard,
-    Calendar as CalendarIcon,
-    Briefcase,
-    Users,
-    Image as ImageIcon
-} from 'lucide-react';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
+
+import {
+    IconHome,
+    IconAgenda,
+    IconProsperus,
+    IconSocios,
+    IconGaleria
+} from '../ui/icons/CustomIcons';
 
 // Constants Removed - Usando Design System Tokens via Tailwind
 
 const bottomNavItems = [
-    { id: ViewState.DASHBOARD, label: 'Início', Icon: LayoutDashboard },
-    { id: ViewState.AGENDA, label: 'Agenda', Icon: CalendarIcon },
-    { id: 'prosperus-tools', label: 'Prosperus', Icon: Briefcase, view: ViewState.PROSPERUS_TOOLS },
-    { id: ViewState.MEMBERS, label: 'Sócios', Icon: Users },
-    { id: ViewState.GALLERY, label: 'Galeria', Icon: ImageIcon },
+    { id: ViewState.DASHBOARD, label: 'Início', Icon: IconHome },
+    { id: ViewState.AGENDA, label: 'Agenda', Icon: IconAgenda },
+    { id: 'prosperus-tools', label: 'Prosperus', Icon: IconProsperus, view: ViewState.PROSPERUS_TOOLS },
+    { id: ViewState.MEMBERS, label: 'Sócios', Icon: IconSocios },
+    { id: ViewState.GALLERY, label: 'Galeria', Icon: IconGaleria },
 ];
 
 export const BottomNav: React.FC = () => {
@@ -79,7 +80,6 @@ export const BottomNav: React.FC = () => {
                             >
                                 <Icon
                                     size={24}
-                                    strokeWidth={strokeWidth}
                                     className={textColorClass}
                                 />
                                 <span className={`text-[11px] leading-[14px] whitespace-nowrap text-center ${textWeightClass}`}>

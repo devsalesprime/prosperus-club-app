@@ -23,8 +23,12 @@ import {
     Loader2,
     Search,
     Users,
-    Star
+    Star,
+    Activity,
+    Trophy,
+    Award
 } from 'lucide-react';
+import { IconChat } from './ui/icons/CustomIcons';
 import { ProfileData } from '../services/profileService';
 import { conversationService } from '../services/conversationService';
 import { analyticsService } from '../services/analyticsService';
@@ -253,7 +257,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-green-600 border border-slate-700 hover:border-green-600 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-sm transition"
                                     >
-                                        <MessageCircle size={16} />
+                                        <IconChat size={16} />
                                         WhatsApp
                                     </a>
                                 )}
@@ -525,7 +529,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                             </>
                                         ) : (
                                             <>
-                                                <MessageCircle size={18} />
+                                                <IconChat size={18} />
                                                 Enviar Mensagem
                                             </>
                                         )}

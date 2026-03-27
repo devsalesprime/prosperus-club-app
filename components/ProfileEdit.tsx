@@ -11,11 +11,15 @@ import {
     History,
     HelpCircle,
     Shield,
+    Image as ImageIcon,
+    MapPin,
+    X,
+    Plus,
     FileText,
-    MessageCircle,
     ExternalLink,
     ChevronRight,
 } from 'lucide-react';
+import { IconChat } from './ui/icons/CustomIcons';
 import { profileService, ProfileData, ExclusiveBenefit } from '../services/profileService';
 import { ImageUpload } from './ImageUpload';
 import { ProfilePreview } from './ProfilePreview';
@@ -215,7 +219,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                 className="flex items-center gap-3 p-4 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] transition-all text-left w-full"
                             >
                                 <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
-                                    <MessageCircle size={18} />
+                                    <IconChat size={18} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-white">Falar com suporte</p>

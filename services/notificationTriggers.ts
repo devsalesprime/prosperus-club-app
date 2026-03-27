@@ -141,7 +141,7 @@ export async function notifyNewVideo(
                 dispatchNotification({
                     userId: m.id,
                     type: 'video',
-                    title: '🎥 Novo conteúdo na Academy',
+                    title: 'Novo conteúdo na Aulas',
                     message: videoTitle,
                     url: '/academy',
                     tag: `video-${videoId}`,

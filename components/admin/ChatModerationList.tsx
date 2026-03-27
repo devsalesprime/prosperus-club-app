@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from 'react';
 import {
     Search,
-    MessageCircle,
     ChevronRight,
     RefreshCw,
     Users,
@@ -12,6 +11,7 @@ import {
     Hash,
     AlertCircle
 } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { adminChatService, ConversationWithParticipants } from '../../services/adminChatService';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -99,7 +99,7 @@ export const ChatModerationList: React.FC<ChatModerationListProps> = ({
             <div className="p-4 border-b border-slate-800">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                        <MessageCircle className="text-yellow-500" size={20} />
+                        <IconChat className="text-yellow-500" size={20} />
                         Conversas
                         <span className="text-sm font-normal text-slate-400">({total})</span>
                     </h3>
@@ -151,7 +151,7 @@ export const ChatModerationList: React.FC<ChatModerationListProps> = ({
                     </div>
                 ) : conversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-                        <MessageCircle size={48} className="mb-3 opacity-50" />
+                        <IconChat size={48} className="mb-3 opacity-50" />
                         <p>Nenhuma conversa encontrada</p>
                     </div>
                 ) : (

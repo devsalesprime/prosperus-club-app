@@ -8,9 +8,10 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
-    Users, UserPlus, MessageCircle, PlayCircle, Activity,
+    Users, UserPlus, PlayCircle, Activity,
     TrendingUp, TrendingDown, Minus, BarChart3, LogIn,
 } from 'lucide-react';
+import { IconChat } from '../../ui/icons/CustomIcons';
 import {
     analyticsService,
     DashboardStats,
@@ -100,7 +101,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
                     <div className="flex items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-emerald-500/10">
-                            <MessageCircle size={24} className="text-emerald-500" />
+                            <IconChat size={24} className="text-emerald-500" />
                         </div>
                         <TrendBadge value={stats?.trendMessages} />
                     </div>

@@ -11,17 +11,26 @@ import { COPY } from '../../utils/copy';
 import { CardSkeleton } from '../ui/CardSkeleton';
 import { SwipeableItem } from '../ui/SwipeableItem';
 import { UndoToast } from '../ui/UndoToast';
+import {
+    IconChat,
+    IconAgenda,
+    IconAcademy,
+    IconGaleria,
+    IconIndicacoes,
+    IconNegocios
+} from '../ui/icons/CustomIcons';
+import { BarChart2 } from 'lucide-react';
 
 // Type-based icons for visual distinction
-const NOTIFICATION_ICONS: Record<string, string> = {
-    message: '💬',
-    event: '📅',
-    video: '🎥',
-    gallery: '🖼️',
-    referral: '🤝',
-    deal: '💼',
-    report: '📊',
-    notification: '🔔',
+const NOTIFICATION_ICONS: Record<string, React.ReactNode> = {
+    message: <IconChat size={20} className="text-blue-400" />,
+    event: <IconAgenda size={20} className="text-yellow-500" />,
+    video: <IconAcademy size={20} className="text-violet-400" />,
+    gallery: <IconGaleria size={20} className="text-emerald-400" />,
+    referral: <IconIndicacoes size={20} className="text-cyan-400" />,
+    deal: <IconNegocios size={20} className="text-emerald-500" />,
+    report: <BarChart2 size={20} className="text-indigo-400" />,
+    notification: <Bell size={20} className="text-slate-400" />,
 };
 
 interface NotificationsPageProps {

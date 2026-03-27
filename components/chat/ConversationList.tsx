@@ -3,7 +3,8 @@
 // With Supabase Realtime for live updates
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MessageCircle, Search, Plus, Users, Trash2, Archive, CheckCircle } from 'lucide-react';
+import { Search, Plus, Users, Trash2, Archive, CheckCircle } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { conversationService, ConversationWithDetails } from '../../services/conversationService';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -214,7 +215,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
                         style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
                     >
-                        <MessageCircle className="w-8 h-8 text-red-400" />
+                        <IconChat size={32} className="text-red-400" />
                     </div>
                     <p className="text-red-400 mb-4 text-sm">{error}</p>
                     <button
@@ -248,7 +249,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                             className="w-8 h-8 rounded-lg flex items-center justify-center"
                             style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(217,119,6,0.1))' }}
                         >
-                            <MessageCircle size={16} className="text-yellow-500" />
+                            <IconChat size={16} className="text-yellow-500" />
                         </div>
                         Mensagens
                     </h2>

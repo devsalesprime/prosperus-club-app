@@ -7,10 +7,11 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    X, Activity, Clock, Video, MessageCircle, FileText,
+    X, Activity, Clock, Video, FileText,
     LogIn, Eye, Search, Bell, AlertTriangle, BarChart3,
     Wrench, Download, ChevronDown, ChevronUp
 } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -51,7 +52,7 @@ const EVENT_CONFIG: Record<string, { icon: React.ReactNode; label: string; color
     VIDEO_COMPLETE:     { icon: <Video size={14} />,          label: 'Vídeo Concluído',     color: 'text-emerald-400' },
     VIDEO_PROGRESS:     { icon: <Video size={14} />,          label: 'Progresso Vídeo',     color: 'text-purple-300' },
     ARTICLE_READ:       { icon: <FileText size={14} />,       label: 'Artigo Lido',         color: 'text-orange-400' },
-    MESSAGE_SENT:       { icon: <MessageCircle size={14} />,  label: 'Mensagem Enviada',    color: 'text-cyan-400' },
+    MESSAGE_SENT:       { icon: <IconChat size={14} />,  label: 'Mensagem Enviada',    color: 'text-cyan-400' },
     APP_OPEN:           { icon: <LogIn size={14} />,          label: 'Acesso ao App',       color: 'text-green-400' },
     LOGIN:              { icon: <LogIn size={14} />,          label: 'Login',               color: 'text-green-400' },
     LOGOUT:             { icon: <LogIn size={14} />,          label: 'Logout',              color: 'text-slate-400' },

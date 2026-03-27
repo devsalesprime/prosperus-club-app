@@ -4,7 +4,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Send, Loader2, MessageCircle, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download, Reply, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, AlertCircle, RefreshCw, ChevronDown, Check, CheckCheck, Paperclip, X, FileText, Download, Reply, Trash2 } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { conversationService, Message, MessageType } from '../../services/conversationService';
 import { analyticsService } from '../../services/analyticsService';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -540,7 +541,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                                 border: '1px solid rgba(250,204,21,0.15)',
                             }}
                         >
-                            <MessageCircle className="w-10 h-10 text-yellow-500/60" />
+                            <IconChat size={40} className="text-yellow-500/60" />
                         </div>
                         <h3 className="text-lg font-bold text-white mb-2">Inicie a conversa</h3>
                         <p className="text-slate-500 text-sm max-w-[240px]">

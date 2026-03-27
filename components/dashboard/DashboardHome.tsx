@@ -5,11 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    PlayCircle,
-    Calendar,
-    Users,
     Gem,
-    Image as ImageIcon,
     Newspaper,
     ChevronRight,
     MapPin,
@@ -22,12 +18,18 @@ import {
     X,
     FileText,
     Trophy,
-    DollarSign,
-    Share2,
     Gift,
     Lightbulb,
     BarChart2
 } from 'lucide-react';
+import {
+    IconAgenda,
+    IconSocios,
+    IconGaleria,
+    IconAcademy,
+    IconNegocios,
+    IconIndicacoes
+} from '../ui/icons/CustomIcons';
 import { ViewState, Member, ClubEvent } from '../../types';
 import { ProfileData } from '../../services/profileService';
 import { articleService } from '../../services/articleService';
@@ -94,7 +96,7 @@ const NextEventEmptyState = () => {
     // Empty State - Elegant fallback
     return (
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 overflow-hidden flex flex-col items-center justify-center p-12 hover:border-slate-600 transition-all">
-            <Calendar size={48} className="text-slate-600 mb-4" />
+            <IconAgenda size={48} className="text-slate-600 mb-4" />
             <h3 className="text-xl font-bold text-slate-400 mb-2">Novos encontros em breve</h3>
             <p className="text-sm text-slate-500">Você será notificado assim que um evento for publicado.</p>
         </div>
@@ -219,7 +221,7 @@ const GlobalSearchBar = ({
                     {results.members.length > 0 && (
                         <div className="p-3 border-b border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <Users size={12} /> Sócios
+                                <IconSocios size={12} /> Sócios
                             </p>
                             {results.members.map((member) => (
                                 <button
@@ -248,7 +250,7 @@ const GlobalSearchBar = ({
                     {results.events.length > 0 && (
                         <div className="p-3 border-b border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <Calendar size={12} /> Eventos
+                                <IconAgenda size={12} /> Eventos
                             </p>
                             {results.events.map((event) => (
                                 <button
@@ -302,7 +304,7 @@ const GlobalSearchBar = ({
                     {results.videos.length > 0 && (
                         <div className="p-3 border-b border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <PlayCircle size={12} /> Academy
+                                <IconAcademy size={12} /> Academy
                             </p>
                             {results.videos.map((video) => (
                                 <button
@@ -333,7 +335,7 @@ const GlobalSearchBar = ({
                     {results.gallery.length > 0 && (
                         <div className="p-3 border-b border-slate-800">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <ImageIcon size={12} /> Galeria
+                                <IconGaleria size={12} /> Galeria
                             </p>
                             {results.gallery.map((album) => (
                                 <button
@@ -353,7 +355,7 @@ const GlobalSearchBar = ({
                                         />
                                     ) : (
                                         <div className="w-10 h-10 bg-emerald-600/20 rounded-lg flex items-center justify-center">
-                                            <ImageIcon size={16} className="text-emerald-400" />
+                                            <IconGaleria size={16} className="text-emerald-400" />
                                         </div>
                                     )}
                                     <div className="min-w-0 flex-1">
@@ -437,7 +439,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         // 1. Meus Negócios
         {
             id: 'my-deals',
-            icon: <DollarSign size={24} className="text-emerald-400" />,
+            icon: <IconNegocios size={24} className="text-emerald-400" />,
             label: 'Meus Negócios',
             color: 'bg-emerald-500/20',
             view: ViewState.DEALS,
@@ -445,7 +447,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         // 2. Indicações
         {
             id: 'referrals',
-            icon: <Share2 size={24} className="text-cyan-400" />,
+            icon: <IconIndicacoes size={24} className="text-cyan-400" />,
             label: 'Indicações',
             color: 'bg-cyan-500/20',
             view: ViewState.REFERRALS,
@@ -461,7 +463,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         // 4. Aulas (Academy)
         {
             id: 'academy',
-            icon: <PlayCircle size={24} className="text-violet-400" />,
+            icon: <IconAcademy size={24} className="text-violet-400" />,
             label: 'Aulas',
             color: 'bg-violet-500/20',
             view: ViewState.ACADEMY,

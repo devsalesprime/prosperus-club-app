@@ -5,18 +5,9 @@
 
 import React from 'react';
 import {
-    LayoutDashboard,
-    Calendar as CalendarIcon,
-    Briefcase,
-    Users,
-    Image as ImageIcon,
     Newspaper,
-    TrendingUp,
-    Send,
     Trophy,
-    MessageCircle,
     User,
-    PlayCircle,
     Lightbulb,
     BarChart2,
     ChevronDown,
@@ -27,6 +18,18 @@ import { useApp } from '../../contexts/AppContext';
 import { ChatIconWithBadge } from '../chat/ChatIconWithBadge';
 import { NotificationCenter } from '../notifications/NotificationCenter';
 
+import {
+    IconHome,
+    IconAgenda,
+    IconProsperus,
+    IconSocios,
+    IconGaleria,
+    IconAcademy,
+    IconNegocios,
+    IconIndicacoes,
+    IconChat
+} from '../ui/icons/CustomIcons';
+
 export const DesktopSidebar: React.FC = () => {
     const {
         currentUser, view, setView,
@@ -36,26 +39,26 @@ export const DesktopSidebar: React.FC = () => {
 
     // Full nav items for sidebar
     const navItems = [
-        { id: ViewState.DASHBOARD, label: 'Início', icon: <LayoutDashboard size={20} /> },
-        { id: ViewState.AGENDA, label: 'Agenda', icon: <CalendarIcon size={20} /> },
+        { id: ViewState.DASHBOARD, label: 'Início', icon: <IconHome size={20} /> },
+        { id: ViewState.AGENDA, label: 'Agenda', icon: <IconAgenda size={20} /> },
         {
             id: 'prosperus-tools' as any,
             label: 'Prosperus Tools',
-            icon: <Briefcase size={20} />,
+            icon: <IconProsperus size={20} />,
             view: ViewState.PROSPERUS_TOOLS,
             children: [
-                { id: ViewState.ACADEMY, label: 'Aulas', icon: <PlayCircle size={18} /> },
+                { id: ViewState.ACADEMY, label: 'Aulas', icon: <IconAcademy size={18} /> },
                 { id: ViewState.SOLUTIONS, label: 'Soluções', icon: <Lightbulb size={18} /> },
                 { id: ViewState.PROGRESS, label: 'Meu Progresso', icon: <BarChart2 size={18} /> },
             ]
         },
-        { id: ViewState.MEMBERS, label: 'Sócios', icon: <Users size={20} /> },
-        { id: ViewState.GALLERY, label: 'Galeria', icon: <ImageIcon size={20} /> },
+        { id: ViewState.MEMBERS, label: 'Sócios', icon: <IconSocios size={20} /> },
+        { id: ViewState.GALLERY, label: 'Galeria', icon: <IconGaleria size={20} /> },
         ...(hasNews ? [{ id: ViewState.NEWS, label: 'News', icon: <Newspaper size={20} /> }] : []),
-        { id: ViewState.DEALS, label: 'Negócios', icon: <TrendingUp size={20} /> },
-        { id: ViewState.REFERRALS, label: 'Indicações', icon: <Send size={20} /> },
+        { id: ViewState.DEALS, label: 'Negócios', icon: <IconNegocios size={20} /> },
+        { id: ViewState.REFERRALS, label: 'Indicações', icon: <IconIndicacoes size={20} /> },
         { id: ViewState.RANKINGS, label: 'Rankings', icon: <Trophy size={20} /> },
-        { id: ViewState.MESSAGES, label: 'Chat', icon: <MessageCircle size={20} /> },
+        { id: ViewState.MESSAGES, label: 'Chat', icon: <IconChat size={20} /> },
         { id: ViewState.PROFILE, label: 'Perfil', icon: <User size={20} /> },
     ];
 

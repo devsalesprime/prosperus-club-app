@@ -5,7 +5,8 @@
 // (body is already position:fixed on iOS, so children use flow layout)
 
 import React from 'react';
-import { Heart, MessageCircle, User } from 'lucide-react';
+import { Heart, User } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { ViewState } from '../../types';
 import { useApp } from '../../contexts/AppContext';
 import { NotificationCenter } from '../notifications/NotificationCenter';
@@ -40,7 +41,7 @@ export const AppHeader: React.FC = () => {
                             title="Chat"
                             data-tour-id="chat"
                         >
-                            <MessageCircle size={22} />
+                            <IconChat size={22} />
                             {unreadMessages > 0 && (
                                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-lg animate-in zoom-in duration-200">
                                     {unreadMessages > 99 ? '99+' : unreadMessages}

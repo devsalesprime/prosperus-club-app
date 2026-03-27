@@ -2,7 +2,8 @@
 // Premium modal for starting a new conversation with a member
 
 import React, { useState, useEffect } from 'react';
-import { X, Search, Loader2, MessageCircle, ArrowRight } from 'lucide-react';
+import { X, Search, Loader2, ArrowRight } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 import { Member } from '../../types';
 import { conversationService } from '../../services/conversationService';
 
@@ -133,7 +134,7 @@ export const NewConversationModal: React.FC<NewConversationModalProps> = ({
                             className="w-8 h-8 rounded-lg flex items-center justify-center"
                             style={{ background: 'linear-gradient(135deg, rgba(250,204,21,0.15), rgba(217,119,6,0.1))' }}
                         >
-                            <MessageCircle className="text-yellow-500" size={16} />
+                            <IconChat className="text-yellow-500" size={16} />
                         </div>
                         Nova Conversa
                     </h2>

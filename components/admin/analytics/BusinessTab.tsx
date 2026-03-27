@@ -10,8 +10,9 @@ import {
 } from 'recharts';
 import {
     Users, DollarSign, ArrowRight, GraduationCap, CalendarCheck,
-    Crown, UserX, CheckCircle2, MessageCircle, AlertTriangle,
+    Crown, UserX, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
+import { IconChat } from '../../ui/icons/CustomIcons';
 import {
     analyticsService,
     NetworkingFunnel,
@@ -351,7 +352,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                                         </td>
                                         <td className="px-5 py-3 text-center">
                                             <AdminActionButton
-                                                icon={MessageCircle}
+                                                icon={IconChat}
                                                 variant="primary"
                                                 title={`Enviar WhatsApp para ${member.memberName}`}
                                                 onClick={() => openWhatsApp(member)}

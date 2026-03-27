@@ -152,7 +152,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             {/* Bell Icon Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`relative p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white ${isShaking ? 'animate-shake' : ''}`}
+                className={`relative p-2 text-prosperus-grey hover:text-prosperus-gold hover:bg-prosperus-navy-light rounded-lg transition-colors ${isShaking ? 'animate-shake' : ''}`}
                 title="Notificações"
             >
                 <Bell size={20} />

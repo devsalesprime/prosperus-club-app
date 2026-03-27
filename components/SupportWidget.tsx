@@ -9,16 +9,22 @@ import {
     X,
     Mail,
     Phone,
-    User,
-    MessageCircle,
     HelpCircle,
-    ExternalLink,
-    Headphones,
-    CreditCard,
+    ChevronDown,
+    Send,
+    ThumbsUp,
     FileText,
+    ExternalLink,
+    AlertCircle,
+    Copy,
+    Check,
     ChevronRight,
+    Headphones,
+    User,
+    CreditCard,
     Shield
 } from 'lucide-react';
+import { IconChat } from './ui/icons/CustomIcons';
 import { settingsService, AppSettings } from '../services/settingsService';
 import { useSupportDocs } from './support/SupportDocsSheet';
 
@@ -182,7 +188,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                                         )}
                                         {settings.support_phone && (
                                             <ContactItem
-                                                icon={<MessageCircle size={16} />}
+                                                icon={<IconChat size={16} />}
                                                 label="WhatsApp"
                                                 value={settings.support_phone}
                                                 href={formatWhatsAppLink(settings.support_phone)}
@@ -214,7 +220,7 @@ export const SupportWidget: React.FC<{ visible?: boolean }> = ({ visible = true 
                                                         rel="noopener noreferrer"
                                                         className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
                                                     >
-                                                        <MessageCircle size={16} />
+                                                        <IconChat size={16} />
                                                         WhatsApp
                                                     </a>
                                                 )}

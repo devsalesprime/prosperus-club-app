@@ -3,11 +3,14 @@
 
 import React from 'react';
 import {
-    Linkedin,
-    Instagram,
     Globe,
-    MessageCircle,
+    Phone,
+    Plus,
+    Trash2,
+    Linkedin,
+    Instagram
 } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 
 interface ProfileSocialsEditorProps {
     socials: {
@@ -58,7 +61,7 @@ export const ProfileSocialsEditor: React.FC<ProfileSocialsEditorProps> = ({
                 <div>
                     <label className="block text-xs text-slate-400 mb-2">WhatsApp</label>
                     <div className="relative">
-                        <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <IconChat className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                         <input
                             type="tel"
                             value={socials?.whatsapp}

@@ -6,7 +6,8 @@ import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { NewConversationModal } from './NewConversationModal';
 import { ConversationWithDetails } from '../../services/conversationService';
-import { MessageCircle, Plus, Sparkles } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
 
 interface MessagesViewProps {
     currentUserId: string;
@@ -199,7 +200,7 @@ const EmptyState: React.FC<{ onNewConversation: () => void }> = ({ onNewConversa
                         boxShadow: '0 0 40px rgba(250,204,21,0.05)',
                     }}
                 >
-                    <MessageCircle className="w-10 h-10 text-yellow-500/50" />
+                    <IconChat size={40} className="text-yellow-500/50" />
                 </div>
                 <div
                     className="absolute -top-1 -right-1 w-7 h-7 rounded-lg flex items-center justify-center"
