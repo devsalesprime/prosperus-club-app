@@ -1,0 +1,19 @@
+[identity]
+name = "Prosperus Club App"
+version = "3.2.0"
+type = "Progressive Web App (PWA) & Admin Dashboard"
+description = "Plataforma premium e exclusiva para membros de um clube de negócios."
+status = "production (Hypercare)"
+
+[stack]
+frontend = ["React 18.2", "TypeScript 5.8", "Vite 6", "vite-plugin-pwa", "Tailwind CSS v4"]
+ui_ux = ["Lucide React", "React Hot Toast", "Recharts", "react-big-calendar"]
+backend = ["Supabase (PostgreSQL, Auth, Storage, Realtime)"]
+functions = ["Deno (Supabase Edge Functions)"]
+integrations = ["HubSpot CRM (Webhooks)", "CursEduca", "Zoom"]
+
+[architecture]
+pattern = "Clean Architecture / Separation of Concerns"
+data_layer = "services/"
+ui_layer = "components/"
+state_management = ["React Context API", "React Query v5"]

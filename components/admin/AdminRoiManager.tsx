@@ -1,0 +1,241 @@
+// ============================================
+// ADMIN ROI MANAGER
+// ============================================
+// Main admin interface for ROI audit and management
+
+import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { TrendingUp, AlertTriangle, CheckCircle, Trophy, Users, RefreshCw, Download } from 'lucide-react';
+import { AdminPageHeader, AdminLoadingState } from './shared';
+import { adminBusinessService } from '../../services/adminBusinessService';
+import AdminKpiCards from './AdminKpiCards';
+import ContestedDealsTab from './ContestedDealsTab';
+import ContestedReferralsTab from './ContestedReferralsTab';
+import AuditTab from './AuditTab';
+import OfficialRankingsTab from './OfficialRankingsTab';
+
+type TabType = 'contested' | 'contested-referrals' | 'audit' | 'rankings';
+
+export const AdminRoiManager: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<TabType>('contested');
+    const [loading, setLoading] = useState(true);
+    const [kpis, setKpis] = useState<any>(null);
+    const [contestedDeals, setContestedDeals] = useState<any[]>([]);
+    const [contestedReferrals, setContestedReferrals] = useState<any[]>([]);
+    const [highValueDeals, setHighValueDeals] = useState<any[]>([]);
+    const [suspiciousDeals, setSuspiciousDeals] = useState<any[]>([]);
+    const [rankings, setRankings] = useState<any[]>([]);
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [kpisData, contested, contestedRefs, highValue, suspicious, rankingsData] = await Promise.all([
+                adminBusinessService.getAdminKPIs(),
+                adminBusinessService.getContestedDeals(),
+                adminBusinessService.getContestedReferrals(),
+                adminBusinessService.getHighValueDeals(),
+                adminBusinessService.getSuspiciousDeals(),
+                adminBusinessService.getOfficialRankings()
+            ]);
+
+            setKpis(kpisData);
+            setContestedDeals(contested);
+            setContestedReferrals(contestedRefs);
+            setHighValueDeals(highValue);
+            setSuspiciousDeals(suspicious);
+            setRankings(rankingsData);
+        } catch (error) {
+            console.error('Error loading admin ROI data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleAudit = async (dealId: string, decision: 'APPROVE' | 'REJECT', notes: string) => {
+        try {
+            await adminBusinessService.auditDeal(dealId, decision, notes);
+            await loadData(); // Reload all data
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            throw new Error(errorMessage);
+        }
+    };
+
+    const handleBulkAudit = async (dealIds: string[], decision: 'APPROVE' | 'REJECT', notes: string) => {
+        try {
+            await adminBusinessService.bulkAuditDeals(dealIds, decision, notes);
+            await loadData(); // Reload all data
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            throw new Error(errorMessage);
+        }
+    };
+
+    const handleResolveReferral = async (referralId: string, decision: 'RESTORE' | 'DISMISS', notes: string) => {
+        try {
+            await adminBusinessService.resolveContestedReferral(referralId, decision, notes);
+            await loadData();
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            throw new Error(errorMessage);
+        }
+    };
+
+    const handleExportCSV = async () => {
+        try {
+            const csv = await adminBusinessService.exportRankingsCSV();
+            const filename = `rankings_${new Date().toISOString().split('T')[0]}.csv`;
+            adminBusinessService.downloadCSV(csv, filename);
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            toast.error('Erro ao exportar CSV');
+        }
+    };
+
+    const tabs = [
+        {
+            id: 'contested' as TabType,
+            label: 'Contestações',
+            icon: <AlertTriangle size={18} />,
+            count: contestedDeals.length,
+            color: 'text-orange-500'
+        },
+        {
+            id: 'audit' as TabType,
+            label: 'Auditoria Geral',
+            icon: <CheckCircle size={18} />,
+            count: highValueDeals.length,
+            color: 'text-blue-500'
+        },
+        {
+            id: 'contested-referrals' as TabType,
+            label: 'Indicações',
+            icon: <Users size={18} />,
+            count: contestedReferrals.length,
+            color: 'text-amber-500'
+        },
+        {
+            id: 'rankings' as TabType,
+            label: 'Rankings Oficiais',
+            icon: <Trophy size={18} />,
+            count: rankings.length,
+            color: 'text-yellow-500'
+        }
+    ];
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Header */}
+                <div className="mb-8">
+                    <AdminPageHeader
+                        title="ROI & Auditoria"
+                        subtitle="Gestão de negócios e rankings oficiais"
+                        action={
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:bg-slate-800 px-3 py-2 rounded-lg transition"
+                                    title="Exportar Rankings CSV"
+                                >
+                                    <Download size={16} />
+                                    CSV
+                                </button>
+                                <button
+                                    onClick={loadData}
+                                    disabled={loading}
+                                    className="p-2 text-slate-400 hover:text-white transition disabled:opacity-50"
+                                    title="Atualizar dados"
+                                >
+                                    <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
+                        }
+                    />
+                </div>
+
+                {/* KPI Cards */}
+                {loading && !kpis ? (
+                    <AdminLoadingState message="Carregando dados de ROI..." />
+                ) : (
+                    kpis && <AdminKpiCards kpis={kpis} loading={loading} />
+                )}
+
+                {/* Tabs */}
+                <div className="mb-6">
+                    <div className="flex gap-2 border-b border-slate-800">
+                        {tabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex items-center gap-2 px-6 py-3 font-bold transition-colors relative ${activeTab === tab.id
+                                    ? 'text-white'
+                                    : 'text-slate-500 hover:text-slate-300'
+                                    }`}
+                            >
+                                <span className={activeTab === tab.id ? tab.color : ''}>
+                                    {tab.icon}
+                                </span>
+                                {tab.label}
+                                {tab.count > 0 && (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id
+                                        ? 'bg-yellow-500 text-slate-900'
+                                        : 'bg-slate-800 text-slate-400'
+                                        }`}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                                {activeTab === tab.id && (
+                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500"></div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Tab Content */}
+                <div>
+                    {activeTab === 'contested' && (
+                        <ContestedDealsTab
+                            deals={contestedDeals}
+                            loading={loading}
+                            onAudit={handleAudit}
+                        />
+                    )}
+
+                    {activeTab === 'contested-referrals' && (
+                        <ContestedReferralsTab
+                            referrals={contestedReferrals}
+                            loading={loading}
+                            onResolve={handleResolveReferral}
+                        />
+                    )}
+
+                    {activeTab === 'audit' && (
+                        <AuditTab
+                            deals={highValueDeals}
+                            suspiciousDeals={suspiciousDeals}
+                            loading={loading}
+                            onAudit={handleAudit}
+                            onBulkAudit={handleBulkAudit}
+                        />
+                    )}
+
+                    {activeTab === 'rankings' && (
+                        <OfficialRankingsTab
+                            rankings={rankings}
+                            loading={loading}
+                            onExportCSV={handleExportCSV}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AdminRoiManager;

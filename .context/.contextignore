@@ -1,0 +1,11 @@
+# Evita que a IA leia arquivos desnecessários e gaste tokens
+node_modules/
+dist/
+build/
+.env
+.env.*
+*.log
+supabase/.temp/
+coverage/
+.DS_Store
+.git/

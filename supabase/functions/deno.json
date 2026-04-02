@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "deno.window",
+            "deno.ns"
+        ],
+        "strict": false,
+        "allowJs": true,
+        "checkJs": false
+    },
+    "tasks": {
+        "test": "deno test --allow-all"
+    }
+}

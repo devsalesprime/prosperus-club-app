@@ -1,0 +1,60 @@
+// ============================================
+// APP HEADER — Mobile Top Bar
+// ============================================
+// Flex item within AppLayout — NO position:fixed
+// (body is already position:fixed on iOS, so children use flow layout)
+
+import React from 'react';
+import { Heart, User } from 'lucide-react';
+import { IconChat } from '../ui/icons/CustomIcons';
+import { ViewState } from '../../types';
+import { useApp } from '../../contexts/AppContext';
+import { NotificationCenter } from '../notifications/NotificationCenter';
+import { useUnreadCount } from '../../contexts/UnreadCountContext';
+
+export const AppHeader: React.FC = () => {
+    const { currentUser, setView, handleNotificationNavigate } = useApp();
+    const { unreadMessages } = useUnreadCount();
+
+    return (
+        <header
+            className="md:hidden shrink-0 z-50 flex items-center justify-between px-4 bg-prosperus-box backdrop-blur-md border-b border-prosperus-stroke"
+            style={{ height: 60 }}
+        >
+            <button onClick={() => setView(ViewState.DASHBOARD)} className="hover:opacity-80 transition-opacity" title="Ir para Home">
+                <img src="https://salesprime.com.br/wp-content/uploads/2025/11/logo-prosperus.svg" alt="Prosperus" className="h-6 w-auto" />
+            </button>
+            <div className="flex items-center gap-2">
+                {currentUser && (
+                    <>
+                        <button
+                            onClick={() => setView(ViewState.FAVORITES)}
+                            className="p-2 text-prosperus-gold-dark hover:text-red-400 transition-colors"
+                            title="Meus Favoritos"
+                            data-tour-id="favorites"
+                        >
+                            <Heart size={22} />
+                        </button>
+                        <button
+                            onClick={() => setView(ViewState.MESSAGES)}
+                            className="relative p-2 text-prosperus-gold-dark hover:text-prosperus-gold transition-colors"
+                            title="Chat"
+                            data-tour-id="chat"
+                        >
+                            <IconChat size={22} />
+                            {unreadMessages > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-lg animate-in zoom-in duration-200">
+                                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                                </span>
+                            )}
+                        </button>
+                        <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
+                    </>
+                )}
+                <button onClick={() => setView(ViewState.PROFILE)} className="p-2 text-prosperus-grey" data-tour-id="profile">
+                    {currentUser ? <img src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`} className="w-8 h-8 rounded-full object-cover" /> : <User size={24} />}
+                </button>
+            </div>
+        </header>
+    );
+};

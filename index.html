@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description"
+    content="Plataforma exclusiva para membros do Prosperus Club — networking, negócios, eventos e ferramentas de crescimento." />
+
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Prosperus" />
+
+  <!-- iOS Touch Icons (PNG, múltiplos tamanhos) -->
+  <link rel="apple-touch-icon" href="/app/icons/icon-180x180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/app/icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/app/icons/icon-167x167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/app/icons/icon-180x180.png" />
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/app/icons/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/app/icons/favicon-16x16.png" />
+
+  <!-- iOS Splash Screens -->
+  <link rel="apple-touch-startup-image" href="/app/splash/iphone5_splash.png"
+    media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/iphone6_splash.png"
+    media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/iphoneplus_splash.png"
+    media="(device-width: 621px) and (device-height: 1104px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/iphonex_splash.png"
+    media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/iphonexr_splash.png"
+    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/iphonexsmax_splash.png"
+    media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/ipad_splash.png"
+    media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/ipadpro1_splash.png"
+    media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)" />
+  <link rel="apple-touch-startup-image" href="/app/splash/ipadpro2_splash.png"
+    media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
+
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#0f172a" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/app/manifest.webmanifest" />
+
+  <title>Prosperus Club</title>
+
+  <!-- Performance Resource Hints -->
+  <link rel="preconnect" href="https://ptvsctwwonvirdwprugv.supabase.co" crossorigin>
+  <link rel="dns-prefetch" href="https://ptvsctwwonvirdwprugv.supabase.co">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <style>
+    /* Prevent white flash during JS bundle parsing */
+    html, body, #root {
+      background: #031A2B;
+      min-height: 100dvh;
+      margin: 0;
+    }
+  </style>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/react-big-calendar@1.8.5/lib/css/react-big-calendar.css" rel="stylesheet">
+  <style>
+    /* ===== PROSPERUS BRAND DESIGN SYSTEM ===== */
+    :root {
+      /* Safe area insets for notch/island support */
+      --safe-area-inset-top: env(safe-area-inset-top);
+      --safe-area-inset-right: env(safe-area-inset-right);
+      --safe-area-inset-bottom: env(safe-area-inset-bottom);
+      --safe-area-inset-left: env(safe-area-inset-left);
+    }
+
+    /* ===== GLOBAL MODAL SAFE AREA — REMOVED ===== */
+    /* Previously added padding-top: env(safe-area-inset-top) to .fixed.inset-0 and .modal-overlay */
+    /* This was WRONG: it pushed modal content down ~47px on iPhone, creating a visible gap */
+    /* Modal overlays are position:fixed covering the full viewport — no extra padding needed */
+    /* The body already has padding-top: var(--safe-area-inset-top) for page-level safe areas */
+
+    /* ===== iOS SCROLL LOCK (applied by useScrollLock hook) ===== */
+    /* overflow:hidden on BOTH html+body blocks scroll on iOS Safari */
+    /* NO position:fixed — that causes layout shifts in standalone PWA */
+    html.scroll-locked,
+    body.scroll-locked {
+      overflow: hidden !important;
+      overscroll-behavior: none !important;
+    }
+
+    body.scroll-locked {
+      touch-action: none !important;
+    }
+
+    /* Re-enable touch/selection for inputs inside modals when locked */
+    body.scroll-locked input,
+    body.scroll-locked textarea,
+    body.scroll-locked select,
+    body.scroll-locked [contenteditable] {
+      touch-action: auto !important;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* Prevent iOS auto-zoom on input focus (requires 16px minimum) */
+    @supports (-webkit-touch-callout: none) {
+
+      body.scroll-locked input,
+      body.scroll-locked textarea,
+      body.scroll-locked select {
+        font-size: 16px !important;
+      }
+    }
+
+    * {
+      /* Disable tap highlight on mobile for native feel */
+      -webkit-tap-highlight-color: transparent;
+      /* Prevent text selection for app-like experience */
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+
+    /* Allow text selection in specific areas */
+    input,
+    textarea,
+    [contenteditable] {
+      -webkit-touch-callout: default;
+      user-select: text;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--prosperus-navy);
+      color: var(--prosperus-white);
+      /* Font smoothing for crisp text on dark backgrounds */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      /* Prevent overscroll bounce on iOS */
+      overscroll-behavior: none;
+      /* Safe area: top protects status bar on iPhone */
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
+
+    /* NOTE: Do NOT add overflow:hidden to html/body — it blocks scroll inside inner containers on Android */
+
+    /* ===== CUSTOM SCROLLBAR (Navy/Gold Theme) ===== */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--prosperus-navy);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--prosperus-gold-dark);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--prosperus-gold);
+    }
+
+    /* Firefox scrollbar */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--prosperus-gold-dark) var(--prosperus-navy);
+    }
+
+    /* Custom scrollbar for horizontal lists (hidden) */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Calendar Overrides for Dark Mode */
+    .rbc-calendar {
+      color: #cbd5e1;
+    }
+
+    .rbc-off-range-bg {
+      background-color: #1e293b !important;
+    }
+
+    .rbc-today {
+      background-color: #334155 !important;
+    }
+
+    .rbc-header {
+      border-bottom: 1px solid #334155 !important;
+      padding: 8px !important;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .rbc-month-view,
+    .rbc-time-view,
+    .rbc-agenda-view {
+      border: 1px solid #334155 !important;
+      background-color: #0f172a;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+
+    .rbc-day-bg+.rbc-day-bg {
+      border-left: 1px solid #334155 !important;
+    }
+
+    .rbc-month-row+.rbc-month-row {
+      border-top: 1px solid #334155 !important;
+    }
+
+    /* ESTILIZAÇÃO DA DATA */
+    .rbc-date-cell {
+      padding: 8px !important;
+      font-size: 0.875rem;
+      font-weight: 700;
+      z-index: 20;
+      /* Fica acima do evento visualmente */
+      position: relative;
+      pointer-events: none;
+      /* O PULO DO GATO: O clique passa pela data e pega o evento embaixo */
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      /* Sombra forte para leitura sobre cores sólidas */
+    }
+
+    .rbc-off-range {
+      color: #475569 !important;
+    }
+
+    .rbc-toolbar button {
+      color: #cbd5e1 !important;
+      border-color: #475569 !important;
+    }
+
+    .rbc-toolbar button:hover {
+      background-color: #334155 !important;
+    }
+
+    .rbc-toolbar button.rbc-active {
+      background-color: #ca8a04 !important;
+      border-color: #ca8a04 !important;
+      color: white !important;
+    }
+
+    /* --- CORREÇÃO DE CLIQUE E UX NO MÊS (FULL CELL CLICK) --- */
+
+    .rbc-month-row {
+      overflow: visible !important;
+      /* Permite camadas absolutas */
+    }
+
+    .rbc-row-content {
+      height: 100%;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Linha de Datas (Fica no topo visualmente) */
+    .rbc-row-content .rbc-row:first-child {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      pointer-events: none;
+      /* Permite clique no evento abaixo */
+    }
+
+    /* Linha de Eventos (Ocupa o fundo e recebe o clique) */
+    .rbc-row-content .rbc-row:nth-child(2) {
+      position: absolute !important;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      z-index: 10;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .rbc-row-segment {
+      height: 100%;
+      padding: 0 !important;
+      /* Remove padding para ocupar tudo */
+    }
+
+    /* O Evento ocupando toda a célula */
+    .rbc-event {
+      border-radius: 0 !important;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      height: 100% !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      /* Sem padding */
+      display: block !important;
+      border: 0 !important;
+      transition: filter 0.2s;
+      outline: none !important;
+      /* Remove borda azul padrão de foco */
+    }
+
+    .rbc-event:hover {
+      filter: brightness(1.1);
+      /* Feedback visual sutil no hover */
+    }
+
+    /* Oculta o texto/conteúdo do evento para mostrar apenas a cor */
+    .rbc-event-content {
+      display: none !important;
+    }
+
+    /* ESTADO SELECIONADO/CLICADO */
+    .rbc-event.rbc-selected,
+    .rbc-event:focus,
+    .rbc-event:active {
+      /* IMPORTANTE: Não sobrescrever background-color aqui para manter a cor inline */
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4);
+      /* Borda interna sutil para indicar seleção */
+      outline: none !important;
+      filter: brightness(1.05);
+    }
+
+    /* --- ESTILIZAÇÃO DA TABELA DE AGENDA (.rbc-agenda-table) --- */
+
+    .rbc-agenda-view table.rbc-agenda-table {
+      border: none !important;
+      border-collapse: collapse !important;
+    }
+
+    .rbc-agenda-view thead>tr>th {
+      border-bottom: 1px solid #334155 !important;
+      color: #94a3b8 !important;
+      font-weight: 600;
+      padding: 12px !important;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    .rbc-agenda-view tbody>tr {
+      border-bottom: 1px solid #1e293b !important;
+      transition: background-color 0.2s;
+    }
+
+    .rbc-agenda-view tbody>tr:hover {
+      background-color: #1e293b !important;
+      cursor: pointer;
+    }
+
+    .rbc-agenda-date-cell {
+      color: #cbd5e1 !important;
+      font-weight: 600;
+      padding: 12px !important;
+    }
+
+    .rbc-agenda-time-cell {
+      color: #94a3b8 !important;
+      font-size: 0.875rem;
+      padding: 12px !important;
+      white-space: nowrap;
+    }
+
+    .rbc-agenda-event-cell {
+      color: #f8fafc !important;
+      padding: 12px !important;
+      font-weight: 500;
+    }
+
+    /* Ensure primary navigation & form buttons meet minimum touch target size */
+    /* Scoped to nav-level and standalone buttons only */
+    .mobile-nav-item,
+    form button,
+    form input[type="button"],
+    form input[type="submit"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Nav buttons controlam próprio tamanho */
+    nav button {
+      min-height: unset;
+      min-width: unset;
+    }
+
+    /* Exception class for small/inline buttons (icons, toggles, inline actions, tabs, filters) */
+    .btn-sm,
+    .btn-icon,
+    [class*="rounded-full"][class*="p-1"],
+    [class*="rounded-full"][class*="p-2"] {
+      min-height: unset !important;
+      min-width: unset !important;
+    }
+
+    /* Mobile Header — body already handles safe-area-inset-top */
+    /* .mobile-header is kept for semantic clarity only, no extra padding needed */
+
+    /* Bottom Navigation with Safe Area Bottom */
+    .safe-area-bottom {
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px) !important;
+    }
+
+    /* Ensure content doesn't hide behind bottom nav */
+    .pb-24 {
+      padding-bottom: calc(5rem + max(env(safe-area-inset-bottom, 0px), 8px)) !important;
+    }
+
+    /* ===== iOS BOTTOM NAV FIX ===== */
+    /* O nav ocupa espaço real — não flutua sobre o conteúdo */
+    .bottom-nav-ios {
+      padding-top: 14px;
+      padding-bottom: 14px;
+      /* Safe area absorvida AQUI, não no main */
+      padding-bottom: max(14px, calc(14px + env(safe-area-inset-bottom, 0px)));
+    }
+
+    /* Main content para no topo do nav naturalmente */
+    .main-content-ios {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      min-height: 0;
+    }
+
+    /* Safe area bottom spacer — env() MUST be in CSS, not inline styles */
+    /* iOS WebKit ignores env() in JS-applied inline styles              */
+    .safe-area-spacer-bottom {
+      flex-shrink: 0;
+      height: env(safe-area-inset-bottom, 0px);
+      background: #031A2B;
+    }
+
+    /* Mobile-specific adjustments */
+    @media (max-width: 768px) {
+
+      /* Increase touch targets on mobile */
+      .mobile-nav-item {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0.75rem;
+      }
+
+      /* Optimize scrolling on mobile */
+      .overflow-y-auto {
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Prevent zoom on input focus (iOS) */
+      input,
+      textarea,
+      select {
+        font-size: 16px !important;
+      }
+
+      /* Calendar Toolbar - Mobile Responsive */
+      .rbc-toolbar {
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        justify-content: center !important;
+      }
+
+      .rbc-toolbar-label {
+        width: 100% !important;
+        text-align: center !important;
+        order: -1 !important;
+      }
+    }
+
+    /* ===== BASE LAYOUT — applies on ALL platforms ===== */
+    html {
+      height: -webkit-fill-available;
+      background: #031A2B;
+    }
+    body {
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      min-height: 100dvh;
+      margin: 0;
+      padding-top: env(safe-area-inset-top, 0px);
+      background-color: var(--prosperus-navy);
+      color: var(--prosperus-white);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overscroll-behavior: none;
+    }
+    #root {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== DVH VIEWPORT FIX ===== */
+    /* Safari 100vh includes the address bar height, causing overflow.    */
+    /* 100dvh (Dynamic Viewport Height) adjusts when the bar shows/hides */
+    @supports (height: 100dvh) {
+      .min-h-screen {
+        min-height: 100dvh !important;
+      }
+
+      .h-screen {
+        height: 100dvh !important;
+      }
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Capture beforeinstallprompt before React mounts (FIX D: event may fire before component) -->
+  <script>
+    window.__pwaInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__pwaInstallPrompt = e;
+      console.log('📱 beforeinstallprompt captured globally (before React)');
+    });
+  </script>
+
+  <script type="module" src="/index.tsx"></script>
+
+  <!-- Global Service Worker Registration (runs on every page load) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/app/sw.js', { scope: '/app/' })
+          .then(function (registration) {
+            console.log('[App] SW registered, scope:', registration.scope);
+            // Check for updates every 60 seconds
+            setInterval(function () {
+              registration.update();
+            }, 60000);
+          })
+          .catch(function (error) {
+            console.error('[App] SW registration failed:', error);
+          });
+      });
+      // Auto-reload when new SW takes over
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        console.log('[App] New SW active, reloading...');
+        window.location.reload();
+      });
+    }
+  </script>
+</body>
+
+</html>
