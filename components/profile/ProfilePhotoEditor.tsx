@@ -17,8 +17,8 @@ interface Position { x: number; y: number }
 // ─── Design tokens ─────────────────────────────────────────────────────────
 const CIRCLE_SIZE = 260;
 const OUTPUT_SIZE = 400;
-const MIN_ZOOM    = 0.5;
-const MAX_ZOOM    = 4;
+// Zoom min/max são calculados dinamicamente a partir do coverZoom
+const ZOOM_MAX_MULTIPLIER = 12; // 12× o zoom de cover = zoom muito detalhado
 const NAVY        = '#031A2B';
 const CARD        = '#0D2E44';
 const BORDER      = '#1A4A6B';
@@ -51,6 +51,11 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
     const [imageEl, setImageEl]   = useState<HTMLImageElement | null>(null);
     const [zoom, setZoom]         = useState(1);
     const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
+    const [coverZoom, setCoverZoom] = useState(1); // zoom mínimo dinâmico (fit image)
+
+    // min/max zoom calculados pela imagem carregada
+    const minZoom = coverZoom;
+    const maxZoom = Math.max(coverZoom * ZOOM_MAX_MULTIPLIER, 4);
 
     const isDragging    = useRef(false);
     const dragStart     = useRef<Position>({ x: 0, y: 0 });
@@ -68,7 +73,9 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
         const img = new Image();
         img.onload = () => {
             URL.revokeObjectURL(url);
+            // Zoom que cobre o círculo completamente sem bordas brancas
             const cover = Math.max(CIRCLE_SIZE / img.width, CIRCLE_SIZE / img.height);
+            setCoverZoom(cover);
             setZoom(cover);
             setPosition({ x: 0, y: 0 });
             setImageEl(img);
@@ -157,7 +164,7 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
             const dx   = e.touches[0].clientX - e.touches[1].clientX;
             const dy   = e.touches[0].clientY - e.touches[1].clientY;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            setZoom(z => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * (dist / lastTouchDist.current!))));
+            setZoom(z => Math.min(maxZoom, Math.max(minZoom, z * (dist / lastTouchDist.current!))));
             lastTouchDist.current = dist;
         }
     };
@@ -168,8 +175,7 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
 
     // ─── Reset ─────────────────────────────────────────────────────────────
     const handleReset = () => {
-        if (!imageEl) return;
-        setZoom(Math.max(CIRCLE_SIZE / imageEl.width, CIRCLE_SIZE / imageEl.height));
+        setZoom(coverZoom); // volta ao fit inicial, não ao MIN_ZOOM fixo
         setPosition({ x: 0, y: 0 });
     };
 
@@ -421,12 +427,15 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
                 />
             </div>
 
-            {/* Slider de zoom */}
+            {/* Slider de zoom — range dinâmico baseado na imagem */}
             <div style={{ padding: '8px 28px 4px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                 <span style={{ color: GREY, fontSize: 20, lineHeight: 1, userSelect: 'none' }}>−</span>
                 <input
                     type="range"
-                    min={MIN_ZOOM} max={MAX_ZOOM} step={0.01} value={zoom}
+                    min={minZoom}
+                    max={maxZoom}
+                    step={minZoom / 100} // step proporcional ao range
+                    value={zoom}
                     onChange={e => setZoom(Number(e.target.value))}
                     style={{ flex: 1, accentColor: GOLD, cursor: 'pointer', height: 4 }}
                 />
