@@ -214,8 +214,13 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
             const matchIds = new Set(matches.map(m => m.profile.id));
             list = list.filter(m => matchIds.has(m.id));
         }
-        return list;
-    }, [members, benefitsOnly, matchesOnly, matches]);
+        // Ordenar por score de match: maior pontuação primeiro, sem match por último
+        return [...list].sort((a, b) => {
+            const scoreA = matchMap.get(a.id)?.score ?? 0;
+            const scoreB = matchMap.get(b.id)?.score ?? 0;
+            return scoreB - scoreA;
+        });
+    }, [members, benefitsOnly, matchesOnly, matches, matchMap]);
 
     // Member count — prefer server total when no client filters active
     const memberCount = (benefitsOnly || matchesOnly) ? filteredMembers.length : (totalCount ?? filteredMembers.length);
