@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Video, VideoProgress, VideoCategory } from '../../types';
 import { VideoCard } from './VideoCard';
 import { VideoPlayerModal } from './VideoPlayerModal';
-import { Play, Loader2 } from 'lucide-react';
+import { Play, Loader2, ArrowLeft } from 'lucide-react';
 import { useAcademyData } from '../../hooks/queries/useAcademyData';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../../utils/queryKeys';
@@ -10,6 +10,7 @@ import { analyticsService } from '../../services/analyticsService';
 
 interface AcademyProps {
     userId: string;
+    onBack?: () => void;
 }
 
 interface CategoryRow {
@@ -17,7 +18,7 @@ interface CategoryRow {
     videos: Video[];
 }
 
-export const Academy: React.FC<AcademyProps> = ({ userId }) => {
+export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
     const queryClient = useQueryClient();
     const { data: academyData, isLoading: loading } = useAcademyData(userId);
 
@@ -117,10 +118,22 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
     return (
         <div className="space-y-8 pb-10">
 
-            {/* ===== FEATURED BANNER ===== */}
+            {/* ===== VOLTAR ===== */}
+            {onBack && (
+                <div className="px-4 pt-4 mb-3">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 text-slate-400 hover:text-white transition"
+                    >
+                        <ArrowLeft size={18} />
+                        <span className="text-sm">Voltar</span>
+                    </button>
+                </div>
+            )}
+
             {featuredVideo && (
                 <div
-                    className="relative h-[40vh] min-h-[280px] bg-slate-900 rounded-xl overflow-hidden group cursor-pointer mx-4"
+                    className="relative h-[30vh] min-h-[280px] bg-slate-900 rounded-xl overflow-hidden group cursor-pointer mx-4"
                     onClick={() => handleVideoClick(featuredVideo)}
                 >
                     <img
@@ -134,7 +147,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId }) => {
                         <span className="inline-block px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-full mb-3">
                             EM DESTAQUE
                         </span>
-                        <h2 className="text-2xl md:text-4xl font-bold text-white mb-2 max-w-2xl">
+                        <h2 className="text-base font-bold text-white mb-2 max-w-2xl">
                             {featuredVideo.title}
                         </h2>
                         <p className="text-slate-300 mb-4 max-w-xl line-clamp-2 text-sm md:text-base">

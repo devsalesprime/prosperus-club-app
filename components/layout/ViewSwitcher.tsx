@@ -342,7 +342,7 @@ export const ViewSwitcher: React.FC = () => {
             )}
 
             {view === ViewState.ACADEMY && currentUser && (
-                <div className="animate-in fade-in"><Academy userId={currentUser.id} /></div>
+                <div className="animate-in fade-in"><Academy userId={currentUser.id} onBack={() => setView(ViewState.PROSPERUS_TOOLS)} /></div>
             )}
 
             {view === ViewState.SOLUTIONS && currentUser && (
