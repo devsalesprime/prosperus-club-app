@@ -2,7 +2,7 @@
 // Member's progress files and reports - Mobile-first responsive layout
 
 import React, { useEffect, useState } from 'react';
-import { Download, Loader2, ArrowLeft, FileText, FileCode, FileSpreadsheet, File, Eye, X, TrendingUp, ExternalLink, Trash2 } from 'lucide-react';
+import { Download, Loader2, ArrowLeft, FileText, FileCode, FileSpreadsheet, File, Eye, X, TrendingUp, Trash2, Link2, Check } from 'lucide-react';
 import { ViewState } from '../types';
 import { toolsService, MemberProgressFile } from '../services/toolsService';
 import { reportService, MemberReport } from '../services/reportService';
@@ -31,6 +31,10 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
     const [openingId, setOpeningId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmDeleteReport, setConfirmDeleteReport] = useState<MemberReport | null>(null);
+
+    // Copy link state
+    const [copyingId, setCopyingId] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -191,6 +195,28 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
         }
     };
 
+    // Copia link compartilhável de 7 dias via viewer público
+    const handleCopyLink = async (report: MemberReport) => {
+        setCopyingId(report.id);
+        try {
+            const storageUrl = await reportService.getShareableUrl(report.storage_path);
+            if (!storageUrl) throw new Error('Falha ao gerar link');
+
+            const titleEncoded = encodeURIComponent(report.title);
+            const urlEncoded = encodeURIComponent(storageUrl);
+            const shareUrl = `${window.location.origin}/relatorio.html?url=${urlEncoded}&title=${titleEncoded}`;
+
+            await navigator.clipboard.writeText(shareUrl);
+            setCopiedId(report.id);
+            setTimeout(() => setCopiedId(null), 2500);
+            toast.success('Link copiado! Válido por 7 dias.', { icon: '🔗' });
+        } catch {
+            toast.error('Falha ao gerar o link.');
+        } finally {
+            setCopyingId(null);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
@@ -236,31 +262,44 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
+                                {/* Botões de ação — padrão 40x40px igual ao Admin */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {/* Visualizar */}
                                     <button
                                         onClick={() => handleOpenReport(report)}
-                                        disabled={openingId === report.id || deletingId === report.id}
-                                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-bold rounded-lg transition disabled:opacity-50"
+                                        disabled={openingId === report.id}
+                                        className="bg-slate-700/80 hover:bg-slate-600 text-yellow-500 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition"
+                                        title="Visualizar"
                                     >
-                                        {openingId === report.id ? (
-                                            <>
-                                                <Loader2 size={16} className="animate-spin" />
-                                                Acessando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ExternalLink size={16} />
-                                                Acessar
-                                            </>
-                                        )}
+                                        {openingId === report.id
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : <Eye size={18} />}
                                     </button>
+                                    {/* Copiar Link */}
+                                    <button
+                                        onClick={() => handleCopyLink(report)}
+                                        disabled={copyingId === report.id}
+                                        className={`bg-slate-700/80 hover:bg-slate-600 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition ${
+                                            copiedId === report.id ? 'text-emerald-400' : 'text-purple-400'
+                                        }`}
+                                        title="Copiar link para compartilhar"
+                                    >
+                                        {copyingId === report.id
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : copiedId === report.id
+                                                ? <Check size={18} />
+                                                : <Link2 size={18} />}
+                                    </button>
+                                    {/* Excluir */}
                                     <button
                                         onClick={() => setConfirmDeleteReport(report)}
                                         disabled={deletingId === report.id}
-                                        className="px-4 py-2.5 bg-red-900/30 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition disabled:opacity-50 flex items-center justify-center flex-shrink-0"
-                                        title="Excluir relatório permanente"
+                                        className="bg-slate-700/80 hover:bg-slate-600 text-red-500 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition"
+                                        title="Excluir relatório"
                                     >
-                                        {deletingId === report.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={18} />}
+                                        {deletingId === report.id
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : <Trash2 size={18} />}
                                     </button>
                                 </div>
                             </div>

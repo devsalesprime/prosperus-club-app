@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, TrendingUp, ExternalLink, FileText, Loader2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, FileText, Loader2, Eye, Link2, Check, Trash2 } from 'lucide-react';
 import { reportService, MemberReport } from '../../services/reportService';
 import toast from 'react-hot-toast';
 
@@ -10,48 +10,112 @@ interface MyProgressViewProps {
 export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
     const [reports, setReports] = useState<MemberReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [openingId, setOpeningId] = useState<string | null>(null);
+
+    // Preview state (blob-based — mesmo padrão do Admin)
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewTitle, setPreviewTitle] = useState('');
+    const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+    // Copy link state
+    const [copyingId, setCopyingId] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    // Delete state
+    const [confirmDeleteReport, setConfirmDeleteReport] = useState<MemberReport | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         loadReports();
     }, []);
+
+    // Libera blob URLs ao desmontar
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [previewUrl]);
 
     const loadReports = async () => {
         try {
             setIsLoading(true);
             const data = await reportService.getMyReports();
             setReports(data);
-        } catch (error) {
+        } catch {
             toast.error('Erro ao carregar os relatórios.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleOpenReport = async (report: MemberReport) => {
+    // Abre o relatório num iframe interno via blob URL
+    const handlePreview = async (report: MemberReport) => {
+        setLoadingPreviewId(report.id);
+        setPreviewTitle(report.title);
         try {
-            setOpeningId(report.id);
             const signedUrl = await reportService.getReportSignedUrl(report.storage_path);
-            
-            if (!signedUrl) {
-                toast.error('Não foi possível gerar a assinatura de acesso do relatório.');
-                return;
-            }
+            if (!signedUrl) throw new Error('Falha ao gerar URL de acesso');
 
-            // 🚨 ISOLAMENTO DE CSS: Protege a renderização abrindo em nova aba
-            // O target="_blank" faz o navegador renderizar o HTML raw da Signed URL
-            // Isso evita que estilos inline ou classes globais quebrem a UI do app.
-            window.open(signedUrl, '_blank', 'noopener,noreferrer');
-        } catch (error) {
+            const response = await fetch(signedUrl);
+            const text = await response.text();
+            const blob = new Blob([text], { type: 'text/html' });
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(URL.createObjectURL(blob));
+        } catch {
             toast.error('Erro ao abrir o relatório.');
         } finally {
-            setOpeningId(null);
+            setLoadingPreviewId(null);
+        }
+    };
+
+    // Copia link compartilhável de 7 dias via viewer público
+    const handleCopyLink = async (report: MemberReport) => {
+        setCopyingId(report.id);
+        try {
+            const storageUrl = await reportService.getShareableUrl(report.storage_path);
+            if (!storageUrl) throw new Error('Falha ao gerar link');
+
+            const titleEncoded = encodeURIComponent(report.title);
+            const urlEncoded = encodeURIComponent(storageUrl);
+            const shareUrl = `${window.location.origin}/relatorio.html?url=${urlEncoded}&title=${titleEncoded}`;
+
+            await navigator.clipboard.writeText(shareUrl);
+            setCopiedId(report.id);
+            setTimeout(() => setCopiedId(null), 2500);
+            toast.success('Link copiado! Válido por 7 dias.', { icon: '🔗' });
+        } catch {
+            toast.error('Falha ao gerar o link.');
+        } finally {
+            setCopyingId(null);
+        }
+    };
+
+    // Deleta o relatório
+    const handleDelete = async () => {
+        if (!confirmDeleteReport) return;
+        setDeleting(true);
+        try {
+            const success = await reportService.deleteReport(
+                confirmDeleteReport.id,
+                confirmDeleteReport.storage_path
+            );
+            if (success) {
+                setReports(prev => prev.filter(r => r.id !== confirmDeleteReport.id));
+                toast.success('Relatório excluído.');
+            } else {
+                toast.error('Erro ao excluir o relatório.');
+            }
+        } catch {
+            toast.error('Erro ao excluir o relatório.');
+        } finally {
+            setDeleting(false);
+            setConfirmDeleteReport(null);
         }
     };
 
     return (
         <div className="absolute inset-0 z-50 bg-prosperus-navy flex flex-col animate-in slide-in-from-right duration-300">
-            {/* Header Oficial */}
+
+            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-prosperus-box border-b border-prosperus-stroke sticky top-0 z-10 shrink-0">
                 <button
                     onClick={onBack}
@@ -63,13 +127,13 @@ export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
                     <TrendingUp className="text-prosperus-gold-dark" size={20} />
                     <h1 className="text-lg font-bold text-prosperus-white">Meu Progresso</h1>
                 </div>
-                <div className="w-10"></div> {/* Spacer balance */}
+                <div className="w-10" />
             </div>
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <p className="text-sm text-prosperus-grey mb-6">
-                    Acompanhe sua evolução e performance gerada pelos nossos consultores. Os relatórios são gerados externamente e preservados de forma segura aqui.
+                <p className="text-sm text-prosperus-grey mb-2">
+                    Acompanhe sua evolução e performance gerada pelos nossos consultores.
                 </p>
 
                 {isLoading ? (
@@ -84,52 +148,133 @@ export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
                         </div>
                         <h3 className="text-lg font-bold text-prosperus-white mb-2">Sem Relatórios</h3>
                         <p className="text-prosperus-grey text-sm">
-                            Nenhum relatório de progresso foi emitido para o seu perfil ainda. 
+                            Nenhum relatório de progresso foi emitido para o seu perfil ainda.
                             Eles aparecerão aqui automaticamente quando processados.
                         </p>
                     </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-3">
                         {reports.map((report) => (
-                            <div 
+                            <div
                                 key={report.id}
-                                className="bg-prosperus-box border border-prosperus-stroke rounded-xl p-5 hover:border-yellow-600/30 transition-all flex flex-col"
+                                className="bg-[#031726] border border-slate-800 rounded-xl p-4 flex flex-col gap-3 w-full"
                             >
-                                <div className="flex items-start gap-3 mb-4">
-                                    <div className="p-2.5 bg-yellow-600/10 rounded-lg shrink-0">
-                                        <TrendingUp className="text-prosperus-gold-dark" size={20} />
+                                {/* Título e data */}
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className="p-2 bg-yellow-600/10 rounded-lg shrink-0">
+                                        <TrendingUp className="text-prosperus-gold-dark" size={18} />
                                     </div>
-                                    <div>
-                                        <h3 className="text-prosperus-white font-bold leading-tight mb-1">{report.title}</h3>
-                                        <p className="text-xs text-prosperus-grey">
-                                            Emitido em: {new Date(report.created_at).toLocaleDateString('pt-BR', {
+                                    <div className="min-w-0">
+                                        <h3 className="text-prosperus-white font-bold text-sm leading-tight truncate">
+                                            {report.title}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            {new Date(report.created_at).toLocaleDateString('pt-BR', {
                                                 day: '2-digit', month: 'long', year: 'numeric'
                                             })}
                                         </p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleOpenReport(report)}
-                                    disabled={openingId === report.id}
-                                    className="mt-auto w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-prosperus-white text-sm font-medium rounded-lg transition border border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {openingId === report.id ? (
-                                        <>
-                                            <Loader2 size={16} className="animate-spin" />
-                                            Gerando Acesso...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ExternalLink size={16} />
-                                            Visualizar Relatório
-                                        </>
-                                    )}
-                                </button>
+
+                                {/* Botões de ação — mesmo padrão visual do Admin */}
+                                <div className="border-t border-slate-800/80 pt-3 flex justify-end gap-2">
+
+                                    {/* Visualizar */}
+                                    <button
+                                        onClick={() => handlePreview(report)}
+                                        disabled={loadingPreviewId === report.id}
+                                        className="bg-slate-800/80 hover:bg-slate-700 text-yellow-500 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition"
+                                        title="Visualizar"
+                                    >
+                                        {loadingPreviewId === report.id
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : <Eye size={18} />
+                                        }
+                                    </button>
+
+                                    {/* Copiar Link */}
+                                    <button
+                                        onClick={() => handleCopyLink(report)}
+                                        disabled={copyingId === report.id}
+                                        className={`bg-slate-800/80 hover:bg-slate-700 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition ${
+                                            copiedId === report.id ? 'text-emerald-400' : 'text-purple-400'
+                                        }`}
+                                        title="Copiar link para compartilhar"
+                                    >
+                                        {copyingId === report.id
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : copiedId === report.id
+                                                ? <Check size={18} />
+                                                : <Link2 size={18} />
+                                        }
+                                    </button>
+
+                                    {/* Deletar */}
+                                    <button
+                                        onClick={() => setConfirmDeleteReport(report)}
+                                        className="bg-slate-800/80 hover:bg-slate-700 text-red-500 rounded-lg p-2 min-h-[40px] min-w-[40px] flex items-center justify-center transition"
+                                        title="Excluir"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Preview Modal — iframe com blob URL */}
+            {previewUrl && (
+                <div className="absolute inset-0 z-[60] bg-black/90 flex flex-col">
+                    <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 shrink-0">
+                        <p className="text-sm font-semibold text-white truncate max-w-[75%]">{previewTitle}</p>
+                        <button
+                            onClick={() => {
+                                URL.revokeObjectURL(previewUrl);
+                                setPreviewUrl(null);
+                            }}
+                            className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg p-2 transition shrink-0"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                    <iframe
+                        src={previewUrl}
+                        title={previewTitle}
+                        className="flex-1 w-full border-none bg-white"
+                    />
+                </div>
+            )}
+
+            {/* Confirm Delete Dialog */}
+            {confirmDeleteReport && (
+                <div className="absolute inset-0 z-[60] bg-black/70 flex items-end sm:items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+                        <h3 className="text-white font-bold text-lg mb-2">Excluir Relatório?</h3>
+                        <p className="text-slate-400 text-sm mb-5 leading-relaxed">
+                            O relatório <span className="text-white font-medium">"{confirmDeleteReport.title}"</span> será excluído permanentemente e não poderá ser recuperado.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmDeleteReport(null)}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition text-sm font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white transition text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                            >
+                                {deleting ? <Loader2 size={16} className="animate-spin" /> : null}
+                                {deleting ? 'Excluindo...' : 'Excluir'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
