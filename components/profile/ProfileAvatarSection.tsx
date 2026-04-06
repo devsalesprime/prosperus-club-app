@@ -1,68 +1,97 @@
 // components/profile/ProfileAvatarSection.tsx
-// Extracted from ProfileEdit.tsx L300-345 — Avatar display + upload trigger
+// Avatar section — sem campo de URL, estilo Gmail/LinkedIn
 
 import React from 'react';
-import { Upload } from 'lucide-react';
-import { AvatarEditable } from '../ui/Avatar';
-import { Button } from '../ui/Button';
 
 interface ProfileAvatarSectionProps {
     imageUrl: string;
-    onImageUrlChange: (url: string) => void;
+    onImageUrlChange: (url: string) => void; // mantida para compatibilidade
     onOpenUpload: () => void;
 }
 
 export const ProfileAvatarSection: React.FC<ProfileAvatarSectionProps> = ({
     imageUrl,
-    onImageUrlChange,
     onOpenUpload,
 }) => {
+    const avatarSrc = imageUrl && !imageUrl.includes('default-avatar')
+        ? imageUrl
+        : `${import.meta.env.BASE_URL}default-avatar.svg`;
+
     return (
-        <div>
-            <label className="block text-sm font-bold text-white mb-2">
-                Foto de Perfil
-            </label>
-            {/* Layout responsivo: empilha no mobile, inline no desktop */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
-                {/* Clickable avatar with camera overlay */}
-                <button
-                    type="button"
-                    onClick={onOpenUpload}
-                    className="relative shrink-0 group"
-                    title="Trocar foto de perfil"
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '4px 0' }}>
+            {/* Avatar clicável com badge de câmera */}
+            <button
+                type="button"
+                onClick={onOpenUpload}
+                title="Editar foto de perfil"
+                style={{
+                    position: 'relative',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    borderRadius: '50%',
+                    display: 'block',
+                }}
+            >
+                <img
+                    src={avatarSrc}
+                    alt="Foto de perfil"
+                    style={{
+                        width: 96,
+                        height: 96,
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2.5px solid #1A4A6B',
+                        background: '#0D2E44',
+                        display: 'block',
+                    }}
+                    onError={(e) => {
+                        e.currentTarget.src = `${import.meta.env.BASE_URL}default-avatar.svg`;
+                    }}
+                />
+
+                {/* Badge câmera (canto inferior direito) */}
+                <span
+                    style={{
+                        position: 'absolute',
+                        bottom: 2,
+                        right: 2,
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        background: '#FFDA71',
+                        border: '2.5px solid #ba8f41',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                    aria-hidden
                 >
-                    <AvatarEditable
-                        src={imageUrl}
-                        alt="Preview"
-                        size="xl"
-                    />
-                    {/* Camera overlay */}
-                    <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity">
-                        <Upload size={24} className="text-white" />
-                    </div>
-                </button>
-                <div className="flex flex-col sm:flex-row gap-3 w-full">
-                    <input
-                        type="url"
-                        value={imageUrl}
-                        onChange={(e) => onImageUrlChange(e.target.value)}
-                        placeholder="https://exemplo.com/foto.jpg"
-                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-yellow-600 transition"
-                    />
-                    <Button
-                        variant="primary"
-                        size="md"
-                        onClick={onOpenUpload}
-                        className="w-full sm:w-auto shrink-0"
-                    >
-                        <Upload size={18} />
-                        Upload
-                    </Button>
-                </div>
-            </div>
-            <p className="text-xs text-slate-500 mt-2 text-center sm:text-left">
-                Toque na foto ou clique em Upload para alterar
-            </p>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#031A2B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/>
+                        <circle cx="12" cy="13" r="3"/>
+                    </svg>
+                </span>
+            </button>
+
+            {/* Botão textual */}
+            <button
+                type="button"
+                onClick={onOpenUpload}
+                style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#FFDA71',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: '2px 0',
+                    letterSpacing: '0.01em',
+                }}
+            >
+                Editar foto
+            </button>
         </div>
     );
 };

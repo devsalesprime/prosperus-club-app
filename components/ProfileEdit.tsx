@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { IconChat } from './ui/icons/CustomIcons';
 import { profileService, ProfileData, ExclusiveBenefit } from '../services/profileService';
-import { ImageUpload } from './ImageUpload';
+import { ProfilePhotoEditor } from './profile/ProfilePhotoEditor';
 import { ProfilePreview } from './ProfilePreview';
 import { ModalWrapper, ModalBody } from './ui/ModalWrapper';
 import { ModalHeader, ModalHeaderIconButton } from './ModalHeader';
@@ -75,7 +75,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
     } = useProfileForm({ currentUser, supabase, isMockMode, onSave });
 
     // Advanced features states
-    const [showImageUpload, setShowImageUpload] = useState(false);
+    const [showPhotoEditor, setShowPhotoEditor] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
 
@@ -151,7 +151,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     <ProfileAvatarSection
                         imageUrl={formData.image_url || ''}
                         onImageUrlChange={(url) => handleInputChange('image_url', url)}
-                        onOpenUpload={() => setShowImageUpload(true)}
+                        onOpenUpload={() => setShowPhotoEditor(true)}
                     />
                     {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
                         <p className="text-xs text-center -mt-3 mb-2" style={{ color: '#CA9A43' }}>
@@ -298,33 +298,49 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                 </form>
             </ModalBody>
 
-            {/* Image Upload Modal */}
-            {showImageUpload && (
-                <ImageUpload
+            {/* Photo Editor (crop circular) */}
+            {showPhotoEditor && (
+                <ProfilePhotoEditor
                     currentImageUrl={formData.image_url}
-                    userId={currentUser.id}
-                    supabase={supabase}
-                    onImageUploaded={async (url) => {
-                        logger.debug('📸 ProfileEdit: Image uploaded, URL:', url);
-                        handleInputChange('image_url', url);
-                        setShowImageUpload(false);
-
-                        // Auto-save image_url directly to the database
+                    onConfirm={async (croppedBlob) => {
+                        setShowPhotoEditor(false);
                         try {
-                            logger.debug('📸 ProfileEdit: Auto-saving image_url to database...');
-                            await profileService.updateProfile(currentUser.id, { image_url: url } as any);
-                            logger.debug('✅ ProfileEdit: image_url saved successfully');
+                            const fileName = `${currentUser.id}/avatar_${Date.now()}.jpg`;
+                            const { error: uploadError } = await supabase.storage
+                                .from('avatars')
+                                .upload(fileName, croppedBlob, {
+                                    contentType: 'image/jpeg',
+                                    cacheControl: '3600',
+                                    upsert: true,
+                                });
+                            if (uploadError) throw uploadError;
 
-                            // Refresh global profile context so the new photo shows everywhere
+                            const { data: { publicUrl } } = supabase.storage
+                                .from('avatars')
+                                .getPublicUrl(fileName);
+
+                            logger.debug('📸 ProfileEdit: crop uploaded ->', publicUrl);
+                            handleInputChange('image_url', publicUrl);
+
+                            await profileService.updateProfile(currentUser.id, { image_url: publicUrl } as any);
                             await refreshProfile();
                             setSuccess(true);
                             setTimeout(() => setSuccess(false), 3000);
                         } catch (err) {
-                            console.error('❌ ProfileEdit: Error auto-saving image_url:', err);
-                            setError('Foto enviada mas não foi possível salvar. Clique em "Salvar Perfil".');
+                            console.error('❌ ProfileEdit: upload error', err);
+                            setError('Não foi possível salvar a foto. Tente novamente.');
                         }
                     }}
-                    onCancel={() => setShowImageUpload(false)}
+                    onRemove={async () => {
+                        try {
+                            await profileService.updateProfile(currentUser.id, { image_url: null } as any);
+                            handleInputChange('image_url', '');
+                            await refreshProfile();
+                        } catch (err) {
+                            console.error('❌ ProfileEdit: remove error', err);
+                        }
+                    }}
+                    onClose={() => setShowPhotoEditor(false)}
                 />
             )}
 
