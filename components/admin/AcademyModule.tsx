@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image, Search, Filter, Clock, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Video as VideoIcon, FolderOpen, Pencil, Trash2, Image, Search, Filter, Clock, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pin, PinOff } from 'lucide-react';
 import { Video, VideoCategory } from '../../types';
 import { VideoMaterialsUpload, PendingMaterial } from './VideoMaterialsUpload';
 import {
@@ -187,6 +187,74 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             console.error('Error deleting video:', error);
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
             toast.error('Erro ao excluir vídeo. Tente novamente.');
+        }
+    };
+
+    // ============================================
+    // CURADORIA DE CONTEÚDOM (Optimistic UI)
+    // ============================================
+
+    /**
+     * Fixar / Desfixar vídeo no topo.
+     * Optimistic UI: atualiza o estado local imediatamente.
+     */
+    const handleTogglePin = async (video: Video) => {
+        const newPinState = !video.is_pinned;
+
+        // 🚀 OPTIMISTIC: atualiza visualmente já
+        setVideos(prev =>
+            prev.map(v => v.id === video.id ? { ...v, is_pinned: newPinState } : v)
+        );
+
+        try {
+            const { videoService } = await import('../../services/videoService');
+            await videoService.toggleVideoPin(video.id, video.is_pinned ?? false);
+            toast.success(newPinState ? '📌 Vídeo fixado no topo!' : 'Vídeo desafixado.');
+        } catch (error) {
+            // Rollback
+            setVideos(prev =>
+                prev.map(v => v.id === video.id ? { ...v, is_pinned: video.is_pinned } : v)
+            );
+            toast.error('Erro ao alterar pin. Tente novamente.');
+        }
+    };
+
+    /**
+     * Subir ou Descer vídeo na ordenação.
+     * Optimistic UI: faz o swap no array local imediatamente.
+     */
+    const handleMoveVideo = async (index: number, direction: 'up' | 'down') => {
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= paginatedVideos.length) return;
+
+        const videoA = paginatedVideos[index];
+        const videoB = paginatedVideos[targetIndex];
+        const orderA = videoA.order_index ?? index;
+        const orderB = videoB.order_index ?? targetIndex;
+
+        // 🚀 OPTIMISTIC: troca no array local
+        setVideos(prev => {
+            const next = [...prev];
+            const idxA = next.findIndex(v => v.id === videoA.id);
+            const idxB = next.findIndex(v => v.id === videoB.id);
+            if (idxA === -1 || idxB === -1) return prev;
+            next[idxA] = { ...videoA, order_index: orderB };
+            next[idxB] = { ...videoB, order_index: orderA };
+            // reordenar
+            return [...next].sort((a, b) => {
+                if ((b.is_pinned ? 1 : 0) !== (a.is_pinned ? 1 : 0)) return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0);
+                return (a.order_index ?? 0) - (b.order_index ?? 0);
+            });
+        });
+
+        try {
+            const { videoService } = await import('../../services/videoService');
+            await videoService.updateVideoOrder(videoA.id, orderB, videoB.id, orderA);
+            toast.success(direction === 'up' ? '↑ Vídeo movido para cima' : '↓ Vídeo movido para baixo');
+        } catch (error) {
+            // Rollback: recarrega do banco
+            await loadVideos();
+            toast.error('Erro ao reordenar. A ordem foi restaurada.');
         }
     };
 
@@ -493,15 +561,102 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                         </div>
                     </div>
 
-                    {/* ── Video Table (Desktop) ─────────────────── */}
-                    <div className="hidden md:block">
-                        <AdminTable title="Vídeos" subtitle={`Página ${safeCurrentPage} de ${totalPages}`}>
-                            <DataTable
-                                columns={['Título', 'Categoria', 'Duração']}
-                                data={paginatedVideos.map(v => ({ ...v, category: getCategoryName(v) }))}
-                                onEdit={(v: Video) => openVideoModal(v)}
-                                onDelete={(id: string) => requestDeleteVideo(id)}
-                            />
+                    {/* ── Video Table (Desktop) — Custom com Pin + Order ─ */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <AdminTable title="Vídeos" subtitle={`Página ${safeCurrentPage} de ${totalPages} • Pin > Ordem > Data`}>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-prosperus-stroke text-xs text-slate-400 uppercase tracking-wider">
+                                        <th className="text-left px-4 py-3">Vídeo</th>
+                                        <th className="text-left px-4 py-3">Categoria</th>
+                                        <th className="text-left px-4 py-3">Duração</th>
+                                        <th className="text-center px-4 py-3">Pin</th>
+                                        <th className="text-center px-4 py-3">Ordem</th>
+                                        <th className="text-center px-4 py-3">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-prosperus-stroke/50">
+                                    {paginatedVideos.map((v, idx) => (
+                                        <tr key={v.id} className={`group hover:bg-prosperus-muted-bg/40 transition-colors ${v.is_pinned ? 'bg-prosperus-gold-dark/5' : ''}`}>
+                                            {/* Thumbnail + Título */}
+                                            <td className="px-4 py-3 max-w-[260px]">
+                                                <div className="flex items-center gap-3">
+                                                    {v.is_pinned && (
+                                                        <Pin size={12} className="text-prosperus-gold-light fill-current flex-shrink-0" />
+                                                    )}
+                                                    {v.thumbnail ? (
+                                                        <img src={v.thumbnail} alt={v.title} className="w-12 aspect-video object-cover rounded-lg flex-shrink-0" />
+                                                    ) : (
+                                                        <div className="w-12 aspect-video rounded-lg bg-prosperus-muted-bg flex items-center justify-center flex-shrink-0">
+                                                            <VideoIcon size={12} className="text-slate-600" />
+                                                        </div>
+                                                    )}
+                                                    <span className="text-white font-medium truncate min-w-0">{v.title}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-400 truncate max-w-[140px]">{getCategoryName(v)}</td>
+                                            <td className="px-4 py-3 text-slate-400">{v.duration}</td>
+                                            {/* Pin Button */}
+                                            <td className="px-4 py-3 text-center">
+                                                <button
+                                                    onClick={() => handleTogglePin(v)}
+                                                    title={v.is_pinned ? 'Desafixar' : 'Fixar no topo'}
+                                                    className={`w-9 h-9 mx-auto flex items-center justify-center rounded-lg border transition-all active:scale-95 ${
+                                                        v.is_pinned
+                                                            ? 'bg-prosperus-gold-dark/20 border-prosperus-gold-dark text-prosperus-gold-light'
+                                                            : 'bg-prosperus-navy border-prosperus-stroke text-slate-500 hover:text-white hover:border-slate-500'
+                                                    }`}
+                                                >
+                                                    {v.is_pinned
+                                                        ? <Pin size={15} className="fill-current" />
+                                                        : <PinOff size={15} />
+                                                    }
+                                                </button>
+                                            </td>
+                                            {/* Up / Down Buttons */}
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <button
+                                                        onClick={() => handleMoveVideo(idx, 'up')}
+                                                        disabled={idx === 0}
+                                                        title="Subir"
+                                                        className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    >
+                                                        <ChevronUp size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleMoveVideo(idx, 'down')}
+                                                        disabled={idx === paginatedVideos.length - 1}
+                                                        title="Descer"
+                                                        className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    >
+                                                        <ChevronDown size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            {/* Edit / Delete */}
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => openVideoModal(v)}
+                                                        title="Editar"
+                                                        className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg hover:bg-prosperus-muted-bg active:scale-95 transition-all"
+                                                    >
+                                                        <Pencil size={14} className="text-yellow-500" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => requestDeleteVideo(v.id)}
+                                                        title="Excluir"
+                                                        className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-red-500/20 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all"
+                                                    >
+                                                        <Trash2 size={14} className="text-red-400" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </AdminTable>
                     </div>
 
@@ -544,14 +699,55 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                                         </div>
                                     </div>
 
+                                    {/* Indicador de pin no card */}
+                                    {v.is_pinned && (
+                                        <div className="flex items-center gap-1.5 text-prosperus-gold-light text-xs font-semibold">
+                                            <Pin size={11} className="fill-current" />
+                                            Fixado no topo
+                                        </div>
+                                    )}
+
                                     {/* Divider */}
                                     <div className="h-px bg-prosperus-stroke" />
 
-                                    {/* Actions row */}
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-500">
-                                            {getCategoryName(v) || 'Sem categoria'}
-                                        </span>
+                                    {/* Actions row: Pin + Up + Down + Edit + Delete */}
+                                    <div className="flex items-center justify-between gap-2">
+                                        {/* Ordenação */}
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                onClick={() => handleMoveVideo(paginatedVideos.indexOf(v), 'up')}
+                                                disabled={paginatedVideos.indexOf(v) === 0}
+                                                title="Subir"
+                                                className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                                            >
+                                                <ChevronUp size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleMoveVideo(paginatedVideos.indexOf(v), 'down')}
+                                                disabled={paginatedVideos.indexOf(v) === paginatedVideos.length - 1}
+                                                title="Descer"
+                                                className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
+                                            >
+                                                <ChevronDown size={18} />
+                                            </button>
+                                            {/* Pin */}
+                                            <button
+                                                onClick={() => handleTogglePin(v)}
+                                                title={v.is_pinned ? 'Desafixar' : 'Fixar no topo'}
+                                                className={`w-10 h-10 flex items-center justify-center rounded-lg border active:scale-95 transition-all ${
+                                                    v.is_pinned
+                                                        ? 'bg-prosperus-gold-dark/20 border-prosperus-gold-dark text-prosperus-gold-light'
+                                                        : 'bg-prosperus-navy border-prosperus-stroke text-slate-500'
+                                                }`}
+                                            >
+                                                {v.is_pinned
+                                                    ? <Pin size={18} className="fill-current" />
+                                                    : <PinOff size={18} className="text-prosperus-muted-text" />
+                                                }
+                                            </button>
+                                        </div>
+
+                                        {/* Edit + Delete */}
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => openVideoModal(v)}

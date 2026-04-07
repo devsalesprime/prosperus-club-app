@@ -12,8 +12,10 @@ export const videoService = {
     async listVideos(): Promise<Video[]> {
         const { data, error } = await supabase
             .from('videos')
-            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, created_at')
-            .order('created_at', { ascending: false });
+            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, is_pinned, order_index, created_at')
+            .order('is_pinned', { ascending: false })    // Pin­os sempre no topo
+            .order('order_index', { ascending: true })   // Ordenação manual crescente
+            .order('created_at', { ascending: false });  // Fallback: mais recentes
 
         if (error) throw error;
         return data.map(mapVideoFromDB);
@@ -29,8 +31,10 @@ export const videoService = {
 
         const { data, error, count } = await supabase
             .from('videos')
-            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, created_at', { count: 'exact' })
-            .order('created_at', { ascending: false })
+            .select('id, title, description, thumbnail_url, video_url, platform, duration, category, category_id, series_id, series_order, is_pinned, order_index, created_at', { count: 'exact' })
+            .order('is_pinned', { ascending: false })   // Pin­os sempre no topo
+            .order('order_index', { ascending: true })  // Ordenação manual crescente
+            .order('created_at', { ascending: false })  // Fallback: mais recentes
             .range(from, to);
 
         if (error) throw error;
@@ -652,7 +656,48 @@ export const videoService = {
             console.error('deleteVideoMaterial error:', err);
             return false;
         }
-    }
+    },
+
+    // ============================================
+    // CURADORIA DE CONTEÚDOM (Pin + Reordenar)
+    // ============================================
+
+    /**
+     * Inverte o estado is_pinned de um vídeo.
+     * Retorna o novo estado (true = fixado).
+     */
+    async toggleVideoPin(id: string, currentStatus: boolean): Promise<boolean> {
+        const newStatus = !currentStatus;
+        const { error } = await supabase
+            .from('videos')
+            .update({ is_pinned: newStatus })
+            .eq('id', id);
+
+        if (error) {
+            logger.error('\u274c toggleVideoPin error:', error);
+            throw error;
+        }
+        return newStatus;
+    },
+
+    /**
+     * Troca os order_index de dois vídeos (Subir / Descer).
+     * Faz duas chamadas UPDATE paralelas para máxima velocidade.
+     */
+    async updateVideoOrder(
+        idToMove: string,
+        newOrderIndex: number,
+        idToSwap: string,
+        swappedOrderIndex: number
+    ): Promise<void> {
+        const [res1, res2] = await Promise.all([
+            supabase.from('videos').update({ order_index: newOrderIndex }).eq('id', idToMove),
+            supabase.from('videos').update({ order_index: swappedOrderIndex }).eq('id', idToSwap),
+        ]);
+
+        if (res1.error) { logger.error('\u274c updateVideoOrder (idToMove) error:', res1.error); throw res1.error; }
+        if (res2.error) { logger.error('\u274c updateVideoOrder (idToSwap) error:', res2.error); throw res2.error; }
+    },
 };
 
 /**
@@ -671,6 +716,9 @@ function mapVideoFromDB(dbVideo: any): Video {
         progress: 0, // Will be populated separately
         seriesId: dbVideo.series_id || undefined,
         seriesOrder: dbVideo.series_order || undefined,
+        // Curadoria Premium
+        order_index: dbVideo.order_index ?? 0,
+        is_pinned: dbVideo.is_pinned ?? false,
         comments: []
     };
 }

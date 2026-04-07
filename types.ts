@@ -98,6 +98,10 @@ export interface Video {
   seriesId?: string;
   seriesOrder?: number;
 
+  // PRD v3.0 - Curadoria de Conteúdo Premium
+  order_index?: number;  // Ordenação manual pelo admin
+  is_pinned?: boolean;   // Fixado no topo da categoria
+
   // PRD v2.0 - Gap 6: Sistema de Comentários
   comments?: ClubComment[];
 }

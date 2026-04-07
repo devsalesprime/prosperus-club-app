@@ -1,6 +1,6 @@
 import React from 'react';
 import { Video } from '../../types';
-import { Play, Clock, CheckCircle2 } from 'lucide-react';
+import { Play, Clock, CheckCircle2, Pin } from 'lucide-react';
 import { FavoriteButton } from './../FavoriteButton';
 
 interface VideoCardProps {
@@ -58,7 +58,15 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                     </div>
                 )}
 
-                {/* Badges top-left */}
+                {/* Badge DESTAQUE (is_pinned) — posicionado acima dos badges de progresso */}
+                {video.is_pinned && progress !== 100 && progress === 0 && (
+                    <div className="absolute top-2 left-2 z-20 bg-prosperus-navy/90 backdrop-blur-md border border-prosperus-gold-dark/50 text-prosperus-gold-light px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-1.5">
+                        <Pin size={12} className="fill-current" />
+                        Destaque
+                    </div>
+                )}
+
+                {/* Badges top-left (progresso sobrescreve Destaque quando há progresso) */}
                 {progress === 100 && (
                     <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-emerald-500/90 text-white px-2 py-1 rounded-lg text-[11px] font-bold backdrop-blur-sm">
                         <CheckCircle2 size={11} strokeWidth={2.5} />
@@ -70,6 +78,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                         {progress}%
                     </div>
                 )}
+
 
                 {/* Favorite */}
                 <FavoriteButton
