@@ -462,7 +462,7 @@ export const videoService = {
     async getCategories(): Promise<VideoCategory[]> {
         const { data, error } = await supabase
             .from('video_categories')
-            .select('id, name, description, cover_image, created_at')
+            .select('id, name, description, cover_image, icon_url, created_at')
             .order('name', { ascending: true });
 
         if (error) throw error;
@@ -478,7 +478,8 @@ export const videoService = {
             .insert([{
                 name: category.name,
                 description: category.description || null,
-                cover_image: category.coverImage || null
+                cover_image: category.coverImage || null,
+                icon_url: category.icon_url || null
             }])
             .select()
             .single();
@@ -496,7 +497,8 @@ export const videoService = {
             .update({
                 name: updates.name,
                 description: updates.description || null,
-                cover_image: updates.coverImage || null
+                cover_image: updates.coverImage || null,
+                icon_url: updates.icon_url !== undefined ? (updates.icon_url || null) : undefined
             })
             .eq('id', id)
             .select()
@@ -516,6 +518,31 @@ export const videoService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    /**
+     * Upload de ícone para uma categoria.
+     * Armazena no bucket `category_icons` e retorna a URL pública.
+     */
+    async uploadCategoryIcon(file: File): Promise<string> {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${Date.now()}_${safeName}`;
+
+        const { data: storageData, error: storageErr } = await supabase.storage
+            .from('category_icons')
+            .upload(path, file, {
+                contentType: file.type || 'image/png',
+                upsert: false,
+                cacheControl: '86400',  // 24h cache para ícones estáticos
+            });
+
+        if (storageErr) throw storageErr;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('category_icons')
+            .getPublicUrl(storageData.path);
+
+        return publicUrl;
     },
 
     /**
@@ -732,6 +759,7 @@ function mapCategoryFromDB(dbCategory: any): VideoCategory {
         name: dbCategory.name,
         description: dbCategory.description || undefined,
         coverImage: dbCategory.cover_image || undefined,
+        icon_url: dbCategory.icon_url || null,
         createdAt: dbCategory.created_at || undefined
     };
 }

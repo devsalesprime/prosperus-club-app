@@ -16,6 +16,7 @@ interface AcademyProps {
 interface CategoryRow {
     categoryName: string;
     videos: Video[];
+    iconUrl?: string | null;   // PRD v3.1 — Ícone da categoria
 }
 
 export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
@@ -51,7 +52,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
         categories.forEach(cat => {
             const vids = grouped.get(cat.id);
             if (vids && vids.length > 0) {
-                rows.push({ categoryName: cat.name, videos: vids });
+                rows.push({ categoryName: cat.name, videos: vids, iconUrl: cat.icon_url });
                 grouped.delete(cat.id);
             }
         });
@@ -198,6 +199,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
                     title={row.categoryName}
                     count={row.videos.length}
                     videos={row.videos}
+                    iconUrl={row.iconUrl}
                     onVideoClick={(v) => handleVideoClick(v, row.videos)}
                 />
             ))}
@@ -236,6 +238,7 @@ interface CategorySwimLaneProps {
     title: string;
     count: number;
     videos: Video[];
+    iconUrl?: string | null;
     onVideoClick: (video: Video) => void;
 }
 
@@ -243,14 +246,30 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     title,
     count,
     videos,
+    iconUrl,
     onVideoClick,
 }) => (
     <div className="flex flex-col mb-8 w-full overflow-hidden">
-        {/* Título da categoria + contador (empilhados verticalmente) */}
+        {/* Título da categoria + ícone + contador (empilhados verticalmente) */}
         <div className="flex flex-col px-4 md:px-4 mb-4 gap-1">
-            <h2 className="text-xl font-bold text-prosperus-white leading-tight">
-                {title}
-            </h2>
+            <div className="flex items-center gap-3">
+                {iconUrl && (
+                    <img
+                        src={iconUrl}
+                        alt=""
+                        className="h-6 sm:h-8 w-auto max-w-[40px] sm:max-w-[48px] object-contain shrink-0 drop-shadow-md"
+                        style={{ filter: 'brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg) brightness(92%)' }}
+                        loading="lazy"
+                        decoding="async"
+                    />
+                )}
+                <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
+                    {title
+                        .split(' ')
+                        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                        .join(' ')}
+                </h2>
+            </div>
             <span className="text-xs text-prosperus-muted-text font-medium">
                 {count} aula{count !== 1 ? 's' : ''}
             </span>

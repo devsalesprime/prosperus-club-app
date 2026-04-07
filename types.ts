@@ -127,6 +127,7 @@ export interface VideoCategory {
   name: string;
   description?: string;
   coverImage?: string;
+  icon_url?: string | null;  // PRD v3.1 — Ícone proprietário (PNG/SVG/WebP)
   createdAt?: string;
 }
 
