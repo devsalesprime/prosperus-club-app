@@ -250,7 +250,13 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
             {/* ══ Modal Cinema Container ═══════════════════════════ */}
             <div
                 className="relative w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-6xl lg:rounded-2xl lg:m-auto lg:my-4 overflow-hidden shadow-2xl shadow-black/60 bg-prosperus-navy border-0 lg:border lg:border-prosperus-stroke flex flex-col"
-                style={{ isolation: 'isolate' }}
+                style={{
+                    isolation: 'isolate',
+                    // iOS Safe Area: empurra o conteúdo abaixo da status bar (notch / Dynamic Island)
+                    paddingTop: 'env(safe-area-inset-top, 0px)',
+                    // Home indicator bar (bottom)
+                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* ── Header (sempre visível) ─────────────────────── */}
