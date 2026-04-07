@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Video } from '../../types';
 import { VideoCard } from './VideoCard';
 import { VideoPlayerModal } from './VideoPlayerModal';
-import { Play, Loader2, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Play, Loader2, ArrowLeft, BookOpen } from 'lucide-react';
 import { useAcademyData } from '../../hooks/queries/useAcademyData';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '../../utils/queryKeys';
@@ -133,36 +133,53 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
                 </div>
             )}
 
-            {/* ── BANNER HERO (Featured Video) ────────────────────── */}
+            {/* ── HERO BANNER (Vídeo em Destaque) ────────────────── */}
             {featuredVideo && (
                 <div
-                    className="relative h-[30vh] min-h-[220px] max-h-[360px] bg-prosperus-navy overflow-hidden group cursor-pointer mx-4 mb-8 rounded-2xl shadow-2xl"
+                    className="relative w-full aspect-[4/3] md:aspect-[21/9] lg:h-[400px] rounded-2xl md:rounded-[32px] overflow-hidden mb-10 shadow-xl group cursor-pointer border border-prosperus-stroke/50 mx-0"
                     onClick={() => handleVideoClick(featuredVideo, [])}
                 >
+                    {/* Imagem de fundo */}
                     <img
                         src={featuredVideo.thumbnail}
                         alt={featuredVideo.title}
-                        className="w-full h-full object-cover opacity-55 group-hover:opacity-40 group-hover:scale-105 transition-all duration-700"
+                        className="absolute inset-0 w-full h-full object-cover object-top opacity-80 z-0 group-hover:scale-105 transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-5 md:p-8">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-prosperus-gold-light text-prosperus-navy text-[11px] font-black rounded-full mb-3 uppercase tracking-wider">
-                            <GraduationCap size={11} strokeWidth={3} />
-                            Em Destaque
-                        </span>
-                        <h2 className="text-xl md:text-2xl font-bold text-white mb-2 max-w-2xl leading-tight">
+
+                    {/* Máscara escura para leitura — crucial */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#031A2B] via-[#031A2B]/60 to-transparent z-10" />
+
+                    {/* Conteúdo posicionado na base */}
+                    <div className="absolute inset-0 flex flex-col justify-end z-20 p-6 md:p-8">
+                        {/* Badge "EM DESTAQUE" vazado */}
+                        <div className="w-fit border border-[#CA9A43] bg-[#CA9A43]/30 backdrop-blur-sm px-3 pb-1 rounded-full mb-3">
+                            <span className="text-[#CA9A43] text-[10px] font-bold tracking-widest">EM DESTAQUE</span>
+                        </div>
+
+                        {/* Título — exatamente 1.2rem */}
+                        <h1 className="text-[1.2rem] font-bold text-white leading-snug drop-shadow-md line-clamp-2 mb-2">
                             {featuredVideo.title}
-                        </h2>
-                        <p className="text-slate-300 mb-4 max-w-xl line-clamp-2 text-sm leading-relaxed hidden sm:block">
-                            {featuredVideo.description}
-                        </p>
-                        <button className="flex items-center gap-2 px-5 py-2.5 bg-prosperus-gold-light hover:bg-white text-prosperus-navy font-bold rounded-xl transition-all duration-150 active:scale-95 shadow-lg text-sm">
-                            <Play className="fill-prosperus-navy" size={15} />
+                        </h1>
+
+                        {/* Categoria — Title Case via JS (dados do banco vêm em UPPERCASE) */}
+                        {featuredVideo.category && (
+                            <p className="text-sm text-white/80 drop-shadow mb-6">
+                                {featuredVideo.category
+                                    .split(' ')
+                                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                                    .join(' ')}
+                            </p>
+                        )}
+
+                        {/* Botão w-fit — proporção da Galeria */}
+                        <button className="self-center w-fit px-6 py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-[0_4px_15px_rgba(202,154,67,0.2)] hover:scale-105 active:scale-95 transition-all text-[#031A2B] font-bold text-sm bg-[linear-gradient(93.9deg,#FFDA71_0%,#CA9A43_100%)] border-none">
+                            <Play size={18} className="fill-current" />
                             Assistir Agora
                         </button>
                     </div>
                 </div>
             )}
+
 
             {/* ── CONTINUE WATCHING ───────────────────────────────── */}
             {continueWatching.length > 0 && (
@@ -189,7 +206,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
             {allVideos.length === 0 && categories.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
                     <div className="w-20 h-20 rounded-2xl bg-prosperus-muted-bg border border-prosperus-stroke flex items-center justify-center mb-6">
-                        <GraduationCap size={36} className="text-prosperus-muted-text" strokeWidth={1} />
+                        <BookOpen size={36} className="text-prosperus-muted-text" strokeWidth={1} />
                     </div>
                     <h3 className="text-xl font-bold text-prosperus-white mb-2">Nenhum vídeo disponível</h3>
                     <p className="text-prosperus-muted-text text-sm">Os vídeos da Academy serão adicionados em breve!</p>
