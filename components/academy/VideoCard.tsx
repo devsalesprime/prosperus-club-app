@@ -104,11 +104,15 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                 <h4 className="text-prosperus-white font-semibold text-sm line-clamp-2 leading-snug group-hover:text-prosperus-gold-light transition-colors duration-150">
                     {video.title}
                 </h4>
+                {/* ── Categoria ──────────────────────────────────────────── 
                 {video.category && (
-                    <p className="text-prosperus-muted-text text-xs truncate normal-case">
-                        {video.category}
+                    <p className="text-prosperus-muted-text text-xs truncate">
+                        {video.category
+                            .split(' ')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                            .join(' ')}
                     </p>
-                )}
+                )}*/}
                 {progress > 0 && progress < 100 && (
                     <p className="text-prosperus-gold-dark text-[11px] font-semibold mt-0.5">
                         {progress}% assistido
