@@ -141,7 +141,7 @@ const GalleryList: React.FC = () => {
                 {albums.map((album) => (
                     <div
                         key={album.id}
-                        className="group bg-[#031726] rounded-2xl overflow-hidden hover:border-prosperus-gold/50 transition-all duration-300 cursor-pointer border border-[#123F5B]"
+                        className="group bg-prosperus-box rounded-2xl overflow-hidden hover:border-prosperus-gold/50 transition-all duration-300 cursor-pointer border border-prosperus-stroke"
                         onClick={() => handleOpenGallery(album)}
                         role="link"
                         tabIndex={0}
@@ -199,7 +199,7 @@ const GalleryList: React.FC = () => {
                             </button>
 
                             {/* Botão "Acessar Galeria" overlay */}
-                            <div className="absolute bottom-3 right-3 z-20 bg-prosperus-gold text-prosperus-navy px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm shadow-lg group-hover:bg-yellow-500 transition-colors">
+                            <div className="absolute bottom-3 right-3 z-20 text-prosperus-navy px-4 py-2 rounded-lg font-bold flex items-center gap-2 text-sm shadow-lg transition-opacity group-hover:opacity-90" style={{ background: 'linear-gradient(93.9deg, #FFDA71 0%, #CA9A43 100%)' }}>
                                 <ExternalLink size={16} />
                                 Acessar Galeria
                             </div>
@@ -212,7 +212,7 @@ const GalleryList: React.FC = () => {
                             </h3>
 
                             <div className="my-3">
-                                <div className="w-full h-[1px] bg-[#123F5B]" />
+                                <div className="w-full h-[1px] bg-prosperus-stroke" />
                             </div>
 
                             {album.description && (

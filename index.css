@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-prosperus-navy: #031A2B;
-  --color-prosperus-box: #031726;
-  --color-prosperus-card: #0D2E44;
-  --color-prosperus-border: #123F5B;
-  --color-prosperus-stroke: #052B48;
-  --color-prosperus-gold: #FFDA71;
-  --color-prosperus-gold-light: #FFDA71;
-  --color-prosperus-gold-dark: #CA9A43;
-  --color-prosperus-white: #FCF7F0;
-  --color-prosperus-grey: #A8B4BC;
-  --color-prosperus-muted-bg: #152938;
-  --color-prosperus-muted-text: #95A4B4;
-  --color-prosperus-dark-start: #042034;
-  --color-prosperus-dark-end: #04253E;
+  --color-prosperus-navy:       #031A2B;   /* fundo base de todas as telas */
+  --color-prosperus-box:        #031726;   /* cards, inputs, header, modais */
+  --color-prosperus-card:       #031726;   /* alias de box — atualizado DS Abr/26 */
+  --color-prosperus-border:     #052B48;   /* alias de stroke — atualizado DS Abr/26 */
+  --color-prosperus-stroke:     #052B48;   /* bordas, separadores */
+  --color-prosperus-gold:       #FFDA71;   /* CTA principal, item ativo nav */
+  --color-prosperus-gold-light: #FFDA71;   /* igual gold (alias) */
+  --color-prosperus-gold-dark:  #CA9A43;   /* botões pequenos, ícones, badges */
+  --color-prosperus-white:      #FCF7F0;   /* texto principal */
+  --color-prosperus-grey:       #95A4B4;   /* atualizado DS Abr/26 (era #A8B4BC) */
+  --color-prosperus-muted-bg:   #152938;   /* botões/opções não selecionadas */
+  --color-prosperus-muted-text: #95A4B4;   /* texto inativo, ícones off, placeholders */
+  --color-prosperus-dark-start: #042034;   /* gradiente Agenda/Tools/Galeria */
+  --color-prosperus-dark-end:   #04253E;   /* gradiente Agenda/Tools/Galeria */
 }
 
 @layer base {

@@ -37,7 +37,7 @@ export const BottomNav: React.FC = () => {
 
             <nav
                 id="prosperus-bottom-nav"
-                className="fixed bottom-0 left-0 right-0 z-50 bg-prosperus-navy border-t border-prosperus-border"
+                className="fixed bottom-0 left-0 right-0 z-50 bg-prosperus-box border-t border-prosperus-stroke"
             >
                 {/* Wrapper interno: 56px fixos para ícones + labels */}
                 <div style={{
