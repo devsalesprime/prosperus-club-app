@@ -493,15 +493,86 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                         </div>
                     </div>
 
-                    {/* ── Video Table ─────────────────────────── */}
-                    <AdminTable title="Vídeos" subtitle={`Página ${safeCurrentPage} de ${totalPages}`}>
-                        <DataTable
-                            columns={['Título', 'Categoria', 'Duração']}
-                            data={paginatedVideos.map(v => ({ ...v, category: getCategoryName(v) }))}
-                            onEdit={(v: Video) => openVideoModal(v)}
-                            onDelete={(id: string) => requestDeleteVideo(id)}
-                        />
-                    </AdminTable>
+                    {/* ── Video Table (Desktop) ─────────────────── */}
+                    <div className="hidden md:block">
+                        <AdminTable title="Vídeos" subtitle={`Página ${safeCurrentPage} de ${totalPages}`}>
+                            <DataTable
+                                columns={['Título', 'Categoria', 'Duração']}
+                                data={paginatedVideos.map(v => ({ ...v, category: getCategoryName(v) }))}
+                                onEdit={(v: Video) => openVideoModal(v)}
+                                onDelete={(id: string) => requestDeleteVideo(id)}
+                            />
+                        </AdminTable>
+                    </div>
+
+                    {/* ── Video Cards (Mobile — Table-to-Card pattern) ── */}
+                    <div className="grid grid-cols-1 gap-4 md:hidden mt-4">
+                        {paginatedVideos.length === 0 ? (
+                            <AdminEmptyState
+                                icon={<VideoIcon size={48} />}
+                                message="Nenhum vídeo encontrado."
+                                description="Ajuste os filtros ou crie um novo vídeo."
+                            />
+                        ) : (
+                            paginatedVideos.map(v => (
+                                <div
+                                    key={v.id}
+                                    className="bg-prosperus-box border border-prosperus-stroke rounded-xl p-4 flex flex-col gap-3"
+                                >
+                                    {/* Thumbnail + info */}
+                                    <div className="flex items-start gap-3">
+                                        {v.thumbnail ? (
+                                            <img
+                                                src={v.thumbnail}
+                                                alt={v.title}
+                                                className="w-16 aspect-video object-cover rounded-lg flex-shrink-0 bg-prosperus-muted-bg"
+                                            />
+                                        ) : (
+                                            <div className="w-16 aspect-video rounded-lg flex-shrink-0 bg-prosperus-muted-bg flex items-center justify-center">
+                                                <VideoIcon size={16} className="text-slate-600" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-white text-sm truncate min-w-0">{v.title}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5 truncate">{getCategoryName(v)}</p>
+                                            {v.duration && (
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <Clock size={11} className="text-slate-500" />
+                                                    <span className="text-xs text-slate-500">{v.duration}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Divider */}
+                                    <div className="h-px bg-prosperus-stroke" />
+
+                                    {/* Actions row */}
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-slate-500">
+                                            {getCategoryName(v) || 'Sem categoria'}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => openVideoModal(v)}
+                                                title="Editar"
+                                                className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg hover:bg-prosperus-muted-bg active:scale-95 transition-all"
+                                            >
+                                                <Pencil size={15} className="text-yellow-500" />
+                                            </button>
+                                            <button
+                                                onClick={() => requestDeleteVideo(v.id)}
+                                                title="Excluir"
+                                                className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-red-500/20 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all"
+                                            >
+                                                <Trash2 size={15} className="text-red-400" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
 
                     {/* ── Pagination Controls ─────────────────── */}
                     {totalPages > 1 && (
