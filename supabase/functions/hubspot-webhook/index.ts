@@ -31,6 +31,15 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 // Business statuses from custom HubSpot property 'situacao_do_negocio'
 const ACTIVE_BUSINESS_STATUSES = ['ativo']
 
+// Deal-level custom properties that hold extra member emails
+const DEAL_PARTICIPANT_EMAIL_PROPS = [
+    'e_mail___participante_vinculado__01_',
+    'c_e_mail',
+    'e_mail___participante_vinculado__02_',
+    'e_mail___participante_vinculado__03_',
+    'e_mail___participante_vinculado__04_',
+]
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-hubspot-signature-v3, x-hubspot-request-timestamp',
@@ -242,6 +251,107 @@ async function handleContactCreatedOrUpdated(eventData: any) {
     return { success: true, action: 'created', email }
 }
 
+// ─── Provision Profile by Email ─────────────────────────────────
+// Used for deal participant emails that may not be CRM-associated contacts.
+// Creates Auth user + profile (if new & active), updates is_active (if existing),
+// or deactivates (if inactive). Sends magic link on first creation.
+
+async function provisionProfileByEmail(
+    email: string,
+    isActive: boolean
+): Promise<{ email: string; action: string }> {
+    const normalEmail = email.trim().toLowerCase()
+
+    if (!normalEmail || !normalEmail.includes('@')) {
+        return { email, action: 'invalid_email' }
+    }
+
+    // 1. Check if profile already exists
+    const { data: existing } = await supabase
+        .from('profiles')
+        .select('id, email, is_active')
+        .eq('email', normalEmail)
+        .maybeSingle()
+
+    if (existing) {
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ is_active: isActive, updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+
+        if (updateError) {
+            console.error(`❌ Participant update error (${normalEmail}):`, updateError)
+            return { email: normalEmail, action: `error: ${updateError.message}` }
+        }
+        console.log(`✅ Participant updated: ${normalEmail} → is_active: ${isActive}`)
+        return { email: normalEmail, action: 'updated' }
+    }
+
+    // 2. No profile — skip if deactivating (nothing to deactivate)
+    if (!isActive) {
+        console.log(`⏭️ Skipping inactive new participant: ${normalEmail}`)
+        return { email: normalEmail, action: 'skipped_inactive' }
+    }
+
+    // 3. Create Auth user
+    const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
+        email: normalEmail,
+        email_confirm: true,
+        user_metadata: { source: 'hubspot_deal_participant' },
+    })
+
+    if (authError) {
+        if (authError.message?.includes('already been registered')) {
+            console.log(`⚠️ Auth user exists, upserting profile: ${normalEmail}`)
+            const { data: { users } } = await supabase.auth.admin.listUsers()
+            const authUser = users?.find((u: { email?: string }) => u.email === normalEmail)
+            if (authUser) {
+                await supabase.from('profiles').upsert({
+                    id: authUser.id,
+                    email: normalEmail,
+                    name: 'Novo Membro',
+                    role: 'MEMBER',
+                    is_active: true,
+                    has_completed_onboarding: false,
+                })
+                return { email: normalEmail, action: 'profile_upserted' }
+            }
+        }
+        console.error(`❌ Auth error for ${normalEmail}:`, authError)
+        return { email: normalEmail, action: `error: ${authError.message}` }
+    }
+
+    // 4. Create profile record
+    const { error: profileError } = await supabase.from('profiles').upsert({
+        id: newUser.user.id,
+        email: normalEmail,
+        name: 'Novo Membro',
+        role: 'MEMBER',
+        is_active: true,
+        has_completed_onboarding: false,
+    })
+
+    if (profileError) {
+        console.error(`❌ Profile creation error for ${normalEmail}:`, profileError)
+        return { email: normalEmail, action: `error: ${profileError.message}` }
+    }
+
+    // 5. Magic link for first access
+    try {
+        await supabase.auth.admin.generateLink({
+            type: 'magiclink',
+            email: normalEmail,
+            options: { redirectTo: `${APP_URL}/` },
+        })
+        console.log(`📧 Magic link sent to participant: ${normalEmail}`)
+    } catch (linkErr) {
+        console.warn(`⚠️ Magic link failed for ${normalEmail} (non-critical):`, linkErr)
+    }
+
+    console.log(`✅ New participant created: ${normalEmail}`)
+    return { email: normalEmail, action: 'created' }
+}
+
 // ─── Contact Deleted ─────────────────────────────────────────────
 
 async function handleContactDeleted(objectId: string) {
@@ -276,7 +386,11 @@ async function handleDealPropertyChange(eventData: any) {
     const propertyValue = (eventData.propertyValue || '')
 
     // Properties we react to on Deal objects
-    const HANDLED_PROPERTIES = ['situacao_do_negocio', 'data_de_nascimento__socio_principal']
+    const HANDLED_PROPERTIES = [
+        'situacao_do_negocio',
+        'data_de_nascimento__socio_principal',
+        ...DEAL_PARTICIPANT_EMAIL_PROPS,
+    ]
 
     if (!HANDLED_PROPERTIES.includes(propertyName)) {
         console.log(`⏭️ Deal property '${propertyName}' ignored`)
@@ -313,15 +427,34 @@ async function handleDealPropertyChange(eventData: any) {
         const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue.toLowerCase())
         console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
 
+        // ── 1. Fetch deal properties to collect participant emails ──
+        const dealPropsQuery = DEAL_PARTICIPANT_EMAIL_PROPS.join(',')
+        const dealRes = await fetch(
+            `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=${dealPropsQuery}`,
+            { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
+        )
+
+        const participantEmails: string[] = []
+        if (dealRes.ok) {
+            const dealData = await dealRes.json()
+            const dp = dealData.properties || {}
+            for (const prop of DEAL_PARTICIPANT_EMAIL_PROPS) {
+                const email = (dp[prop] || '').trim()
+                if (email && email.includes('@')) participantEmails.push(email.toLowerCase())
+            }
+            console.log(`📧 Deal ${dealId} participant emails: ${participantEmails.join(', ') || 'none'}`)
+        } else {
+            console.warn(`⚠️ Could not fetch deal properties for ${dealId}`)
+        }
+
+        // ── 2. Process CRM-associated contacts (existing flow) ──
         const updatedEmails: string[] = []
 
         for (const contactId of contactIds) {
             try {
                 const contactRes = await fetch(
                     `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
-                    {
-                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
-                    }
+                    { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
                 )
 
                 if (!contactRes.ok) {
@@ -335,22 +468,25 @@ async function handleDealPropertyChange(eventData: any) {
 
                 const { error: updateError } = await supabase
                     .from('profiles')
-                    .update({
-                        is_active: isActive,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update({ is_active: isActive, updated_at: new Date().toISOString() })
                     .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
 
                 if (updateError) {
                     console.error(`❌ Failed to update profile for ${email}:`, updateError)
                 } else {
                     updatedEmails.push(email)
-                    console.log(`✅ Profile updated: ${email} → is_active: ${isActive}`)
+                    console.log(`✅ CRM contact updated: ${email} → is_active: ${isActive}`)
                 }
             } catch (err) {
                 console.error(`❌ Error processing contact ${contactId}:`, err)
             }
         }
+
+        // ── 3. Provision deal participant emails (new feature) ──
+        const participantResults = await Promise.all(
+            participantEmails.map(email => provisionProfileByEmail(email, isActive))
+        )
+        const provisionedEmails = participantResults.map(r => `${r.email}(${r.action})`)
 
         return {
             success: true,
@@ -358,7 +494,8 @@ async function handleDealPropertyChange(eventData: any) {
             dealId,
             situacao: propertyValue,
             isActive,
-            updatedEmails
+            updatedCrmEmails: updatedEmails,
+            provisionedParticipants: provisionedEmails,
         }
     }
 
@@ -427,6 +564,41 @@ async function handleDealPropertyChange(eventData: any) {
             dealId,
             birthDate: birthDateStr,
             updatedEmails
+        }
+    }
+
+    // ── Handle individual participant email property change ──
+    // Triggered when admin adds/updates an email on a deal that's already active.
+    if (DEAL_PARTICIPANT_EMAIL_PROPS.includes(propertyName)) {
+        const newEmail = (propertyValue || '').trim().toLowerCase()
+        if (!newEmail || !newEmail.includes('@')) {
+            return { success: true, action: 'participant_email_empty', dealId, propertyName }
+        }
+
+        // Fetch current deal status to know if we should activate
+        const dealStatusRes = await fetch(
+            `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio`,
+            { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
+        )
+
+        let isActive = false
+        if (dealStatusRes.ok) {
+            const dealData = await dealStatusRes.json()
+            const situacao = (dealData.properties?.situacao_do_negocio || '').toLowerCase()
+            isActive = ACTIVE_BUSINESS_STATUSES.includes(situacao)
+        } else {
+            console.warn(`⚠️ Could not fetch deal status for ${dealId} — defaulting isActive: false`)
+        }
+
+        console.log(`📧 Participant email changed on deal ${dealId}: ${newEmail} | deal isActive: ${isActive}`)
+        const result = await provisionProfileByEmail(newEmail, isActive)
+
+        return {
+            success: true,
+            dealId,
+            propertyName,
+            ...result,
+            action: 'participant_email_provisioned',  // sobrepõe result.action
         }
     }
 

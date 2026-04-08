@@ -6,11 +6,92 @@
 // Get API Key from Environment Variables (set via supabase secrets set HUBSPOT_ACCESS_TOKEN=...)
 const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
 
+// Propriedades do Deal que armazenam e-mails de participantes vinculados
+const PARTICIPANT_EMAIL_PROPS = [
+    'e_mail___participante_vinculado__01_',
+    'c_e_mail',
+    'e_mail___participante_vinculado__02_',
+    'e_mail___participante_vinculado__03_',
+    'e_mail___participante_vinculado__04_',
+]
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-version',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
+
+// ─── Busca Deal onde qualquer propriedade de participante = email ──────────────────
+// Retorna o primeiro deal válido (closedwon + comprovante) encontrado.
+async function searchDealByParticipantEmail(email: string) {
+    // HubSpot: filterGroups são OR'd — cada grupo é uma propriedade diferente
+    const filterGroups = PARTICIPANT_EMAIL_PROPS.map(prop => ({
+        filters: [{ propertyName: prop, operator: 'EQ', value: email }]
+    }))
+
+    const propsToFetch = [
+        'dealstage',
+        'dealname',
+        'comprovante_de_pagamento_arq',
+        'data_de_nascimento__socio_principal',
+        'cargo_do_contato',
+        'numero_de_telefone',
+        ...PARTICIPANT_EMAIL_PROPS,
+    ].join(',')
+
+    const searchRes = await fetch('https://api.hubapi.com/crm/v3/objects/deals/search', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+            filterGroups,
+            properties: propsToFetch.split(','),
+            limit: 10,
+        }),
+    })
+
+    if (!searchRes.ok) {
+        console.error('❌ HubSpot deal search by participant failed:', await searchRes.text())
+        return null
+    }
+
+    const searchData = await searchRes.json()
+    const deals = searchData.results || []
+
+    // Encontra o primeiro deal closedwon com comprovante
+    for (const deal of deals) {
+        const props = deal.properties || {}
+        const isClosedWon = props.dealstage === 'closedwon'
+        const hasPaymentProof = props.comprovante_de_pagamento_arq?.trim()
+
+        if (isClosedWon && hasPaymentProof) {
+            // Extrai data de nascimento
+            const rawBirthDate = props.data_de_nascimento__socio_principal || ''
+            let birthDate = null
+            if (/^\d{13,}$/.test(rawBirthDate)) {
+                const d = new Date(Number(rawBirthDate))
+                birthDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+            } else if (/^\d{4}-\d{2}-\d{2}/.test(rawBirthDate)) {
+                birthDate = rawBirthDate.substring(0, 10)
+            }
+
+            console.log(`✅ Participante vinculado encontrado no deal ${deal.id}: ${email}`)
+            return {
+                dealId: deal.id,
+                dealName: props.dealname || '',
+                jobTitle: props.cargo_do_contato || '',
+                phone: props.numero_de_telefone || '',
+                birthDate,
+            }
+        }
+    }
+
+    console.log(`⚠️ Nenhum deal válido encontrado para participante: ${email}`)
+    return null
+}
+
 
 Deno.serve(async (req: Request) => {
     // Handle CORS
@@ -213,8 +294,33 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        // 3. Invalid or Not Found
-        // Return 200 OK but with valid: false to handle it gracefully in frontend
+        // 3. Contato não encontrado no HubSpot como CRM contact —
+        //    Busca fallback: email pode ser participante vinculado no Deal
+        console.log(`⚠️ Contato não encontrado no HubSpot: ${email} — buscando como participante vinculado...`)
+        const participantDeal = await searchDealByParticipantEmail(email)
+
+        if (participantDeal) {
+            return new Response(
+                JSON.stringify({
+                    valid: true,
+                    message: 'Participante vinculado validado',
+                    contactId: null,
+                    dealId: participantDeal.dealId,
+                    isParticipante: true,  // flag para o frontend saber que é participante
+                    profile: {
+                        fullName: 'Sócio Participante',  // será preenchido no onboarding
+                        email,
+                        jobTitle: participantDeal.jobTitle,
+                        company: participantDeal.dealName,
+                        phone: participantDeal.phone,
+                        birthDate: participantDeal.birthDate,
+                    },
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+        }
+
+        // Não encontrado nem como contato nem como participante
         return new Response(
             JSON.stringify({ valid: false, message: 'Pagamento não confirmado ou comprovante ausente.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

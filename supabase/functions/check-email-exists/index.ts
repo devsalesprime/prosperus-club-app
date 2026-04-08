@@ -11,6 +11,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
 const ACTIVE_STATUSES = ['ativo']
 
+// Propriedades do Deal que armazenam e-mails de participantes vinculados
+const PARTICIPANT_EMAIL_PROPS = [
+    'e_mail___participante_vinculado__01_',
+    'c_e_mail',
+    'e_mail___participante_vinculado__02_',
+    'e_mail___participante_vinculado__03_',
+    'e_mail___participante_vinculado__04_',
+]
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-version',
@@ -51,8 +60,9 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
 
         const searchData = await searchRes.json()
         if (!searchData.results || searchData.results.length === 0) {
-            console.log(`⚠️ Contact not found in HubSpot: ${email}`)
-            return { isActive: true, situacao: 'not_in_hubspot', birthDate: null }
+            // ── FALLBACK: email não é contato CRM — busca como participante vinculado no Deal
+            console.log(`⚠️ Contato não encontrado no HubSpot: ${email} — tentando busca por participante vinculado...`)
+            return await checkParticipantDealStatus(email)
         }
 
         const contactId = searchData.results[0].id
@@ -114,6 +124,74 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
     } catch (err) {
         console.error('❌ HubSpot check error:', err)
         // On error, don't block — fail open
+        return { isActive: true, situacao: 'check_error', birthDate: null }
+    }
+}
+
+// ─── Fallback: verifica status do Sócio buscando diretamente nos Deals ─────────────
+// Usado quando o email não é um contato CRM mas está em propriedade de participante do Deal.
+async function checkParticipantDealStatus(
+    email: string
+): Promise<{ isActive: boolean; situacao: string; birthDate: string | null }> {
+    if (!HUBSPOT_API_KEY) {
+        return { isActive: true, situacao: 'no_api_key', birthDate: null }
+    }
+    try {
+        // Busca deals onde qualquer propriedade de participante = email (OR entre grupos)
+        const filterGroups = PARTICIPANT_EMAIL_PROPS.map(prop => ({
+            filters: [{ propertyName: prop, operator: 'EQ', value: email }]
+        }))
+
+        const searchRes = await fetch('https://api.hubapi.com/crm/v3/objects/deals/search', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            },
+            body: JSON.stringify({
+                filterGroups,
+                properties: ['situacao_do_negocio', 'data_de_nascimento__socio_principal'],
+                limit: 10,
+            }),
+        })
+
+        if (!searchRes.ok) {
+            console.error('❌ Deal search by participant failed:', searchRes.status)
+            return { isActive: true, situacao: 'api_error', birthDate: null }
+        }
+
+        const searchData = await searchRes.json()
+        const deals = searchData.results || []
+
+        if (deals.length === 0) {
+            console.log(`🚧 Nenhum deal encontrado para participante: ${email}`)
+            return { isActive: false, situacao: 'no_deals_as_participant', birthDate: null }
+        }
+
+        // Se qualquer deal estiver 'ativo' — Sócio está ativo
+        for (const deal of deals) {
+            const props = deal.properties || {}
+            const situacao = (props.situacao_do_negocio || '').toLowerCase()
+
+            if (ACTIVE_STATUSES.includes(situacao)) {
+                const rawBirthDate = props.data_de_nascimento__socio_principal || ''
+                let birthDate: string | null = null
+                if (/^\d{13,}$/.test(rawBirthDate)) {
+                    const d = new Date(Number(rawBirthDate))
+                    birthDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+                } else if (/^\d{4}-\d{2}-\d{2}/.test(rawBirthDate)) {
+                    birthDate = rawBirthDate.substring(0, 10)
+                }
+                console.log(`✅ Participante ativo no deal ${deal.id}: ${email} (${situacao})`)
+                return { isActive: true, situacao, birthDate }
+            }
+        }
+
+        console.log(`🚫 Participante encontrado mas deal inativo: ${email}`)
+        return { isActive: false, situacao: 'deal_inactive', birthDate: null }
+
+    } catch (err) {
+        console.error('❌ checkParticipantDealStatus error:', err)
         return { isActive: true, situacao: 'check_error', birthDate: null }
     }
 }
