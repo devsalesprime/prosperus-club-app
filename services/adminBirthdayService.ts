@@ -26,11 +26,11 @@ export const adminBirthdayService = {
      */
     async getUpcomingBirthdays(): Promise<BirthdayBanner[]> {
         try {
-            // 1. Todos os MEMBERS ativos com data de nascimento
+            // 1. Todos os membros ativos com data de nascimento (incluindo admins/CEO para testes e uso real)
             const { data: profiles, error: profilesError } = await supabase
                 .from('profiles')
                 .select('id, name, email, birth_date')
-                .eq('role', 'MEMBER')
+                .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER'])
                 .eq('is_active', true)
                 .not('birth_date', 'is', null);
 

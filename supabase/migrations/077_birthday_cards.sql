@@ -14,13 +14,19 @@ CREATE TABLE IF NOT EXISTS public.birthday_cards (
 );
 
 -- Evita agendar mais de uma homenagem pro mesmo usuário no mesmo dia (ano)
-ALTER TABLE public.birthday_cards ADD CONSTRAINT unique_birthday_card_per_year UNIQUE (user_id, trigger_date);
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_birthday_card_per_year') THEN
+        ALTER TABLE public.birthday_cards ADD CONSTRAINT unique_birthday_card_per_year UNIQUE (user_id, trigger_date);
+    END IF;
+END $$;
 
 -- Habilitar RLS
 ALTER TABLE public.birthday_cards ENABLE ROW LEVEL SECURITY;
 
 -- 2. RLS Policies
 
+DROP POLICY IF EXISTS "Admins e Team gerenciam todos os cards" ON public.birthday_cards;
 -- Admins e Team podem ver, criar, atualizar e deletar todos os cards
 CREATE POLICY "Admins e Team gerenciam todos os cards"
     ON public.birthday_cards FOR ALL
@@ -32,11 +38,13 @@ CREATE POLICY "Admins e Team gerenciam todos os cards"
         )
     );
 
+DROP POLICY IF EXISTS "Usuários veem seus próprios cards" ON public.birthday_cards;
 -- Usuários comuns podem VER apenas os seus próprios cards
 CREATE POLICY "Usuários veem seus próprios cards"
     ON public.birthday_cards FOR SELECT
     USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Usuários podem marcar seus cards como lidos" ON public.birthday_cards;
 -- Usuários comuns podem ATUALIZAR apenas o status is_viewed dos seus cards
 CREATE POLICY "Usuários podem marcar seus cards como lidos"
     ON public.birthday_cards FOR UPDATE
@@ -53,11 +61,13 @@ ON CONFLICT (id) DO NOTHING;
 
 -- RLS Policies do Storage (usando as permissões padrão do public bucket do supabase)
 
+DROP POLICY IF EXISTS "Imagens de aniversário publicamente acessíveis" ON storage.objects;
 -- Qualquer um pode visualizar/baixar as imagens
 CREATE POLICY "Imagens de aniversário publicamente acessíveis" 
     ON storage.objects FOR SELECT 
     USING (bucket_id = 'birthday-cards');
 
+DROP POLICY IF EXISTS "Apenas Admins podem fazer upload de homenagens" ON storage.objects;
 -- Apenas admins podem fazer upload
 CREATE POLICY "Apenas Admins podem fazer upload de homenagens" 
     ON storage.objects FOR INSERT 
@@ -69,6 +79,7 @@ CREATE POLICY "Apenas Admins podem fazer upload de homenagens"
         )
     );
 
+DROP POLICY IF EXISTS "Apenas Admins podem atualizar imagens de homenagens" ON storage.objects;
 CREATE POLICY "Apenas Admins podem atualizar imagens de homenagens" 
     ON storage.objects FOR UPDATE 
     WITH CHECK (
@@ -79,6 +90,7 @@ CREATE POLICY "Apenas Admins podem atualizar imagens de homenagens"
         )
     );
 
+DROP POLICY IF EXISTS "Apenas Admins podem deletar imagens de homenagens" ON storage.objects;
 CREATE POLICY "Apenas Admins podem deletar imagens de homenagens" 
     ON storage.objects FOR DELETE 
     USING (
