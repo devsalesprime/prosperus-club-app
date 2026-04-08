@@ -343,3 +343,47 @@ export async function notifyEventUpdated(payload: EventUpdatePayload & { exclude
         );
     }
 }
+
+// ─── TIPO 10: Nova ferramenta / solução ──────────────────────────
+
+export async function notifyNewSolution(
+    solutionId: string,
+    solutionName: string,
+    solutionType: 'internal' | 'external' = 'external'
+): Promise<void> {
+    try {
+        const { data: members, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .in('role', ['MEMBER', 'ADMIN', 'TEAM'])
+            .eq('is_active', true);
+
+        if (error) throw error;
+        if (!members?.length) return;
+
+        const title = '🛠️ Nova ferramenta disponível';
+        const message = solutionName;
+        // ViewState.SOLUTIONS correspond a 'SOLUTIONS' (que AppContext navega)
+        const url = 'SOLUTIONS';
+        
+        const BATCH = 20;
+        for (let i = 0; i < members.length; i += BATCH) {
+            await Promise.allSettled(
+                members.slice(i, i + BATCH).map((m) =>
+                    dispatchNotification({
+                        userId: m.id,
+                        type: 'tools',
+                        title,
+                        message,
+                        url,
+                        tag: `solution-${solutionId}`,
+                    })
+                )
+            );
+        }
+        
+        console.log(`[notifyNewSolution] ✅ ${members.length} sócios notificados — ${solutionName}`);
+    } catch (err) {
+        console.error('[notifyNewSolution] ❌ erro:', err);
+    }
+}
