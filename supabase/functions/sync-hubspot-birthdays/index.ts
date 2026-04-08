@@ -105,12 +105,32 @@ Deno.serve(async (req: Request) => {
         stats.found = allContacts.length
         console.log(`📋 ${allContacts.length} contatos com banner encontrados`)
 
+        // ── HELPERS: Função para resolver File ID em URL pública ──
+        const getHubSpotFileUrl = async (fileId: string): Promise<string | null> => {
+            if (fileId.startsWith('http')) return fileId; // Já é URL
+
+            try {
+                const res = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
+                    headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                });
+                if (!res.ok) {
+                    console.error(`❌ Erro requisição arquivo HubSpot ${fileId}: ${res.status}`);
+                    return null;
+                }
+                const data = await res.json();
+                return data.url || null;
+            } catch (e) {
+                console.error(`❌ Exception arquivo HubSpot ${fileId}:`, e);
+                return null;
+            }
+        };
+
         // ── STEP 2: Para cada contato, cruzar com Supabase e fazer UPSERT ──
         for (const contact of allContacts) {
             const email = (contact.properties.email || '').toLowerCase().trim()
-            const bannerUrl = contact.properties.banner_de_aniversario?.trim()
+            const bannerIdOrUrl = contact.properties.banner_de_aniversario?.trim()
 
-            if (!email || !bannerUrl) {
+            if (!email || !bannerIdOrUrl) {
                 stats.skipped++
                 continue
             }
@@ -132,6 +152,14 @@ Deno.serve(async (req: Request) => {
                 console.warn(`⚠️ Sócio sem birth_date: ${email}`)
                 stats.skipped++
                 continue
+            }
+
+            // Converter ID do arquivo HubSpot em URL pública real
+            const bannerUrl = await getHubSpotFileUrl(bannerIdOrUrl);
+            if (!bannerUrl) {
+                console.warn(`⚠️ Imagem do banner não retornou URL válida para: ${email} (Valor: ${bannerIdOrUrl})`);
+                stats.skipped++;
+                continue;
             }
 
             const scheduledDate = calcScheduledDate(profile.birth_date)
