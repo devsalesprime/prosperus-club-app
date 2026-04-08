@@ -32,6 +32,7 @@ async function searchDealByParticipantEmail(email: string) {
     const propsToFetch = [
         'dealstage',
         'dealname',
+        'situacao_do_negocio',
         'comprovante_de_pagamento_arq',
         'data_de_nascimento__socio_principal',
         'cargo_do_contato',
@@ -60,13 +61,14 @@ async function searchDealByParticipantEmail(email: string) {
     const searchData = await searchRes.json()
     const deals = searchData.results || []
 
-    // Encontra o primeiro deal closedwon com comprovante
+    // Participantes vinculados: valida por situacao_do_negocio = 'ativo'
+    // (comprovante_de_pagamento_arq é campo do sócio principal, não dos vinculados)
     for (const deal of deals) {
         const props = deal.properties || {}
-        const isClosedWon = props.dealstage === 'closedwon'
-        const hasPaymentProof = props.comprovante_de_pagamento_arq?.trim()
+        const situacao = (props.situacao_do_negocio || '').toLowerCase()
+        const isAtivo = situacao === 'ativo'
 
-        if (isClosedWon && hasPaymentProof) {
+        if (isAtivo) {
             // Extrai data de nascimento
             const rawBirthDate = props.data_de_nascimento__socio_principal || ''
             let birthDate = null
@@ -77,7 +79,7 @@ async function searchDealByParticipantEmail(email: string) {
                 birthDate = rawBirthDate.substring(0, 10)
             }
 
-            console.log(`✅ Participante vinculado encontrado no deal ${deal.id}: ${email}`)
+            console.log(`✅ Participante vinculado encontrado no deal ${deal.id}: ${email} (${situacao})`)
             return {
                 dealId: deal.id,
                 dealName: props.dealname || '',
@@ -88,7 +90,7 @@ async function searchDealByParticipantEmail(email: string) {
         }
     }
 
-    console.log(`⚠️ Nenhum deal válido encontrado para participante: ${email}`)
+    console.log(`⚠️ Nenhum deal ativo encontrado para participante: ${email}`)
     return null
 }
 
