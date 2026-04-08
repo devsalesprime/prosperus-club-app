@@ -9,7 +9,18 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
-const ACTIVE_STATUSES = ['ativo']
+
+// Situações que permitem acesso ao app
+// Normalizado: sem acentos, lowercase — para comparação robusta com qualquer variação do HubSpot
+const ACTIVE_STATUSES = ['ativo', 'solicitacao de cancelamento']
+
+function normalizeStatus(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+}
+
+function isStatusActive(situacao: string): boolean {
+    return ACTIVE_STATUSES.includes(normalizeStatus(situacao))
+}
 
 // Propriedades do Deal que armazenam e-mails de participantes vinculados
 const PARTICIPANT_EMAIL_PROPS = [
@@ -100,7 +111,7 @@ async function checkHubSpotDealStatus(email: string): Promise<{ isActive: boolea
 
             console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${situacao}'`)
 
-            if (ACTIVE_STATUSES.includes(situacao)) {
+            if (isStatusActive(situacao)) {
                 // Also extract birth date from this deal
                 const rawBirthDate = dealData.properties?.data_de_nascimento__socio_principal || ''
                 let birthDate: string | null = null
@@ -168,12 +179,12 @@ async function checkParticipantDealStatus(
             return { isActive: false, situacao: 'no_deals_as_participant', birthDate: null }
         }
 
-        // Se qualquer deal estiver 'ativo' — Sócio está ativo
+        // Se qualquer deal estiver ativo — Sócio está ativo
         for (const deal of deals) {
             const props = deal.properties || {}
-            const situacao = (props.situacao_do_negocio || '').toLowerCase()
+            const situacao = props.situacao_do_negocio || ''
 
-            if (ACTIVE_STATUSES.includes(situacao)) {
+            if (isStatusActive(situacao)) {
                 const rawBirthDate = props.data_de_nascimento__socio_principal || ''
                 let birthDate: string | null = null
                 if (/^\d{13,}$/.test(rawBirthDate)) {

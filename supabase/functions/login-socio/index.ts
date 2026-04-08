@@ -15,6 +15,17 @@ const PARTICIPANT_EMAIL_PROPS = [
     'e_mail___participante_vinculado__04_',
 ]
 
+// Situações que permitem acesso ao app (normalizado: sem acentos, lowercase)
+const ACTIVE_STATUSES_NORMALIZED = ['ativo', 'solicitacao de cancelamento']
+
+function normalizeStatus(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+}
+
+function isStatusAtivo(situacao: string): boolean {
+    return ACTIVE_STATUSES_NORMALIZED.includes(normalizeStatus(situacao))
+}
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-version',
@@ -197,8 +208,8 @@ Deno.serve(async (req: Request) => {
                 for (const dealAssociation of dealsData.results) {
                     const dealId = dealAssociation.id
 
-                    // Fetch deal details with properties (including profile data)
-                    const dealDetailsUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=dealstage,closedate,amount,comprovante_de_pagamento_arq,cargo_do_contato,numero_de_telefone,dealname,data_de_nascimento__socio_principal`
+                    // Fetch deal details — validação por situacao_do_negocio
+                    const dealDetailsUrl = `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio,cargo_do_contato,numero_de_telefone,dealname,data_de_nascimento__socio_principal`
 
                     const dealDetailsResponse = await fetch(dealDetailsUrl, {
                         method: 'GET',
@@ -210,31 +221,22 @@ Deno.serve(async (req: Request) => {
 
                     if (dealDetailsResponse.ok) {
                         const dealDetails = await dealDetailsResponse.json()
-                        const dealStage = dealDetails.properties.dealstage
-                        const paymentProof = dealDetails.properties.comprovante_de_pagamento_arq
+                        const situacao = dealDetails.properties.situacao_do_negocio || ''
 
                         console.log('🔍 Deal Validation:', {
                             dealId,
-                            dealstage: dealStage,
-                            comprovante_de_pagamento_arq: paymentProof,
-                            isClosedWon: dealStage === 'closedwon',
-                            hasPaymentProof: !!paymentProof && paymentProof.trim() !== ''
+                            situacao_do_negocio: situacao,
+                            isAtivo: isStatusAtivo(situacao),
                         })
 
-                        // AND Logic: BOTH conditions must be true
-                        // 1. dealstage must be "closedwon"
-                        // 2. comprovante_de_pagamento_arq must be filled
-                        const isClosedWon = dealStage === 'closedwon'
-                        const hasPaymentProof = paymentProof && paymentProof.trim() !== ''
-
-                        if (isClosedWon && hasPaymentProof) {
+                        if (isStatusAtivo(situacao)) {
                             const firstName = contact.properties.firstname || ''
                             const lastName = contact.properties.lastname || ''
                             const fullName = `${firstName} ${lastName}`.trim() || contact.properties.email
                             const jobTitle = dealDetails.properties.cargo_do_contato || ''
                             const company = dealDetails.properties.dealname || ''
                             const phone = dealDetails.properties.numero_de_telefone || ''
-                            
+
                             // Extract birth date
                             const rawBirthDate = dealDetails.properties.data_de_nascimento__socio_principal || ''
                             let birthDate = null
@@ -247,14 +249,7 @@ Deno.serve(async (req: Request) => {
                                 }
                             }
 
-                            console.log('✅ Validation PASSED for:', contact.properties.email)
-                            console.log('📋 Profile Data:', {
-                                fullName,
-                                jobTitle,
-                                company,
-                                phone,
-                                birthDate
-                            })
+                            console.log('✅ Validation PASSED for:', contact.properties.email, '| situacao:', situacao)
 
                             return new Response(
                                 JSON.stringify({
@@ -276,15 +271,16 @@ Deno.serve(async (req: Request) => {
                         } else {
                             console.log('❌ Validation FAILED:', {
                                 email: contact.properties.email,
-                                reason: !isClosedWon ? 'dealstage is not closedwon' : 'payment proof is missing'
+                                situacao,
+                                reason: 'situacao_do_negocio não permite acesso'
                             })
                         }
                     }
                 }
 
-                // If we checked all deals and none passed validation
+                // Verificou todos os deals — nenhum com situação ativa
                 return new Response(
-                    JSON.stringify({ valid: false, message: 'Pagamento não confirmado ou comprovante ausente.' }),
+                    JSON.stringify({ valid: false, message: 'Acesso não autorizado. Verifique a situação do seu contrato.' }),
                     { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
                 )
             } else {
