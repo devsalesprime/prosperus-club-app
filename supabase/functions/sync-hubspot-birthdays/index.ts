@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
                         ],
                     },
                 ],
-                properties: ['email', 'banner_de_aniversario', 'data_de_nascimento__socio_principal'],
+                properties: ['email', 'banner_de_aniversario', 'data_de_nascimento_'],
                 limit: 100,
             }
             if (after) body.after = after
@@ -129,7 +129,7 @@ Deno.serve(async (req: Request) => {
         for (const contact of allContacts) {
             const email = (contact.properties.email || '').toLowerCase().trim()
             const bannerIdOrUrl = contact.properties.banner_de_aniversario?.trim()
-            const rawHubspotDate = contact.properties.data_de_nascimento__socio_principal
+            const rawHubspotDate = contact.properties.data_de_nascimento_
 
             if (!email || !bannerIdOrUrl) {
                 stats.skipped++

@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
                 properties: {
-                    data_de_nascimento__socio_principal: timestamp,
+                    data_de_nascimento_: timestamp,
                 },
             }),
         })
