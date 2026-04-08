@@ -364,6 +364,19 @@ export const AdminSolutions: React.FC = () => {
             } else {
                 await toolsService.createSolution(input);
                 toast.success('Solução criada!');
+                
+                // Disparar notificação (Push e In-App) para todos os usuários
+                try {
+                    const { notificationService } = await import('../../services/notificationService');
+                    await notificationService.createNotification(
+                        'Nova Solução Prosperus!',
+                        `A ferramenta "${input.title}" acaba de ser disponibilizada. Acesse Soluções Prosperus para conferir!`,
+                        'ALL',
+                        'SOLUTIONS' // Rota mapeada no AppContext para ViewState.SOLUTIONS
+                    );
+                } catch (err) {
+                    console.error('Falha ao enviar notificação da nova solução:', err);
+                }
             }
 
             setShowModal(false);
