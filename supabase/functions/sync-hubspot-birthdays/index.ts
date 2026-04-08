@@ -77,7 +77,7 @@ Deno.serve(async (req: Request) => {
                         ],
                     },
                 ],
-                properties: ['email', 'banner_de_aniversario'],
+                properties: ['email', 'banner_de_aniversario', 'data_de_nascimento__socio_principal'],
                 limit: 100,
             }
             if (after) body.after = after
@@ -129,10 +129,23 @@ Deno.serve(async (req: Request) => {
         for (const contact of allContacts) {
             const email = (contact.properties.email || '').toLowerCase().trim()
             const bannerIdOrUrl = contact.properties.banner_de_aniversario?.trim()
+            const rawHubspotDate = contact.properties.data_de_nascimento__socio_principal
 
             if (!email || !bannerIdOrUrl) {
                 stats.skipped++
                 continue
+            }
+
+            // Converter Date do HubSpot (timestamp unix em ms ou formato string YYYY-MM-DD)
+            let hubspotBirthDateStr: string | null = null
+            if (rawHubspotDate) {
+                if (!isNaN(Number(rawHubspotDate))) {
+                    // É um timestamp (ex: 260928000000)
+                    hubspotBirthDateStr = new Date(Number(rawHubspotDate)).toISOString().split('T')[0]
+                } else if (typeof rawHubspotDate === 'string' && rawHubspotDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+                    // Já é YYYY-MM-DD
+                    hubspotBirthDateStr = rawHubspotDate.substring(0, 10)
+                }
             }
 
             // Buscar profile pelo e-mail
@@ -148,8 +161,22 @@ Deno.serve(async (req: Request) => {
                 continue
             }
 
-            if (!profile.birth_date) {
-                console.warn(`⚠️ Sócio sem birth_date: ${email}`)
+            // 🔄 TWO-WAY SYNC: Atualizar a data no App se o HubSpot estiver diferente
+            let profileBirthDate = profile.birth_date
+            if (hubspotBirthDateStr && profileBirthDate !== hubspotBirthDateStr) {
+                console.log(`🔄 Sincronizando nova data do HubSpot para o app: ${email} -> ${hubspotBirthDateStr}`)
+                const { error: updateProfileErr } = await supabase
+                    .from('profiles')
+                    .update({ birth_date: hubspotBirthDateStr, updated_at: new Date().toISOString() })
+                    .eq('id', profile.id)
+                
+                if (!updateProfileErr) {
+                    profileBirthDate = hubspotBirthDateStr // Usa a data nova para o agendamento
+                }
+            }
+
+            if (!profileBirthDate) {
+                console.warn(`⚠️ Sócio sem birth_date (nem no App, nem no HubSpot validado): ${email}`)
                 stats.skipped++
                 continue
             }
@@ -162,7 +189,7 @@ Deno.serve(async (req: Request) => {
                 continue;
             }
 
-            const scheduledDate = calcScheduledDate(profile.birth_date)
+            const scheduledDate = calcScheduledDate(profileBirthDate)
 
             console.log(`📅 Agendando para ${email} → ${scheduledDate} | banner: ${bannerUrl.substring(0, 60)}...`)
 
