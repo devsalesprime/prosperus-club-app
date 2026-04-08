@@ -199,6 +199,23 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
                     console.warn('⚠️ HubSpot sync error (non-blocking):', syncErr);
                 });
 
+                // 🎂 PUSH birth_date → HubSpot (fire-and-forget, non-blocking)
+                // Só dispara se a data mudou em relação ao valor original do perfil
+                const birthDateChanged = formData.birth_date && formData.birth_date !== currentUser.birth_date;
+                if (birthDateChanged && updatedProfile.email && formData.birth_date) {
+                    supabase.functions.invoke('update-hubspot-contact', {
+                        body: { email: updatedProfile.email, birth_date: formData.birth_date }
+                    }).then(({ error: pushErr }) => {
+                        if (pushErr) {
+                            console.warn('⚠️ HubSpot birth_date PUSH failed (non-blocking):', pushErr);
+                        } else {
+                            logger.debug('✅ birth_date synced to HubSpot:', formData.birth_date);
+                        }
+                    }).catch(pushErr => {
+                        console.warn('⚠️ HubSpot birth_date PUSH error (non-blocking):', pushErr);
+                    });
+                }
+
                 setSuccess(true);
                 const hasBenefitPending = formData.exclusive_benefit?.active;
                 notify.success(hasBenefitPending

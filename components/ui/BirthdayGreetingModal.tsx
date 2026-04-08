@@ -22,17 +22,17 @@ export const BirthdayGreetingModal: React.FC = () => {
 
     const handleClose = async () => {
         if (!card) return;
-        
-        // Optimistic UI Update - animação de saída rápida
+
+        // Optimistic UI — anima saída imediatamente
         setIsClosing(true);
-        
-        // Marca como visualizado em background (não precisa do await pra travar a UI)
-        birthdayService.markCardAsViewed(card.id);
-        
+
+        // Gatilho silencioso: marca como 'sent' → atualiza painel Admin autonomamente
+        birthdayService.markBirthdayBannerAsSent(card.id);
+
         setTimeout(() => {
             setIsVisible(false);
-            setCard(null); // Remove referência apenas DEPOIS da animação
-        }, 300); // 300ms de animação out
+            setCard(null);
+        }, 300);
     };
 
     if (!isVisible || !card) return null;
