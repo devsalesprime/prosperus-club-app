@@ -106,31 +106,58 @@ Deno.serve(async (req: Request) => {
         console.log(`📋 ${allContacts.length} contatos com banner encontrados`)
 
         // ── HELPERS: Função para resolver File ID em URL pública ──
-        const getHubSpotFileUrl = async (fileOrUrl: string): Promise<string | null> => {
+        const getHubSpotFileUrl = async (fileOrUrl: string, email: string): Promise<string | null> => {
             let fileId = fileOrUrl;
 
             // Se for uma URL interna do HubSpot (signed-url-redirect), extrair o File ID
             const hubspotInternalMatch = fileOrUrl.match(/files\/(\d+)/);
             if (hubspotInternalMatch && hubspotInternalMatch[1]) {
                 fileId = hubspotInternalMatch[1];
-            } else if (fileOrUrl.startsWith('http')) {
-                return fileOrUrl; // É uma URL pública / externa qualquer
+            } else if (fileOrUrl.startsWith('http') && !fileOrUrl.includes('crm-properties-file-values')) {
+                return fileOrUrl; // É uma URL pública / externa (sem bloqueio)
             }
 
             try {
+                // 1. Obtém metadados da imagem
                 const res = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
                     headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
                 });
                 if (!res.ok) {
-                    console.error(`❌ Erro requisição arquivo HubSpot ${fileId}: ${res.status}`);
+                    console.error(`❌ Erro metadados HubSpot ${fileId}: ${res.status}`);
                     return null;
                 }
                 const data = await res.json();
                 
-                // Prioriza a defaultHostingUrl (URL pública livre do CDN), senão usa a URL padrão.
-                return data.defaultHostingUrl || data.url || null;
+                const downloadUrl = data.url || data.defaultHostingUrl;
+                if (!downloadUrl) return null;
+
+                // 2. Faz o download usando a URL assinada temporária (permitido sem Bearer header)
+                const imgRes = await fetch(downloadUrl);
+                if (!imgRes.ok) throw new Error(`Falha no download Proxy HubSpot: ${imgRes.status}`);
+
+                const arrayBuffer = await imgRes.arrayBuffer();
+                
+                // 3. Upload permanente para o Supabase Storage
+                const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
+                const fileExt = data.extension || 'jpg';
+                const filename = `${safeEmail}-${fileId}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('birthday-cards')
+                    .upload(filename, arrayBuffer, {
+                        contentType: imgRes.headers.get('content-type') || 'image/jpeg',
+                        upsert: true
+                    });
+
+                if (uploadError) {
+                    console.error('❌ Erro no upload Supabase Storage:', uploadError);
+                    return null;
+                }
+
+                // URL pública e perpétua para o App
+                return supabase.storage.from('birthday-cards').getPublicUrl(filename).data.publicUrl;
             } catch (e) {
-                console.error(`❌ Exception arquivo HubSpot ${fileId}:`, e);
+                console.error(`❌ Exception proxying HubSpot ${fileId}:`, e);
                 return null;
             }
         };
@@ -191,8 +218,8 @@ Deno.serve(async (req: Request) => {
                 continue
             }
 
-            // Converter ID do arquivo HubSpot em URL pública real
-            const bannerUrl = await getHubSpotFileUrl(bannerIdOrUrl);
+            // Converter ID do arquivo HubSpot em URL pública real salvando no Supabase Storage
+            const bannerUrl = await getHubSpotFileUrl(bannerIdOrUrl, email);
             if (!bannerUrl) {
                 console.warn(`⚠️ Imagem do banner não retornou URL válida para: ${email} (Valor: ${bannerIdOrUrl})`);
                 stats.skipped++;
