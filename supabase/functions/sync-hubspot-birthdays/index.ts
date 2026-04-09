@@ -106,8 +106,16 @@ Deno.serve(async (req: Request) => {
         console.log(`📋 ${allContacts.length} contatos com banner encontrados`)
 
         // ── HELPERS: Função para resolver File ID em URL pública ──
-        const getHubSpotFileUrl = async (fileId: string): Promise<string | null> => {
-            if (fileId.startsWith('http')) return fileId; // Já é URL
+        const getHubSpotFileUrl = async (fileOrUrl: string): Promise<string | null> => {
+            let fileId = fileOrUrl;
+
+            // Se for uma URL interna do HubSpot (signed-url-redirect), extrair o File ID
+            const hubspotInternalMatch = fileOrUrl.match(/files\/(\d+)/);
+            if (hubspotInternalMatch && hubspotInternalMatch[1]) {
+                fileId = hubspotInternalMatch[1];
+            } else if (fileOrUrl.startsWith('http')) {
+                return fileOrUrl; // É uma URL pública / externa qualquer
+            }
 
             try {
                 const res = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
@@ -118,7 +126,9 @@ Deno.serve(async (req: Request) => {
                     return null;
                 }
                 const data = await res.json();
-                return data.url || null;
+                
+                // Prioriza a defaultHostingUrl (URL pública livre do CDN), senão usa a URL padrão.
+                return data.defaultHostingUrl || data.url || null;
             } catch (e) {
                 console.error(`❌ Exception arquivo HubSpot ${fileId}:`, e);
                 return null;
