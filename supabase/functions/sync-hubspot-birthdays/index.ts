@@ -118,34 +118,56 @@ Deno.serve(async (req: Request) => {
             }
 
             try {
-                // 1. Obtém metadados da imagem
-                const res = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
+                // 1. Geração de Signed URL da API (Bypass de Cookie)
+                // A URL gerada aponta diretamente para o S3 com os parâmetros de assinatura válidos
+                const resSigned = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}/signed-url`, {
                     headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
                 });
-                if (!res.ok) {
-                    console.error(`❌ Erro metadados HubSpot ${fileId}: ${res.status}`);
-                    return null;
+
+                if (!resSigned.ok) {
+                    console.error(`❌ Erro ao gerar Signed URL do HubSpot ${fileId}: ${resSigned.status}`);
+                    
+                    // Fallback: Tenta pegar a URL de fallback se for público (defaultHostingUrl)
+                    const resMeta = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
+                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                    });
+                    if (!resMeta.ok) return null;
+                    const metaData = await resMeta.json();
+                    if (!metaData.defaultHostingUrl) return null;
+                    
+                    const fRes = await fetch(metaData.defaultHostingUrl);
+                    if (!fRes.ok) return null;
+                    
+                    const { error: fUploadError } = await supabase.storage.from('birthday-cards').upload(
+                        `${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`, 
+                        await fRes.arrayBuffer(), 
+                        { contentType: 'image/jpeg', upsert: true }
+                    );
+                    if (fUploadError) return null;
+                    return supabase.storage.from('birthday-cards').getPublicUrl(`${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`).data.publicUrl;
                 }
-                const data = await res.json();
+
+                const signedData = await resSigned.json();
+                const directAwsUrl = signedData.url;
+
+                if (!directAwsUrl) throw new Error('Signed URL vazia retornada pela API.');
+
+                // 2. Fetch no link puro do AWS CDN
+                const imgRes = await fetch(directAwsUrl);
+                if (!imgRes.ok) throw new Error(`Falha no download da imagem física S3 via API: ${imgRes.status}`);
                 
-                const downloadUrl = data.url || data.defaultHostingUrl;
-                if (!downloadUrl) return null;
-
-                // 2. Faz o download usando a URL assinada temporária (permitido sem Bearer header)
-                const imgRes = await fetch(downloadUrl);
-                if (!imgRes.ok) throw new Error(`Falha no download Proxy HubSpot: ${imgRes.status}`);
-
                 const arrayBuffer = await imgRes.arrayBuffer();
+                let contentType = imgRes.headers.get('content-type') || 'image/jpeg';
                 
                 // 3. Upload permanente para o Supabase Storage
                 const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
-                const fileExt = data.extension || 'jpg';
+                const fileExt = signedData.extension || 'jpg';
                 const filename = `${safeEmail}-${fileId}.${fileExt}`;
 
                 const { error: uploadError } = await supabase.storage
                     .from('birthday-cards')
                     .upload(filename, arrayBuffer, {
-                        contentType: imgRes.headers.get('content-type') || 'image/jpeg',
+                        contentType,
                         upsert: true
                     });
 
