@@ -86,7 +86,7 @@ export const DesktopSidebar: React.FC = () => {
                                 userId={currentUser.id}
                                 onClick={() => setView(ViewState.MESSAGES)}
                             />
-                            <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} />
+                            <NotificationCenter currentUserId={currentUser.id} onNavigate={handleNotificationNavigate} align="left" />
                         </div>
                     )}
                 </div>
