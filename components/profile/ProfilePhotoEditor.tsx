@@ -1,9 +1,11 @@
 // components/profile/ProfilePhotoEditor.tsx
-// Editor de foto com crop circular, zoom e pan
-// Zero dependências externas — Canvas API nativa
-// Fluxo: bottom sheet → editor fullscreen → crop → blob
+// Engenharia Nativa: Editor de foto com crop circular, pan & zoom (Pointer Events) + Canvas WebP
+// Zero dependências externas — WPO App
+// Fluxo: Bottom sheet -> Fullscreen Editor -> Blob (WebP)
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { Camera, Trash2 } from 'lucide-react';
 
 interface Props {
     currentImageUrl?: string | null;
@@ -13,484 +15,301 @@ interface Props {
 }
 
 interface Position { x: number; y: number }
-
-// ─── Design tokens ─────────────────────────────────────────────────────────
-const CIRCLE_SIZE = 260;
-const OUTPUT_SIZE = 400;
-// Zoom min/max são calculados dinamicamente a partir do coverZoom
-const ZOOM_MAX_MULTIPLIER = 12; // 12× o zoom de cover = zoom muito detalhado
-const NAVY        = '#031A2B';
-const CARD        = '#031726';
-const BORDER      = '#1A4A6B';
-const GOLD        = '#FFDA71';
-const WHITE       = '#FCF7F0';
-const GREY        = '#8BA3B4';
-
-// ─── SVG câmera ─────────────────────────────────────────────────────────────
-const IconCamera = ({ size = 18, color = GOLD }: { size?: number; color?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
-        fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/>
-        <circle cx="12" cy="13" r="3"/>
-    </svg>
-);
-
-// ─── SVG lixeira ─────────────────────────────────────────────────────────────
-const IconTrash = ({ size = 16, color = '#EF4444' }: { size?: number; color?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
-        fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 11v6"/><path d="M14 11v6"/>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-        <path d="M3 6h18"/>
-        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    </svg>
-);
+interface PointerData { id: number; x: number; y: number }
 
 export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClose }: Props) {
-    const [step, setStep]         = useState<'select' | 'edit'>('select');
-    const [imageEl, setImageEl]   = useState<HTMLImageElement | null>(null);
-    const [zoom, setZoom]         = useState(1);
+    const [step, setStep] = useState<'select' | 'edit'>('select');
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null);
+    const [nativeSize, setNativeSize] = useState({ w: 0, h: 0 });
+
+    const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
-    const [coverZoom, setCoverZoom] = useState(1); // zoom mínimo dinâmico (fit image)
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    // min/max zoom calculados pela imagem carregada
-    const minZoom = coverZoom;
-    const maxZoom = Math.max(coverZoom * ZOOM_MAX_MULTIPLIER, 4);
-
-    const isDragging    = useRef(false);
-    const dragStart     = useRef<Position>({ x: 0, y: 0 });
-    const posStart      = useRef<Position>({ x: 0, y: 0 });
+    // Gestures state
+    const pointers = useRef<PointerData[]>([]);
+    const isDragging = useRef(false);
+    const dragStart = useRef<Position>({ x: 0, y: 0 });
+    const posStart = useRef<Position>({ x: 0, y: 0 });
     const lastTouchDist = useRef<number | null>(null);
 
-    const [isProcessing, setIsProcessing] = useState(false);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const fileRef   = useRef<HTMLInputElement>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
-    // ─── Carregar arquivo ──────────────────────────────────────────────────
+    // Responsive mask size (sm: 320px, mobile: 256px)
+    const [maskSize, setMaskSize] = useState(256);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setMaskSize(window.innerWidth >= 640 ? 320 : 256);
+            const handleResize = () => setMaskSize(window.innerWidth >= 640 ? 320 : 256);
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }
+    }, []);
+
+    // ─── LER ARQUIVO ─────────────────────────────────────────────────────────
     const handleFileSelect = useCallback((file: File) => {
         if (!file) return;
         const url = URL.createObjectURL(file);
         const img = new Image();
         img.onload = () => {
-            URL.revokeObjectURL(url);
-            // Zoom que cobre o círculo completamente sem bordas brancas
-            const cover = Math.max(CIRCLE_SIZE / img.width, CIRCLE_SIZE / img.height);
-            setCoverZoom(cover);
-            setZoom(cover);
-            setPosition({ x: 0, y: 0 });
+            setNativeSize({ w: img.width, h: img.height });
+            setImageUrl(url);
             setImageEl(img);
+            setZoom(1);
+            setPosition({ x: 0, y: 0 });
             setStep('edit');
         };
-        img.onerror = () => URL.revokeObjectURL(url);
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            toast.error('Erro ao ler a imagem.');
+        };
         img.src = url;
     }, []);
 
     const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) handleFileSelect(file);
-        e.target.value = '';
+        if (fileRef.current) fileRef.current.value = '';
     };
 
-    // ─── Render canvas ─────────────────────────────────────────────────────
-    useEffect(() => {
-        if (!imageEl || !canvasRef.current || step !== 'edit') return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+    // ─── POINTER EVENTS MATH (PAN & ZOOM) ────────────────────────────────────
+    const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        pointers.current.push({ id: e.pointerId, x: e.clientX, y: e.clientY });
 
-        const W = canvas.width;
-        const H = canvas.height;
-        const cx = W / 2;
-        const cy = H / 2;
-        const r  = CIRCLE_SIZE / 2;
-
-        ctx.clearRect(0, 0, W, H);
-        ctx.fillStyle = 'rgba(3, 26, 43, 0.78)';
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.clip();
-        const sw = imageEl.width  * zoom;
-        const sh = imageEl.height * zoom;
-        ctx.drawImage(imageEl, cx - sw / 2 + position.x, cy - sh / 2 + position.y, sw, sh);
-        ctx.restore();
-
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.strokeStyle = GOLD;
-        ctx.lineWidth   = 2.5;
-        ctx.stroke();
-    }, [imageEl, zoom, position, step]);
-
-    // ─── Pan Mouse ──────────────────────────────────────────────────────────
-    const onMouseDown = (e: React.MouseEvent) => {
-        isDragging.current = true;
-        dragStart.current  = { x: e.clientX, y: e.clientY };
-        posStart.current   = { ...position };
-    };
-    const onMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging.current) return;
-        setPosition({
-            x: posStart.current.x + (e.clientX - dragStart.current.x),
-            y: posStart.current.y + (e.clientY - dragStart.current.y),
-        });
-    };
-    const onMouseUp = () => { isDragging.current = false; };
-
-    // ─── Pan + Pinch Touch ──────────────────────────────────────────────────
-    const onTouchStart = (e: React.TouchEvent) => {
-        if (e.touches.length === 1) {
+        if (pointers.current.length === 1) {
             isDragging.current = true;
-            dragStart.current  = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            posStart.current   = { ...position };
-        }
-        if (e.touches.length === 2) {
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            dragStart.current = { x: e.clientX, y: e.clientY };
+            posStart.current = { ...position };
+        } else if (pointers.current.length === 2) {
+            const dx = pointers.current[0].x - pointers.current[1].x;
+            const dy = pointers.current[0].y - pointers.current[1].y;
             lastTouchDist.current = Math.sqrt(dx * dx + dy * dy);
         }
     };
-    const onTouchMove = (e: React.TouchEvent) => {
-        e.preventDefault();
-        if (e.touches.length === 1 && isDragging.current) {
-            setPosition({
-                x: posStart.current.x + (e.touches[0].clientX - dragStart.current.x),
-                y: posStart.current.y + (e.touches[0].clientY - dragStart.current.y),
-            });
+
+    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        const pIndex = pointers.current.findIndex(p => p.id === e.pointerId);
+        if (pIndex !== -1) {
+            pointers.current[pIndex] = { id: e.pointerId, x: e.clientX, y: e.clientY };
         }
-        if (e.touches.length === 2 && lastTouchDist.current !== null) {
-            const dx   = e.touches[0].clientX - e.touches[1].clientX;
-            const dy   = e.touches[0].clientY - e.touches[1].clientY;
+
+        if (pointers.current.length === 1 && isDragging.current) {
+            setPosition({
+                x: posStart.current.x + (e.clientX - dragStart.current.x),
+                y: posStart.current.y + (e.clientY - dragStart.current.y)
+            });
+        } else if (pointers.current.length === 2 && lastTouchDist.current !== null) {
+            const dx = pointers.current[0].x - pointers.current[1].x;
+            const dy = pointers.current[0].y - pointers.current[1].y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            setZoom(z => Math.min(maxZoom, Math.max(minZoom, z * (dist / lastTouchDist.current!))));
+            const ratio = dist / lastTouchDist.current;
+            setZoom(z => Math.max(1, Math.min(3, z * ratio)));
             lastTouchDist.current = dist;
         }
     };
-    const onTouchEnd = () => {
-        isDragging.current    = false;
-        lastTouchDist.current = null;
-    };
 
-    // ─── Reset ─────────────────────────────────────────────────────────────
-    const handleReset = () => {
-        setZoom(coverZoom); // volta ao fit inicial, não ao MIN_ZOOM fixo
-        setPosition({ x: 0, y: 0 });
-    };
-
-    // ─── Gerar JPEG 400×400 ─────────────────────────────────────────────────
-    const handleConfirm = useCallback(async () => {
-        if (!imageEl) return;
-        setIsProcessing(true);
-        try {
-            const out = document.createElement('canvas');
-            out.width  = OUTPUT_SIZE;
-            out.height = OUTPUT_SIZE;
-            const ctx   = out.getContext('2d')!;
-            const cx    = OUTPUT_SIZE / 2;
-            const scale = OUTPUT_SIZE / CIRCLE_SIZE;
-
-            ctx.beginPath();
-            ctx.arc(cx, cx, OUTPUT_SIZE / 2, 0, Math.PI * 2);
-            ctx.clip();
-
-            const sw = imageEl.width  * zoom * scale;
-            const sh = imageEl.height * zoom * scale;
-            ctx.drawImage(
-                imageEl,
-                cx - sw / 2 + position.x * scale,
-                cx - sh / 2 + position.y * scale,
-                sw, sh
-            );
-
-            out.toBlob(blob => {
-                if (blob) onConfirm(blob);
-                setIsProcessing(false);
-            }, 'image/jpeg', 0.92);
-        } catch {
-            setIsProcessing(false);
+    const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+        pointers.current = pointers.current.filter(p => p.id !== e.pointerId);
+        if (pointers.current.length < 2) {
+            lastTouchDist.current = null;
         }
-    }, [imageEl, zoom, position, onConfirm]);
+        if (pointers.current.length === 0) {
+            isDragging.current = false;
+        } else if (pointers.current.length === 1) {
+            isDragging.current = true;
+            dragStart.current = { x: pointers.current[0].x, y: pointers.current[0].y };
+            posStart.current = { ...position };
+        }
+    };
+
+    // ─── CROP HTML5 CANVAS (LÂMINA) ──────────────────────────────────────────
+    const handleCrop = async () => {
+        if (!imageEl || nativeSize.w === 0) return;
+        setIsProcessing(true);
+
+        // A escala base (cover)
+        const coverScale = Math.max(maskSize / nativeSize.w, maskSize / nativeSize.h);
+        
+        // Vamos renderizar em 500x500 (alta definição, leve)
+        const canvasSize = 500;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+        const ctx = canvas.getContext('2d')!;
+
+        // Fundo preto (prevenção PNG)
+        ctx.fillStyle = '#031726';
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+        // Recorte circular
+        ctx.beginPath();
+        ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, 2 * Math.PI);
+        ctx.clip();
+
+        // Escala matemática do UI para o Canvas (500 / maskSize)
+        const uiScale = canvasSize / maskSize;
+        const finalScale = coverScale * zoom * uiScale;
+
+        const renderW = nativeSize.w * finalScale;
+        const renderH = nativeSize.h * finalScale;
+
+        // O centro da imagem na UI cai exatamente no centro do viewport ANTES do translate.
+        // position.x e y deslocam esse centro.
+        const cCenter = canvasSize / 2;
+        const dx = cCenter - (renderW / 2) + (position.x * uiScale);
+        const dy = cCenter - (renderH / 2) + (position.y * uiScale);
+
+        ctx.drawImage(imageEl, dx, dy, renderW, renderH);
+
+        canvas.toBlob((blob) => {
+            if (blob) {
+                // Instantly optimistic update is triggered by the parent via onConfirm
+                onConfirm(blob);
+            } else {
+                toast.error('Erro ao gerar recorte.');
+                setIsProcessing(false);
+            }
+        }, 'image/webp', 0.85); // Compressão WebP nativa
+    };
 
     // ══════════════════════════════════════════════════════════════════════════
-    // TELA 1 — Bottom sheet estilo iOS/Apple com cores Prosperus
+    // TELA 1: BOTTOM SHEET (Seleção / Remoção)
     // ══════════════════════════════════════════════════════════════════════════
     if (step === 'select') {
         return (
             <>
-                {/* Backdrop com blur */}
-                <div
-                    onClick={onClose}
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 9998,
-                        background: 'rgba(0,0,0,0.55)',
-                        backdropFilter: 'blur(6px)',
-                        WebkitBackdropFilter: 'blur(6px)',
-                    }}
-                />
-
-                {/* Sheet wrapper */}
-                <div style={{
-                    position: 'fixed',
-                    bottom: 0, left: 0, right: 0,
-                    zIndex: 9999,
-                    display: 'flex',
-                    justifyContent: 'center',
-                }}>
-                    <div style={{
-                        width: '100%',
-                        maxWidth: 440,
-                        background: '#0F3249',
-                        borderRadius: '28px 28px 0 0',
-                        paddingBottom: 'max(28px, env(safe-area-inset-bottom, 28px))',
-                        animation: 'sheetUp 0.3s cubic-bezier(0.32,0.72,0,1)',
-                        position: 'relative',
-                        boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
-                    }}>
-                        {/* Handle pill */}
-                        <div style={{
-                            width: 36, height: 4,
-                            background: BORDER,
-                            borderRadius: 2,
-                            margin: '12px auto 0',
-                        }} />
-
-                        {/* Avatar flutuante com borda dourada */}
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'center',
-                            marginTop: 20,
-                            marginBottom: 18,
-                        }}>
+                <div onClick={onClose} className="fixed inset-0 z-[9998] bg-black/55 backdrop-blur-sm" />
+                <div className="fixed bottom-0 left-0 right-0 z-[9999] flex justify-center">
+                    <div className="w-full max-w-[440px] bg-[#0F3249] rounded-t-[28px] pb-[max(28px,env(safe-area-inset-bottom,28px))] animate-in slide-in-from-bottom shadow-2xl relative">
+                        <div className="w-9 h-1 bg-[#1A4A6B] rounded-full mx-auto mt-3" />
+                        
+                        <div className="flex justify-center mt-5 mb-4">
                             <img
-                                src={currentImageUrl || ''}
-                                alt="Foto de perfil"
-                                style={{
-                                    width: 88, height: 88,
-                                    borderRadius: '50%',
-                                    objectFit: 'cover',
-                                    border: `3px solid ${GOLD}`,
-                                    background: BORDER,
-                                    boxShadow: `0 0 0 4px #0F3249, 0 8px 32px rgba(0,0,0,0.5)`,
-                                    display: 'block',
-                                }}
-                                onError={e => { e.currentTarget.style.visibility = 'hidden'; }}
+                                src={currentImageUrl || `${import.meta.env.BASE_URL}default-avatar.svg`}
+                                alt="Foto do Sócio"
+                                className="w-[88px] h-[88px] rounded-full object-cover border-[3px] border-[#FFDA71] bg-[#1A4A6B] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
                             />
                         </div>
 
-                        {/* Título */}
-                        <p style={{
-                            textAlign: 'center',
-                            color: WHITE,
-                            fontSize: 17,
-                            fontWeight: 600,
-                            margin: '0 0 24px',
-                            letterSpacing: '-0.01em',
-                        }}>
-                            Alterar foto de perfil
-                        </p>
+                        <p className="text-center text-[#FCF7F0] text-[17px] font-semibold mb-6 tracking-tight">Alterar foto de perfil</p>
 
-                        {/* Botões */}
-                        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-                            {/* Trocar foto — pill dourado */}
+                        <div className="px-5 flex flex-col gap-3">
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                style={{
-                                    display: 'flex', alignItems: 'center',
-                                    justifyContent: 'center', gap: 10,
-                                    width: '100%', padding: '15px 20px',
-                                    borderRadius: 50,
-                                    border: `1.5px solid ${GOLD}`,
-                                    background: 'rgba(255,218,113,0.06)',
-                                    color: GOLD,
-                                    fontSize: 16, fontWeight: 600,
-                                    cursor: 'pointer',
-                                    transition: 'background 0.15s',
-                                }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,218,113,0.12)')}
-                                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,218,113,0.06)')}
+                                className="flex items-center justify-center gap-2.5 w-full py-4 rounded-full border-[1.5px] border-[#FFDA71] bg-[#FFDA71]/5 text-[#FFDA71] text-base font-semibold hover:bg-[#FFDA71]/10 transition-colors"
                             >
-                                <IconCamera size={18} color={GOLD} />
+                                <Camera size={18} className="text-[#FFDA71]" />
                                 {currentImageUrl ? 'Trocar foto' : 'Adicionar foto'}
                             </button>
 
-                            {/* Remover foto — pill vermelho */}
                             {currentImageUrl && onRemove && (
                                 <button
                                     onClick={() => { onRemove(); onClose(); }}
-                                    style={{
-                                        display: 'flex', alignItems: 'center',
-                                        justifyContent: 'center', gap: 10,
-                                        width: '100%', padding: '15px 20px',
-                                        borderRadius: 50,
-                                        border: '1.5px solid rgba(239,68,68,0.45)',
-                                        background: 'rgba(239,68,68,0.05)',
-                                        color: '#EF4444',
-                                        fontSize: 16, fontWeight: 600,
-                                        cursor: 'pointer',
-                                        transition: 'background 0.15s',
-                                    }}
-                                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.10)')}
-                                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.05)')}
+                                    className="flex items-center justify-center gap-2.5 w-full py-4 rounded-full border-[1.5px] border-red-500/40 bg-red-500/5 text-red-500 text-base font-semibold hover:bg-red-500/10 transition-colors"
                                 >
-                                    <IconTrash size={16} color="#EF4444" />
+                                    <Trash2 size={16} />
                                     Remover foto
                                 </button>
                             )}
 
-                            {/* Cancelar — sem borda */}
                             <button
                                 onClick={onClose}
-                                style={{
-                                    width: '100%', padding: '15px 20px',
-                                    borderRadius: 50,
-                                    border: 'none',
-                                    background: 'transparent',
-                                    color: GREY,
-                                    fontSize: 16, fontWeight: 500,
-                                    cursor: 'pointer',
-                                    marginTop: 2,
-                                }}
+                                className="w-full py-4 rounded-full text-[#8BA3B4] text-base font-medium mt-1 hover:text-[#FCF7F0] transition-colors"
                             >
                                 Cancelar
                             </button>
                         </div>
 
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/heic,image/webp,image/*"
-                            style={{ display: 'none' }}
-                            onChange={onFileChange}
-                        />
+                        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/heic,image/webp,image/*" className="hidden" onChange={onFileChange} />
                     </div>
                 </div>
-
-                <style>{`
-                    @keyframes sheetUp {
-                        from { transform: translateY(100%); opacity: 0; }
-                        to   { transform: translateY(0);    opacity: 1; }
-                    }
-                `}</style>
             </>
         );
     }
 
     // ══════════════════════════════════════════════════════════════════════════
-    // TELA 2 — Editor fullscreen com canvas (crop circular)
+    // TELA 2: FULLSCREEN EDITOR (UI Cinematográfica)
     // ══════════════════════════════════════════════════════════════════════════
-    const canvasW = Math.min(typeof window !== 'undefined' ? window.innerWidth : 480, 480);
-    const canvasH = Math.round(canvasW * 1.1);
+    const coverScale = Math.max(maskSize / nativeSize.w, maskSize / nativeSize.h);
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: NAVY,
-            display: 'flex', flexDirection: 'column',
-        }}>
+        <div className="fixed inset-0 z-[100] bg-[#031726]/95 backdrop-blur-md flex flex-col overflow-hidden touch-none text-white">
+            
             {/* Header */}
-            <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '52px 20px 12px',
-                flexShrink: 0,
-            }}>
-                <button
-                    onClick={() => setStep('select')}
-                    style={{ background: 'none', border: 'none', color: GREY, fontSize: 15, cursor: 'pointer', padding: '4px 0' }}
-                >
+            <div className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top,44px)] pb-3 flex-shrink-0 z-50">
+                <button onClick={() => setStep('select')} className="text-[#8BA3B4] py-2 text-base font-medium active:opacity-70">
                     Cancelar
                 </button>
-                <span style={{ fontSize: 16, fontWeight: 600, color: WHITE }}>Mover e ajustar</span>
-                <div style={{ width: 64 }} />
+                <div className="flex flex-col items-center">
+                    <span className="font-bold text-[#FCF7F0] tracking-tight">Estúdio</span>
+                </div>
+                <button 
+                    onClick={handleCrop} 
+                    disabled={isProcessing}
+                    className="text-[#CA9A43] py-2 text-base font-bold active:opacity-70 disabled:opacity-50"
+                >
+                    {isProcessing ? 'Cortando...' : 'Salvar'}
+                </button>
             </div>
 
-            <p style={{ textAlign: 'center', fontSize: 13, color: GREY, margin: '0 0 8px', flexShrink: 0 }}>
-                Arraste para reposicionar · Pinça para zoom
+            {/* Hint */}
+            <p className="text-center text-[13px] text-[#8BA3B4] mt-2 mb-4 z-50 flex-shrink-0 relative pointer-events-none">
+                Movimente para centrar e aplique zoom
             </p>
 
-            {/* Canvas */}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                <canvas
-                    ref={canvasRef}
-                    width={canvasW}
-                    height={canvasH}
-                    style={{ cursor: 'grab', touchAction: 'none', display: 'block', maxWidth: '100%' }}
-                    onMouseDown={onMouseDown}
-                    onMouseMove={onMouseMove}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseUp}
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
+            {/* Gesture Engine Area */}
+            <div 
+                className="flex-1 w-full relative flex items-center justify-center overflow-hidden z-20 cursor-grab active:cursor-grabbing"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+                onPointerLeave={onPointerUp}
+            >
+                {/* Imagem Pura com CSS Transform (GPU Accelerated) */}
+                {imageUrl && (
+                    <img 
+                        src={imageUrl} 
+                        alt="Crop source"
+                        width={nativeSize.w} 
+                        height={nativeSize.h}
+                        className="max-w-none origin-center pointer-events-none select-none drop-shadow-2xl"
+                        style={{ 
+                            transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${coverScale * zoom})`,
+                            willChange: 'transform'
+                        }}
+                    />
+                )}
+
+                {/* Máscara Circular Cinematográfica (Pointer Events None) */}
+                <div 
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_9999px_rgba(3,23,38,0.85)] border-2 border-[#CA9A43] pointer-events-none z-10"
+                    style={{ width: maskSize, height: maskSize }}
                 />
             </div>
 
-            {/* Slider de zoom — range dinâmico baseado na imagem */}
-            <div style={{ padding: '8px 28px 4px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                <span style={{ color: GREY, fontSize: 20, lineHeight: 1, userSelect: 'none' }}>−</span>
-                <input
-                    type="range"
-                    min={minZoom}
-                    max={maxZoom}
-                    step={minZoom / 100} // step proporcional ao range
-                    value={zoom}
-                    onChange={e => setZoom(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: GOLD, cursor: 'pointer', height: 4 }}
-                />
-                <span style={{ color: GREY, fontSize: 22, lineHeight: 1, userSelect: 'none' }}>+</span>
-                <button
-                    onClick={handleReset}
-                    style={{ background: BORDER, border: 'none', color: GREY, fontSize: 12, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontWeight: 500 }}
-                >
-                    Reset
-                </button>
+            {/* Slider de Zoom no Rodapé */}
+            <div className="flex flex-col items-center px-6 pb-[max(32px,env(safe-area-inset-bottom,32px))] pt-6 flex-shrink-0 z-50 bg-gradient-to-t from-[#031726] to-transparent">
+                <div className="flex items-center gap-4 w-full max-w-xs">
+                    <span className="text-[#8BA3B4] text-xl font-light">−</span>
+                    <input 
+                        type="range" 
+                        min="1" 
+                        max="3" 
+                        step="0.05" 
+                        value={zoom}
+                        onChange={e => setZoom(Number(e.target.value))}
+                        className="w-full flex-1 accent-[#CA9A43] h-1 bg-[#1A4A6B] rounded-full appearance-none outline-none" 
+                    />
+                    <span className="text-[#8BA3B4] text-2xl font-light">+</span>
+                </div>
             </div>
 
-            {/* Botões de ação */}
-            <div style={{
-                padding: '8px 20px',
-                paddingBottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
-                display: 'flex', flexDirection: 'column', gap: 10,
-                flexShrink: 0,
-            }}>
-                <button
-                    onClick={() => fileRef.current?.click()}
-                    style={{
-                        background: CARD, border: `1px solid ${BORDER}`,
-                        borderRadius: 14, padding: '13px 20px',
-                        color: WHITE, fontSize: 15, cursor: 'pointer', fontWeight: 500,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    }}
-                >
-                    <IconCamera size={16} color={GREY} />
-                    Selecionar outra foto
-                </button>
-                <button
-                    onClick={handleConfirm}
-                    disabled={isProcessing}
-                    style={{
-                        background: isProcessing ? BORDER : GOLD,
-                        border: 'none', borderRadius: 14,
-                        padding: '15px 20px',
-                        color: NAVY, fontSize: 16, fontWeight: 700,
-                        cursor: isProcessing ? 'not-allowed' : 'pointer',
-                        opacity: isProcessing ? 0.7 : 1,
-                        transition: 'opacity 0.2s',
-                    }}
-                >
-                    {isProcessing ? 'Processando...' : 'Confirmar'}
-                </button>
-            </div>
-
-            <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/heic,image/webp,image/*"
-                style={{ display: 'none' }}
-                onChange={onFileChange}
-            />
         </div>
     );
 }
+
+export default ProfilePhotoEditor;
