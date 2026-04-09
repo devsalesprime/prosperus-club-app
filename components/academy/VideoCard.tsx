@@ -18,14 +18,13 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 }) => {
     return (
         /*
-         * w-[85vw] max-w-[280px] → mobile: carrossel com peek effect (próximo card espia na borda)
-         * md:w-auto              → desktop: preenche a célula do grid
-         * shrink-0 snap-center  → mobile: impede compressão e ancora no snap
-         * md:snap-align-none    → desktop: desativa snap
+         * w-[85vw] max-w-[280px] → mobile: carrossel constante no iPhone (sem gaps extremos)
+         * md:w-80 lg:w-96        → desktop: tamanho fixo horizontal Netflix-style
+         * shrink-0 snap-start    → sempre gruda nos inícios (mobile e desktop)
          */
         <div
             onClick={onClick}
-            className="w-[85vw] max-w-[280px] md:w-auto shrink-0 snap-center md:snap-align-none bg-prosperus-box border border-prosperus-stroke rounded-2xl overflow-hidden shadow-lg group cursor-pointer relative flex flex-col transition-shadow duration-200 hover:shadow-xl hover:border-prosperus-gold-dark/40"
+            className="w-[85vw] max-w-[280px] md:w-80 lg:w-96 shrink-0 snap-start bg-prosperus-box border border-prosperus-stroke rounded-2xl overflow-hidden shadow-lg group cursor-pointer relative flex flex-col transition-shadow duration-200 hover:shadow-xl hover:border-prosperus-gold-dark/40"
         >
             {/* ── Thumbnail ─────────────────────────────────────── */}
             <div className="aspect-video w-full overflow-hidden relative bg-prosperus-navy/50">

@@ -319,13 +319,12 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                     className="flex overflow-x-auto overflow-y-hidden gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-6"
                 >
                     {videos.map(video => (
-                        <div key={video.id} className="w-[85vw] sm:w-80 shrink-0 md:w-96 snap-start">
-                            <VideoCard
-                                video={video}
-                                progress={video.progress}
-                                onClick={() => onVideoClick(video)}
-                            />
-                        </div>
+                        <VideoCard
+                            key={video.id}
+                            video={video}
+                            progress={video.progress}
+                            onClick={() => onVideoClick(video)}
+                        />
                     ))}
                 </div>
             </div>
