@@ -318,13 +318,14 @@ export const MembersModule: React.FC = () => {
 
     // ─── CSV Export ────────────────────────────────────────
     const exportToCsv = () => {
-        const headers = ['Nome', 'Email', 'Empresa', 'Cargo', 'Perfil', 'Cadastro'];
+        const headers = ['Nome', 'Email', 'Empresa', 'Cargo', 'Perfil', 'Nascimento', 'Cadastro'];
         const rows = filteredMembers.map(m => [
             m.name || '',
             m.email || '',
             m.company || '',
             m.job_title || '',
             m.role || '',
+            m.birth_date ? new Date(m.birth_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '',
             m.created_at ? new Date(m.created_at).toLocaleDateString('pt-BR') : ''
         ]);
         const csvContent = [headers, ...rows]
@@ -529,6 +530,7 @@ export const MembersModule: React.FC = () => {
                                 <th className="px-6 py-4">Empresa</th>
                                 <th className="px-6 py-4">Cargo</th>
                                 <th className="px-6 py-4">Role</th>
+                                <th className="px-6 py-4">Nascimento</th>
                                 <th className="px-6 py-4">Último Acesso</th>
                                 <th className="px-6 py-4">Vídeo Pitch</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
@@ -555,6 +557,9 @@ export const MembersModule: React.FC = () => {
                                     <td className="px-6 py-4">{member.company || '-'}</td>
                                     <td className="px-6 py-4">{member.job_title || '-'}</td>
                                     <td className="px-6 py-4">{formatRole(member.role)}</td>
+                                    <td className="px-6 py-4">
+                                        {member.birth_date ? new Date(member.birth_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '-'}
+                                    </td>
                                     <td className="px-6 py-4">
                                         {(() => {
                                             const { text, color } = formatLastSeen(lastActivityMap[member.id]);
@@ -635,6 +640,12 @@ export const MembersModule: React.FC = () => {
                             <span className="truncate flex-1 pr-2">{member.company || 'Empresa não defi.'}</span>
                             <span className="shrink-0 bg-slate-900 px-2 py-0.5 rounded">{formatRole(member.role)}</span>
                         </div>
+                        
+                        {member.birth_date && (
+                            <div className="flex items-center text-xs text-slate-400 mt-1">
+                                <span className="bg-slate-800 px-2 py-0.5 rounded">🎂 {new Date(member.birth_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                            </div>
+                        )}
                         
                         <div className="flex justify-between items-center text-xs text-slate-400">
                             {(() => {

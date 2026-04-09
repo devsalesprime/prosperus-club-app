@@ -22,6 +22,7 @@ export interface MemberRow {
     created_at: string;
     pitch_video_url?: string | null;
     is_active?: boolean;
+    birth_date?: string | null;
 }
 
 export interface MemberListResult {
@@ -66,7 +67,7 @@ class AdminMemberService {
 
         let query = supabase
             .from('profiles')
-            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url, is_active', { count: 'exact' });
+            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url, is_active, birth_date', { count: 'exact' });
 
         // Server-side role filter
         if (filters?.role && filters.role !== 'ALL') {
