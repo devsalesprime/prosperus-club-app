@@ -8,7 +8,7 @@ import React from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 
 const base: React.CSSProperties = {
-    background: '#0D2E44',
+    background: '#031726',
     color: '#FCF7F0',
     fontFamily: 'inherit',
     fontSize: '14px',
@@ -32,14 +32,14 @@ export const notify = {
 
     info: (msg: string) =>
         toast(msg, {
-            style: { ...base, border: '1px solid #123F5B' },
+            style: { ...base, border: '1px solid #052B48' },
             duration: 2500,
             icon: 'ℹ️',
         }),
 
     loading: (msg: string) =>
         toast.loading(msg, {
-            style: { ...base, border: '1px solid #123F5B' },
+            style: { ...base, border: '1px solid #052B48' },
         }),
 
     dismiss: (id?: string) => toast.dismiss(id),

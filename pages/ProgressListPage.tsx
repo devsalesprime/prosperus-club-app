@@ -351,7 +351,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                                 {(file.file_type.toLowerCase() === 'html' || file.file_type.toLowerCase() === 'htm') && (
                                     <button
                                         onClick={() => handlePreview(file)}
-                                        className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-yellow-500 hover:bg-yellow-900/20 transition border-r border-slate-700/50"
+                                        className="flex-1 min-w-0 flex items-center justify-center gap-2 py-3 text-sm font-medium text-yellow-500 hover:bg-yellow-900/20 transition border-r border-slate-700/50"
                                     >
                                         <Eye size={16} />
                                         Visualizar
@@ -359,7 +359,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                                 )}
                                 <button
                                     onClick={() => handleDownload(file)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-green-400 hover:bg-green-900/20 transition"
+                                    className="flex-1 min-w-0 flex items-center justify-center gap-2 py-3 text-sm font-medium text-green-400 hover:bg-green-900/20 transition"
                                 >
                                     <Download size={16} />
                                     Baixar
@@ -390,7 +390,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                 <div className="fixed inset-0 bg-black/80 z-50 flex flex-col">
                     {/* Modal Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 min-w-0">
                             <FileCode size={18} className="text-orange-400 shrink-0" />
                             <span className="font-bold text-white text-sm truncate">{previewTitle}</span>
                         </div>
@@ -402,7 +402,7 @@ export const ProgressListPage: React.FC<ProgressListPageProps> = ({ setView }) =
                         </button>
                     </div>
                     {/* Modal Body - iframe with blob URL */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                         <iframe
                             src={previewUrl}
                             className="w-full h-full bg-white"

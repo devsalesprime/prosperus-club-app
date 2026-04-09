@@ -12,9 +12,9 @@ import { AdminConfirmDialog } from './shared/AdminConfirmDialog';
 
 const GOLD   = '#FFDA71';
 const NAVY   = '#031A2B';
-const CARD   = '#0D2E44';
-const GREY   = '#A8B4BC';
-const BORDER = '#123F5B';
+const CARD   = '#031726';
+const GREY   = '#95A4B4';
+const BORDER = '#052B48';
 
 const ACCEPT = '.pdf,.ppt,.pptx,.jpg,.jpeg,.png,.webp';
 

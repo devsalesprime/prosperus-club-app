@@ -405,7 +405,7 @@ export const AdminMemberProgress: React.FC = () => {
                         <div className="flex gap-1 mb-5 bg-slate-800 rounded-lg p-1">
                             <button
                                 onClick={() => setUploadMode('bulk')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'bulk'
+                                className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'bulk'
                                     ? 'bg-yellow-600 text-white'
                                     : 'text-slate-400 hover:text-white'
                                     }`}
@@ -415,7 +415,7 @@ export const AdminMemberProgress: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setUploadMode('single')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'single'
+                                className={`flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition ${uploadMode === 'single'
                                     ? 'bg-yellow-600 text-white'
                                     : 'text-slate-400 hover:text-white'
                                     }`}
@@ -468,7 +468,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                 type="file"
                                                 multiple
                                                 onChange={handleBulkFilesSelect}
-                                                className="hidden"
+                                                className="hidden w-full box-border"
                                                 accept=".html,.htm,.pdf,.xlsx,.xls,.doc,.docx,.csv"
                                             />
                                         </label>
@@ -499,7 +499,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                     ) : (
                                                         <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" title="Sócio não encontrado" />
                                                     )}
-                                                    <span className="text-slate-300 truncate flex-1">{f.name}</span>
+                                                    <span className="text-slate-300 truncate flex-1 min-w-0">{f.name}</span>
                                                     {member && (
                                                         <span className="text-green-400 truncate text-[10px]">{member.name}</span>
                                                     )}
@@ -553,7 +553,7 @@ export const AdminMemberProgress: React.FC = () => {
                                             <div key={i} className={`flex items-center gap-2 p-2 rounded text-xs ${r.success ? 'bg-green-900/10' : 'bg-red-900/10'
                                                 }`}>
                                                 <span>{r.success ? '✅' : '❌'}</span>
-                                                <span className="text-slate-300 flex-1 truncate">{r.email}</span>
+                                                <span className="text-slate-300 flex-1 min-w-0 truncate">{r.email}</span>
                                                 <span className={`truncate ${r.success ? 'text-green-400' : 'text-red-400'}`}>
                                                     {r.success ? r.memberName : r.error}
                                                 </span>
@@ -677,7 +677,7 @@ export const AdminMemberProgress: React.FC = () => {
 
                         {/* Search & Filter */}
                         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full mb-6">
-                            <div className="relative flex-1">
+                            <div className="relative flex-1 min-w-0">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <input
                                     type="text"
@@ -731,7 +731,7 @@ export const AdminMemberProgress: React.FC = () => {
                                         </div>
 
                                         <div className="flex justify-between items-center text-xs text-slate-400 mt-1 pb-1">
-                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2">
+                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 min-w-0 pr-2">
                                                 <Users size={12} className="shrink-0" />
                                                 <span className="truncate">{file.member?.name || 'Desconhecido'}</span>
                                             </div>
@@ -927,7 +927,7 @@ export const AdminMemberProgress: React.FC = () => {
                                 <X size={18} />
                             </button>
                         </div>
-                        <div className="flex-1 overflow-hidden reports-container">
+                        <div className="flex-1 min-w-0 overflow-hidden reports-container">
                             <style>{`
                                 .reports-container * {
                                     max-width: 100%;

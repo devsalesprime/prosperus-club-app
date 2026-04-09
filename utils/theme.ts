@@ -8,10 +8,10 @@
 
 export const themeColors = {
   navy: '#031A2B',
-  card: '#0D2E44',
-  border: '#123F5B',
+  card: '#031726',
+  border: '#052B48',
   gold: '#FFDA71',
   goldDark: '#CA9A43',
   white: '#FCF7F0',
-  grey: '#A8B4BC',
+  grey: '#95A4B4',
 };

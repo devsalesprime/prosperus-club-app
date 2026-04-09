@@ -20,7 +20,7 @@ const OUTPUT_SIZE = 400;
 // Zoom min/max são calculados dinamicamente a partir do coverZoom
 const ZOOM_MAX_MULTIPLIER = 12; // 12× o zoom de cover = zoom muito detalhado
 const NAVY        = '#031A2B';
-const CARD        = '#0D2E44';
+const CARD        = '#031726';
 const BORDER      = '#1A4A6B';
 const GOLD        = '#FFDA71';
 const WHITE       = '#FCF7F0';

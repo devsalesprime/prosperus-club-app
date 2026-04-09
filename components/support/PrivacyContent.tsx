@@ -24,13 +24,13 @@ function Table({ rows }: { rows: string[][] }) {
             <table className="w-full text-xs border-collapse">
                 <tbody>
                     {rows.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #123F5B' }}>
+                        <tr key={i} style={{ borderBottom: '1px solid #052B48' }}>
                             {row.map((cell, j) => (
                                 <td key={j} className="py-2 px-3 align-top"
                                     style={{
                                         color: j === 0 ? '#FFDA71' : '#EDF4F7',
                                         fontWeight: j === 0 ? 600 : 400,
-                                        background: i % 2 === 0 ? '#0D2E44' : 'transparent',
+                                        background: i % 2 === 0 ? '#031726' : 'transparent',
                                     }}>
                                     {cell}
                                 </td>
@@ -57,7 +57,7 @@ export function PrivacyContent() {
                     armazena e protege seus dados pessoais, em conformidade com a{' '}
                     <strong>LGPD (Lei nº 13.709/2018)</strong>.
                 </p>
-                <div className="rounded-xl p-4 space-y-1" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4 space-y-1" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs font-semibold" style={{ color: '#FFDA71' }}>Controlador dos Dados</p>
                     <p>Prosperus Club Ltda · CNPJ 57.378.551/0001-00</p>
                     <p>Rua Conceição de Monte Alegre, 198 — Conj. 82</p>
@@ -96,7 +96,7 @@ export function PrivacyContent() {
                     ['Analytics de uso', 'Legítimo interesse'],
                     ['Moderação do chat', 'Legítimo interesse'],
                 ]} />
-                <div className="rounded-xl p-4 mt-3" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4 mt-3" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="font-semibold text-white mb-2">Nunca usamos seus dados para:</p>
                     <ul className="space-y-1 text-xs" style={{ color: '#8BA3B5' }}>
                         <li>• Venda a terceiros</li>
@@ -142,7 +142,7 @@ export function PrivacyContent() {
                     ['Portabilidade', 'Receber dados em formato estruturado'],
                     ['Revogação', 'Retirar consentimento a qualquer momento'],
                 ]} />
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs font-semibold mb-1" style={{ color: '#FFDA71' }}>Como exercer seus direitos</p>
                     <p className="text-xs">Email: tecnologia@salesprime.com.br</p>
                     <p className="text-xs">Prazo de resposta: até 15 dias úteis</p>
@@ -163,7 +163,7 @@ export function PrivacyContent() {
             </Section>
 
             <Section title="8. Contato">
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p>DPO: Fábio Soares</p>
                     <p>Email: tecnologia@salesprime.com.br</p>
                     <p>Endereço: Rua Conceição de Monte Alegre, 198 — Conj. 82, São Paulo-SP</p>

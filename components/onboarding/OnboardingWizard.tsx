@@ -429,7 +429,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             {/* Format hint */}
             {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
-                <p className="text-[10px] mt-3" style={{ color: '#A8B4BC', opacity: 0.5 }}>
+                <p className="text-[10px] mt-3" style={{ color: '#95A4B4', opacity: 0.5 }}>
                     JPG, PNG, HEIC · máx. 15MB · Google Fotos ✓
                 </p>
             )}
@@ -682,8 +682,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
                 {/* Campo "Outros" — aparece ao selecionar */}
                 {(formData.partnership_interests || []).includes('Outros') && (
-                    <div className="mt-3 rounded-2xl overflow-hidden" style={{ border: '1px solid #FFDA71', background: '#0D2E44' }}>
-                        <div className="flex items-center px-4 py-1" style={{ borderBottom: '1px solid #123F5B' }}>
+                    <div className="mt-3 rounded-2xl overflow-hidden" style={{ border: '1px solid #FFDA71', background: '#031726' }}>
+                        <div className="flex items-center px-4 py-1" style={{ borderBottom: '1px solid #052B48' }}>
                             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#FFDA71', opacity: 0.7 }}>Qual área?</span>
                         </div>
                         <input

@@ -391,7 +391,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                 </div>
             )}
 
-            {/* ── Strong Matches Carousel ── */}
+            {/* ── Conexões Estratégicas Carousel ── */}
             {!searchQuery && !matchesOnly && strongMatches.length > 0 && (
                 <div>
                     <div className="flex items-center justify-between mb-3">

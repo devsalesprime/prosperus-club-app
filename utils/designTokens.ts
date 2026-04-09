@@ -1,92 +1,32 @@
-/**
- * ============================================================
- * PROSPERUS CLUB — DESIGN SYSTEM TOKENS
- * Versão: Abril 2026
- * ============================================================
- * Fonte única de verdade para todas as cores do app.
- * Os valores CSS estão declarados em index.css @theme e são
- * consumidos automaticamente pelo Tailwind via classes como
- * `bg-prosperus-box`, `text-prosperus-gold`, etc.
- *
- * Use este arquivo para valores inline (style={{}}) ou
- * lógica condicional de cores em JavaScript.
- * ============================================================
- */
+// ============================================
+// DESIGN TOKENS
+// ============================================
+// Official color palette and gradients for Prosperus Club App
 
-export const TOKENS = {
-
-    // ─── FUNDOS ────────────────────────────────────────────────────────
-    bgPrimary:    '#031A2B',  // fundo base de todas as telas → bg-prosperus-navy
-    bgBox:        '#031726',  // cards, inputs, header, modais → bg-prosperus-box
-    bgGradientStart: '#042034',  // gradiente Agenda/Tools/Galeria
-    bgGradientEnd:   '#04253E',  // gradiente Agenda/Tools/Galeria
-
-    // ─── GOLD ──────────────────────────────────────────────────────────
-    gold:         '#FFDA71',  // CTA principal, item ativo nav, headlines
-    goldDark:     '#CA9A43',  // botões pequenos, ícones topo, badges
-
-    // ─── BORDAS ────────────────────────────────────────────────────────
-    stroke:       '#052B48',  // bordas, separadores, outlines
-
-    // ─── TEXTO / ESTADOS ───────────────────────────────────────────────
-    textPrimary:  '#FCF7F0',  // texto principal
-    inactive:     '#152938',  // fundo botões/opções não selecionadas
-    textInactive: '#95A4B4',  // texto inativo, ícones off, placeholders
-
-    // ─── SEMÂNTICAS ────────────────────────────────────────────────────
-    success:  '#22C55E',
-    danger:   '#EF4444',
-    warning:  '#F97316',
-    info:     '#3B82F6',
-
-} as const;
-
-// ─── Helpers CSS ─────────────────────────────────────────────────────────────
-
-/** Gradiente gold para botões CTA grandes */
-export const goldGradientCSS = 'linear-gradient(135deg, #FFDA71, #CA9A43)';
-
-/** Gradiente gold em 93.9° (padrão botão Galeria/Academy) */
-export const goldGradient939CSS = 'linear-gradient(93.9deg, #FFDA71 0%, #CA9A43 100%)';
-
-/** Gradiente navy para Agenda, Tools e Galeria */
-export const bgGradientCSS = 'linear-gradient(135deg, #042034, #04253E)';
-
-/** Gradiente navy vertical (Tools full-screen) */
-export const bgGradientVerticalCSS = 'linear-gradient(180deg, #042034 0%, #04253E 100%)';
-
-// ─── Estilos reutilizáveis ──────────────────────────────────────────────────
-
-/** Card padrão: fundo escuro + borda definida */
-export const cardStyle: React.CSSProperties = {
-    background:   TOKENS.bgBox,
-    border:       `1px solid ${TOKENS.stroke}`,
-    borderRadius: 12,
-};
-
-/** Input padrão */
-export const inputStyle: React.CSSProperties = {
-    background: TOKENS.bgBox,
-    border:     `1px solid ${TOKENS.stroke}`,
-    color:      TOKENS.textPrimary,
-};
-
-/** Chip/badge inativo */
-export const chipInactiveStyle: React.CSSProperties = {
-    background: TOKENS.inactive,
-    color:      TOKENS.textInactive,
-    border:     `1px solid ${TOKENS.stroke}`,
-};
-
-/** Chip/badge ativo */
-export const chipActiveStyle: React.CSSProperties = {
-    background: `${TOKENS.gold}20`,   // gold 12% opacidade
-    color:      TOKENS.gold,
-    border:     `1px solid ${TOKENS.goldDark}`,
-};
-
-/** Container de tela com gradiente navy (Agenda, Tools, Galeria) */
-export const screenGradientStyle: React.CSSProperties = {
-    background: bgGradientCSS,
-    minHeight:  '100dvh',
+export const DESIGN_TOKENS = {
+    colors: {
+        // Base backgrounds
+        bgPrimary: '#031A2B',  // App root background
+        bgBox: '#031726',      // Cards, inputs, modals (Substituiu o antigo #031726)
+        
+        // Borders and separation
+        stroke: '#052B48',     // Borders, dividers (Substituiu o antigo #052B48)
+        
+        // Accents
+        gold: '#FFDA71',       // CTAs, active items
+        goldDark: '#CA9A43',   // Small buttons, header icons
+        
+        // Text
+        textPrimary: '#FCF7F0',// Main readable text
+        textOff: '#95A4B4',    // Muted text, placeholders (Substituiu o antigo #95A4B4)
+        
+        // States
+        inactive: '#152938',   // Idle states, disabled backgrounds
+    },
+    gradients: {
+        gold: 'linear-gradient(135deg, #FFDA71, #CA9A43)',
+        goldClasses: 'from-[#FFDA71] to-[#CA9A43]',
+        bg: 'linear-gradient(135deg, #042034, #04253E)',
+        bgClasses: 'from-[#042034] to-[#04253E]',
+    }
 };

@@ -9,9 +9,9 @@ import { Download, FileText, Image, Paperclip, Link as LinkIcon, ExternalLink } 
 import { videoService, VideoMaterial } from '../../services/videoService';
 
 const GOLD   = '#FFDA71';
-const CARD   = '#0D2E44';
-const GREY   = '#A8B4BC';
-const BORDER = '#123F5B';
+const CARD   = '#031726';
+const GREY   = '#95A4B4';
+const BORDER = '#052B48';
 
 function getIcon(type: string) {
     if (type === 'pdf')       return <FileText size={16} color="#EF4444" />;

@@ -43,7 +43,7 @@ export const ProfileAvatarSection: React.FC<ProfileAvatarSectionProps> = ({
                         borderRadius: '50%',
                         objectFit: 'cover',
                         border: '2.5px solid #1A4A6B',
-                        background: '#0D2E44',
+                        background: '#031726',
                         display: 'block',
                     }}
                     onError={(e) => {

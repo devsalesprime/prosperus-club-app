@@ -38,7 +38,7 @@ export function SupportDocsSheet({ open, onClose }: Props) {
                 className="fixed inset-x-0 bottom-0 z-[80] flex flex-col rounded-t-3xl"
                 style={{
                     background: '#031A2B',
-                    borderTop: '1px solid #123F5B',
+                    borderTop: '1px solid #052B48',
                     height: '92dvh',
                     animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
                 }}
@@ -52,11 +52,11 @@ export function SupportDocsSheet({ open, onClose }: Props) {
 
                 {/* Handle */}
                 <div className="w-10 h-1 rounded-full mx-auto mt-3 mb-0 shrink-0"
-                    style={{ background: '#123F5B' }} />
+                    style={{ background: '#052B48' }} />
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 shrink-0"
-                    style={{ borderBottom: '1px solid #123F5B' }}>
+                    style={{ borderBottom: '1px solid #052B48' }}>
                     <div className="flex items-center gap-2" style={{ color: '#FFDA71' }}>
                         {meta.icon}
                         <h2 className="text-base font-semibold text-white">
@@ -66,7 +66,7 @@ export function SupportDocsSheet({ open, onClose }: Props) {
                     <button
                         onClick={onClose}
                         className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:text-white"
-                        style={{ background: '#123F5B', color: '#8BA3B5' }}
+                        style={{ background: '#052B48', color: '#8BA3B5' }}
                     >
                         <X size={16} />
                     </button>

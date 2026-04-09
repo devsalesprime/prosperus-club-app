@@ -67,7 +67,7 @@ export const AnalyticsDashboard: React.FC = () => {
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition ${
+                        className={`flex-1 min-w-0 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition ${
                             activeTab === tab.id
                                 ? 'bg-yellow-600 text-white shadow-lg shadow-yellow-900/20'
                                 : 'text-slate-400 hover:text-white hover:bg-slate-700/50'

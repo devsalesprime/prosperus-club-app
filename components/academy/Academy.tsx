@@ -248,51 +248,87 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     videos,
     iconUrl,
     onVideoClick,
-}) => (
-    <div className="flex flex-col mb-8 w-full overflow-hidden">
-        {/* Título da categoria + ícone + contador (empilhados verticalmente) */}
-        <div className="flex flex-col px-4 md:px-4 mb-4 gap-1">
-            <div className="flex items-center gap-3">
-                {iconUrl && (
-                    <img
-                        src={iconUrl}
-                        alt=""
-                        className="h-6 sm:h-8 w-auto max-w-[40px] sm:max-w-[48px] object-contain shrink-0 drop-shadow-md"
-                        style={{ filter: 'brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg) brightness(92%)' }}
-                        loading="lazy"
-                        decoding="async"
-                    />
-                )}
-                <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
-                    {title
-                        .split(' ')
-                        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                        .join(' ')}
-                </h2>
-            </div>
-            <span className="text-xs text-prosperus-muted-text font-medium">
-                {count} aula{count !== 1 ? 's' : ''}
-            </span>
-        </div>
+}) => {
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-        {/*
-         * Container híbrido — a mágica Netflix:
-         *   MOBILE:  flex + overflow-x-auto + snap → swimlane horizontal
-         *   DESKTOP: md:grid 2→3→4 colunas → grid
-         *
-         * [&::-webkit-scrollbar]:hidden → oculta scrollbar webkit
-         * [-ms-overflow-style:'none']   → oculta scrollbar IE/Edge
-         * [scrollbar-width:'none']      → oculta scrollbar Firefox
-         */}
-        <div className="flex overflow-x-auto overflow-y-hidden gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6 md:px-4 md:overflow-visible md:snap-none md:pb-0">
-            {videos.map(video => (
-                <VideoCard
-                    key={video.id}
-                    video={video}
-                    progress={video.progress}
-                    onClick={() => onVideoClick(video)}
-                />
-            ))}
+    const scrollLeft = () => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: -600, behavior: 'smooth' });
+        }
+    };
+
+    const scrollRight = () => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
+        }
+    };
+
+    return (
+        <div className="flex flex-col mb-8 w-full overflow-hidden relative group">
+            {/* Título da categoria + ícone + contador */}
+            <div className="flex flex-col px-4 md:px-4 mb-4 gap-1">
+                <div className="flex items-center gap-3">
+                    {iconUrl && (
+                        <img
+                            src={iconUrl}
+                            alt=""
+                            className="h-6 sm:h-8 w-auto max-w-[40px] sm:max-w-[48px] object-contain shrink-0 drop-shadow-md"
+                            style={{ filter: 'brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg) brightness(92%)' }}
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    )}
+                    <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
+                        {title
+                            .split(' ')
+                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                            .join(' ')}
+                    </h2>
+                </div>
+                <span className="text-xs text-prosperus-muted-text font-medium">
+                    {count} aula{count !== 1 ? 's' : ''}
+                </span>
+            </div>
+
+            <div className="relative w-full">
+                {/* Netflix Desktop Left Arrow */}
+                <div className="hidden md:flex absolute left-0 top-0 bottom-4 w-20 items-center justify-start z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-[#031726] to-transparent pointer-events-none">
+                    <button 
+                        onClick={scrollLeft}
+                        aria-label="Rolar para esquerda"
+                        className="h-10 w-10 ml-2 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-sm pointer-events-auto flex items-center justify-center transition-all shadow-lg active:scale-95 border border-white/10"
+                    >
+                        &larr;
+                    </button>
+                </div>
+
+                {/* Netflix Desktop Right Arrow */}
+                <div className="hidden md:flex absolute right-0 top-0 bottom-4 w-20 items-center justify-end z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-[#031726] to-transparent pointer-events-none">
+                    <button 
+                        onClick={scrollRight}
+                        aria-label="Rolar para direita"
+                        className="h-10 w-10 mr-2 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-sm pointer-events-auto flex items-center justify-center transition-all shadow-lg active:scale-95 border border-white/10"
+                    >
+                        &rarr;
+                    </button>
+                </div>
+
+                {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
+                <div 
+                    ref={scrollContainerRef}
+                    className="flex overflow-x-auto overflow-y-hidden gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-6"
+                >
+                    {videos.map(video => (
+                        <div key={video.id} className="w-[85vw] sm:w-80 shrink-0 md:w-96 snap-start">
+                            <VideoCard
+                                video={video}
+                                progress={video.progress}
+                                onClick={() => onVideoClick(video)}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
-    </div>
-);
+    );
+};

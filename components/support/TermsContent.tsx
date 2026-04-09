@@ -29,7 +29,7 @@ function Rules({ allowed, forbidden }: { allowed?: string[]; forbidden?: string[
     return (
         <div className="space-y-3">
             {allowed && (
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs font-semibold text-green-400 mb-2">✅ Você pode</p>
                     <ul className="space-y-1 text-xs" style={{ color: '#EDF4F7' }}>
                         {allowed.map((r, i) => <li key={i}>• {r}</li>)}
@@ -37,7 +37,7 @@ function Rules({ allowed, forbidden }: { allowed?: string[]; forbidden?: string[
                 </div>
             )}
             {forbidden && (
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs font-semibold text-red-400 mb-2">🚫 Não é permitido</p>
                     <ul className="space-y-1 text-xs" style={{ color: '#EDF4F7' }}>
                         {forbidden.map((r, i) => <li key={i}>• {r}</li>)}
@@ -61,7 +61,7 @@ export function TermsContent() {
                     Ao acessar a plataforma <strong>Prosperus Club</strong>, você concorda
                     integralmente com estes Termos. Caso não concorde, interrompa o uso imediatamente.
                 </p>
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs">Prosperus Club Ltda · CNPJ 57.378.551/0001-00</p>
                     <p className="text-xs">Rua Conceição de Monte Alegre, 198 — Conj. 82, São Paulo-SP</p>
                 </div>
@@ -109,7 +109,7 @@ export function TermsContent() {
                     O parceiro deve confirmar para que o valor entre no ROI.
                     Deals contestados são analisados pela administração.
                 </p>
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs font-semibold text-red-400 mb-2">Manipulação de dados pode resultar em:</p>
                     <ul className="space-y-1 text-xs" style={{ color: '#EDF4F7' }}>
                         <li>• Invalidação dos registros</li>
@@ -162,7 +162,7 @@ export function TermsContent() {
             </Section>
 
             <Section num="11." title="Contato">
-                <div className="rounded-xl p-4" style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                <div className="rounded-xl p-4" style={{ background: '#031726', border: '1px solid #052B48' }}>
                     <p className="text-xs">Email: tecnologia@salesprime.com.br</p>
                     <p className="text-xs mt-1" style={{ opacity: 0.7 }}>
                         Ou via botão de suporte (WhatsApp) na plataforma

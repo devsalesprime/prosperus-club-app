@@ -222,7 +222,7 @@ export function FAQContent() {
         <div className="px-4 pb-8 pt-3">
             {/* Search */}
             <div className="flex items-center gap-2 rounded-2xl px-3 py-3 mb-5"
-                style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                style={{ background: '#031726', border: '1px solid #052B48' }}>
                 <Search size={15} className="shrink-0" style={{ color: '#8BA3B5' }} />
                 <input
                     type="text"
@@ -238,14 +238,14 @@ export function FAQContent() {
             <div className="space-y-2">
                 {filtered.map(section => (
                     <div key={section.title} className="rounded-2xl overflow-hidden"
-                        style={{ border: '1px solid #123F5B' }}>
+                        style={{ border: '1px solid #052B48' }}>
                         {/* Section header */}
                         <button
                             onClick={() =>
                                 setOpenSection(openSection === section.title ? null : section.title)
                             }
                             className="w-full flex items-center justify-between px-4 py-3"
-                            style={{ background: '#0D2E44' }}
+                            style={{ background: '#031726' }}
                         >
                             <span className="flex items-center gap-2 text-sm font-semibold text-white">
                                 <span>{section.emoji}</span>
@@ -263,9 +263,9 @@ export function FAQContent() {
 
                         {/* Items */}
                         {openSection === section.title && (
-                            <div style={{ borderTop: '1px solid #123F5B' }}>
+                            <div style={{ borderTop: '1px solid #052B48' }}>
                                 {section.items.map((item, idx) => (
-                                    <div key={item.q} style={{ borderTop: idx > 0 ? '1px solid #0D2E44' : 'none' }}>
+                                    <div key={item.q} style={{ borderTop: idx > 0 ? '1px solid #031726' : 'none' }}>
                                         <button
                                             onClick={() =>
                                                 setOpenItem(openItem === item.q ? null : item.q)
@@ -305,7 +305,7 @@ export function FAQContent() {
 
             {/* Support CTA */}
             <div className="mt-6 rounded-2xl p-4 text-center"
-                style={{ background: '#0D2E44', border: '1px solid #123F5B' }}>
+                style={{ background: '#031726', border: '1px solid #052B48' }}>
                 <p className="text-sm mb-3" style={{ color: '#8BA3B5' }}>
                     Não encontrou o que precisava?
                 </p>

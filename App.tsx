@@ -40,7 +40,7 @@ const AppSkeleton = () => (
   }}>
     <div style={{
       width: 40, height: 40,
-      border: '2px solid #123F5B',
+      border: '2px solid #052B48',
       borderTop: '2px solid #FFDA71',
       borderRadius: '50%',
       animation: 'spin 0.8s linear infinite',
