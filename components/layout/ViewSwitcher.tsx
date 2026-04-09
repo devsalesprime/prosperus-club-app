@@ -52,6 +52,8 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 
 
+import { PremiumLoader } from '../ui/PremiumLoader';
+
 export const ViewSwitcher: React.FC = () => {
     const {
         view, setView,
@@ -76,12 +78,13 @@ export const ViewSwitcher: React.FC = () => {
 
     return (
         <ErrorBoundary moduleName="aplicativo">
-            {view === ViewState.DASHBOARD && (
-                <DashboardHome
-                    currentUser={currentUser!}
-                    members={members}
-                    carouselItems={carouselItems}
-                    setView={setView}
+            <Suspense fallback={<PremiumLoader />}>
+                {view === ViewState.DASHBOARD && (
+                    <DashboardHome
+                        currentUser={currentUser!}
+                        members={members}
+                        carouselItems={carouselItems}
+                        setView={setView}
                     onViewProfile={(memberId) => {
                         profileService.getProfile(memberId).then(profile => {
                             if (profile) {
@@ -454,6 +457,7 @@ export const ViewSwitcher: React.FC = () => {
                     currentUserId={currentUser.id}
                 />
             )}
+            </Suspense>
         </ErrorBoundary>
     );
 };

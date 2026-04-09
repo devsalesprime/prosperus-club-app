@@ -33,6 +33,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({
                         src={video.thumbnail}
                         alt={video.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        loading="lazy"
+                        decoding="async"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">

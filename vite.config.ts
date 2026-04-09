@@ -298,15 +298,13 @@ export default defineConfig(async ({ mode }) => {
       }
     },
     build: {
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: {
             'vendor-react': ['react', 'react-dom'],
             'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-query': ['@tanstack/react-query'],
-            'vendor-icons': ['lucide-react'],
-            'vendor-date': ['date-fns'],
+            'vendor-ui': ['lucide-react', 'date-fns']
           }
         }
       },

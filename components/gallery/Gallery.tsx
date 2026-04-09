@@ -155,6 +155,8 @@ const GalleryList: React.FC = () => {
                                         src={album.coverImage}
                                         alt={album.title}
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        loading="lazy"
+                                        decoding="async"
                                         onError={(e) => {
                                             e.currentTarget.style.display = 'none';
                                             const fallback = e.currentTarget.nextElementSibling as HTMLElement;
