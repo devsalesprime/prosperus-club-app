@@ -1,65 +1,101 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 interface Props {
-  children: React.ReactNode
-  title?: string
-  subtitle?: string   // ex: "12 aulas"
-  onSeeAll?: () => void
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  onSeeAll?: () => void;
 }
 
 export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
-  const trackRef     = useRef<HTMLDivElement>(null)
-  const [canPrev, setCanPrev] = useState(false)
-  const [canNext, setCanNext] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // Mouse Drag Logic
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeft = useRef(0);
 
   const updateButtons = useCallback(() => {
-    const el = trackRef.current
-    if (!el) return
-    const atStart = el.scrollLeft <= 4
-    const atEnd   = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
-    setCanPrev(!atStart)
-    setCanNext(!atEnd)
-  }, [])
+    const el = trackRef.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 4;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    setCanPrev(!atStart);
+    setCanNext(!atEnd);
+  }, []);
 
   useEffect(() => {
-    const el = trackRef.current
-    if (!el) return
+    const el = trackRef.current;
+    if (!el) return;
 
-    // Dar tempo para os filhos renderizarem antes de medir
-    const timeout = setTimeout(updateButtons, 100)
-
-    el.addEventListener('scroll', updateButtons, { passive: true })
-    const ro = new ResizeObserver(updateButtons)
-    ro.observe(el)
+    const timeout = setTimeout(updateButtons, 100);
+    el.addEventListener('scroll', updateButtons, { passive: true });
+    
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(updateButtons);
+      ro.observe(el);
+    }
 
     return () => {
-      clearTimeout(timeout)
-      el.removeEventListener('scroll', updateButtons)
-      ro.disconnect()
-    }
-  }, [updateButtons])
+      clearTimeout(timeout);
+      el.removeEventListener('scroll', updateButtons);
+      if (ro) ro.disconnect();
+    };
+  }, [updateButtons]);
 
   const scrollByPage = (dir: 'prev' | 'next') => {
-    const el = trackRef.current
-    if (!el) return
-    const amount = el.clientWidth * 0.85 * (dir === 'next' ? 1 : -1)
-    el.scrollBy({ left: amount, behavior: 'smooth' })
-  }
+    const el = trackRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.85 * (dir === 'next' ? 1 : -1);
+    el.scrollBy({ left: amount, behavior: 'smooth' });
+  };
 
-  const totalChildren = React.Children.count(children)
-  if (totalChildren === 0) return null
+  // Pointer Handlers for Mouse Drag
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!trackRef.current) return;
+    // Captura apenas mouse para não interferir com touch scroll nativo mobile
+    if (e.pointerType === 'mouse') {
+      isDragging.current = true;
+      startX.current = e.pageX - trackRef.current.offsetLeft;
+      scrollLeft.current = trackRef.current.scrollLeft;
+      trackRef.current.style.cursor = 'grabbing';
+      trackRef.current.style.scrollSnapType = 'none'; // Disable snap during drag
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current || !trackRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - trackRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5; // Drag speed multiplier
+    trackRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging.current || !trackRef.current) return;
+    isDragging.current = false;
+    trackRef.current.style.cursor = 'grab';
+    trackRef.current.style.scrollSnapType = 'x mandatory'; // Restore snap
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const totalChildren = React.Children.count(children);
+  if (totalChildren === 0) return null;
 
   return (
     <div
-      style={{ position: 'relative', marginBottom: 40, overflow: 'visible', minWidth: 0, width: '100%', maxWidth: '100%' }}
+      style={{ position: 'relative', marginBottom: 40, width: '100%', minWidth: 0, maxWidth: '100%' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-
-      {/* Header da seção */}
+      {/* Header opcional */}
       {title && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, paddingLeft: 16 }}>
           <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#FCF7F0', letterSpacing: '0.03em', display: 'flex', alignItems: 'center' }}>
             {title}
           </h2>
@@ -81,8 +117,8 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
       {canPrev && (
         <div style={{
           position: 'absolute', top: title ? 56 : 0, left: 0, bottom: 0,
-          width: 80, zIndex: 2, pointerEvents: 'none',
-          background: 'linear-gradient(to right, #031A2B, transparent)',
+          width: 80, zIndex: 15, pointerEvents: 'none',
+          background: 'linear-gradient(to right, #031726, transparent)',
         }} />
       )}
 
@@ -90,8 +126,8 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
       {canNext && (
         <div style={{
           position: 'absolute', top: title ? 56 : 0, right: 0, bottom: 0,
-          width: 80, zIndex: 2, pointerEvents: 'none',
-          background: 'linear-gradient(to left, #031A2B, transparent)',
+          width: 80, zIndex: 15, pointerEvents: 'none',
+          background: 'linear-gradient(to left, #031726, transparent)',
         }} />
       )}
 
@@ -102,15 +138,16 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
           aria-label="Anterior"
           style={{
             position: 'absolute', top: '50%',
-            left: -18, transform: 'translateY(-50%)',
-            zIndex: 10, width: 36, height: 36,
-            borderRadius: '50%', background: '#031726',
+            left: 20, transform: 'translateY(-50%)',
+            zIndex: 20, width: 44, height: 44,
+            borderRadius: '50%', background: 'rgba(3, 23, 38, 0.85)',
             border: '1px solid #052B48', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FCF7F0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCF7F0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
@@ -123,44 +160,52 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
           aria-label="Próximo"
           style={{
             position: 'absolute', top: '50%',
-            right: -18, transform: 'translateY(-50%)',
-            zIndex: 10, width: 36, height: 36,
-            borderRadius: '50%', background: '#031726',
+            right: 20, transform: 'translateY(-50%)',
+            zIndex: 20, width: 44, height: 44,
+            borderRadius: '50%', background: 'rgba(3, 23, 38, 0.85)',
             border: '1px solid #052B48', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FCF7F0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCF7F0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6" />
           </svg>
         </button>
       )}
 
-      {/* Track — o único elemento com overflow:auto */}
+      {/* Track com eventos de arrasto */}
       <div
         ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{
           display:                  'flex',
           gap:                      14,
           overflowX:                'auto',
-          overflowY:                'visible',
           scrollSnapType:           'x mandatory',
           WebkitOverflowScrolling:  'touch',
           msOverflowStyle:          'none',
           scrollbarWidth:           'none',
           paddingBottom:            8,
-          paddingLeft:              2,
-          paddingRight:             2,
+          paddingLeft:              4,
+          paddingRight:             4,
+          cursor:                   'grab',
+          touchAction:              'pan-y pan-x',
+          minWidth:                 0, // Flex limite
+          width:                    '100%',
         }}
       >
-        <style>{`.video-track::-webkit-scrollbar{display:none}`}</style>
+        <style>{`.video-track::-webkit-scrollbar{display:none} .video-track-item { flex-shrink: 0; scroll-snap-align: start; }`}</style>
         {React.Children.map(children, (child, i) => (
-          <div key={i} className="video-track" style={{ scrollSnapAlign: 'start', flexShrink: 0 }}>
+          <div key={i} className="video-track-item">
             {child}
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }
