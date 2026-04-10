@@ -52,7 +52,7 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
 
   return (
     <div
-      style={{ position: 'relative', marginBottom: 40, overflow: 'visible' }}
+      style={{ position: 'relative', marginBottom: 40, overflow: 'visible', minWidth: 0, width: '100%', maxWidth: '100%' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

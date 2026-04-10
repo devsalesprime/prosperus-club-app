@@ -251,7 +251,7 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     onVideoClick,
 }) => {
     return (
-        <div className="flex flex-col mb-8 w-full relative group">
+        <div className="flex flex-col mb-8 w-full min-w-0 relative group">
             {/* Título da categoria + ícone + contador */}
             <div className="flex flex-col px-4 md:px-4 mb-4 gap-1">
                 <div className="flex items-center gap-3">
