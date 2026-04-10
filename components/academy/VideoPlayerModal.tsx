@@ -421,15 +421,23 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                             </div>
 
                             {/* Lista dos outros vídeos (scrollável) */}
-                            <div className="flex-1 overflow-y-auto divide-y divide-prosperus-stroke/50">
-                                {otherVideos.map(v => (
-                                    <PlaylistItem
-                                        key={v.id}
-                                        video={v}
-                                        isActive={false}
-                                        onClick={() => onNavigate?.(v)}
-                                    />
-                                ))}
+                            <div className="flex-1 overflow-y-auto divide-y divide-prosperus-stroke/50 relative" style={{ scrollbarWidth: 'thin', scrollbarColor: '#1A4A6B transparent' }}>
+                                <style>{`
+                                    .playlist-scroll::-webkit-scrollbar { width: 6px; }
+                                    .playlist-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+                                    .playlist-scroll::-webkit-scrollbar-thumb { background: #1A4A6B; border-radius: 10px; }
+                                    .playlist-scroll::-webkit-scrollbar-thumb:hover { background: #FFDA71; }
+                                `}</style>
+                                <div className="playlist-scroll h-full overflow-y-auto">
+                                    {otherVideos.map(v => (
+                                        <PlaylistItem
+                                            key={v.id}
+                                            video={v}
+                                            isActive={false}
+                                            onClick={() => onNavigate?.(v)}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
