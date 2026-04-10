@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Video } from '../../types';
 import { VideoCard } from './VideoCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSnapCarousel } from 'react-snap-carousel';
 
 interface VideoCarouselProps {
     title: string;
@@ -18,20 +19,18 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
     count,
     onVideoClick,
 }) => {
-    const carouselRef = useRef<HTMLDivElement>(null);
+    const { scrollRef, prev, next } = useSnapCarousel();
 
-    const scroll = (direction: 'left' | 'right', e: React.MouseEvent) => {
+    const handleLeft = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (carouselRef.current) {
-            const { clientWidth } = carouselRef.current;
-            // Usa 75% da visibilidade real do client pra não pular o que o usuário viu parcialmente
-            const amount = direction === 'left' ? -(clientWidth * 0.75) : (clientWidth * 0.75);
-            
-            // O fallback infalível é confiar no motor do navegador puro sem restrições
-            carouselRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-        }
+        prev();
+    };
+
+    const handleRight = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        next();
     };
 
     return (
@@ -68,7 +67,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 <div className="hidden md:flex absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#031726] to-transparent items-center justify-start z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
                         type="button"
-                        onClick={(e) => scroll('left', e)} 
+                        onClick={handleLeft} 
                         className="pointer-events-auto ml-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
                     >
                         <ChevronLeft size={24} />
@@ -79,25 +78,33 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 <div className="hidden md:flex absolute top-0 right-0 h-full w-24 bg-gradient-to-l from-[#031726] to-transparent items-center justify-end z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
                         type="button"
-                        onClick={(e) => scroll('right', e)} 
+                        onClick={handleRight} 
                         className="pointer-events-auto mr-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
                     >
                         <ChevronRight size={24} />
                     </button>
                 </div>
 
-                {/* A Trilha de Vídeos (O Track) - Removidas pseudo-classes ocultadoras perigosas */}
+                {/* A Trilha de Vídeos (O Track) - Adaptada para o react-snap-carousel */}
                 <div 
-                    ref={carouselRef} 
-                    className="flex flex-row overflow-x-auto overflow-y-visible gap-4 px-4 md:px-8 pb-4 snap-x md:snap-none academy-swimlane md:gap-4 w-full"
+                    ref={scrollRef} 
+                    className="flex flex-row overflow-x-auto overflow-y-visible gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory academy-swimlane md:gap-4 w-full"
+                    style={{ scrollBehavior: 'smooth' }}
                 >
-                    {videos.map(video => (
-                        <VideoCard
-                            key={video.id}
-                            video={video}
-                            progress={video.progress}
-                            onClick={() => onVideoClick(video)}
-                        />
+                    {videos.map((video, index) => (
+                        <div 
+                            key={video.id} 
+                            style={{ 
+                                scrollSnapAlign: 'start',
+                                flexShrink: 0
+                            }}
+                        >
+                            <VideoCard
+                                video={video}
+                                progress={video.progress}
+                                onClick={() => onVideoClick(video)}
+                            />
+                        </div>
                     ))}
                 </div>
             </div>
