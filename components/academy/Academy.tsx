@@ -316,7 +316,7 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                 {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-4 w-full"
+                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full scroll-smooth"
                 >
                     {videos.map(video => (
                         <div key={video.id} className="snap-start shrink-0">
