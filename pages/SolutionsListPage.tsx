@@ -19,7 +19,7 @@ interface SolutionsListPageProps {
 // ── Skeleton Loading ──
 function SolutionsSkeletonList() {
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             {[1, 2, 3, 4].map((i) => (
                 <div
                     key={i}
@@ -174,7 +174,7 @@ export const SolutionsListPage: React.FC<SolutionsListPageProps> = ({ setView })
                 ) : solutions.length === 0 ? (
                     <SolutionsMemberEmptyState />
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                         {solutions
                             .sort((a, b) => a.sort_order - b.sort_order)
                             .map((solution, index) => (

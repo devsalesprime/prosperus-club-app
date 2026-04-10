@@ -137,7 +137,7 @@ const GalleryList: React.FC = () => {
             </div>
 
             {/* Cards Stack */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 md:gap-6">
                 {albums.map((album) => (
                     <div
                         key={album.id}
