@@ -249,7 +249,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
             {/* ══ Modal Cinema Container ═══════════════════════════ */}
             <div
-                className="relative w-full h-full lg:h-auto lg:max-h-[92vh] lg:max-w-6xl lg:rounded-2xl lg:m-auto lg:my-4 overflow-hidden shadow-2xl shadow-black/60 bg-prosperus-navy border-0 lg:border lg:border-prosperus-stroke flex flex-col"
+                className="relative w-full h-full lg:h-full lg:max-h-[92vh] lg:max-w-6xl lg:rounded-2xl lg:m-auto lg:my-4 overflow-hidden shadow-2xl shadow-black/60 bg-prosperus-navy border-0 lg:border lg:border-prosperus-stroke flex flex-col"
                 style={{
                     isolation: 'isolate',
                     // iOS Safe Area: empurra o conteúdo abaixo da status bar (notch / Dynamic Island)
@@ -401,9 +401,9 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
 
                     {/* ─── COLUNA DIREITA: Sidebar Playlist (Desktop only) ── */}
                     {otherVideos.length > 0 && (
-                        <div className="hidden lg:flex flex-col w-[340px] shrink-0 bg-prosperus-box border-l border-prosperus-stroke h-full overflow-hidden">
+                        <div className="hidden lg:block w-[340px] shrink-0 bg-prosperus-box border-l border-prosperus-stroke h-full overflow-y-auto overflow-x-hidden">
                             {/* Header sidebar */}
-                            <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3.5 border-b border-prosperus-stroke">
+                            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-prosperus-stroke">
                                 <ListVideo size={16} className="text-prosperus-gold-light" strokeWidth={1.5} />
                                 <span className="text-sm font-semibold text-prosperus-white">Playlist da Categoria</span>
                                 <span className="ml-auto text-xs bg-prosperus-muted-bg text-prosperus-muted-text px-2 py-0.5 rounded-full">
@@ -412,7 +412,7 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                             </div>
 
                             {/* Vídeo atual em destaque */}
-                            <div className="flex-shrink-0 border-b border-prosperus-stroke">
+                            <div className="border-b border-prosperus-stroke">
                                 <PlaylistItem
                                     video={video}
                                     isActive={true}
@@ -420,24 +420,16 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                                 />
                             </div>
 
-                            {/* Lista dos outros vídeos (scrollável) */}
-                            <div className="flex-1 overflow-y-auto divide-y divide-prosperus-stroke/50 relative" style={{ scrollbarWidth: 'thin', scrollbarColor: '#1A4A6B transparent' }}>
-                                <style>{`
-                                    .playlist-scroll::-webkit-scrollbar { width: 6px; }
-                                    .playlist-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-                                    .playlist-scroll::-webkit-scrollbar-thumb { background: #1A4A6B; border-radius: 10px; }
-                                    .playlist-scroll::-webkit-scrollbar-thumb:hover { background: #FFDA71; }
-                                `}</style>
-                                <div className="playlist-scroll h-full overflow-y-auto">
-                                    {otherVideos.map(v => (
-                                        <PlaylistItem
-                                            key={v.id}
-                                            video={v}
-                                            isActive={false}
-                                            onClick={() => onNavigate?.(v)}
-                                        />
-                                    ))}
-                                </div>
+                            {/* Lista dos outros vídeos */}
+                            <div className="divide-y divide-prosperus-stroke/50 pb-6">
+                                {otherVideos.map(v => (
+                                    <PlaylistItem
+                                        key={v.id}
+                                        video={v}
+                                        isActive={false}
+                                        onClick={() => onNavigate?.(v)}
+                                    />
+                                ))}
                             </div>
                         </div>
                     )}
