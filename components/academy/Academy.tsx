@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Video } from '../../types';
 import { VideoCard } from './VideoCard';
-import { VideoCarousel } from './VideoCarousel';
 import { VideoPlayerModal } from './VideoPlayerModal';
 import { Play, Loader2, ArrowLeft, BookOpen } from 'lucide-react';
 import { useAcademyData } from '../../hooks/queries/useAcademyData';
@@ -250,6 +249,20 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     iconUrl,
     onVideoClick,
 }) => {
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    const scrollLeft = () => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: -600, behavior: 'smooth' });
+        }
+    };
+
+    const scrollRight = () => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
+        }
+    };
+
     return (
         <div className="flex flex-col mb-8 w-full min-w-0 relative group">
             {/* Título da categoria + ícone + contador */}
@@ -277,16 +290,45 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                 </span>
             </div>
 
-            <VideoCarousel>
-                {videos.map(video => (
-                    <VideoCard
-                        key={video.id}
-                        video={video}
-                        progress={video.progress}
-                        onClick={() => onVideoClick(video)}
-                    />
-                ))}
-            </VideoCarousel>
+            <div className="relative w-full overflow-hidden bg-transparent">
+                {/* Netflix Desktop Left Arrow */}
+                <div className="hidden md:flex absolute left-0 top-0 bottom-4 w-20 items-center justify-start z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-prosperus-navy/90 to-transparent pointer-events-none">
+                    <button 
+                        onClick={scrollLeft}
+                        aria-label="Rolar para esquerda"
+                        className="h-10 w-10 ml-2 bg-black/60 hover:bg-black/90 rounded-full text-white backdrop-blur-md pointer-events-auto flex items-center justify-center transition-transform hover:scale-110 shadow-lg active:scale-95 border border-white/20"
+                    >
+                        &larr;
+                    </button>
+                </div>
+
+                {/* Netflix Desktop Right Arrow */}
+                <div className="hidden md:flex absolute right-0 top-0 bottom-4 w-20 items-center justify-end z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-prosperus-navy/90 to-transparent pointer-events-none">
+                    <button 
+                        onClick={scrollRight}
+                        aria-label="Rolar para direita"
+                        className="h-10 w-10 mr-2 bg-black/60 hover:bg-black/90 rounded-full text-white backdrop-blur-md pointer-events-auto flex items-center justify-center transition-transform hover:scale-110 shadow-lg active:scale-95 border border-white/20"
+                    >
+                        &rarr;
+                    </button>
+                </div>
+
+                {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
+                <div 
+                    ref={scrollContainerRef}
+                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-4 w-full"
+                >
+                    {videos.map(video => (
+                        <div key={video.id} className="snap-start shrink-0">
+                            <VideoCard
+                                video={video}
+                                progress={video.progress}
+                                onClick={() => onVideoClick(video)}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 };
