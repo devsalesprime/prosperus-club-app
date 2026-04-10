@@ -54,35 +54,8 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
     el.scrollBy({ left: amount, behavior: 'smooth' });
   };
 
-  // Pointer Handlers for Mouse Drag
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!trackRef.current) return;
-    // Captura apenas mouse para não interferir com touch scroll nativo mobile
-    if (e.pointerType === 'mouse') {
-      isDragging.current = true;
-      startX.current = e.pageX - trackRef.current.offsetLeft;
-      scrollLeft.current = trackRef.current.scrollLeft;
-      trackRef.current.style.cursor = 'grabbing';
-      trackRef.current.style.scrollSnapType = 'none'; // Disable snap during drag
-      e.currentTarget.setPointerCapture(e.pointerId);
-    }
-  };
+  // Removendo interceptadores Pointer para não quebrar o clique nativo do Player
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging.current || !trackRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - trackRef.current.offsetLeft;
-    const walk = (x - startX.current) * 1.5; // Drag speed multiplier
-    trackRef.current.scrollLeft = scrollLeft.current - walk;
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDragging.current || !trackRef.current) return;
-    isDragging.current = false;
-    trackRef.current.style.cursor = 'grab';
-    trackRef.current.style.scrollSnapType = 'x mandatory'; // Restore snap
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
 
   const totalChildren = React.Children.count(children);
   if (totalChildren === 0) return null;
@@ -175,13 +148,9 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
         </button>
       )}
 
-      {/* Track com eventos de arrasto */}
+      {/* Track com eventos padrão */}
       <div
         ref={trackRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
         style={{
           display:                  'flex',
           gap:                      14,
@@ -193,8 +162,6 @@ export function VideoCarousel({ children, title, subtitle, onSeeAll }: Props) {
           paddingBottom:            8,
           paddingLeft:              4,
           paddingRight:             4,
-          cursor:                   'grab',
-          touchAction:              'pan-y pan-x',
           minWidth:                 0, // Flex limite
           width:                    '100%',
         }}
