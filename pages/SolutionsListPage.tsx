@@ -19,20 +19,22 @@ interface SolutionsListPageProps {
 // ── Skeleton Loading ──
 function SolutionsSkeletonList() {
     return (
-        <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {[1, 2, 3, 4].map((i) => (
                 <div
                     key={i}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-pulse"
+                    className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-pulse flex flex-col h-full"
                 >
                     {/* Skeleton banner */}
                     {i <= 2 && <div className="h-36 bg-slate-800" />}
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 flex flex-col flex-1 space-y-3">
                         <div className="h-5 bg-slate-800 rounded-full w-28" />
                         <div className="h-5 bg-slate-800 rounded w-3/4" />
                         <div className="h-4 bg-slate-800 rounded w-full" />
                         <div className="h-4 bg-slate-800 rounded w-2/3" />
-                        <div className="h-10 bg-slate-800 rounded-xl mt-2" />
+                        <div className="mt-auto pt-2">
+                            <div className="h-10 bg-slate-800 rounded-xl" />
+                        </div>
                     </div>
                 </div>
             ))}
@@ -71,7 +73,7 @@ function SolutionMemberCard({
     const { currentUser } = useApp();
     return (
         <div
-            className="slp-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-yellow-600/20 transition-all duration-300"
+            className="slp-card flex flex-col h-full bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-yellow-600/20 transition-all duration-300"
             style={{ animationDelay: `${index * 60}ms` }}
         >
             {/* Banner */}
@@ -87,9 +89,9 @@ function SolutionMemberCard({
                 </div>
             )}
 
-            <div className="p-4">
+            <div className="p-4 flex flex-col flex-1">
                 {/* Category badge */}
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-600/10 border border-yellow-600/20 mb-3">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-600/10 border border-yellow-600/20 mb-3 w-fit">
                     <Wrench size={11} className="text-yellow-500" />
                     <span className="text-[11px] font-semibold text-yellow-500 uppercase tracking-wider">
                         Ferramenta Externa
@@ -109,16 +111,18 @@ function SolutionMemberCard({
                 )}
 
                 {/* CTA Button */}
-                <a
-                    href={solution.external_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => analyticsService.trackSolutionClick(currentUser?.id || null, solution.id, solution.title)}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-sm font-semibold text-white transition-all active:scale-[0.98]"
-                >
-                    Acessar Ferramenta
-                    <ExternalLink size={13} />
-                </a>
+                <div className="mt-auto pt-2">
+                    <a
+                        href={solution.external_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => analyticsService.trackSolutionClick(currentUser?.id || null, solution.id, solution.title)}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-sm font-semibold text-white transition-all active:scale-[0.98]"
+                    >
+                        Acessar Ferramenta
+                        <ExternalLink size={13} />
+                    </a>
+                </div>
             </div>
         </div>
     );
@@ -164,17 +168,19 @@ export const SolutionsListPage: React.FC<SolutionsListPageProps> = ({ setView })
             </div>
 
             {/* Solutions list */}
-            <div className="px-4 pb-8 space-y-3">
+            <div className="px-4 pb-8">
                 {loading ? (
                     <SolutionsSkeletonList />
                 ) : solutions.length === 0 ? (
                     <SolutionsMemberEmptyState />
                 ) : (
-                    solutions
-                        .sort((a, b) => a.sort_order - b.sort_order)
-                        .map((solution, index) => (
-                            <SolutionMemberCard key={solution.id} solution={solution} index={index} />
-                        ))
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        {solutions
+                            .sort((a, b) => a.sort_order - b.sort_order)
+                            .map((solution, index) => (
+                                <SolutionMemberCard key={solution.id} solution={solution} index={index} />
+                            ))}
+                    </div>
                 )}
             </div>
 
