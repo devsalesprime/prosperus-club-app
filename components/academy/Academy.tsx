@@ -253,82 +253,72 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
 
     const scrollLeft = (e: React.MouseEvent) => {
         e.preventDefault();
-        e.stopPropagation();
         if (scrollContainerRef.current) {
-            const container = scrollContainerRef.current;
-            container.scrollTo({
-                left: container.scrollLeft - (container.clientWidth * 0.8),
-                behavior: 'smooth'
-            });
+            scrollContainerRef.current.scrollLeft -= 600;
         }
     };
 
     const scrollRight = (e: React.MouseEvent) => {
         e.preventDefault();
-        e.stopPropagation();
         if (scrollContainerRef.current) {
-            const container = scrollContainerRef.current;
-            container.scrollTo({
-                left: container.scrollLeft + (container.clientWidth * 0.8),
-                behavior: 'smooth'
-            });
+            scrollContainerRef.current.scrollLeft += 600;
         }
     };
 
     return (
         <div className="flex flex-col mb-8 w-full min-w-0 relative group">
-            {/* Título da categoria + ícone + contador */}
-            <div className="flex flex-col px-4 md:px-4 mb-4 gap-1">
-                <div className="flex items-center gap-3">
-                    {iconUrl && (
-                        <img
-                            src={iconUrl}
-                            alt=""
-                            className="h-6 sm:h-8 w-auto max-w-[40px] sm:max-w-[48px] object-contain shrink-0 drop-shadow-md"
-                            style={{ filter: 'brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg) brightness(92%)' }}
-                            loading="lazy"
-                            decoding="async"
-                        />
-                    )}
-                    <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
-                        {title
-                            .split(' ')
-                            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                            .join(' ')}
-                    </h2>
+            {/* Título da categoria + ícone + contador + SETAS DE NAVEGAÇÃO DE DESKTOP */}
+            <div className="flex px-4 md:px-4 mb-4 items-end justify-between">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                        {iconUrl && (
+                            <img
+                                src={iconUrl}
+                                alt=""
+                                className="h-6 sm:h-8 w-auto max-w-[40px] sm:max-w-[48px] object-contain shrink-0 drop-shadow-md"
+                                style={{ filter: 'brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg) brightness(92%)' }}
+                                loading="lazy"
+                                decoding="async"
+                            />
+                        )}
+                        <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
+                            {title
+                                .split(' ')
+                                .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                                .join(' ')}
+                        </h2>
+                    </div>
+                    <span className="text-xs text-prosperus-muted-text font-medium">
+                        {count} aula{count !== 1 ? 's' : ''}
+                    </span>
                 </div>
-                <span className="text-xs text-prosperus-muted-text font-medium">
-                    {count} aula{count !== 1 ? 's' : ''}
-                </span>
-            </div>
 
-            <div className="relative w-full overflow-hidden bg-transparent">
-                {/* Netflix Desktop Left Arrow */}
-                <div className="hidden md:flex absolute left-0 top-0 bottom-4 w-20 items-center justify-start z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-prosperus-navy/90 to-transparent pointer-events-none">
+                {/* SÓ NO DESKTOP: Setas de navegação anexadas ao título em vez de sobrepor os vídeos */}
+                <div className="hidden md:flex items-center gap-2">
                     <button 
                         onClick={scrollLeft}
                         aria-label="Rolar para esquerda"
-                        className="h-10 w-10 ml-2 bg-black/60 hover:bg-black/90 rounded-full text-white backdrop-blur-md pointer-events-auto flex items-center justify-center transition-transform hover:scale-110 shadow-lg active:scale-95 border border-white/20"
+                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold"
                     >
-                        &larr;
+                        <ArrowLeft size={18} strokeWidth={2.5} />
                     </button>
-                </div>
-
-                {/* Netflix Desktop Right Arrow */}
-                <div className="hidden md:flex absolute right-0 top-0 bottom-4 w-20 items-center justify-end z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-l from-prosperus-navy/90 to-transparent pointer-events-none">
                     <button 
                         onClick={scrollRight}
                         aria-label="Rolar para direita"
-                        className="h-10 w-10 mr-2 bg-black/60 hover:bg-black/90 rounded-full text-white backdrop-blur-md pointer-events-auto flex items-center justify-center transition-transform hover:scale-110 shadow-lg active:scale-95 border border-white/20"
+                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold"
                     >
-                        &rarr;
+                        <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
                     </button>
                 </div>
+            </div>
 
+            <div className="relative w-full overflow-hidden bg-transparent">
                 {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full"
+                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full scroll-smooth"
                 >
                     {videos.map(video => (
                         <div key={video.id} className="snap-start shrink-0">
