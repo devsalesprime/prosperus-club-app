@@ -137,11 +137,11 @@ const GalleryList: React.FC = () => {
             </div>
 
             {/* Cards Stack */}
-            <div className="flex flex-col gap-5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
                 {albums.map((album) => (
                     <div
                         key={album.id}
-                        className="group bg-prosperus-box rounded-2xl overflow-hidden hover:border-prosperus-gold/50 transition-all duration-300 cursor-pointer border border-prosperus-stroke"
+                        className="group flex flex-col h-full bg-prosperus-box rounded-2xl overflow-hidden hover:border-prosperus-gold/50 transition-all duration-300 cursor-pointer border border-prosperus-stroke"
                         onClick={() => handleOpenGallery(album)}
                         role="link"
                         tabIndex={0}
@@ -208,12 +208,12 @@ const GalleryList: React.FC = () => {
                         </div>
 
                         {/* Título do Álbum */}
-                        <div className="p-5">
+                        <div className="p-5 flex flex-col flex-1">
                             <h3 className="text-lg font-bold text-prosperus-white group-hover:text-prosperus-gold transition-colors line-clamp-2">
                                 {album.title}
                             </h3>
 
-                            <div className="my-3">
+                            <div className="my-3 mt-auto">
                                 <div className="w-full h-[1px] bg-prosperus-stroke" />
                             </div>
 
