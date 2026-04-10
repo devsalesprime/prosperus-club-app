@@ -250,6 +250,10 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     onVideoClick,
 }) => {
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+    const isDragging = React.useRef(false);
+    const startX = React.useRef(0);
+    const scrollLeftPos = React.useRef(0);
+    const draggedWindow = React.useRef(false);
 
     const scrollLeft = () => {
         if (scrollContainerRef.current) {
@@ -261,6 +265,37 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
         }
+    };
+
+    const onMouseDown = (e: React.MouseEvent) => {
+        isDragging.current = true;
+        draggedWindow.current = false;
+        startX.current = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
+        scrollLeftPos.current = scrollContainerRef.current?.scrollLeft || 0;
+        if (scrollContainerRef.current) {
+           scrollContainerRef.current.style.scrollSnapType = 'none'; // Temporarily disable snapping during drag
+        }
+    };
+
+    const onMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging.current) return;
+        e.preventDefault();
+        const x = e.pageX - (scrollContainerRef.current?.offsetLeft || 0);
+        const walk = (x - startX.current) * 1.5; // Scroll speed
+        if (Math.abs(walk) > 10) draggedWindow.current = true;
+        
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = scrollLeftPos.current - walk;
+        }
+    };
+
+    const onMouseUpOrLeave = () => {
+        isDragging.current = false;
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.style.scrollSnapType = 'x mandatory'; // Re-enable snapping
+        }
+        // Small delay to reset dragged state so click events don't fire immediately
+        setTimeout(() => { draggedWindow.current = false; }, 50);
     };
 
     return (
@@ -313,18 +348,28 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                     </button>
                 </div>
 
-                {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
+                {/* Carrossel Horizontal Unificado (Mobile e Desktop) com Mouse Drag */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto overflow-y-hidden gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-6"
+                    className="flex overflow-x-auto overflow-y-hidden gap-4 pb-4 px-4 snap-x snap-mandatory academy-swimlane md:gap-6 cursor-grab active:cursor-grabbing select-none"
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUpOrLeave}
+                    onMouseLeave={onMouseUpOrLeave}
+                    onClickCapture={(e) => {
+                        if (draggedWindow.current) {
+                            e.stopPropagation();
+                        }
+                    }}
                 >
                     {videos.map(video => (
-                        <VideoCard
-                            key={video.id}
-                            video={video}
-                            progress={video.progress}
-                            onClick={() => onVideoClick(video)}
-                        />
+                        <div key={video.id} className="pointer-events-auto">
+                            <VideoCard
+                                video={video}
+                                progress={video.progress}
+                                onClick={() => onVideoClick(video)}
+                            />
+                        </div>
                     ))}
                 </div>
             </div>
