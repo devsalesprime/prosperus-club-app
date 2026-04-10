@@ -20,16 +20,39 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 }) => {
     const carouselRef = useRef<HTMLDivElement>(null);
 
+    const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
+        t /= d / 2;
+        if (t < 1) return (c / 2) * t * t + b;
+        t--;
+        return (-c / 2) * (t * (t - 2) - 1) + b;
+    };
+
+    const animateScroll = (element: HTMLElement, change: number, duration: number) => {
+        const start = element.scrollLeft;
+        let currentTime = 0;
+        const increment = 20;
+
+        const animate = () => {
+            currentTime += increment;
+            const val = easeInOutQuad(currentTime, start, change, duration);
+            element.scrollLeft = val;
+            if (currentTime < duration) {
+                setTimeout(animate, increment);
+            }
+        };
+        animate();
+    };
+
     const scroll = (direction: 'left' | 'right') => {
         if (carouselRef.current) {
             const { clientWidth } = carouselRef.current;
             const scrollAmount = direction === 'left' ? -clientWidth * 0.75 : clientWidth * 0.75;
-            carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            animateScroll(carouselRef.current, scrollAmount, 350);
         }
     };
 
     return (
-        <div className="relative group mb-8 w-full">
+        <div className="relative group/carousel mb-8 w-full min-w-0">
             {/* Título da Categoria */}
             <div className="flex flex-col px-4 md:px-8 mb-4 gap-1">
                 <div className="flex items-center gap-3">
@@ -59,7 +82,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 
             <div className="relative w-full">
                 {/* Fumaça Esquerda + Seta */}
-                <div className="hidden md:flex absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#031726] to-transparent items-center justify-start z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <div className="hidden md:flex absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#031726] to-transparent items-center justify-start z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
                         onClick={() => scroll('left')} 
                         className="pointer-events-auto ml-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
@@ -69,7 +92,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 </div>
 
                 {/* Fumaça Direita + Seta */}
-                <div className="hidden md:flex absolute top-0 right-0 h-full w-24 bg-gradient-to-l from-[#031726] to-transparent items-center justify-end z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <div className="hidden md:flex absolute top-0 right-0 h-full w-24 bg-gradient-to-l from-[#031726] to-transparent items-center justify-end z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
                         onClick={() => scroll('right')} 
                         className="pointer-events-auto mr-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
@@ -81,7 +104,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* A Trilha de Vídeos (O Track) */}
                 <div 
                     ref={carouselRef} 
-                    className="flex flex-row overflow-x-auto overflow-y-visible gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']"
+                    className="flex flex-row overflow-x-auto overflow-y-visible gap-4 px-4 md:px-8 pb-4 snap-x md:snap-none academy-swimlane md:gap-4 w-full"
                 >
                     {videos.map(video => (
                         <VideoCard
