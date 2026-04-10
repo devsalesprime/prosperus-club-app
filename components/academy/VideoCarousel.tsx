@@ -20,34 +20,17 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 }) => {
     const carouselRef = useRef<HTMLDivElement>(null);
 
-    const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
-        t /= d / 2;
-        if (t < 1) return (c / 2) * t * t + b;
-        t--;
-        return (-c / 2) * (t * (t - 2) - 1) + b;
-    };
-
-    const animateScroll = (element: HTMLElement, change: number, duration: number) => {
-        const start = element.scrollLeft;
-        let currentTime = 0;
-        const increment = 20;
-
-        const animate = () => {
-            currentTime += increment;
-            const val = easeInOutQuad(currentTime, start, change, duration);
-            element.scrollLeft = val;
-            if (currentTime < duration) {
-                setTimeout(animate, increment);
-            }
-        };
-        animate();
-    };
-
-    const scroll = (direction: 'left' | 'right') => {
+    const scroll = (direction: 'left' | 'right', e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         if (carouselRef.current) {
             const { clientWidth } = carouselRef.current;
-            const scrollAmount = direction === 'left' ? -clientWidth * 0.75 : clientWidth * 0.75;
-            animateScroll(carouselRef.current, scrollAmount, 350);
+            // Usa 75% da visibilidade real do client pra não pular o que o usuário viu parcialmente
+            const amount = direction === 'left' ? -(clientWidth * 0.75) : (clientWidth * 0.75);
+            
+            // O fallback infalível é confiar no motor do navegador puro sem restrições
+            carouselRef.current.scrollBy({ left: amount, behavior: 'smooth' });
         }
     };
 
@@ -84,7 +67,8 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* Fumaça Esquerda + Seta */}
                 <div className="hidden md:flex absolute top-0 left-0 h-full w-24 bg-gradient-to-r from-[#031726] to-transparent items-center justify-start z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
-                        onClick={() => scroll('left')} 
+                        type="button"
+                        onClick={(e) => scroll('left', e)} 
                         className="pointer-events-auto ml-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
                     >
                         <ChevronLeft size={24} />
@@ -94,14 +78,15 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* Fumaça Direita + Seta */}
                 <div className="hidden md:flex absolute top-0 right-0 h-full w-24 bg-gradient-to-l from-[#031726] to-transparent items-center justify-end z-10 opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 pointer-events-none">
                     <button 
-                        onClick={() => scroll('right')} 
+                        type="button"
+                        onClick={(e) => scroll('right', e)} 
                         className="pointer-events-auto mr-2 w-12 h-12 bg-black/60 hover:bg-prosperus-navy backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 text-white shadow-xl transition-all hover:scale-110 active:scale-95"
                     >
                         <ChevronRight size={24} />
                     </button>
                 </div>
 
-                {/* A Trilha de Vídeos (O Track) */}
+                {/* A Trilha de Vídeos (O Track) - Removidas pseudo-classes ocultadoras perigosas */}
                 <div 
                     ref={carouselRef} 
                     className="flex flex-row overflow-x-auto overflow-y-visible gap-4 px-4 md:px-8 pb-4 snap-x md:snap-none academy-swimlane md:gap-4 w-full"
