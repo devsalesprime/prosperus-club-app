@@ -31,7 +31,6 @@
     "react-hook-form": "^7.55.0",
     "react-hot-toast": "^2.6.0",
     "react-quill": "^2.0.0",
-    "react-snap-carousel": "^0.5.1",
     "recharts": "^3.7.0",
     "tailwindcss": "^4.1.18",
     "zod": "^4.3.5"
