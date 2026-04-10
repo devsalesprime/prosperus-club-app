@@ -254,19 +254,19 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
     const scrollLeft = (e: React.MouseEvent) => {
         e.preventDefault();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollLeft -= 600;
+            scrollContainerRef.current.scrollBy({ left: -600, behavior: 'smooth' });
         }
     };
 
     const scrollRight = (e: React.MouseEvent) => {
         e.preventDefault();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollLeft += 600;
+            scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
         }
     };
 
     return (
-        <div className="flex flex-col mb-8 w-full min-w-0 relative group">
+        <div className="flex flex-col mb-8 w-full min-w-0 relative">
             {/* Título da categoria + ícone + contador + SETAS DE NAVEGAÇÃO DE DESKTOP */}
             <div className="flex px-4 md:px-4 mb-4 items-end justify-between">
                 <div className="flex flex-col gap-1">
@@ -298,14 +298,14 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                     <button 
                         onClick={scrollLeft}
                         aria-label="Rolar para esquerda"
-                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold"
+                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold z-10"
                     >
                         <ArrowLeft size={18} strokeWidth={2.5} />
                     </button>
                     <button 
                         onClick={scrollRight}
                         aria-label="Rolar para direita"
-                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold"
+                        className="h-9 w-9 bg-prosperus-navy-light/50 hover:bg-prosperus-gold text-prosperus-grey hover:text-[#031726] rounded-full flex items-center justify-center transition-all shadow active:scale-95 border border-prosperus-stroke/30 hover:border-prosperus-gold z-10"
                     >
                         <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="9 18 15 12 9 6" />
@@ -318,16 +318,15 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                 {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full scroll-smooth"
+                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full"
                 >
                     {videos.map(video => (
-                        <div key={video.id} className="snap-start shrink-0">
-                            <VideoCard
-                                video={video}
-                                progress={video.progress}
-                                onClick={() => onVideoClick(video)}
-                            />
-                        </div>
+                        <VideoCard
+                            key={video.id}
+                            video={video}
+                            progress={video.progress}
+                            onClick={() => onVideoClick(video)}
+                        />
                     ))}
                 </div>
             </div>
