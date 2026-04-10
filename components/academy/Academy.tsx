@@ -251,17 +251,42 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
 }) => {
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
+    const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
+        t /= d / 2;
+        if (t < 1) return c / 2 * t * t + b;
+        t--;
+        return -c / 2 * (t * (t - 2) - 1) + b;
+    };
+
+    const animateScroll = (element: HTMLElement, change: number, duration: number) => {
+        const start = element.scrollLeft;
+        let currentTime = 0;
+        const increment = 20;
+        
+        const animate = () => {
+            currentTime += increment;
+            const val = easeInOutQuad(currentTime, start, change, duration);
+            element.scrollLeft = val;
+            if (currentTime < duration) {
+                setTimeout(animate, increment);
+            }
+        };
+        animate();
+    };
+
     const scrollLeft = (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollBy({ left: -600, behavior: 'smooth' });
+            animateScroll(scrollContainerRef.current, -600, 300);
         }
     };
 
     const scrollRight = (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
+            animateScroll(scrollContainerRef.current, 600, 300);
         }
     };
 

@@ -60,12 +60,31 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
         >
             {/* NUNCA adicionar overflow:hidden em html/body/#root */}
             {/* Essas regras ficam SOMENTE no index.html */}
+            {/* NUNCA adicionar overflow:hidden em html/body/#root */}
+            {/* Essas regras ficam SOMENTE no index.html e substituem display:none para manter JS scroll */}
             <style>{`
-                .app-scroll-main {
-                    scrollbar-width: none;
-                    -ms-overflow-style: none;
+                .app-scroll-main::-webkit-scrollbar,
+                .academy-swimlane::-webkit-scrollbar {
+                    height: 5px;
+                    width: 5px;
                 }
-                .app-scroll-main::-webkit-scrollbar { display: none; }
+                .app-scroll-main::-webkit-scrollbar-track,
+                .academy-swimlane::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .app-scroll-main::-webkit-scrollbar-thumb,
+                .academy-swimlane::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.08); /* Quase invisível, mas DOM entende que existe */
+                    border-radius: 10px;
+                }
+                .app-scroll-main::-webkit-scrollbar-thumb:hover,
+                .academy-swimlane::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 218, 113, 0.4); /* Ouro suave Hover */
+                }
+                .app-scroll-main, .academy-swimlane {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+                }
             `}</style>
 
             {/* Sidebar (Desktop only) */}
