@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Video } from '../../types';
 import { VideoCard } from './VideoCard';
+import { VideoCarousel } from './VideoCarousel';
 import { VideoPlayerModal } from './VideoPlayerModal';
 import { Play, Loader2, ArrowLeft, BookOpen } from 'lucide-react';
 import { useAcademyData } from '../../hooks/queries/useAcademyData';
@@ -184,7 +185,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
 
             {/* ── CONTINUE WATCHING ───────────────────────────────── */}
             {continueWatching.length > 0 && (
-                <CategorySwimLane
+                <VideoCarousel
                     title="🔄 Continuar Assistindo"
                     count={continueWatching.length}
                     videos={continueWatching}
@@ -194,7 +195,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
 
             {/* ── CATEGORY SWIMLANES / GRIDS ──────────────────────── */}
             {categoryRows.map(row => (
-                <CategorySwimLane
+                <VideoCarousel
                     key={row.categoryName}
                     title={row.categoryName}
                     count={row.videos.length}
