@@ -251,15 +251,27 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
 }) => {
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-    const scrollLeft = () => {
+    const scrollLeft = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollBy({ left: -600, behavior: 'smooth' });
+            const container = scrollContainerRef.current;
+            container.scrollTo({
+                left: container.scrollLeft - (container.clientWidth * 0.8),
+                behavior: 'smooth'
+            });
         }
     };
 
-    const scrollRight = () => {
+    const scrollRight = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollBy({ left: 600, behavior: 'smooth' });
+            const container = scrollContainerRef.current;
+            container.scrollTo({
+                left: container.scrollLeft + (container.clientWidth * 0.8),
+                behavior: 'smooth'
+            });
         }
     };
 
@@ -316,7 +328,7 @@ const CategorySwimLane: React.FC<CategorySwimLaneProps> = ({
                 {/* Carrossel Horizontal Unificado (Mobile e Desktop) */}
                 <div 
                     ref={scrollContainerRef}
-                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full scroll-smooth"
+                    className="flex overflow-x-auto overflow-y-visible gap-4 pb-4 px-4 snap-x snap-mandatory md:snap-none academy-swimlane md:gap-4 w-full"
                 >
                     {videos.map(video => (
                         <div key={video.id} className="snap-start shrink-0">
