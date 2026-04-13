@@ -419,3 +419,12 @@ export interface BusinessStats {
   referralsReceived: number;
   conversions: number;
 }
+
+export interface JourneyMilestone {
+  id: string;
+  user_id: string;
+  revenue_amount: number;
+  milestone_title: string;
+  achieved_at: string;
+  created_at: string;
+}
