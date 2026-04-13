@@ -304,12 +304,18 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     currentImageUrl={formData.image_url}
                     onConfirm={async (croppedBlob) => {
                         setShowPhotoEditor(false);
+
+                        // ⚡ OPTIMISTIC UI: atualiza avatar visualmente ANTES do upload
+                        const optimisticUrl = URL.createObjectURL(croppedBlob);
+                        handleInputChange('image_url', optimisticUrl);
+
+                        // 🔥 Background upload (fire-and-forget com feedback)
                         try {
-                            const fileName = `${currentUser.id}/avatar_${Date.now()}.jpg`;
+                            const fileName = `${currentUser.id}/avatar_${Date.now()}.webp`;
                             const { error: uploadError } = await supabase.storage
                                 .from('avatars')
                                 .upload(fileName, croppedBlob, {
-                                    contentType: 'image/jpeg',
+                                    contentType: 'image/webp',
                                     cacheControl: '3600',
                                     upsert: true,
                                 });
@@ -320,6 +326,9 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                                 .getPublicUrl(fileName);
 
                             logger.debug('📸 ProfileEdit: crop uploaded ->', publicUrl);
+
+                            // Swap optimistic URL → permanent URL
+                            URL.revokeObjectURL(optimisticUrl);
                             handleInputChange('image_url', publicUrl);
 
                             await profileService.updateProfile(currentUser.id, { image_url: publicUrl } as any);
@@ -328,6 +337,9 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             setTimeout(() => setSuccess(false), 3000);
                         } catch (err) {
                             console.error('❌ ProfileEdit: upload error', err);
+                            // Revert optimistic on failure
+                            URL.revokeObjectURL(optimisticUrl);
+                            handleInputChange('image_url', currentUser.image_url || '');
                             setError('Não foi possível salvar a foto. Tente novamente.');
                         }
                     }}
