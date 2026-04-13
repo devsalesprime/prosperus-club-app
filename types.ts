@@ -428,3 +428,12 @@ export interface JourneyMilestone {
   achieved_at: string;
   created_at: string;
 }
+
+export interface AdminJourneyMilestone extends JourneyMilestone {
+  profiles?: {
+    id: string;
+    name: string;
+    company: string | null;
+    image_url: string | null;
+  };
+}

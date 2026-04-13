@@ -9,22 +9,22 @@ CREATE TABLE IF NOT EXISTS public.member_journey_milestones (
 
 ALTER TABLE public.member_journey_milestones ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their own journey milestones"
+CREATE POLICY "Users can view their own journey milestones or admins"
     ON public.member_journey_milestones
     FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id OR public.is_admin_or_team());
 
-CREATE POLICY "Users can insert their own journey milestones"
+CREATE POLICY "Users can insert their own journey milestones or admins"
     ON public.member_journey_milestones
     FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK (auth.uid() = user_id OR public.is_admin_or_team());
 
-CREATE POLICY "Users can update their own journey milestones"
+CREATE POLICY "Users can update their own journey milestones or admins"
     ON public.member_journey_milestones
     FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id OR public.is_admin_or_team());
 
-CREATE POLICY "Users can delete their own journey milestones"
+CREATE POLICY "Users can delete their own journey milestones or admins"
     ON public.member_journey_milestones
     FOR DELETE
-    USING (auth.uid() = user_id);
+    USING (auth.uid() = user_id OR public.is_admin_or_team());
