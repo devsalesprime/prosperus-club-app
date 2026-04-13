@@ -1,15 +1,11 @@
 // ============================================
-// VIDEO CAROUSEL — Netflix-style Swimlane (Definitivo)
+// VIDEO CAROUSEL — Netflix-style Swimlane (Anti-Blowout)
 // Mobile: Touch-swipe horizontal (snap magnético)
 // Desktop: Scroll nativo via setas com fumaça lateral
 // ============================================
-// Hierarquia DOM:
-//   1. Container Pai (relative, min-w-0, group)
-//   2. Título (FORA do wrapper relativo das setas)
-//   3. Wrapper Relativo (relative) — ancora setas + pista
-//      3a. Seta Esquerda (absolute, pointer-events-none → botão pointer-events-auto z-50)
-//      3b. Pista (ref=carouselRef, overflow-x-auto, flex-row)
-//      3c. Seta Direita (absolute, pointer-events-none → botão pointer-events-auto z-50)
+// Root: grid grid-cols-1 min-w-0 → VACINA contra Flexbox Blowout
+// Cards: wrapper shrink-0 w-[320px] → força overflow real
+// Setas: pointer-events layering (fumaça none, botão auto z-50)
 // ============================================
 
 import React, { useRef } from 'react';
@@ -49,11 +45,11 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
     };
 
     return (
-        /* 1. CONTAINER PAI — relative + min-w-0 blinda contra flex-bug */
-        <div className="relative w-full min-w-0 mb-10 group">
+        /* 🚨 VACINA ANTI-BLOWOUT: grid-cols-1 força o limite na viewport */
+        <div className="relative w-full min-w-0 grid grid-cols-1 mb-10 group">
 
-            {/* 1. TÍTULO DA CATEGORIA (Livre do Wrapper Relativo) */}
-            <div className="flex items-center gap-3 mb-4 px-4 md:px-0">
+            {/* 1. TÍTULO E ÍCONE */}
+            <div className="flex items-center gap-3 mb-4 px-4 md:px-0 min-w-0">
                 {iconUrl && (
                     <img
                         src={iconUrl}
@@ -64,28 +60,25 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                         decoding="async"
                     />
                 )}
-                <div className="flex flex-col gap-0.5">
-                    <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm">
+                <div className="flex flex-col gap-0.5 min-w-0">
+                    <h2 className="text-xl md:text-2xl font-bold text-prosperus-white capitalize tracking-wide drop-shadow-sm truncate">
                         {title
                             .split(' ')
                             .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
                             .join(' ')}
                     </h2>
                     {count !== undefined && (
-                        <span className="text-xs text-prosperus-muted-text font-medium">
+                        <span className="text-xs text-prosperus-muted-text font-medium truncate">
                             {count} aula{count !== 1 ? 's' : ''}
                         </span>
                     )}
                 </div>
             </div>
 
-            {/* 2. WRAPPER RELATIVO PARA AS SETAS — ancora setas + pista */}
-            <div className="relative w-full">
+            {/* 2. WRAPPER RELATIVO DAS SETAS */}
+            <div className="relative w-full min-w-0">
 
-                {/* ── SETA ESQUERDA ──
-                     Fumaça: pointer-events-none (mouse ignora o gradiente)
-                     Botão: pointer-events-auto z-50 (fura a fumaça e captura clicks)
-                */}
+                {/* SETA ESQUERDA */}
                 <div className="hidden md:flex absolute top-0 bottom-0 left-0 items-center justify-start w-24 bg-gradient-to-r from-[#031726] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
                     <button
                         type="button"
@@ -97,26 +90,24 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                     </button>
                 </div>
 
-                {/* 🚨 A PISTA DE ROLAGEM — carouselRef FICA AQUI! 🚨
-                     Eixo ininterrupto: flex-row + overflow-x-auto
-                     ZERO grid, ZERO flex-wrap
-                     z-0 para ficar atrás das setas z-10/z-50
-                */}
+                {/* 🚨 A PISTA DE ROLAGEM ESTRITA — carouselRef AQUI 🚨 */}
                 <div
                     ref={carouselRef}
-                    className="flex flex-row overflow-x-auto gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    className="flex flex-row overflow-x-auto w-full gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                 >
+                    {/* 🚨 CÁPSULA PROTETORA: shrink-0 + largura fixa → FORÇA overflow */}
                     {videos.map((video) => (
-                        <VideoCard
-                            key={video.id}
-                            video={video}
-                            progress={video.progress}
-                            onClick={() => onVideoClick(video)}
-                        />
+                        <div key={video.id} className="w-[85vw] sm:w-[280px] md:w-[320px] shrink-0 snap-start relative">
+                            <VideoCard
+                                video={video}
+                                progress={video.progress}
+                                onClick={() => onVideoClick(video)}
+                            />
+                        </div>
                     ))}
                 </div>
 
-                {/* ── SETA DIREITA ── */}
+                {/* SETA DIREITA */}
                 <div className="hidden md:flex absolute top-0 bottom-0 right-0 items-center justify-end w-24 bg-gradient-to-l from-[#031726] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
                     <button
                         type="button"
