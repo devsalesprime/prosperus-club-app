@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Category } from '../../types';
-import { dataService } from '../../services/mockData';
 import { DataTable, Modal, FormInput } from './shared/AdminSharedUI';
 
 export const CategoriesModule = () => {
@@ -10,8 +9,8 @@ export const CategoriesModule = () => {
   const [editingCategory, setEditingCategory] = useState<Partial<Category>>({});
 
   useEffect(() => {
-    setCategories(dataService.getCategories());
-    return dataService.subscribe(() => setCategories(dataService.getCategories()));
+    // API Call fallback expected
+    setCategories([]);
   }, []);
 
   const generateSlug = (name: string) => {
@@ -23,9 +22,9 @@ export const CategoriesModule = () => {
     const slug = editingCategory.slug || generateSlug(editingCategory.name);
     const categoryToSave = { ...editingCategory, slug };
     if (editingCategory.id) {
-      dataService.updateCategory(categoryToSave as Category);
+       // update logic fallback
     } else {
-      dataService.addCategory(categoryToSave as any);
+       // add logic fallback
     }
     setIsModalOpen(false);
     setEditingCategory({});
@@ -43,7 +42,7 @@ export const CategoriesModule = () => {
         columns={['Nome', 'Slug']} 
         data={categories} 
         onEdit={(c: Category) => { setEditingCategory(c); setIsModalOpen(true); }} 
-        onDelete={(id: string) => dataService.deleteCategory(id)} 
+        onDelete={(id: string) => { /* logic fallback */}} 
       />
       {isModalOpen && (
         <Modal title={editingCategory.id ? "Editar Categoria" : "Nova Categoria"} onClose={() => setIsModalOpen(false)}>

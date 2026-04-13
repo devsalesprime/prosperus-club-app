@@ -8,7 +8,6 @@ import React, { createContext, useContext, useState, useEffect, useRef, useMemo 
 import { ViewState, Member, Video, ClubEvent as Event, Article } from '../types';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
-import { dataService } from '../services/mockData';
 import { eventService } from '../services/eventService';
 import { profileService, ProfileData } from '../services/profileService';
 import { articleService, Article as ServiceArticle } from '../services/articleService';
@@ -382,23 +381,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 };
             }
         } else {
-            const members = dataService.getMembers();
-            memberUser = members.find(m => m.id === user.id);
-            if (!memberUser) {
-                const mockMemberTemplate = members.find(m => m.role === 'MEMBER') || members[0];
-                memberUser = {
-                    id: user.id,
-                    name: user.user_metadata?.full_name || 'Usuário',
-                    role: 'MEMBER' as const,
-                    company: user.user_metadata?.company || '',
-                    jobTitle: user.user_metadata?.job_title || '',
-                    phone: user.user_metadata?.phone || '',
-                    image: user.user_metadata?.avatar_url || mockMemberTemplate.image,
-                    description: '',
-                    socials: {},
-                    tags: []
-                };
-            }
+            memberUser = {
+                id: user.id,
+                name: user.user_metadata?.full_name || 'Usuário',
+                role: 'MEMBER' as const,
+                company: user.user_metadata?.company || '',
+                jobTitle: user.user_metadata?.job_title || '',
+                phone: user.user_metadata?.phone || '',
+                image: user.user_metadata?.avatar_url || `${import.meta.env.BASE_URL}default-avatar.svg`,
+                description: '',
+                socials: {},
+                tags: []
+            };
         }
 
         if (memberUser.role === 'ADMIN' || memberUser.role === 'TEAM') {
