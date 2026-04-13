@@ -14,12 +14,21 @@ type TabType = 'sales' | 'purchases';
 type ModeType = 'internal' | 'global';
 
 export const MyDealsScreen: React.FC = () => {
-    const [mode, setMode] = useState<ModeType>('internal');
+    const [mode, setMode] = useState<ModeType>(
+        window.location.hash === '#global-journey' ? 'global' : 'internal'
+    );
     const [activeTab, setActiveTab] = useState<TabType>('sales');
     const [deals, setDeals] = useState<Deal[]>([]);
     const [pendingCount, setPendingCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+
+    // Clean the hash when entering via deep link
+    useEffect(() => {
+        if (window.location.hash === '#global-journey') {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+    }, []);
 
     const loadDeals = async () => {
         setLoading(true);
@@ -51,20 +60,6 @@ export const MyDealsScreen: React.FC = () => {
     const handleDealRegistered = () => {
         loadDeals();
     };
-
-    // Helper to allow deep linking to global tab from the dashboard
-    useEffect(() => {
-        const handleHashChange = () => {
-            if (window.location.hash === '#global-journey') {
-                setMode('global');
-                // Clean hash to avoid keeping it in URL if user navigates away
-                window.history.replaceState(null, '', window.location.pathname);
-            }
-        };
-        handleHashChange();
-        window.addEventListener('hashchange', handleHashChange);
-        return () => window.removeEventListener('hashchange', handleHashChange);
-    }, []);
 
     return (
         <div className="deals-screen">
