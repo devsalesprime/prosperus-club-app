@@ -1,4 +1,14 @@
-import React from 'react';
+// ============================================
+// VIDEO CAROUSEL — Netflix-style Swimlane
+// Mobile: Touch-swipe horizontal (snap magnético)
+// Desktop: Scroll nativo via setas com fumaça lateral
+// ============================================
+// Motor: scrollBy nativo + pointer-events layering
+// Blindagem: min-w-0 (pai) + shrink-0 (cards)
+// ============================================
+
+import React, { useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Video } from '../../types';
 import { VideoCard } from './VideoCard';
 
@@ -17,9 +27,26 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
     count,
     onVideoClick,
 }) => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // ── Motor Matemático: avança 75% da viewport visível ──
+    const scroll = (direction: 'left' | 'right') => {
+        if (scrollContainerRef.current) {
+            const { clientWidth } = scrollContainerRef.current;
+            const scrollAmount = direction === 'left'
+                ? -(clientWidth * 0.75)
+                : clientWidth * 0.75;
+            scrollContainerRef.current.scrollBy({
+                left: scrollAmount,
+                behavior: 'smooth',
+            });
+        }
+    };
+
     return (
-        <div className="relative mb-8 w-full min-w-0">
-            {/* Título da Categoria */}
+        /* ── Container Pai: relative + min-w-0 blinda contra flex-bug ── */
+        <div className="relative w-full min-w-0 mb-8 group">
+            {/* ── Título da Categoria ── */}
             <div className="flex flex-col px-4 md:px-8 mb-4 gap-1">
                 <div className="flex items-center gap-3">
                     {iconUrl && (
@@ -46,30 +73,51 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 )}
             </div>
 
-            <div className="relative w-full">
-                {/* 
-                  MOBILE: Carrossel touch horizontal (flex wrap blockado, overflow-x)
-                  DESKTOP: Grid Responsivo 
-                */}
-                <div 
-                    className="
-                        flex flex-row overflow-x-auto gap-4 px-4 pb-4 snap-x snap-mandatory academy-swimlane
-                        md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6 md:px-8 md:overflow-visible
-                    "
+            {/* ── Pista de Rolagem (Track) ──
+                 Eixo ininterrupto: flex-row + flex-nowrap + overflow-x-auto
+                 ZERO grid, ZERO flex-wrap — o eixo deve ser horizontal contínuo
+            */}
+            <div
+                ref={scrollContainerRef}
+                className="flex flex-row flex-nowrap overflow-x-auto gap-4 px-4 md:px-8 pb-4 snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+                {videos.map((video) => (
+                    <VideoCard
+                        key={video.id}
+                        video={video}
+                        progress={video.progress}
+                        onClick={() => onVideoClick(video)}
+                    />
+                ))}
+            </div>
+
+            {/* ════════════════════════════════════════════════════════
+                 SETAS DESKTOP — Fumaça + Pointer-Events Layering
+                 A fumaça (gradiente) é pointer-events-none.
+                 O botão fura a fumaça com pointer-events-auto.
+                 Aparecem no hover do container pai (group-hover).
+                 ════════════════════════════════════════════════════════ */}
+
+            {/* ── Seta Esquerda ── */}
+            <div className="hidden md:flex absolute top-0 left-0 bottom-0 w-24 bg-gradient-to-r from-[#031726] to-transparent z-10 pointer-events-none items-center justify-start opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button
+                    onClick={() => scroll('left')}
+                    className="pointer-events-auto ml-2 w-12 h-12 rounded-full bg-black/60 hover:bg-[#CA9A43] border border-white/20 text-white flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
+                    aria-label="Rolar para esquerda"
                 >
-                    {videos.map((video) => (
-                        <div 
-                            key={video.id} 
-                            className="shrink-0 snap-start md:shrink grid"
-                        >
-                            <VideoCard
-                                video={video}
-                                progress={video.progress}
-                                onClick={() => onVideoClick(video)}
-                            />
-                        </div>
-                    ))}
-                </div>
+                    <ChevronLeft size={28} />
+                </button>
+            </div>
+
+            {/* ── Seta Direita ── */}
+            <div className="hidden md:flex absolute top-0 right-0 bottom-0 w-24 bg-gradient-to-l from-[#031726] to-transparent z-10 pointer-events-none items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <button
+                    onClick={() => scroll('right')}
+                    className="pointer-events-auto mr-2 w-12 h-12 rounded-full bg-black/60 hover:bg-[#CA9A43] border border-white/20 text-white flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 cursor-pointer z-20"
+                    aria-label="Rolar para direita"
+                >
+                    <ChevronRight size={28} />
+                </button>
             </div>
         </div>
     );
