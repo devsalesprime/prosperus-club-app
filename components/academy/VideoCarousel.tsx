@@ -46,7 +46,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
 
     return (
         /* 🚨 VACINA ANTI-BLOWOUT: grid-cols-1 força o limite na viewport */
-        <div className="relative w-full min-w-0 grid grid-cols-1 mb-10 group">
+        <div className="relative w-full min-w-0 grid grid-cols-1 mb-10 group/carousel">
 
             {/* 1. TÍTULO E ÍCONE */}
             <div className="flex items-center gap-3 mb-4 px-4 md:px-0 min-w-0">
@@ -79,7 +79,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
             <div className="relative w-full min-w-0">
 
                 {/* SETA ESQUERDA */}
-                <div className="hidden md:flex absolute top-0 bottom-0 left-0 items-center justify-start w-24 bg-gradient-to-r from-[#031726] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+                <div className="hidden md:flex absolute top-0 bottom-0 left-0 items-center justify-start w-24 bg-gradient-to-r from-[#031726] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
                     <button
                         type="button"
                         onClick={() => scroll('left')}
@@ -93,7 +93,8 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* 🚨 A PISTA DE ROLAGEM ESTRITA — carouselRef AQUI 🚨 */}
                 <div
                     ref={carouselRef}
-                    className="flex flex-row overflow-x-auto w-full gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    className="flex flex-row overflow-x-auto w-full gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 academy-swimlane"
+                    style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
                 >
                     {/* 🚨 CÁPSULA PROTETORA: shrink-0 + largura fixa → FORÇA overflow */}
                     {videos.map((video) => (
@@ -108,7 +109,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 </div>
 
                 {/* SETA DIREITA */}
-                <div className="hidden md:flex absolute top-0 bottom-0 right-0 items-center justify-end w-24 bg-gradient-to-l from-[#031726] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+                <div className="hidden md:flex absolute top-0 bottom-0 right-0 items-center justify-end w-24 bg-gradient-to-l from-[#031726] to-transparent opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
                     <button
                         type="button"
                         onClick={() => scroll('right')}
