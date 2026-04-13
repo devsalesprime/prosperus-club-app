@@ -35,6 +35,7 @@ export enum AdminViewState {
   NOTIFICATIONS = 'NOTIFICATIONS', // Novo
   MESSAGES = 'MESSAGES', // Novo (Moderação)
   ROI_AUDIT = 'ROI_AUDIT', // Business Core Admin
+  JOURNEY = 'JOURNEY', // Evolução Financeira / PIB Global
   MEMBER_FILES = 'MEMBER_FILES', // Arquivos do Sócio
   BIRTHDAYS = 'BIRTHDAYS', // Aniversários e Homenagens
   BENEFITS_APPROVAL = 'BENEFITS_APPROVAL', // Moderação de Benefícios

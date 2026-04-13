@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy } from 'lucide-react';
+import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy, TrendingUp } from 'lucide-react';
 import { AdminViewState } from '../../types';
 
 interface DashboardKpi {
@@ -109,6 +109,25 @@ export const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState
       <div>
         <h2 className="text-3xl font-bold text-white mb-1">Painel de Controle</h2>
         <p className="text-slate-400">Visão geral do Prosperus Club</p>
+      </div>
+
+      {/* VIP Card: PIB Global */}
+      <div 
+        onClick={() => setView(AdminViewState.JOURNEY)}
+        className="w-full flex items-center justify-between p-5 sm:p-6 rounded-2xl hover:scale-[1.02] transition-all cursor-pointer border border-[#CA9A43]/50 bg-[linear-gradient(145deg,#031726_0%,#052B48_100%)] shadow-lg shadow-[#CA9A43]/10 group"
+      >
+        <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#CA9A43]/10 border border-[#CA9A43]/30 group-hover:scale-110 transition-transform">
+                <TrendingUp className="text-[#CA9A43]" size={28} />
+            </div>
+            <div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1 tracking-tight">PIB Global do Clube</h3>
+                <p className="text-sm text-[#8BA3B4]">Administre o faturamento global e marcos dos sócios.</p>
+            </div>
+        </div>
+        <div className="hidden sm:flex text-[#CA9A43] group-hover:translate-x-2 transition-transform">
+            <ArrowRight size={24} />
+        </div>
       </div>
 
       {/* KPI Cards — responsividade mobile first (Table-to-Card concept) */}
