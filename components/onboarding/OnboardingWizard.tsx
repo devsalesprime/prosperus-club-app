@@ -24,6 +24,8 @@ import {
 import { ProfileData, ProfileUpdateData, profileService } from '../../services/profileService';
 import { supabase } from '../../lib/supabase';
 import { useSupportDocs } from '../support/SupportDocsSheet';
+import { AVAILABLE_TAGS, PARTNERSHIP_SECTORS, MAX_INTERESTS, TOTAL_STEPS } from './onboardingConstants';
+import { WelcomeStep, PhotoStep, TermsStep, ReadyStep } from './steps';
 
 interface OnboardingWizardProps {
     currentUser: ProfileData;
@@ -31,23 +33,7 @@ interface OnboardingWizardProps {
     onProfileUpdate: (updatedProfile: ProfileData) => void;
 }
 
-const AVAILABLE_TAGS = [
-    'Tecnologia', 'Vendas', 'Marketing', 'Investimentos',
-    'Consultoria', 'Saúde', 'Educação', 'Finanças',
-    'Imobiliário', 'Jurídico', 'Indústria', 'Comércio',
-    'Serviços', 'Agronegócio', 'Startups', 'E-commerce'
-];
-
-const PARTNERSHIP_SECTORS = [
-    'Tecnologia & SaaS', 'Saúde & Bem-estar', 'Educação & Treinamento',
-    'Finanças & Investimentos', 'Marketing & Publicidade', 'Imobiliário',
-    'Indústria & Manufatura', 'Comércio & Varejo', 'Consultoria & Gestão',
-    'Jurídico & Compliance', 'Agronegócio', 'Logística & Supply Chain',
-    'E-commerce & Digital', 'Energia & Sustentabilidade', 'Food & Beverage',
-    'Outros'
-];
-
-const MAX_INTERESTS = 5;
+const MAX_INTERESTS_LOCAL = MAX_INTERESTS;
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     currentUser,
@@ -93,7 +79,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         partnership_interests: currentUser.partnership_interests || []
     });
 
-    const totalSteps = 7;
+    const totalSteps = TOTAL_STEPS;
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -337,103 +323,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         }
     };
 
-    // Step 0: Welcome
-    const renderWelcome = () => (
-        <div className="text-center py-6">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-600 to-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-900/30">
-                <Sparkles className="text-white" size={40} />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-3">
-                Você chegou ao lugar certo.
-            </h2>
-            <p className="text-slate-300 text-lg mb-6 max-w-md mx-auto">
-                Configure seu perfil em <strong className="text-yellow-500">menos de 3 minutos</strong> e comece a gerar negócios com os sócios do clube.
-            </p>
-            <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto mt-8">
-                <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                    <Camera className="text-yellow-500 mx-auto mb-2" size={24} />
-                    <p className="text-xs text-slate-400">Sua Foto</p>
-                </div>
-                <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                    <User className="text-yellow-500 mx-auto mb-2" size={24} />
-                    <p className="text-xs text-slate-400">Seu Perfil</p>
-                </div>
-                <div className="bg-slate-800/50 rounded-xl p-4 text-center">
-                    <Rocket className="text-yellow-500 mx-auto mb-2" size={24} />
-                    <p className="text-xs text-slate-400">Explorar</p>
-                </div>
-            </div>
-        </div>
-    );
+    // Step 0: Welcome — extracted to WelcomeStep component
+    const renderWelcome = () => <WelcomeStep />;
 
-    // Step 1: Photo (dedicated)
+    // Step 1: Photo — extracted to PhotoStep component
     const renderPhotoStep = () => (
-        <div className="text-center py-6">
-            <h2 className="text-2xl font-bold text-white mb-2">
-                Sua foto é sua presença.
-            </h2>
-            <p className="text-slate-400 text-sm mb-8 max-w-xs mx-auto">
-                Sócios com foto recebem <strong className="text-yellow-500">3× mais conexões</strong> estratégicas.
-            </p>
-
-            {/* Photo Upload */}
-            <div className="flex justify-center mb-4">
-                <div className="relative">
-                    <div
-                        className="w-32 h-32 rounded-full border-4 border-yellow-600/50 overflow-hidden bg-slate-800 cursor-pointer hover:border-yellow-500 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <img src={formData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt="Avatar" className="w-full h-full object-cover" />
-                        {uploadingPhoto && (
-                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        )}
-                    </div>
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="absolute bottom-0 right-0 bg-yellow-600 hover:bg-yellow-500 text-white p-2.5 rounded-full shadow-lg transition-colors"
-                    >
-                        <Camera size={16} />
-                    </button>
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.heic,.heif"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                    />
-                </div>
-            </div>
-
-            {/* Status / Error */}
-            {errors.photo && (
-                <div className="flex items-center justify-center gap-1.5 mb-4">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-                        <p className="text-xs text-red-400">
-                            📷 {errors.photo}
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Upload label */}
-            <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="text-sm font-semibold transition-colors disabled:opacity-40"
-                style={{ color: '#FFDA71' }}
-            >
-                {uploadingPhoto ? 'Processando...' : formData.image_url && !formData.image_url.includes('default-avatar') ? 'Trocar foto' : 'Adicionar foto'}
-            </button>
-
-            {/* Format hint */}
-            {(!formData.image_url || formData.image_url.includes('default-avatar')) && (
-                <p className="text-[10px] mt-3" style={{ color: '#95A4B4', opacity: 0.5 }}>
-                    JPG, PNG, HEIC · máx. 15MB · Google Fotos ✓
-                </p>
-            )}
-        </div>
+        <PhotoStep
+            imageUrl={formData.image_url || ''}
+            uploadingPhoto={uploadingPhoto}
+            errors={errors}
+            fileInputRef={fileInputRef as React.RefObject<HTMLInputElement>}
+            onPhotoUpload={handlePhotoUpload}
+            onTriggerFileInput={() => fileInputRef.current?.click()}
+        />
     );
 
     // Step 2: Profile Info (data only — photo moved to step 1)
@@ -706,59 +608,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
     );
 
-    // Step 5: Terms Acceptance
+    // Step 5: Terms — extracted to TermsStep component
     const renderTermsAcceptance = () => (
-        <div className="flex flex-col h-full justify-between py-4">
-            <div>
-                <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-white mb-1">Quase lá!</h2>
-                    <p className="text-slate-400 text-sm">Confirme que você leu e concorda com as regras.</p>
-                </div>
-
-                {/* Terms checkbox */}
-                <label className="flex items-start gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700 cursor-pointer mb-3">
-                    <input
-                        type="checkbox"
-                        checked={acceptedTerms}
-                        onChange={e => setAcceptedTerms(e.target.checked)}
-                        className="mt-0.5 accent-yellow-500 w-4 h-4 shrink-0"
-                    />
-                    <span className="text-sm text-slate-300 leading-relaxed">
-                        Li e aceito os{' '}
-                        <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); openDoc('terms'); }}
-                            className="text-yellow-500 underline underline-offset-2 hover:text-yellow-400"
-                        >
-                            Termos de Uso
-                        </button>
-                    </span>
-                </label>
-
-                {/* Privacy checkbox */}
-                <label className="flex items-start gap-3 p-4 bg-slate-800/50 rounded-2xl border border-slate-700 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={acceptedPrivacy}
-                        onChange={e => setAcceptedPrivacy(e.target.checked)}
-                        className="mt-0.5 accent-yellow-500 w-4 h-4 shrink-0"
-                    />
-                    <span className="text-sm text-slate-300 leading-relaxed">
-                        Li e aceito a{' '}
-                        <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); openDoc('privacy'); }}
-                            className="text-yellow-500 underline underline-offset-2 hover:text-yellow-400"
-                        >
-                            Política de Privacidade
-                        </button>
-                    </span>
-                </label>
-            </div>
-        </div>
+        <TermsStep
+            acceptedTerms={acceptedTerms}
+            acceptedPrivacy={acceptedPrivacy}
+            onAcceptTermsChange={setAcceptedTerms}
+            onAcceptPrivacyChange={setAcceptedPrivacy}
+            onOpenDoc={openDoc}
+        />
     );
 
-    // Step 6: Ready!
+    // Step 6: Ready — extracted to ReadyStep component
     const renderReady = () => {
         const completion = profileService.getProfileCompletionPercentage({
             ...currentUser,
@@ -767,49 +628,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         } as ProfileData);
 
         return (
-            <div className="text-center py-6">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full overflow-hidden border-4 border-yellow-600 shadow-lg shadow-yellow-900/30">
-                    <img src={formData.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`} alt="Avatar" className="w-full h-full object-cover" />
-                </div>
-
-                <h2 className="text-3xl font-bold text-white mb-2">
-                    Tudo Pronto, {(formData.name || currentUser.name || '').split(' ')[0]}! 🎉
-                </h2>
-                <p className="text-slate-300 text-lg mb-6">
-                    Seu perfil está <strong className="text-yellow-500">{completion}% completo</strong>
-                </p>
-
-                {/* Completion Bar */}
-                <div className="max-w-xs mx-auto mb-8">
-                    <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 transition-all duration-1000 rounded-full"
-                            style={{ width: `${completion}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* What's next */}
-                <div className="bg-slate-800/50 rounded-xl p-6 max-w-sm mx-auto text-left space-y-3">
-                    <p className="text-sm font-bold text-yellow-500 uppercase">O que você pode fazer agora:</p>
-                    <div className="flex items-center gap-3 text-slate-300 text-sm">
-                        <Check size={16} className="text-green-500 shrink-0" />
-                        Explorar o Member's Book e conectar-se
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-300 text-sm">
-                        <Check size={16} className="text-green-500 shrink-0" />
-                        Assistir vídeos na Academy
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-300 text-sm">
-                        <Check size={16} className="text-green-500 shrink-0" />
-                        Ver a agenda de eventos
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-300 text-sm">
-                        <Check size={16} className="text-green-500 shrink-0" />
-                        Registrar negócios e indicações
-                    </div>
-                </div>
-            </div>
+            <ReadyStep
+                imageUrl={formData.image_url || ''}
+                name={formData.name || currentUser.name || ''}
+                completion={completion}
+            />
         );
     };
 

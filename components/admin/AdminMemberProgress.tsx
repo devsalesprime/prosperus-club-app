@@ -26,6 +26,8 @@ import { toolsService, MemberProgressFile } from '../../services/toolsService';
 import { reportService, MemberReport } from '../../services/reportService';
 import { supabase } from '../../lib/supabase';
 import { AdminPageHeader, AdminConfirmDialog } from './shared';
+import { getFileIcon, getFileTypeBadge } from './progress/progressFileHelpers';
+import { ProgressPreviewModal } from './progress/ProgressPreviewModal';
 
 interface Member {
     id: string;
@@ -280,33 +282,7 @@ export const AdminMemberProgress: React.FC = () => {
         }
     };
 
-    const getFileIcon = (fileType: string) => {
-        const type = fileType.toLowerCase();
-        if (type === 'html' || type === 'htm') return <FileCode size={20} className="text-orange-400" />;
-        if (type === 'pdf') return <FileText size={20} className="text-red-400" />;
-        if (['xlsx', 'xls', 'csv', 'excel'].includes(type)) return <FileSpreadsheet size={20} className="text-green-400" />;
-        if (['doc', 'docx'].includes(type)) return <FileText size={20} className="text-blue-400" />;
-        return <File size={20} className="text-slate-400" />;
-    };
-
-    const getFileTypeBadge = (fileType: string) => {
-        const type = fileType.toUpperCase();
-        const colorMap: Record<string, string> = {
-            'HTML': 'bg-orange-900/30 text-orange-400 border-orange-800/50',
-            'HTM': 'bg-orange-900/30 text-orange-400 border-orange-800/50',
-            'PDF': 'bg-red-900/30 text-red-400 border-red-800/50',
-            'XLSX': 'bg-green-900/30 text-green-400 border-green-800/50',
-            'XLS': 'bg-green-900/30 text-green-400 border-green-800/50',
-            'DOC': 'bg-blue-900/30 text-blue-400 border-blue-800/50',
-            'DOCX': 'bg-blue-900/30 text-blue-400 border-blue-800/50',
-        };
-        const color = colorMap[type] || 'bg-slate-700 text-slate-300 border-slate-600';
-        return (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${color}`}>
-                {type}
-            </span>
-        );
-    };
+    // getFileIcon and getFileTypeBadge imported from progress/progressFileHelpers
 
     // Combine Automated M2M Reports into the legacy file structure for UI
     const mappedReports = reports.map(r => {
@@ -893,59 +869,18 @@ export const AdminMemberProgress: React.FC = () => {
                 </div>
             </div>
 
-            {/* Loading overlay for preview */}
-            {loadingPreview && (
-                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
-                    <div className="text-center">
-                        <Loader2 className="animate-spin text-yellow-500 mx-auto mb-3" size={32} />
-                        <p className="text-white text-sm">Carregando relatório...</p>
-                    </div>
-                </div>
-            )}
-
-            {/* HTML Preview Modal - uses blob URL with correct MIME type */}
-            {previewUrl && (
-                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-900 rounded-xl border border-slate-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
-                        <div className="flex items-center justify-between p-4 border-b border-slate-800">
-                            <div className="flex items-center gap-3">
-                                <FileCode size={20} className="text-orange-400" />
-                                <div>
-                                    <h3 className="font-bold text-white">{previewTitle}</h3>
-                                    <p className="text-xs text-slate-400">{previewMemberName}</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    if (previewUrl) URL.revokeObjectURL(previewUrl);
-                                    setPreviewUrl(null);
-                                    setPreviewTitle('');
-                                    setPreviewMemberName('');
-                                }}
-                                className="p-2 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-                        <div className="flex-1 min-w-0 overflow-hidden reports-container">
-                            <style>{`
-                                .reports-container * {
-                                    max-width: 100%;
-                                    box-sizing: border-box;
-                                }
-                                .reports-container img {
-                                    height: auto;
-                                }
-                            `}</style>
-                            <iframe
-                                src={previewUrl}
-                                className="w-full h-full min-h-[60vh] bg-white rounded-b-xl"
-                                title={previewTitle}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ProgressPreviewModal
+                previewUrl={previewUrl}
+                previewTitle={previewTitle}
+                previewMemberName={previewMemberName}
+                loadingPreview={loadingPreview}
+                onClose={() => {
+                    if (previewUrl) URL.revokeObjectURL(previewUrl);
+                    setPreviewUrl(null);
+                    setPreviewTitle('');
+                    setPreviewMemberName('');
+                }}
+            />
             {/* Confirm Delete Dialog */}
             <AdminConfirmDialog
                 isOpen={!!confirmDeleteId}
