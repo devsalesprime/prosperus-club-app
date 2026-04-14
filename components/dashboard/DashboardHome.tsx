@@ -22,7 +22,8 @@ import {
     Lightbulb,
     BarChart2,
     Calendar,
-    Square
+    Square,
+    AlertTriangle
 } from 'lucide-react';
 import {
     IconAgenda,
@@ -33,9 +34,10 @@ import {
     IconIndicacoes
 } from '../ui/icons/CustomIcons';
 import { ViewState, Member, ClubEvent } from '../../types';
-import { ProfileData } from '../../services/profileService';
+import { profileService, ProfileData } from '../../services/profileService';
 import { articleService } from '../../services/articleService';
 import { eventService } from '../../services/eventService';
+import { roiService } from '../../services/roiService';
 import { searchService, GlobalSearchResults, SearchArticle, SearchVideo, SearchGalleryAlbum } from '../../services/searchService';
 import { HomeCarousel } from './HomeCarousel';
 import { OnboardingBanner } from './OnboardingBanner';
@@ -511,7 +513,28 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     // Novas vars do Roi C-Level:
     const [showRegistrarFaturamento, setShowRegistrarFaturamento] = useState(false);
     const [tipoRegistro, setTipoRegistro] = useState<'onboarding' | 'trimestral' | 'manual'>('manual');
+    const [needsRoiUpdate, setNeedsRoiUpdate] = useState(false);
     const [roiRefreshCounter, setRoiRefreshCounter] = useState(0); // State to trigger RoiDashboard refresh
+
+    // Verificação de Cohort (Nudge 90 dias)
+    useEffect(() => {
+        if (!currentUser) return;
+        
+        roiService.getRegistrosFaturamento(currentUser.id).then(registros => {
+            if (registros.length === 0) {
+                setNeedsRoiUpdate(true);
+                return;
+            }
+            const sorted = [...registros].sort((a,b) => new Date(b.data_registro).getTime() - new Date(a.data_registro).getTime());
+            const last = sorted[0];
+            const diffTime = Math.abs(new Date().getTime() - new Date(last.data_registro).getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays >= 90) {
+                setNeedsRoiUpdate(true);
+            }
+        });
+    }, [currentUser, roiRefreshCounter]);
 
     // Check if there are published articles
     useEffect(() => {
@@ -641,6 +664,22 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                     </div>
                 )}
 
+                {/* NUDGE DE COBRANÇA VIP (Fase 2) */}
+                {needsRoiUpdate && (
+                    <div onClick={() => setShowRegistrarFaturamento(true)} className="w-full bg-[linear-gradient(145deg,#031726_0%,#052B48_100%)] border border-[#CA9A43] shadow-[0_0_15px_rgba(202,154,67,0.15)] rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group hover:scale-[1.01] transition-all relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#CA9A43]/10 flex items-center justify-center shrink-0"> 
+                          <AlertTriangle className="text-[#CA9A43] animate-pulse" size={20} /> 
+                        </div>
+                        <div>
+                          <h3 className="text-white font-bold text-sm md:text-base">Ciclo Financeiro Expirado</h3>
+                          <p className="text-slate-400 text-xs md:text-sm mt-0.5">Faz mais de 90 dias desde o seu último registro. Atualize agora para calibrar seu Múltiplo.</p>
+                        </div>
+                      </div>
+                      <button className="bg-[#CA9A43] text-[#031726] font-bold px-4 py-2 rounded-lg whitespace-nowrap group-hover:bg-[#FFDA71] transition-colors">Atualizar Agora</button>
+                    </div>
+                )}
+
                 {/* 2. Banners - Carrossel Híbrido */}
                 <div data-tour-id="dashboard">
                     <HomeCarousel
@@ -681,6 +720,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                             }}
                         />
                     </div>
+                )}
+
+                {showRegistrarFaturamento && currentUser && (
+                    <RegistrarFaturamentoModal 
+                        socioId={currentUser.id} 
+                        tipo={tipoRegistro} 
+                        onClose={() => setShowRegistrarFaturamento(false)} 
+                        onSuccess={() => { 
+                            setShowRegistrarFaturamento(false);
+                            setNeedsRoiUpdate(false);
+                            setRoiRefreshCounter(prev => prev + 1); 
+                        }} 
+                    />
                 )}
 
                 {/* 5. Ranking Preview */}
