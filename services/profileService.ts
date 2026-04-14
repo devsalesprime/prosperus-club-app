@@ -37,6 +37,10 @@ export interface ProfileData {
     benefit_status?: 'pending' | 'approved' | 'rejected'; 
     rejection_reason?: string | null;
     birth_date?: string | null;
+    // Business Core & ROI Fields
+    valor_pago_mentoria?: number | null;
+    data_entrada_clube?: string | null;
+    hubspot_deal_id?: string | null;
 }
 
 // Exclusive Benefit type - cada sócio pode oferecer um benefício ao clube
@@ -96,7 +100,7 @@ class ProfileService {
             // Create query promise
             const queryPromise = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, is_active, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, is_active, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, hubspot_deal_id, valor_pago_mentoria, data_entrada_clube, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at, updated_at')
                 .eq('id', userId)
                 .single();
 
@@ -170,7 +174,7 @@ class ProfileService {
                 async () => {
                     let query = supabase
                         .from('profiles')
-                        .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at')
+                        .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, valor_pago_mentoria, data_entrada_clube, created_at')
                         .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
                     // Exclude specific user if provided (e.g., logged-in user)
@@ -205,7 +209,7 @@ class ProfileService {
         try {
             let queryBuilder = supabase
                 .from('profiles')
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, valor_pago_mentoria, data_entrada_clube, created_at')
                 .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
 
             // Exclude specific user if provided (e.g., logged-in user)
@@ -265,7 +269,7 @@ class ProfileService {
             let queryBuilder = supabase
                 .from('profiles')
                 .select(
-                    'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at',
+                    'id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, has_completed_onboarding, pitch_video_url, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, valor_pago_mentoria, data_entrada_clube, created_at',
                     { count: 'exact', head: false }
                 )
                 .in('role', ['MEMBER', 'ACCOUNT_MANAGER', 'CEO', 'MANAGER']);
@@ -354,7 +358,7 @@ class ProfileService {
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 })
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, hubspot_deal_id, valor_pago_mentoria, data_entrada_clube, created_at, updated_at')
                 .single();
 
             if (error) {
@@ -404,7 +408,7 @@ class ProfileService {
                 .from('profiles')
                 .update(cleanUpdates)
                 .eq('id', userId)
-                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at, updated_at')
+                .select('id, name, email, image_url, company, job_title, phone, role, bio, socials, tags, is_featured, exclusive_benefit, benefit_status, rejection_reason, has_completed_onboarding, pitch_video_url, hubspot_contact_id, hubspot_deal_id, valor_pago_mentoria, data_entrada_clube, what_i_sell, what_i_need, partnership_interests, member_since, birth_date, created_at, updated_at')
                 .single();
 
             if (error) {

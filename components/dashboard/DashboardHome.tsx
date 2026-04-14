@@ -22,8 +22,7 @@ import {
     Lightbulb,
     BarChart2,
     Calendar,
-    Square,
-    LineChart
+    Square
 } from 'lucide-react';
 import {
     IconAgenda,
@@ -43,6 +42,8 @@ import { OnboardingBanner } from './OnboardingBanner';
 import { CarouselItem, Banner } from '../../services/bannerService';
 import { Avatar } from '../ui/Avatar';
 import { ROIDashboardWidget } from '../business/ROIDashboardWidget';
+import { RoiDashboard } from '../roi/RoiDashboard';
+import { RegistrarFaturamentoModal } from '../roi/RegistrarFaturamentoModal';
 import { TopRankingPreview } from '../business/TopRankingPreview';
 import { EventCard } from '../events/EventCard';
 import { EventDetailsModal } from '../events/EventDetailsModal';
@@ -506,6 +507,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     const [hasNews, setHasNews] = useState(false);
     const [nextEvent, setNextEvent] = useState<ClubEvent | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null); // Modal state
+    
+    // Novas vars do Roi C-Level:
+    const [showRegistrarFaturamento, setShowRegistrarFaturamento] = useState(false);
+    const [tipoRegistro, setTipoRegistro] = useState<'onboarding' | 'trimestral' | 'manual'>('manual');
+    const [roiRefreshCounter, setRoiRefreshCounter] = useState(0); // State to trigger RoiDashboard refresh
 
     // Check if there are published articles
     useEffect(() => {
@@ -652,12 +658,27 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                     setView={setView}
                 />
 
-                {/* 4. ROI Widget - Business Value Showcase */}
+                {/* 4. ROI Widget - Business Value Showcase (Legado) */}
                 {currentUser && (
                     <div data-tour-id="roi-widget">
                         <ROIDashboardWidget
                             onRegisterDeal={() => setView(ViewState.DEALS)}
                             onNavigateToDeals={() => setView(ViewState.DEALS)}
+                        />
+                    </div>
+                )}
+
+                {/* 4.5. Meu ROI (Delta Acumulado) */}
+                {currentUser && (
+                    <div className="mt-4" key={roiRefreshCounter}>
+                        <SectionTitle>📈 Meu Crescimento (C-Level)</SectionTitle>
+                        <RoiDashboard
+                            socioId={currentUser.id}
+                            valorPago={currentUser.valor_pago_mentoria ?? null}
+                            onRegistrar={(tipo) => {
+                                setTipoRegistro(tipo || 'manual');
+                                setShowRegistrarFaturamento(true);
+                            }}
                         />
                     </div>
                 )}
@@ -683,7 +704,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 </div>
 
                 {/* 7. Acesso Rápido */}
-                <div className="mb-6">
+                <div>
                     <SectionTitle>⚡ Acesso Rápido</SectionTitle>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                         {quickAccessItems.map(item => (
@@ -705,24 +726,6 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                     </div>
                 </div>
 
-                {/* 7.5. Nudge de Vaidade: Sua Jornada */}
-                <div 
-                    onClick={() => {
-                        window.location.hash = '#global-journey';
-                        setView(ViewState.DEALS);
-                    }}
-                    className="w-full bg-[#052B48] border border-[#CA9A43]/30 rounded-xl p-4 md:p-5 flex items-center justify-between cursor-pointer group mb-6 shadow-lg hover:border-[#CA9A43]/60 transition-all"
-                >
-                    <div className="flex items-center gap-4">
-                        <LineChart className="text-[#CA9A43] shrink-0" size={32} />
-                        <div>
-                            <h4 className="font-bold text-white text-base md:text-lg">Sua Jornada Prosperus</h4>
-                            <p className="text-xs md:text-sm text-slate-400">Registre sua nova meta batida e acompanhe o gráfico.</p>
-                        </div>
-                    </div>
-                    <ChevronRight className="text-[#CA9A43] group-hover:translate-x-1 transition-transform" />
-                </div>
-
                 {/* 8. Onboarding Banner (final, apenas para novos usuários) */}
                 {currentUser && (
                     <OnboardingBanner
@@ -737,6 +740,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                         event={selectedEvent}
                         onClose={() => setSelectedEvent(null)}
                         userId={currentUser?.id}
+                    />
+                )}
+
+                {/* Registrar Faturamento Modal */}
+                {showRegistrarFaturamento && currentUser && (
+                    <RegistrarFaturamentoModal
+                        socioId={currentUser.id}
+                        tipo={tipoRegistro}
+                        onClose={() => setShowRegistrarFaturamento(false)}
+                        onSuccess={() => {
+                            // Increment counter to remount / refetch data
+                            setRoiRefreshCounter(prev => prev + 1);
+                        }}
                     />
                 )}
             </div>

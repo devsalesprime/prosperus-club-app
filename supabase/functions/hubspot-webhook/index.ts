@@ -55,21 +55,24 @@ async function validateHubSpotSignature(
     const signature = req.headers.get('X-HubSpot-Signature-v3')
     const timestamp = req.headers.get('X-HubSpot-Request-Timestamp')
 
-    if (!signature || !timestamp) {
-        console.warn('⚠️ Missing signature headers')
+    if (!signature && !req.headers.get('X-HubSpot-Signature')) {
+        console.warn('⚠️ Missing ALL signature headers')
         return false
     }
 
-    // Anti-replay: reject requests older than 5 minutes
-    const requestAge = Date.now() - Number(timestamp)
-    if (requestAge > 5 * 60 * 1000) {
-        console.warn('⚠️ Request too old:', requestAge, 'ms')
-        return false
+    // Anti-replay: reject V3 requests older than 5 minutes (só recusa se tiver timestamp)
+    if (timestamp) {
+        const requestAge = Date.now() - Number(timestamp)
+        if (requestAge > 5 * 60 * 1000) {
+            console.warn('⚠️ Request too old:', requestAge, 'ms')
+            return false
+        }
     }
 
     // Build the source string per HubSpot v3 spec
     const method = req.method
-    const url = req.url
+    // O Edge function muitas vezes pode injetar trailing slashes, mas o app original não tem
+    const url = req.url.endsWith('/') ? req.url.slice(0, -1) : req.url
     const source = `${method}${url}${body}${timestamp}`
 
     try {
@@ -86,7 +89,26 @@ async function validateHubSpotSignature(
             new TextEncoder().encode(source)
         )
         const expected = btoa(String.fromCharCode(...new Uint8Array(sig)))
-        return expected === signature
+        
+        if (expected === signature) return true;
+
+        console.warn(`⚠️ V3 validation failed. Expected: ${expected}, Got: ${signature}`);
+        
+        // --- Fallback para V1/V2 (O Botão "Testar Webhook" usa v1) ---
+        const sigV1 = req.headers.get('X-HubSpot-Signature')
+        if (sigV1) {
+            const v1Source = `${HUBSPOT_CLIENT_SECRET}${body}`
+            const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v1Source))
+            const hashArray = Array.from(new Uint8Array(hashBuffer))
+            const v1Expected = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+            
+            if (v1Expected === sigV1) {
+                console.log('✅ Approved via V1 Signature (HubSpot Test Button fallback)')
+                return true;
+            }
+        }
+
+        return false
     } catch (err) {
         console.error('❌ Signature validation error:', err)
         return false
@@ -389,6 +411,7 @@ async function handleDealPropertyChange(eventData: any) {
     const HANDLED_PROPERTIES = [
         'situacao_do_negocio',
         'data_de_nascimento__socio_principal',
+        'amount',
         ...DEAL_PARTICIPANT_EMAIL_PROPS,
     ]
 
@@ -427,22 +450,27 @@ async function handleDealPropertyChange(eventData: any) {
         const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue.toLowerCase())
         console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
 
-        // ── 1. Fetch deal properties to collect participant emails ──
-        const dealPropsQuery = DEAL_PARTICIPANT_EMAIL_PROPS.join(',')
+        // ── 1. Fetch deal properties to collect participant emails and amount ──
+        const dealPropsQuery = ['amount', ...DEAL_PARTICIPANT_EMAIL_PROPS].join(',')
         const dealRes = await fetch(
             `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=${dealPropsQuery}`,
             { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
         )
 
         const participantEmails: string[] = []
+        let amountValue: number | null = null
+
         if (dealRes.ok) {
             const dealData = await dealRes.json()
             const dp = dealData.properties || {}
+            
+            if (dp['amount']) amountValue = parseFloat(dp['amount'])
+
             for (const prop of DEAL_PARTICIPANT_EMAIL_PROPS) {
                 const email = (dp[prop] || '').trim()
                 if (email && email.includes('@')) participantEmails.push(email.toLowerCase())
             }
-            console.log(`📧 Deal ${dealId} participant emails: ${participantEmails.join(', ') || 'none'}`)
+            console.log(`📧 Deal ${dealId} participant emails: ${participantEmails.join(', ') || 'none'}, Amount: ${amountValue}`)
         } else {
             console.warn(`⚠️ Could not fetch deal properties for ${dealId}`)
         }
@@ -466,9 +494,14 @@ async function handleDealPropertyChange(eventData: any) {
                 const email = contact.properties?.email
                 if (!email) continue
 
+                const payload: any = { is_active: isActive, updated_at: new Date().toISOString() }
+                if (amountValue !== null) {
+                    payload.valor_pago_mentoria = amountValue
+                }
+
                 const { error: updateError } = await supabase
                     .from('profiles')
-                    .update({ is_active: isActive, updated_at: new Date().toISOString() })
+                    .update(payload)
                     .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
 
                 if (updateError) {
@@ -496,6 +529,54 @@ async function handleDealPropertyChange(eventData: any) {
             isActive,
             updatedCrmEmails: updatedEmails,
             provisionedParticipants: provisionedEmails,
+        }
+    }
+
+    // ── Handle amount (Update value directly) ──
+    if (propertyName === 'amount') {
+        const amountValue = propertyValue ? parseFloat(propertyValue) : null
+        console.log(`💰 Deal ${dealId}: amount = '${amountValue}'`)
+        
+        const updatedEmails: string[] = []
+
+        for (const contactId of contactIds) {
+            try {
+                const contactRes = await fetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
+                    { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
+                )
+
+                if (!contactRes.ok) continue
+
+                const contact = await contactRes.json()
+                const email = contact.properties?.email
+                if (!email) continue
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        valor_pago_mentoria: amountValue,
+                        updated_at: new Date().toISOString()
+                    })
+                    .or(`hubspot_contact_id.eq.${contactId},email.eq.${email}`)
+
+                if (!updateError) {
+                    updatedEmails.push(email)
+                    console.log(`✅ valor_pago_mentoria updated: ${email} → ${amountValue}`)
+                } else {
+                    console.error(`❌ Failed to update amount for ${email}:`, updateError)
+                }
+            } catch (err) {
+                console.error(`❌ Error updating amount for contact ${contactId}:`, err)
+            }
+        }
+
+        return {
+            success: true,
+            action: 'deal_amount_updated',
+            dealId,
+            amount: amountValue,
+            updatedEmails
         }
     }
 

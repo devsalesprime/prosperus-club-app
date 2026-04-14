@@ -1,276 +1,196 @@
-// roiService.ts
-// Service for ROI tracking: Deals and Referrals
+// services/roiService.ts
+// Responsabilidade: cálculo do ROI de crescimento (delta acumulado)
+// Documentação: handover_roi_socio.docx (Sales Prime, Abril 2026)
 
-import { supabase } from '../lib/supabase';
-import { logger } from '../utils/logger';
+import { supabase } from '../lib/supabase'
 
-// ============================================
-// TYPES
-// ============================================
-
-export interface FinancialGrowth {
-    totalRevenue: number;
-    dealsRevenue: number;
-    referralsRevenue: number;
-    dealsCount: number;
-    referralsCount: number;
+export interface RegistroFaturamento {
+  id:                 string
+  socio_id:           string
+  valor:              number
+  periodo_referencia: string
+  tipo:               'onboarding' | 'trimestral' | 'manual'
+  data_registro:      string
+  fonte:              string
 }
 
-export interface Deal {
-    id: string;
-    seller_id: string;
-    buyer_id: string;
-    amount: number;
-    description: string;
-    status: 'PENDING' | 'CONFIRMED' | 'CONTESTED';
-    deal_date: string;
-    created_at: string;
-    updated_at: string;
-    // Joined data
-    seller_name?: string;
-    buyer_name?: string;
+export interface RoiData {
+  roi:              number | null   // null = dados insuficientes
+  roiFormatado:     string          // ex: "3,3x" ou "+233%"
+  fraseConcetual:   string          // ex: "Para cada R$1 investido..."
+  deltaAcumulado:   number
+  faturamentoBase:  number | null
+  faturamentoAtual: number | null
+  valorPago:        number | null
+  registros:        RegistroFaturamento[]
+  status:           'ok' | 'sem_base' | 'sem_valor_pago' | 'negativo'
 }
-
-export interface Referral {
-    id: string;
-    referrer_id: string;
-    receiver_id: string;
-    lead_name: string;
-    lead_email?: string;
-    lead_phone?: string;
-    notes?: string;
-    status: 'NEW' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST';
-    converted_amount?: number;
-    feedback?: string;
-    created_at: string;
-    updated_at: string;
-    converted_at?: string;
-    // Joined data
-    referrer_name?: string;
-    receiver_name?: string;
-}
-
-export interface RankingEntry {
-    user_id: string;
-    name: string;
-    image_url: string;
-    total_amount: number;
-    count: number;
-}
-
-// ============================================
-// SERVICE CLASS
-// ============================================
 
 class RoiService {
-    /**
-     * Get financial growth summary for a user
-     * Aggregates confirmed deals + converted referrals
-     */
-    async getMyFinancialGrowth(userId: string): Promise<FinancialGrowth> {
-        try {
-            // Fetch confirmed deals where user is seller
-            const { data: deals, error: dealsError } = await supabase
-                .from('member_deals')
-                .select('amount')
-                .eq('seller_id', userId)
-                .eq('status', 'CONFIRMED');
+  // ─── Buscar todos os registros de um sócio ──────────────────────────────────
+  async getRegistrosFaturamento(socioId: string): Promise<RegistroFaturamento[]> {
+    const { data, error } = await supabase
+      .from('registros_faturamento')
+      .select('*')
+      .eq('socio_id', socioId)
+      .order('periodo_referencia', { ascending: true })
+      .order('data_registro', { ascending: false })
 
-            if (dealsError) throw dealsError;
+    if (error) throw error
+    return data || []
+  }
 
-            // Fetch converted referrals where user is referrer
-            const { data: referrals, error: referralsError } = await supabase
-                .from('member_referrals')
-                .select('converted_amount')
-                .eq('referrer_id', userId)
-                .eq('status', 'CONVERTED')
-                .not('converted_amount', 'is', null);
-
-            if (referralsError) throw referralsError;
-
-            const dealsRevenue = deals?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
-            const referralsRevenue = referrals?.reduce((sum, r) => sum + Number(r.converted_amount), 0) || 0;
-
-            return {
-                totalRevenue: dealsRevenue + referralsRevenue,
-                dealsRevenue,
-                referralsRevenue,
-                dealsCount: deals?.length || 0,
-                referralsCount: referrals?.length || 0
-            };
-        } catch (error) {
-            logger.error('[ROI Service] Error fetching financial growth:', error);
-            return {
-                totalRevenue: 0,
-                dealsRevenue: 0,
-                referralsRevenue: 0,
-                dealsCount: 0,
-                referralsCount: 0
-            };
-        }
+  // ─── Calcular ROI delta acumulado ────────────────────────────────────────────
+  calcularRoi(
+    registros: RegistroFaturamento[],
+    valorPago: number | null,
+    isRoiApproved: boolean
+  ): RoiData {
+    // Sem registro de onboarding
+    const registroBase = registros.find(r => r.tipo === 'onboarding')
+    if (!registroBase) {
+      return {
+        roi: null, roiFormatado: '--', fraseConcetual: '',
+        deltaAcumulado: 0, faturamentoBase: null, faturamentoAtual: null,
+        valorPago, registros, status: 'sem_base'
+      }
     }
 
-    /**
-     * Get all deals for a user (as seller or buyer)
-     */
-    async getMyDeals(userId: string): Promise<Deal[]> {
-        try {
-            const { data, error } = await supabase
-                .from('member_deals')
-                .select(`
-                    *,
-                    seller:profiles!seller_id(name),
-                    buyer:profiles!buyer_id(name)
-                `)
-                .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            return (data || []).map(d => ({
-                ...d,
-                seller_name: d.seller?.name,
-                buyer_name: d.buyer?.name
-            }));
-        } catch (error) {
-            logger.error('[ROI Service] Error fetching deals:', error);
-            return [];
-        }
+    // Sem valor pago (denominador) ou sem aprovação do Admin
+    if (!isRoiApproved || !valorPago || valorPago <= 0) {
+      return {
+        roi: null, roiFormatado: '--', fraseConcetual: '',
+        deltaAcumulado: 0, faturamentoBase: registroBase.valor, faturamentoAtual: null,
+        valorPago: null, registros, status: 'sem_valor_pago'
+      }
     }
 
-    /**
-     * Get all referrals for a user (as referrer or receiver)
-     */
-    async getMyReferrals(userId: string): Promise<Referral[]> {
-        try {
-            const { data, error } = await supabase
-                .from('member_referrals')
-                .select(`
-                    *,
-                    referrer:profiles!referrer_id(name),
-                    receiver:profiles!receiver_id(name)
-                `)
-                .or(`referrer_id.eq.${userId},receiver_id.eq.${userId}`)
-                .order('created_at', { ascending: false });
+    const base = registroBase.valor
 
-            if (error) throw error;
-
-            return (data || []).map(r => ({
-                ...r,
-                referrer_name: r.referrer?.name,
-                receiver_name: r.receiver?.name
-            }));
-        } catch (error) {
-            logger.error('[ROI Service] Error fetching referrals:', error);
-            return [];
+    // Deduplicar por período — usar o mais recente de cada período
+    const porPeriodo = new Map<string, RegistroFaturamento>()
+    registros
+      .filter(r => r.tipo !== 'onboarding')
+      .forEach(r => {
+        const existente = porPeriodo.get(r.periodo_referencia)
+        if (!existente || new Date(r.data_registro).getTime() > new Date(existente.data_registro).getTime()) {
+          porPeriodo.set(r.periodo_referencia, r)
         }
+      })
+
+    const registrosDedupados = Array.from(porPeriodo.values())
+      .sort((a, b) => a.periodo_referencia.localeCompare(b.periodo_referencia))
+
+    // Calcular delta acumulado
+    const deltaAcumulado = registrosDedupados.reduce(
+      (soma, r) => soma + (r.valor - base), 0
+    )
+
+    // Calcular Múltiplo (ROAS / Delta)
+    const multiplo = deltaAcumulado / valorPago
+
+    const faturamentoAtual = registrosDedupados.length > 0
+      ? registrosDedupados[registrosDedupados.length - 1].valor
+      : base
+
+    // Formatar Múltiplo
+    const formatarMultiplicador = (n: number) => n.toFixed(2).replace('.', ',')
+
+    let roiFormatado = `${formatarMultiplicador(multiplo)}x`
+
+    // Frase contextual estratégica (C-Level)
+    let fraseConcetual = ''
+    if (multiplo > 1) {
+      fraseConcetual = `Múltiplo validado: Para cada R$1 investido no Clube, sua empresa faturou R$${formatarMultiplicador(multiplo)} a mais.`
+    } else if (multiplo === 1) {
+      fraseConcetual = `Payback Atingido (Break-even): O faturamento extra gerado acabou de empatar com o valor investido.`
+    } else if (multiplo > 0) {
+      const porcentagemRecuperada = (multiplo * 100).toFixed(0)
+      fraseConcetual = `Eficiência: Você já recuperou ${porcentagemRecuperada}% do valor investido na mentoria em novo faturamento.`
+    } else if (deltaAcumulado === 0) {
+      fraseConcetual = `Neste momento, você mantém o cenário neutro de entrada. Aplique as estratégias do Clube para escalar seus resultados.`
+    } else {
+      fraseConcetual = `Seu faturamento apresentou retração. O crescimento exige constância e realinhamento estratégico.`
     }
 
-    /**
-     * Create a new deal
-     */
-    async createDeal(deal: {
-        buyer_id: string;
-        amount: number;
-        description: string;
-        deal_date?: string;
-    }): Promise<{ success: boolean; data?: Deal; error?: string }> {
-        try {
-            const { data, error } = await supabase
-                .from('member_deals')
-                .insert({
-                    ...deal,
-                    deal_date: deal.deal_date || new Date().toISOString().split('T')[0]
-                })
-                .select()
-                .single();
+    return {
+      roi: multiplo, 
+      roiFormatado, fraseConcetual,
+      deltaAcumulado, faturamentoBase: base,
+      faturamentoAtual, valorPago, registros,
+      status: multiplo < 0 ? 'negativo' : 'ok'
+    }
+  }
 
-            if (error) throw error;
-
-            return { success: true, data };
-        } catch (error: any) {
-            logger.error('[ROI Service] Error creating deal:', error);
-            return { success: false, error: error.message };
-        }
+  // ─── Salvar novo registro ────────────────────────────────────────────────────
+  async salvarRegistroFaturamento(
+    socioId: string,
+    valor:   number,
+    tipo:    'onboarding' | 'trimestral' | 'manual',
+    fonte:   'app' | 'admin' = 'app'
+  ): Promise<RegistroFaturamento> {
+    // Auto-heal: se for o primeiro registro do usuário, force como onboarding
+    let tipoFinal = tipo;
+    if (tipo !== 'onboarding') {
+      const temBase = await this.temFaturamentoBase(socioId);
+      if (!temBase) {
+        tipoFinal = 'onboarding';
+      }
     }
 
-    /**
-     * Create a new referral
-     */
-    async createReferral(referral: {
-        receiver_id: string;
-        lead_name: string;
-        lead_email?: string;
-        lead_phone?: string;
-        notes?: string;
-    }): Promise<{ success: boolean; data?: Referral; error?: string }> {
-        try {
-            const { data, error } = await supabase
-                .from('member_referrals')
-                .insert(referral)
-                .select()
-                .single();
+    // Gerar periodo_referencia automaticamente
+    const now = new Date()
+    const ano = now.getFullYear()
+    const mes = now.getMonth() + 1
+    const trimestre = Math.ceil(mes / 3)
 
-            if (error) throw error;
+    const periodoReferencia = tipoFinal === 'manual'
+      ? `${ano}-${String(mes).padStart(2, '0')}`  // YYYY-MM
+      : `${ano}-Q${trimestre}`                     // YYYY-QN
 
-            return { success: true, data };
-        } catch (error: any) {
-            logger.error('[ROI Service] Error creating referral:', error);
-            return { success: false, error: error.message };
-        }
-    }
+    const { data, error } = await supabase
+      .from('registros_faturamento')
+      .insert({
+        socio_id:           socioId,
+        valor,
+        periodo_referencia: periodoReferencia,
+        tipo:               tipoFinal,
+        fonte,
+      })
+      .select()
+      .single()
 
-    /**
-     * Get top sellers ranking
-     */
-    async getTopSellers(limit: number = 10): Promise<RankingEntry[]> {
-        try {
-            const { data, error } = await supabase
-                .from('view_ranking_sellers')
-                .select('user_id, name, image_url, deal_count, total_amount')
-                .limit(limit);
+    if (error) throw error
+    return data
+  }
 
-            if (error) throw error;
+  // ─── Verificar se sócio já registrou faturamento base ───────────────────────
+  async temFaturamentoBase(socioId: string): Promise<boolean> {
+    const { count } = await supabase
+      .from('registros_faturamento')
+      .select('*', { count: 'exact', head: true })
+      .eq('socio_id', socioId)
+      .eq('tipo', 'onboarding')
 
-            // Map deal_count to count for RankingEntry interface
-            return (data || []).map(row => ({
-                user_id: row.user_id,
-                name: row.name,
-                image_url: row.image_url,
-                total_amount: row.total_amount,
-                count: row.deal_count
-            }));
-        } catch (error) {
-            logger.error('[ROI Service] Error fetching top sellers:', error);
-            return [];
-        }
-    }
+    return (count ?? 0) > 0
+  }
+  // ─── Atualizar registro existente ─────────────────────────────────────────────
+  async atualizarRegistroFaturamento(id: string, novoValor: number): Promise<void> {
+    const { error } = await supabase
+      .from('registros_faturamento')
+      .update({ valor: novoValor })
+      .eq('id', id)
+    if (error) throw error
+  }
 
-    /**
-     * Get top referrers ranking
-     */
-    async getTopReferrers(limit: number = 10): Promise<RankingEntry[]> {
-        try {
-            const { data, error } = await supabase
-                .from('view_ranking_referrers')
-                .select('user_id, name, image_url, referral_count, total_converted_amount')
-                .limit(limit);
-
-            if (error) throw error;
-
-            // Map referral_count to count and total_converted_amount to total_amount
-            return (data || []).map(row => ({
-                user_id: row.user_id,
-                name: row.name,
-                image_url: row.image_url,
-                total_amount: row.total_converted_amount,
-                count: row.referral_count
-            }));
-        } catch (error) {
-            logger.error('[ROI Service] Error fetching top referrers:', error);
-            return [];
-        }
-    }
+  // ─── Deletar registro ────────────────────────────────────────────────────────
+  async deletarRegistroFaturamento(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('registros_faturamento')
+      .delete()
+      .eq('id', id)
+    if (error) throw error
+  }
 }
 
 export const roiService = new RoiService();

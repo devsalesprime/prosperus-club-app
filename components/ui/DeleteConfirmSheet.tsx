@@ -29,12 +29,12 @@ export const DeleteConfirmSheet: React.FC<DeleteConfirmSheetProps> = ({
         <>
             {/* Overlay */}
             <div
-                className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+                className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
                 onClick={onCancel}
             />
 
             {/* Sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-50
+            <div className="fixed bottom-0 left-0 right-0 z-[10001]
                 bg-slate-900 border-t border-slate-800 rounded-t-3xl
                 p-6 pb-10
                 animate-in slide-in-from-bottom-4 duration-200"

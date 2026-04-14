@@ -26,6 +26,7 @@ import { supabase } from '../../lib/supabase';
 import { useSupportDocs } from '../support/SupportDocsSheet';
 import { AVAILABLE_TAGS, PARTNERSHIP_SECTORS, MAX_INTERESTS, TOTAL_STEPS } from './onboardingConstants';
 import { WelcomeStep, PhotoStep, TermsStep, ReadyStep } from './steps';
+import { roiService } from '../../services/roiService';
 
 interface OnboardingWizardProps {
     currentUser: ProfileData;
@@ -50,6 +51,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
     const [customInterest, setCustomInterest] = useState('');
+    const [faturamentoBase, setFaturamentoBase] = useState('');
+    const [faturamentoAtual, setFaturamentoAtual] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +132,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             if (!(formData.partnership_interests && formData.partnership_interests.length >= 1)) errs.partnership_interests = 'Selecione pelo menos 1 setor';
             if (formData.partnership_interests && formData.partnership_interests.length > MAX_INTERESTS) errs.partnership_interests = `Máximo ${MAX_INTERESTS} setores`;
             if (formData.partnership_interests?.includes('Outros') && !customInterest.trim()) errs.custom_interest = 'Descreva qual área';
+        } else if (s === 5) {
+            // Revenue Step (Opcional - não bloqueia o usuário)
+            // const valorNumerico = parseFloat(faturamentoBase.replace(/\./g, '').replace(',', '.')) || 0;
+            // if (valorNumerico <= 0) errs.faturamentoBase = 'Informe seu faturamento médio';
+        } else if (s === 6) {
+            // Terms
+            if (!acceptedTerms) errs.terms = 'Você precisa aceitar os Termos e Condições';
+            if (!acceptedPrivacy) errs.privacy = 'Você precisa aceitar a Política de Privacidade';
         }
         return errs;
     };
@@ -292,6 +303,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             // Save terms acceptance timestamps and custom interest
             await profileService.acceptTerms(currentUser.id, customInterest.trim() || null);
 
+            // Registro de ROI Inicial
+            const valorInicial = parseFloat(faturamentoBase.replace(/\./g, '').replace(',', '.'));
+            if (valorInicial > 0) {
+                try {
+                    await roiService.salvarRegistroFaturamento(currentUser.id, valorInicial, 'onboarding');
+                } catch (rErr) {
+                    console.error('Erro ao salvar ROI Inicial:', rErr);
+                }
+            }
+
+            // Registro de ROI Atual (se a pessoa já está há algum tempo no clube)
+            const valorAtual = parseFloat(faturamentoAtual.replace(/\./g, '').replace(',', '.'));
+            if (valorAtual > 0) {
+                try {
+                    // Pequeno atraso para garantir que este vá cronologicamente DEPOIS do onboarding
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    await roiService.salvarRegistroFaturamento(currentUser.id, valorAtual, 'manual');
+                } catch (rErr) {
+                    console.error('Erro ao salvar ROI Atual do Onboarding:', rErr);
+                }
+            }
+
+
             // Mark onboarding as complete
             await profileService.completeOnboarding(currentUser.id);
 
@@ -317,8 +351,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             case 2: return renderProfileInfo();
             case 3: return renderSocialTags();
             case 4: return renderStrategicProfile();
-            case 5: return renderTermsAcceptance();
-            case 6: return renderReady();
+            case 5: return renderRevenueStep();
+            case 6: return renderTermsAcceptance();
+            case 7: return renderReady();
             default: return null;
         }
     };
@@ -608,7 +643,80 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </div>
     );
 
-    // Step 5: Terms — extracted to TermsStep component
+    // Step 5: Revenue Initial Step
+    const renderRevenueStep = () => {
+        const formatInputCurrency = (val: string): string => {
+            const digits = val.replace(/\D/g, '');
+            if (!digits) return '';
+            const num = parseInt(digits, 10);
+            return new Intl.NumberFormat('pt-BR').format(num);
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="text-center mb-6">
+                    <h2 className="text-2xl font-bold text-white mb-1">Seu <span className="text-yellow-500">ROI</span> no Clube</h2>
+                    <p className="text-slate-400 text-sm">Base inicial para acompanhar seu crescimento</p>
+                </div>
+                
+                <div className="bg-[#031A2B] border border-[#052B48] rounded-xl p-6 relative overflow-hidden">
+                    <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                        Calculamos aqui o seu Retorno sobre Investimento (ROI).
+                        Se você já está no Clube há alguns meses, declare como era antes e como está agora para calibrar seu gráfico de evolução instantaneamente.
+                    </p>
+
+                    <label className="block text-[13px] font-bold text-slate-300 mb-2 uppercase tracking-wide">
+                        Faturamento médio: <span className="text-yellow-500">Quando entrou no clube</span> (Base)
+                    </label>
+                    <div style={{ position: 'relative', marginBottom: 24 }}>
+                        <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#95A4B4', fontWeight: 600 }}>R$</span>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={faturamentoBase}
+                            onChange={e => setFaturamentoBase(formatInputCurrency(e.target.value))}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                padding: '14px 16px 14px 44px',
+                                background: '#092135', border: `1px solid ${errors.faturamentoBase ? '#EF4444' : '#052B48'}`,
+                                borderRadius: 12, color: '#FCF7F0',
+                                fontSize: 18, fontWeight: 700,
+                                outline: 'none',
+                                transition: 'border 0.2s'
+                            }}
+                        />
+                    </div>
+
+                    <label className="block text-[13px] font-bold text-slate-300 mb-2 uppercase tracking-wide">
+                        Faturamento médio: <span className="text-emerald-400">Exatamente Hoje</span>
+                    </label>
+                    <div style={{ position: 'relative', marginBottom: 8 }}>
+                        <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#95A4B4', fontWeight: 600 }}>R$</span>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Deixe em branco se for o mesmo"
+                            value={faturamentoAtual}
+                            onChange={e => setFaturamentoAtual(formatInputCurrency(e.target.value))}
+                            style={{
+                                width: '100%', boxSizing: 'border-box',
+                                padding: '14px 16px 14px 44px',
+                                background: '#092135', border: `1px solid #052B48`,
+                                borderRadius: 12, color: '#FCF7F0',
+                                fontSize: 18, fontWeight: 700,
+                                outline: 'none',
+                                transition: 'border 0.2s'
+                            }}
+                        />
+                    </div>
+                    {errors.faturamentoBase && <p className="text-xs text-red-500 mt-2">{errors.faturamentoBase}</p>}
+                </div>
+            </div>
+        );
+    };
+
+    // Step 6: Terms — extracted to TermsStep component
     const renderTermsAcceptance = () => (
         <TermsStep
             acceptedTerms={acceptedTerms}
@@ -619,7 +727,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         />
     );
 
-    // Step 6: Ready — extracted to ReadyStep component
+    // Step 7: Ready — extracted to ReadyStep component
     const renderReady = () => {
         const completion = profileService.getProfileCompletionPercentage({
             ...currentUser,
@@ -702,10 +810,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     {step < totalSteps - 1 ? (
                         <button
                             onClick={handleNext}
-                            disabled={step === 5 && (!acceptedTerms || !acceptedPrivacy)}
-                            className={`flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition${step === 5 && (!acceptedTerms || !acceptedPrivacy) ? ' opacity-30 cursor-not-allowed' : ''}`}
+                            disabled={step === 6 && (!acceptedTerms || !acceptedPrivacy)}
+                            className={`flex items-center gap-1 bg-yellow-600 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-yellow-900/20 transition${step === 6 && (!acceptedTerms || !acceptedPrivacy) ? ' opacity-30 cursor-not-allowed' : ''}`}
                         >
-                            {step === 5 ? 'Entrar no clube' : 'Continuar'}
+                            {step === 6 ? 'Entrar no clube' : 'Continuar'}
                             <ChevronRight size={18} />
                         </button>
                     ) : (

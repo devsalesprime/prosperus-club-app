@@ -1,34 +1,21 @@
 // components/business/MyDealsScreen.tsx
 // Tela de Meus Negócios (ROI) - Prosperus Club App v2.5
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Plus, DollarSign, ShoppingBag, Loader2, FileX, TrendingUp, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, DollarSign, ShoppingBag, Loader2, FileX } from 'lucide-react';
 import { Deal } from '../../types';
 import { businessService } from '../../services/businessService';
 import { DealCard } from './DealCard';
 import { RegisterDealModal } from './RegisterDealModal';
 
-const JourneyDashboard = lazy(() => import('../tools/journey/JourneyDashboard').then(m => ({ default: m.JourneyDashboard })));
-
 type TabType = 'sales' | 'purchases';
-type ModeType = 'internal' | 'global';
 
 export const MyDealsScreen: React.FC = () => {
-    const [mode, setMode] = useState<ModeType>(
-        window.location.hash === '#global-journey' ? 'global' : 'internal'
-    );
     const [activeTab, setActiveTab] = useState<TabType>('sales');
     const [deals, setDeals] = useState<Deal[]>([]);
     const [pendingCount, setPendingCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-
-    // Clean the hash when entering via deep link
-    useEffect(() => {
-        if (window.location.hash === '#global-journey') {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }, []);
 
     const loadDeals = async () => {
         setLoading(true);
@@ -52,10 +39,8 @@ export const MyDealsScreen: React.FC = () => {
     };
 
     useEffect(() => {
-        if (mode === 'internal') {
-            loadDeals();
-        }
-    }, [activeTab, mode]);
+        loadDeals();
+    }, [activeTab]);
 
     const handleDealRegistered = () => {
         loadDeals();
@@ -63,105 +48,74 @@ export const MyDealsScreen: React.FC = () => {
 
     return (
         <div className="deals-screen">
-            <div className="flex bg-slate-900/80 p-1.5 rounded-2xl mb-8 border border-slate-800">
-                <button 
-                    onClick={() => setMode('internal')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold transition-all ${
-                        mode === 'internal' 
-                        ? 'bg-[#CA9A43] text-[#031726] shadow-lg shadow-[#CA9A43]/20' 
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                    <Users size={18} /> <span className="hidden sm:inline">🤝 Negócios no Clube</span>
-                </button>
-                <button 
-                    onClick={() => setMode('global')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold transition-all ${
-                        mode === 'global' 
-                        ? 'bg-[#CA9A43] text-[#031726] shadow-lg shadow-[#CA9A43]/20' 
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                    <TrendingUp size={18} /> <span className="hidden sm:inline">📈 Minha Evolução Global</span>
+            <div className="screen-header">
+                <h1>Meus Negócios</h1>
+                <button className="btn-register" onClick={() => setShowModal(true)}>
+                    <Plus size={18} />
+                    Registrar
                 </button>
             </div>
 
-            {mode === 'global' ? (
-                <Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="animate-spin text-[#CA9A43]" size={32} /></div>}>
-                    <JourneyDashboard />
-                </Suspense>
-            ) : (
-                <>
-                    <div className="screen-header">
-                        <h1>Meus Negócios</h1>
-                        <button className="btn-register" onClick={() => setShowModal(true)}>
-                            <Plus size={18} />
-                            Registrar
-                        </button>
-                    </div>
+            <div className="tabs">
+                <button
+                    className={`tab ${activeTab === 'sales' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('sales')}
+                >
+                    <DollarSign size={18} />
+                    Vendas
+                </button>
+                <button
+                    className={`tab ${activeTab === 'purchases' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('purchases')}
+                >
+                    <ShoppingBag size={18} />
+                    Compras
+                    {pendingCount > 0 && (
+                        <span className="pending-badge">{pendingCount}</span>
+                    )}
+                </button>
+            </div>
 
-                    <div className="tabs">
-                        <button
-                            className={`tab ${activeTab === 'sales' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('sales')}
-                        >
-                            <DollarSign size={18} />
-                            Vendas
-                        </button>
-                        <button
-                            className={`tab ${activeTab === 'purchases' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('purchases')}
-                        >
-                            <ShoppingBag size={18} />
-                            Compras
-                            {pendingCount > 0 && (
-                                <span className="pending-badge">{pendingCount}</span>
-                            )}
-                        </button>
+            <div className="deals-list">
+                {loading ? (
+                    <div className="loading-state">
+                        <Loader2 className="animate-spin" size={32} />
+                        <span>Carregando negócios...</span>
                     </div>
-
-                    <div className="deals-list">
-                        {loading ? (
-                            <div className="loading-state">
-                                <Loader2 className="animate-spin" size={32} />
-                                <span>Carregando negócios...</span>
-                            </div>
-                        ) : deals.length === 0 ? (
-                            <div className="empty-state">
-                                <FileX size={48} />
-                                <h3>Nenhum negócio encontrado</h3>
-                                <p>
-                                    {activeTab === 'sales'
-                                        ? 'Você ainda não registrou nenhuma venda.'
-                                        : 'Nenhuma compra registrada com você.'
-                                    }
-                                </p>
-                                {activeTab === 'sales' && (
-                                    <button className="btn-primary" onClick={() => setShowModal(true)}>
-                                        <Plus size={16} />
-                                        Registrar minha primeira venda
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            deals.map(deal => (
-                                <DealCard
-                                    key={deal.id}
-                                    deal={deal}
-                                    viewType={activeTab}
-                                    onStatusChange={loadDeals}
-                                />
-                            ))
+                ) : deals.length === 0 ? (
+                    <div className="empty-state">
+                        <FileX size={48} />
+                        <h3>Nenhum negócio encontrado</h3>
+                        <p>
+                            {activeTab === 'sales'
+                                ? 'Você ainda não registrou nenhuma venda.'
+                                : 'Nenhuma compra registrada com você.'
+                            }
+                        </p>
+                        {activeTab === 'sales' && (
+                            <button className="btn-primary" onClick={() => setShowModal(true)}>
+                                <Plus size={16} />
+                                Registrar minha primeira venda
+                            </button>
                         )}
                     </div>
+                ) : (
+                    deals.map(deal => (
+                        <DealCard
+                            key={deal.id}
+                            deal={deal}
+                            viewType={activeTab}
+                            onStatusChange={loadDeals}
+                        />
+                    ))
+                )}
+            </div>
 
-                    <RegisterDealModal
-                        isOpen={showModal}
-                        onClose={() => setShowModal(false)}
-                        onSuccess={handleDealRegistered}
-                    />
-                </>
-            )}
+            <RegisterDealModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                onSuccess={handleDealRegistered}
+            />
 
             <style>{`
                 .deals-screen {

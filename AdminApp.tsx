@@ -27,8 +27,7 @@ import {
   FileText,
   Target,
   LifeBuoy,
-  TrendingUp,
-  Landmark
+  TrendingUp
 } from 'lucide-react';
 import { AdminViewState, Member } from './types';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -43,7 +42,7 @@ const AnalyticsDashboard = React.lazy(() => import('./components/admin/Analytics
 const BannersModule = React.lazy(() => import('./components/admin/BannersModule').then(m => ({ default: m.BannersModule })));
 const AppSettingsModule = React.lazy(() => import('./components/admin/AppSettingsModule').then(m => ({ default: m.AppSettingsModule })));
 const AdminRoiManager = React.lazy(() => import('./components/admin/AdminRoiManager').then(m => ({ default: m.AdminRoiManager })));
-const AdminJourneyModule = React.lazy(() => import('./components/admin/journey/AdminJourneyModule').then(m => ({ default: m.AdminJourneyModule })));
+const ROIAdminModule = React.lazy(() => import('./components/admin/ROIAdminModule').then(m => ({ default: m.ROIAdminModule })));
 const AdminSolutions = React.lazy(() => import('./components/admin/AdminSolutions').then(m => ({ default: m.AdminSolutions })));
 const AdminMemberProgress = React.lazy(() => import('./components/admin/AdminMemberProgress').then(m => ({ default: m.AdminMemberProgress })));
 const EventsModule = React.lazy(() => import('./components/admin/events').then(m => ({ default: m.EventsModule })));
@@ -118,7 +117,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
       { id: AdminViewState.TOOLS_PROGRESS, label: 'Relatórios', icon: <FileText size={18} /> },
       { id: AdminViewState.TOOLS_SOLUTIONS, label: 'Soluções', icon: <Wrench size={18} /> },
       { id: AdminViewState.ROI_AUDIT, label: 'ROI & Auditoria', icon: <Target size={18} /> },
-      { id: AdminViewState.JOURNEY, label: 'Evolução e PIB', icon: <Landmark size={18} /> },
+      { id: AdminViewState.ROI_GROWTH, label: 'Crescimento (ROI)', icon: <TrendingUp size={18} /> },
     ],
   },
   {
@@ -286,7 +285,7 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
       case AdminViewState.BANNERS: return <BannersModule />;
       case AdminViewState.CATEGORIES: return <CategoriesModule />;
       case AdminViewState.ROI_AUDIT: return <AdminRoiManager />;
-      case AdminViewState.JOURNEY: return <AdminJourneyModule />;
+      case AdminViewState.ROI_GROWTH: return <ROIAdminModule />;
       case AdminViewState.MEMBER_FILES: return <AdminFilesModule />;
       case AdminViewState.BENEFITS_APPROVAL: return <AdminBenefitsApproval />;
       case AdminViewState.SETTINGS: return <AppSettingsModule />;

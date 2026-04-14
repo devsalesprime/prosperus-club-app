@@ -35,7 +35,7 @@ export enum AdminViewState {
   NOTIFICATIONS = 'NOTIFICATIONS', // Novo
   MESSAGES = 'MESSAGES', // Novo (Moderação)
   ROI_AUDIT = 'ROI_AUDIT', // Business Core Admin
-  JOURNEY = 'JOURNEY', // Evolução Financeira / PIB Global
+  ROI_GROWTH = 'ROI_GROWTH', // Admin de ROI de Crescimento (Faturamento)
   MEMBER_FILES = 'MEMBER_FILES', // Arquivos do Sócio
   BIRTHDAYS = 'BIRTHDAYS', // Aniversários e Homenagens
   BENEFITS_APPROVAL = 'BENEFITS_APPROVAL', // Moderação de Benefícios
@@ -65,6 +65,11 @@ export interface Member {
   what_i_need?: string;
   partnership_interests?: string[];
   pitch_video_url?: string;
+  
+  // Business Core & ROI Fields
+  valor_pago_mentoria?: number | null;
+  data_entrada_clube?: string | null;
+  hubspot_deal_id?: string | null;
 
   // PRD v2.0 - Gap 5: Benefício Exclusivo
   exclusiveBenefit?: {
@@ -419,22 +424,4 @@ export interface BusinessStats {
   referralsSent: number;
   referralsReceived: number;
   conversions: number;
-}
-
-export interface JourneyMilestone {
-  id: string;
-  user_id: string;
-  revenue_amount: number;
-  milestone_title: string;
-  achieved_at: string;
-  created_at: string;
-}
-
-export interface AdminJourneyMilestone extends JourneyMilestone {
-  profiles?: {
-    id: string;
-    name: string;
-    company: string | null;
-    image_url: string | null;
-  };
 }

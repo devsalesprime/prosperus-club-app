@@ -20,4 +20,4 @@ export const PARTNERSHIP_SECTORS = [
 ];
 
 export const MAX_INTERESTS = 5;
-export const TOTAL_STEPS = 7;
+export const TOTAL_STEPS = 8;

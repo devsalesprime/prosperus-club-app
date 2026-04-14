@@ -7,8 +7,6 @@ interface MyProgressViewProps {
     onBack: () => void;
 }
 
-import { JourneyDashboard } from './journey/JourneyDashboard';
-
 export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
     const [reports, setReports] = useState<MemberReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -133,17 +131,14 @@ export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-8">
-                <div>
-                    <h2 className="text-sm font-semibold text-prosperus-grey uppercase tracking-wider mb-4">Métricas Pessoais</h2>
-                    <JourneyDashboard />
-                </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <p className="text-sm text-prosperus-grey mb-2">
+                    Acompanhe sua evolução e performance gerada pelos nossos consultores.
+                </p>
 
-                <div className="border-t border-slate-800/80 pt-6">
-                    <h2 className="text-sm font-semibold text-prosperus-grey uppercase tracking-wider mb-4">Relatórios Oficiais</h2>
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-prosperus-grey">
-                            <Loader2 className="animate-spin mb-4" size={32} />
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-prosperus-grey">
+                        <Loader2 className="animate-spin mb-4" size={32} />
                         <p>Buscando relatórios seguros...</p>
                     </div>
                 ) : reports.length === 0 ? (
@@ -227,7 +222,6 @@ export const MyProgressView: React.FC<MyProgressViewProps> = ({ onBack }) => {
                         ))}
                     </div>
                 )}
-                </div>
             </div>
 
             {/* Preview Modal — iframe com blob URL */}
