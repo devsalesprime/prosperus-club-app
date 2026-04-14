@@ -6,7 +6,7 @@ import { notificationTriggers } from '../../services/notificationTriggers';
 import { AdminPageHeader, AdminLoadingState, AdminTable, AdminActionButton, AdminModal } from './shared';
 import DeleteConfirmSheet from '../ui/DeleteConfirmSheet';
 import { roiService } from '../../services/roiService';
-import { RefreshCw, Bell, Edit, Check, Trash2 } from 'lucide-react';
+import { RefreshCw, Bell, Edit, Check, Trash2, Search, X, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface RoiSocio {
     socio_id: string;
@@ -55,6 +55,12 @@ export const ROIAdminModule: React.FC = () => {
     const [socios, setSocios] = useState<RoiSocio[]>([]);
     const [loading, setLoading] = useState(true);
     const [sendingPush, setSendingPush] = useState(false);
+    
+    // Filters and Pagination
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
     
     // Modal Edit
     const [editingSocio, setEditingSocio] = useState<RoiSocio | null>(null);
@@ -182,6 +188,22 @@ export const ROIAdminModule: React.FC = () => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
     };
 
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, pageSize]);
+
+    const filteredSocios = socios.filter((s) => {
+        const term = searchTerm.toLowerCase().trim();
+        const matchesSearch = !term || s.name.toLowerCase().includes(term);
+        const matchesStatus = statusFilter === 'ALL' 
+            ? true 
+            : statusFilter === 'APPROVED' 
+                ? s.is_roi_approved 
+                : !s.is_roi_approved;
+        return matchesSearch && matchesStatus;
+    });
+
+    const totalPages = Math.max(1, Math.ceil(filteredSocios.length / pageSize));
+    const displaySocios = filteredSocios.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -217,6 +239,41 @@ export const ROIAdminModule: React.FC = () => {
                 }
             />
 
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 w-full">
+                <div className="relative flex-1 w-full">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar sócio por nome..."
+                        className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-9 py-2.5 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-emerald-600/50 focus:ring-1 focus:ring-emerald-600/20 transition"
+                    />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                    <Filter size={14} className="text-slate-500 hidden md:block" />
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-emerald-600/50 transition w-full md:w-auto min-w-[140px]"
+                    >
+                        <option value="ALL">Status: Todos</option>
+                        <option value="APPROVED">✅ Aprovados</option>
+                        <option value="PENDING">⏳ Pendentes</option>
+                    </select>
+                </div>
+            </div>
+
             <AdminTable>
                 <table className="w-full min-w-[800px] text-left text-sm text-slate-400 whitespace-nowrap">
                     <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
@@ -231,7 +288,7 @@ export const ROIAdminModule: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                        {socios.map((s) => (
+                        {displaySocios.map((s) => (
                             <tr key={s.socio_id} className="hover:bg-slate-800/50 transition-colors">
                                 <td className="px-6 py-4 font-bold text-white">{s.name}</td>
                                 <td className="px-6 py-4">{formatBRL(s.valor_pago_mentoria)}</td>
@@ -280,7 +337,7 @@ export const ROIAdminModule: React.FC = () => {
                                 </td>
                             </tr>
                         ))}
-                        {socios.length === 0 && (
+                        {displaySocios.length === 0 && (
                             <tr>
                                 <td colSpan={7} className="px-6 py-8 text-center text-slate-600">
                                     Nenhum membro encontrado.
@@ -290,6 +347,44 @@ export const ROIAdminModule: React.FC = () => {
                     </tbody>
                 </table>
             </AdminTable>
+
+            {/* Pagination UI */}
+            {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">Mostrar</span>
+                        <select
+                            value={pageSize}
+                            onChange={e => setPageSize(Number(e.target.value))}
+                            className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-emerald-600/50 transition"
+                        >
+                            {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                        <span className="text-xs text-slate-500">
+                            Página {currentPage} de {totalPages} ({filteredSocios.length} total)
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        <span className="text-sm text-slate-400 px-3">
+                            {currentPage} / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Modal de Edição */}
             {editingSocio && (
