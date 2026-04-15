@@ -102,6 +102,14 @@ class AnalyticsService {
     }
 
     /**
+     * Alias for trackEvent with null user (used for generic telemetry)
+     */
+    logEvent(eventName: string, metadata?: Record<string, any>): Promise<void> {
+        this.trackEvent(null, eventName as AnalyticsEventType, metadata);
+        return Promise.resolve();
+    }
+
+    /**
      * Convenience methods for common events
      */
     trackPageView(userId: string | null, pageName: string, previousPage?: string): void {

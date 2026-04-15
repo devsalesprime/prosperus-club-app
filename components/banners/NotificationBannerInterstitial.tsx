@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { NotificationBanner } from '../../services/notificationBannerService'
+import { analyticsService } from '../../services/analyticsService'
 
 interface Props {
   banner: NotificationBanner
@@ -24,14 +25,16 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
     return () => clearTimeout(timer)
   }, [secondsLeft])
 
-  const handleSkip = useCallback(() => {
+  const handleSkipClick = useCallback(() => {
+    analyticsService.logEvent('BANNER_INTERACTION', { action: 'skip_clicked', banner_name: banner.title }).catch(console.error);
     if (!canSkip) return
     onDismiss()
-  }, [canSkip, onDismiss])
+  }, [canSkip, onDismiss, banner.title])
 
-  const handleAction = useCallback(() => {
+  const handleCtaClick = useCallback(() => {
+    analyticsService.logEvent('BANNER_INTERACTION', { action: 'cta_clicked', banner_name: banner.title }).catch(console.error);
     onSkip(banner.deep_link)
-  }, [banner.deep_link, onSkip])
+  }, [banner.deep_link, onSkip, banner.title])
 
   // Progresso do countdown (0 → 1)
   const progress = 1 - secondsLeft / (banner.skip_delay ?? 5)
@@ -121,7 +124,7 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
         ) : (
           /* Botão pular */
           <button
-            onClick={handleSkip}
+            onClick={handleSkipClick}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -152,12 +155,14 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
       </div>
 
       {/* Label do link (opcional — Double Pill High Ticket CTA) */}
+      {/* Label do link e Ghost Button (Apenas se o banner permitir pular e tiver label) */}
       {banner.link_label && (
-        <div className="absolute bottom-[135px] left-1/2 -translate-x-1/2 z-30 flex">
-          {/* A CASCA EXTERNA (Glass Halo) */}
+        <div className="absolute bottom-[130px] md:bottom-[140px] left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-4">
+          
+          {/* AÇÃO PRINCIPAL: A CASCA EXTERNA (Glass Halo) */}
           <div
             className="inline-flex p-[5px] md:p-[6px] rounded-full bg-white/10 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.15)] transition-transform hover:scale-105 active:scale-95 cursor-pointer group"
-            onClick={handleAction}
+            onClick={handleCtaClick}
           >
             {/* O MIOLO DOURADO (Gold Pill) */}
             <button
@@ -166,6 +171,17 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
               {banner.link_label}
             </button>
           </div>
+
+          {/* AÇÃO SECUNDÁRIA: Botão Fantasma (Ghost Button - Pular) */}
+          {canSkip && (
+            <button 
+              onClick={handleSkipClick}
+              className="text-white/60 hover:text-white text-xs md:text-sm font-medium tracking-widest uppercase transition-colors duration-300 hover:underline underline-offset-4 cursor-pointer outline-none drop-shadow-md active:scale-95"
+            >
+              Pular
+            </button>
+          )}
+
         </div>
       )}
     </div>

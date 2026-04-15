@@ -23,6 +23,7 @@ export type AnalyticsEventType =
     | 'FILE_DOWNLOAD'      // Download de arquivo
     | 'REPORT_VIEW'        // Visualização de relatório
     | 'GALLERY_VIEW'       // Visualização de galeria de fotos
+    | 'BANNER_INTERACTION' // Interação com Banners Promocionais (Ex: pop-up/interstitial)
     | 'ERROR';             // Erro capturado
 
 export interface AnalyticsEvent {
