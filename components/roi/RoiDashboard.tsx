@@ -133,7 +133,7 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
             />
             <MetricCard
               icon={<Target size={14} />}
-              label="Valor de Investimento no Prosperus"
+              label="Valor Investido no Prosperus"
               value={formatCurrency(roiData.valorPago)}
               isInvestment
             />
@@ -165,17 +165,16 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
 
 function MetricCard({ icon, label, value, highlight, isInvestment, isPending, onClick }: { icon: React.ReactNode, label: string; value: string; highlight?: boolean, isInvestment?: boolean, isPending?: boolean, onClick?: () => void }) {
   return (
-    <div 
+    <div
       onClick={isPending ? onClick : undefined}
-      className={`p-4 rounded-2xl border transition-colors ${
-        isPending
+      className={`p-4 rounded-2xl border transition-colors ${isPending
           ? 'bg-[#CA9A43]/5 border-dashed border-[#CA9A43]/50 cursor-pointer hover:bg-[#CA9A43]/10'
           : highlight
             ? 'bg-gradient-to-br from-[#082846] to-[#041E32] border-yellow-500/30 shadow-lg shadow-yellow-900/10'
             : isInvestment
               ? 'bg-slate-900/50 border-slate-700/50'
               : 'bg-[#031A2B]/60 border-[#052B48]'
-      }`}>
+        }`}>
       <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider mb-1 ${isPending ? 'text-[#CA9A43]' : highlight ? 'text-yellow-500' : isInvestment ? 'text-slate-500' : 'text-slate-400'}`}>
         {icon} {label}
       </div>
