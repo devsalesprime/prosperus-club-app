@@ -538,6 +538,16 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         });
     }, [currentUser, roiRefreshCounter]);
 
+    // Listener global para deeplink de cadastro de Faturamento (Banners)
+    useEffect(() => {
+        const handleOpenRoi = () => {
+            setTipoRegistro('manual');
+            setShowRegistrarFaturamento(true);
+        };
+        window.addEventListener('open-roi-modal', handleOpenRoi);
+        return () => window.removeEventListener('open-roi-modal', handleOpenRoi);
+    }, []);
+
     // Check if there are published articles
     useEffect(() => {
         articleService.getPublishedArticles().then(result => {

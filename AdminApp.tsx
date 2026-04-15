@@ -40,6 +40,7 @@ const AdminNotifications = React.lazy(() => import('./components/notifications/A
 const AdminChatManager = React.lazy(() => import('./components/AdminChatManager').then(m => ({ default: m.AdminChatManager })));
 const AnalyticsDashboard = React.lazy(() => import('./components/admin/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
 const BannersModule = React.lazy(() => import('./components/admin/BannersModule').then(m => ({ default: m.BannersModule })));
+const NotificationBannersModule = React.lazy(() => import('./components/admin/NotificationBannersModule').then(m => ({ default: m.NotificationBannersModule })));
 const AppSettingsModule = React.lazy(() => import('./components/admin/AppSettingsModule').then(m => ({ default: m.AppSettingsModule })));
 const AdminRoiManager = React.lazy(() => import('./components/admin/AdminRoiManager').then(m => ({ default: m.AdminRoiManager })));
 const ROIAdminModule = React.lazy(() => import('./components/admin/ROIAdminModule').then(m => ({ default: m.ROIAdminModule })));
@@ -126,6 +127,7 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
     icon: <Settings size={18} />,
     items: [
       { id: AdminViewState.NOTIFICATIONS, label: 'Notificações', icon: <BellRing size={18} /> },
+      { id: AdminViewState.NOTIFICATION_BANNERS, label: 'Banners de Notificação', icon: <Bell size={18} /> },
       { id: AdminViewState.MESSAGES, label: 'Mensagens', icon: <MessageSquare size={18} /> },
       { id: AdminViewState.CATEGORIES, label: 'Tags / Categorias', icon: <Tags size={18} /> },
       { id: AdminViewState.SETTINGS, label: 'Suporte', icon: <LifeBuoy size={18} /> },
@@ -283,6 +285,7 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
       case AdminViewState.ARTICLES: return <ArticlesModule />;
       case AdminViewState.GALLERY: return <GalleryModule DataTable={DataTable} />;
       case AdminViewState.BANNERS: return <BannersModule />;
+      case AdminViewState.NOTIFICATION_BANNERS: return <NotificationBannersModule />;
       case AdminViewState.CATEGORIES: return <CategoriesModule />;
       case AdminViewState.ROI_AUDIT: return <AdminRoiManager />;
       case AdminViewState.ROI_GROWTH: return <ROIAdminModule />;

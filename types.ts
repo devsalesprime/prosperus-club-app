@@ -33,6 +33,7 @@ export enum AdminViewState {
   CATEGORIES = 'CATEGORIES',
   ANALYTICS = 'ANALYTICS', // Novo
   NOTIFICATIONS = 'NOTIFICATIONS', // Novo
+  NOTIFICATION_BANNERS = 'NOTIFICATION_BANNERS', // Banners de Notificação Fullscreen
   MESSAGES = 'MESSAGES', // Novo (Moderação)
   ROI_AUDIT = 'ROI_AUDIT', // Business Core Admin
   ROI_GROWTH = 'ROI_GROWTH', // Admin de ROI de Crescimento (Faturamento)

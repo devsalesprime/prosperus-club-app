@@ -143,8 +143,25 @@ const BannerSlide: React.FC<BannerSlideProps> = ({ banner, onClick }) => {
                 style={{ backgroundImage: `url(${banner.image_url})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-prosperus-navy via-prosperus-navy/40 to-transparent" />
-            <div className="absolute inset-0 p-6 flex flex-col justify-end pb-12">
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {/* 🚨 ANCORAGEM: Exatos 180px do rodapé da imagem */}
+            <div className="absolute bottom-[180px] left-4 md:left-12 z-30 flex">
+              {/* A CASCA EXTERNA (Glass Halo) */}
+              <div 
+                className="inline-flex p-[5px] md:p-[6px] rounded-full bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.15)] transition-transform hover:scale-105 active:scale-95 cursor-pointer group"
+                onClick={(e) => { e.stopPropagation(); handleClick(); }}
+              >
+                {/* O MIOLO DOURADO (Gold Pill) */}
+                <button
+                  className="px-8 py-2.5 md:px-10 md:py-3.5 rounded-full bg-gradient-to-r from-[#C89B3C] via-[#E2B75A] to-[#FDF0A6] text-[#031726] font-semibold text-lg md:text-xl tracking-wide shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),0_4px_10px_rgba(0,0,0,0.1)] flex items-center justify-center whitespace-nowrap border border-[#FCE79A]/50 outline-none"
+                >
+                  {banner.link_type === 'EXTERNAL' ? 'Acessar Link' : 'Saber mais'}
+                </button>
+              </div>
+            </div>
+
+            <div className="absolute inset-0 p-6 flex flex-col justify-end pb-12 pointer-events-none">
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-auto w-full pr-12">
                     <h2 className="text-xl md:text-3xl font-bold text-prosperus-white drop-shadow-md mb-1 leading-tight">
                         {banner.title}
                     </h2>
@@ -155,7 +172,7 @@ const BannerSlide: React.FC<BannerSlideProps> = ({ banner, onClick }) => {
                     )}
                 </div>
                 {banner.link_url && banner.link_type === 'EXTERNAL' && (
-                    <ExternalLink size={16} className="absolute top-4 right-4 text-white/50" />
+                    <ExternalLink size={16} className="absolute top-4 right-4 text-white/50 pointer-events-auto" />
                 )}
             </div>
         </div>

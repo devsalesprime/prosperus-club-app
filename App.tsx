@@ -24,6 +24,8 @@ import { PushAutoSubscriber } from './components/push/PushAutoSubscriber';
 import { UnreadCountProvider } from './contexts/UnreadCountContext';
 import { SupportDocsProvider } from './components/support/SupportDocsSheet';
 import { ProspToaster } from './utils/toast';
+import { NotificationBannerInterstitial } from './components/banners/NotificationBannerInterstitial';
+import { useNotificationBanner } from './hooks/useNotificationBanner';
 
 // --- Lazy: Onboarding & Admin (heavy, rarely needed initially) ---
 const OnboardingWizard = React.lazy(() => import('./components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
@@ -108,6 +110,29 @@ const AppShell: React.FC = () => {
             tour.checkPendingReplay();
         }
     }, [currentUser, showOnboarding, authContextLoading]);
+
+    // ─── Banner Interstitial ──────────────────────────
+    const { activeBanner, dismissBanner } = useNotificationBanner(
+        currentUser?.id ?? null,
+        currentUser?.role ?? null
+    );
+
+    const resolveDeepLink = (link: string) => {
+        switch (link) {
+            case '/app/dashboard': setView(ViewState.DASHBOARD); break;
+            case '/app/socios': setView(ViewState.MEMBERS); break;
+            case '/app/agenda': setView(ViewState.AGENDA); break;
+            case '/app/tools/solucoes': setView(ViewState.SOLUTIONS); break;
+            case '/app/roi-socios': setView(ViewState.DEALS); break;
+            case '/app/roi-crescimento': 
+                 setView(ViewState.DASHBOARD);
+                 setTimeout(() => window.dispatchEvent(new CustomEvent('open-roi-modal')), 500);
+                 break;
+            case '/app/notificacoes': setView(ViewState.NOTIFICATIONS); break;
+            case '/app/chat': setView(ViewState.MESSAGES); break;
+            default: setView(ViewState.DASHBOARD); break;
+        }
+    };
 
     // ─── Guard 0: Blocked User ───────────────────────
     if (isBlocked) {
@@ -260,6 +285,16 @@ const AppShell: React.FC = () => {
     // ─── Main App ────────────────────────────────────
     return (
         <UnreadCountProvider userId={session?.user?.id}>
+            {activeBanner && (
+              <NotificationBannerInterstitial
+                banner={activeBanner}
+                onSkip={(deepLink) => {
+                  dismissBanner(deepLink);
+                  if (deepLink) resolveDeepLink(deepLink);
+                }}
+                onDismiss={() => dismissBanner()}
+              />
+            )}
             <AppLayout>
                 <Suspense fallback={<AppSkeleton />}>
                     <ViewSwitcher />
