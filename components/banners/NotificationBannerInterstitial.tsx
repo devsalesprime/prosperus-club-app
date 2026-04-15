@@ -5,14 +5,14 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { NotificationBanner } from '../../services/notificationBannerService'
 
 interface Props {
-  banner:    NotificationBanner
-  onSkip:    (deepLink: string) => void
+  banner: NotificationBanner
+  onSkip: (deepLink: string) => void
   onDismiss: () => void
 }
 
 export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Props) {
   const [secondsLeft, setSecondsLeft] = useState(banner.skip_delay ?? 5)
-  const [canSkip, setCanSkip]         = useState(false)
+  const [canSkip, setCanSkip] = useState(false)
 
   // ─── Countdown ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -31,18 +31,18 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
 
   // Progresso do countdown (0 → 1)
   const progress = 1 - secondsLeft / (banner.skip_delay ?? 5)
-  const radius   = 14
-  const circ     = 2 * Math.PI * radius
+  const radius = 14
+  const circ = 2 * Math.PI * radius
   const dashOffset = circ * (1 - progress)
 
   return (
     <div
       style={{
-        position:   'fixed',
-        inset:      0,
-        zIndex:     9999,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
         background: '#000',
-        display:    'flex',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -52,20 +52,20 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
         src={banner.image_url}
         alt={banner.title}
         style={{
-          width:      '100%',
-          height:     '100%',
-          objectFit:  'cover',
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
           objectPosition: 'center',
-          display:    'block',
+          display: 'block',
         }}
         draggable={false}
       />
 
       {/* Overlay superior — gradient para o badge de skip ficar legível */}
       <div style={{
-        position:   'absolute',
-        top:        0, left: 0, right: 0,
-        height:     120,
+        position: 'absolute',
+        top: 0, left: 0, right: 0,
+        height: 120,
         background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
         pointerEvents: 'none',
       }} />
@@ -73,21 +73,21 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
       {/* Badge de skip — canto superior direito */}
       <div style={{
         position: 'absolute',
-        top:      48,   // abaixo da notch iOS
-        right:    16,
+        top: 48,   // abaixo da notch iOS
+        right: 16,
       }}>
         {!canSkip ? (
           /* Countdown circular */
           <div style={{
-            display:        'flex',
-            alignItems:     'center',
-            gap:            8,
-            background:     'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'rgba(0,0,0,0.55)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            borderRadius:   24,
-            padding:        '6px 12px 6px 8px',
-            border:         '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 24,
+            padding: '6px 12px 6px 8px',
+            border: '1px solid rgba(255,255,255,0.15)',
           }}>
             {/* SVG countdown ring */}
             <svg width={36} height={36} viewBox="0 0 36 36">
@@ -119,21 +119,21 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
           <button
             onClick={handleSkip}
             style={{
-              display:        'flex',
-              alignItems:     'center',
-              gap:            6,
-              background:     'rgba(0,0,0,0.65)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(0,0,0,0.65)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
-              border:         '1.5px solid rgba(255,218,113,0.6)',
-              borderRadius:   24,
-              padding:        '8px 16px',
-              color:          '#FFDA71',
-              fontSize:       14,
-              fontWeight:     700,
-              cursor:         'pointer',
-              letterSpacing:  '0.02em',
-              transition:     'transform 0.15s, opacity 0.15s',
+              border: '1.5px solid rgba(255,218,113,0.6)',
+              borderRadius: 24,
+              padding: '8px 16px',
+              color: '#FFDA71',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              letterSpacing: '0.02em',
+              transition: 'transform 0.15s, opacity 0.15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05)')}
             onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -147,27 +147,21 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
         )}
       </div>
 
-      {/* Label do link (opcional — canto inferior) */}
-      {banner.link_label && canSkip && (
-        <div
-          onClick={handleSkip}
-          style={{
-            position:  'absolute',
-            bottom:    40,
-            left:      '50%',
-            transform: 'translateX(-50%)',
-            background: 'linear-gradient(135deg, #FFDA71, #CA9A43)',
-            borderRadius: 14,
-            padding:   '12px 28px',
-            cursor:    'pointer',
-            fontSize:  15,
-            fontWeight: 700,
-            color:     '#031A2B',
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 20px rgba(255,218,113,0.35)',
-          }}
-        >
-          {banner.link_label} →
+      {/* Label do link (opcional — Double Pill High Ticket CTA) */}
+      {banner.link_label && (
+        <div className="absolute bottom-[135px] left-1/2 -translate-x-1/2 z-30 flex">
+          {/* A CASCA EXTERNA (Glass Halo) */}
+          <div
+            className="inline-flex p-[5px] md:p-[6px] rounded-full bg-white/10 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.15)] transition-transform hover:scale-105 active:scale-95 cursor-pointer group"
+            onClick={handleSkip}
+          >
+            {/* O MIOLO DOURADO (Gold Pill) */}
+            <button
+              className="px-8 py-2 md:px-10 md:py-3.5 rounded-full bg-gradient-to-r from-[#C89B3C] via-[#E2B75A] to-[#FDF0A6] text-[#031726] font-semibold text-lg md:text-xl tracking-wide shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),0_4px_10px_rgba(0,0,0,0.1)] flex items-center justify-center whitespace-nowrap border border-[#FCE79A]/50 outline-none"
+            >
+              {banner.link_label}
+            </button>
+          </div>
         </div>
       )}
     </div>
