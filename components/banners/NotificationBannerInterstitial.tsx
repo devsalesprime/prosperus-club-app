@@ -26,8 +26,12 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
 
   const handleSkip = useCallback(() => {
     if (!canSkip) return
+    onDismiss()
+  }, [canSkip, onDismiss])
+
+  const handleAction = useCallback(() => {
     onSkip(banner.deep_link)
-  }, [canSkip, banner.deep_link, onSkip])
+  }, [banner.deep_link, onSkip])
 
   // Progresso do countdown (0 → 1)
   const progress = 1 - secondsLeft / (banner.skip_delay ?? 5)
@@ -153,7 +157,7 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
           {/* A CASCA EXTERNA (Glass Halo) */}
           <div
             className="inline-flex p-[5px] md:p-[6px] rounded-full bg-white/10 backdrop-blur-md border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.15)] transition-transform hover:scale-105 active:scale-95 cursor-pointer group"
-            onClick={handleSkip}
+            onClick={handleAction}
           >
             {/* O MIOLO DOURADO (Gold Pill) */}
             <button
