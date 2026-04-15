@@ -59,7 +59,7 @@ export function RegistrarFaturamentoModal({ socioId, tipo, onClose, onSuccess }:
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div style={{ background: '#031726', borderRadius: '20px 20px 0 0', padding: '8px 0 40px', width: '100%', maxWidth: 480 }}>
+      <div style={{ background: '#031726', borderRadius: '20px 20px 0 0', padding: '8px 0 110px', width: '100%', maxWidth: 480 }}>
 
         <div style={{ width: 40, height: 4, background: '#052B48', borderRadius: 2, margin: '8px auto 24px' }} />
 
