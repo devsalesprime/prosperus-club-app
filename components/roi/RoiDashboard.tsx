@@ -133,7 +133,7 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
             />
             <MetricCard
               icon={<Target size={14} />}
-              label="Custo da Mentoria"
+              label="Valor de Investimento no Prosperus"
               value={formatCurrency(roiData.valorPago)}
               isInvestment
             />
