@@ -16,6 +16,12 @@ export interface NotificationBanner {
   created_at:   string
 }
 
+export interface BannerMetrics {
+  totalViews: number;
+  ctaClicks: number;
+  skipClicks: number;
+}
+
 // ─── Buscar banner ativo não visto pelo usuário atual ────────────────────────
 // Retorna apenas 1 — o mais recente não visto nesta sessão
 async function getActiveBannerForUser(
@@ -113,11 +119,41 @@ async function getAllBanners(): Promise<NotificationBanner[]> {
   return data || []
 }
 
+async function getBannerMetrics(bannerId: string): Promise<BannerMetrics> {
+  // Views diretas da tabela isolada
+  const { count: views } = await supabase
+    .from('notification_banner_views')
+    .select('*', { count: 'exact', head: true })
+    .eq('banner_id', bannerId);
+
+  // Cliques capturados via Data Lake (analytics_events)
+  const { data: events } = await supabase
+    .from('analytics_events')
+    .select('metadata')
+    .eq('event_type', 'BANNER_INTERACTION')
+    .contains('metadata', { banner_id: bannerId });
+
+  let ctaClicks = 0;
+  let skipClicks = 0;
+
+  events?.forEach((e: any) => {
+      if (e.metadata?.action === 'cta_clicked') ctaClicks++;
+      if (e.metadata?.action === 'skip_clicked') skipClicks++;
+  });
+
+  return {
+    totalViews: views || 0,
+    ctaClicks,
+    skipClicks
+  };
+}
+
 export const notificationBannerService = {
   getActiveBannerForUser,
   markBannerAsSeen,
   createBanner,
   updateBanner,
   deleteBanner,
-  getAllBanners
+  getAllBanners,
+  getBannerMetrics
 };

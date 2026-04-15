@@ -17,7 +17,7 @@ import {
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
-import { notificationBannerService, NotificationBanner } from '../../services/notificationBannerService';
+import { notificationBannerService, NotificationBanner, BannerMetrics } from '../../services/notificationBannerService';
 import { supabase } from '../../lib/supabase';
 import {
     AdminPageHeader,
@@ -68,6 +68,49 @@ const toLocalDatetimeLocal = (dateInput?: string | Date | null): string => {
     if (isNaN(d.getTime())) return '';
     const offset = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+};
+
+// --- Mini Dashboard / Metrics Cell ---
+const BannerMetricsCell = ({ bannerId }: { bannerId: string }) => {
+    const [metrics, setMetrics] = useState<BannerMetrics | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        notificationBannerService.getBannerMetrics(bannerId)
+            .then(m => {
+                setMetrics(m);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
+    }, [bannerId]);
+
+    if (loading) return <span className="text-xs text-slate-500 animate-pulse">Calculando CTR...</span>;
+    if (!metrics) return <span className="text-xs text-slate-500">-</span>;
+
+    const views = metrics.totalViews || 0;
+    const cta = metrics.ctaClicks || 0;
+    const skip = metrics.skipClicks || 0;
+    const ctr = views > 0 ? ((cta / views) * 100).toFixed(1) : '0.0';
+
+    return (
+        <div className="flex flex-col gap-1 text-xs min-w-[120px]">
+            <div className="flex justify-between items-center bg-slate-900/50 rounded p-1.5 border border-slate-700/50">
+                <span className="text-slate-400">Views:</span>
+                <span className="text-white font-medium">{views}</span>
+            </div>
+            <div className="flex justify-between items-center bg-emerald-900/20 text-emerald-400 rounded p-1.5 border border-emerald-900/30 font-bold" title="Cliques no botão principal CTA">
+                <span>CTA:</span>
+                <span>{cta}</span>
+            </div>
+            <div className="flex justify-between items-center text-slate-500 px-1.5">
+                <span>Pulos:</span>
+                <span>{skip}</span>
+            </div>
+            <div className="text-yellow-500 font-bold mt-1 text-center bg-yellow-900/20 rounded py-1 border border-yellow-900/30">
+                CTR: {ctr}%
+            </div>
+        </div>
+    );
 };
 
 export const NotificationBannersModule: React.FC = () => {
@@ -330,7 +373,8 @@ export const NotificationBannersModule: React.FC = () => {
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Título</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Status</th>
                                 <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase hidden md:table-cell">Período</th>
-                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Função</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Conversão / CTR</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase hidden lg:table-cell">Função</th>
                                 <th className="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase">Ações</th>
                             </tr>
                         </thead>
@@ -365,6 +409,9 @@ export const NotificationBannersModule: React.FC = () => {
                                             </p>
                                         </td>
                                         <td className="px-4 py-3">
+                                            <BannerMetricsCell bannerId={banner.id} />
+                                        </td>
+                                        <td className="px-4 py-3 hidden lg:table-cell">
                                             <span className="text-sm text-slate-300 px-2 py-1 bg-slate-800 rounded">{getLabelByDeepLink(banner.deep_link)}</span>
                                         </td>
                                         <td className="px-4 py-3">

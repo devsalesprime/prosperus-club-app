@@ -26,15 +26,23 @@ export function NotificationBannerInterstitial({ banner, onSkip, onDismiss }: Pr
   }, [secondsLeft])
 
   const handleSkipClick = useCallback(() => {
-    analyticsService.logEvent('BANNER_INTERACTION', { action: 'skip_clicked', banner_name: banner.title }).catch(console.error);
+    analyticsService.logEvent('BANNER_INTERACTION', { 
+      action: 'skip_clicked', 
+      banner_id: banner.id,
+      banner_name: banner.title 
+    }).catch(console.error);
     if (!canSkip) return
     onDismiss()
-  }, [canSkip, onDismiss, banner.title])
+  }, [canSkip, onDismiss, banner.id, banner.title])
 
   const handleCtaClick = useCallback(() => {
-    analyticsService.logEvent('BANNER_INTERACTION', { action: 'cta_clicked', banner_name: banner.title }).catch(console.error);
+    analyticsService.logEvent('BANNER_INTERACTION', { 
+      action: 'cta_clicked', 
+      banner_id: banner.id,
+      banner_name: banner.title 
+    }).catch(console.error);
     onSkip(banner.deep_link)
-  }, [banner.deep_link, onSkip, banner.title])
+  }, [banner.deep_link, onSkip, banner.id, banner.title])
 
   // Progresso do countdown (0 → 1)
   const progress = 1 - secondsLeft / (banner.skip_delay ?? 5)
