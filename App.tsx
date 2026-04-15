@@ -289,10 +289,10 @@ const AppShell: React.FC = () => {
               <NotificationBannerInterstitial
                 banner={activeBanner}
                 onSkip={(deepLink) => {
-                  dismissBanner(deepLink);
+                  dismissBanner(deepLink, false); // false = clicou CTA = Exclusão Permanente
                   if (deepLink) resolveDeepLink(deepLink);
                 }}
-                onDismiss={() => dismissBanner()}
+                onDismiss={() => dismissBanner(undefined, true)} // true = pulou = Cache de 24h
               />
             )}
             <AppLayout>

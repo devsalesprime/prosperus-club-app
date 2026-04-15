@@ -21,9 +21,13 @@ export function useNotificationBanner(userId: string | null, userRole: string | 
     return () => clearTimeout(timer)
   }, [userId, userRole])
 
-  const dismissBanner = (deepLink?: string) => {
+  const dismissBanner = (deepLink?: string, isSkip: boolean = false) => {
     if (activeBanner) {
-      notificationBannerService.markBannerAsSeen(activeBanner.id, userId!)
+      if (isSkip) {
+        notificationBannerService.markBannerAsSkipped(activeBanner.id, userId!)
+      } else {
+        notificationBannerService.markBannerAsSeen(activeBanner.id, userId!)
+      }
     }
     setActiveBanner(null)
     return deepLink
