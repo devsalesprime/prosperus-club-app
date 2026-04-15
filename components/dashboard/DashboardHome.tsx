@@ -422,7 +422,7 @@ const PremiumNextEventCard = ({ event, onSelect, onViewAgenda }: { event: ClubEv
 
     return (
         <div className="bg-prosperus-card rounded-2xl overflow-hidden shadow-lg border border-prosperus-border flex flex-col mt-6">
-            <div 
+            <div
                 className="bg-prosperus-gold text-prosperus-navy px-6 py-5 flex items-center justify-between cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={onSelect}
             >
@@ -436,7 +436,7 @@ const PremiumNextEventCard = ({ event, onSelect, onViewAgenda }: { event: ClubEv
                 </div>
             </div>
 
-            <div 
+            <div
                 className="bg-prosperus-card p-6 flex flex-col gap-3 cursor-pointer group"
                 onClick={onSelect}
             >
@@ -451,7 +451,7 @@ const PremiumNextEventCard = ({ event, onSelect, onViewAgenda }: { event: ClubEv
                             {event.category === 'ONLINE' ? 'Online' : 'Presencial'}
                         </span>
                     </div>
-                    
+
                     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm border border-yellow-500/30 bg-yellow-900/20">
                         <Sparkles size={12} className="text-yellow-500" />
                         <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest">
@@ -459,11 +459,11 @@ const PremiumNextEventCard = ({ event, onSelect, onViewAgenda }: { event: ClubEv
                         </span>
                     </div>
                 </div>
-                
+
                 <h3 className="text-xl font-bold text-prosperus-white mt-1 leading-tight group-hover:text-yellow-500 transition-colors">
                     {event.title}
                 </h3>
-                
+
                 <div className="flex items-center gap-2 text-sm text-prosperus-grey mt-1">
                     {event.category === 'ONLINE' ? (
                         <VideoIcon size={14} className="text-emerald-400 shrink-0" />
@@ -471,19 +471,19 @@ const PremiumNextEventCard = ({ event, onSelect, onViewAgenda }: { event: ClubEv
                         <MapPin size={14} className="text-emerald-400 shrink-0" />
                     )}
                     <span className="truncate">
-                        {event.location 
-                            ? event.location 
-                            : (event.category === 'ONLINE' 
-                                ? (event.link?.includes('zoom') ? 'Zoom' 
-                                   : event.link?.includes('meet.google') ? 'Google Meet' 
-                                   : event.link?.includes('teams') ? 'Microsoft Teams' 
-                                   : 'Plataforma Online') 
+                        {event.location
+                            ? event.location
+                            : (event.category === 'ONLINE'
+                                ? (event.link?.includes('zoom') ? 'Zoom'
+                                    : event.link?.includes('meet.google') ? 'Google Meet'
+                                        : event.link?.includes('teams') ? 'Microsoft Teams'
+                                            : 'Plataforma Online')
                                 : 'A definir')}
                     </span>
                 </div>
             </div>
 
-            <div 
+            <div
                 className="bg-[#02111d] p-5 border-t border-white/5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-black/40 transition-colors group"
                 onClick={onViewAgenda}
             >
@@ -510,7 +510,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     const [hasNews, setHasNews] = useState(false);
     const [nextEvent, setNextEvent] = useState<ClubEvent | null>(null);
     const [selectedEvent, setSelectedEvent] = useState<ClubEvent | null>(null); // Modal state
-    
+
     // Novas vars do Roi C-Level:
     const [showRegistrarFaturamento, setShowRegistrarFaturamento] = useState(false);
     const [tipoRegistro, setTipoRegistro] = useState<'onboarding' | 'trimestral' | 'manual'>('manual');
@@ -521,17 +521,17 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
     // Verificação de Cohort (Nudge 90 dias)
     useEffect(() => {
         if (!currentUser) return;
-        
+
         roiService.getRegistrosFaturamento(currentUser.id).then(registros => {
             if (registros.length === 0) {
                 setNeedsRoiUpdate(true);
                 return;
             }
-            const sorted = [...registros].sort((a,b) => new Date(b.data_registro).getTime() - new Date(a.data_registro).getTime());
+            const sorted = [...registros].sort((a, b) => new Date(b.data_registro).getTime() - new Date(a.data_registro).getTime());
             const last = sorted[0];
             const diffTime = Math.abs(new Date().getTime() - new Date(last.data_registro).getTime());
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
+
             if (diffDays >= 90) {
                 setNeedsRoiUpdate(true);
             }
@@ -669,16 +669,16 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 {/* NUDGE DE COBRANÇA VIP (Fase 2) */}
                 {needsRoiUpdate && (
                     <div onClick={() => setShowRegistrarFaturamento(true)} className="w-full bg-[linear-gradient(145deg,#031726_0%,#052B48_100%)] border border-[#CA9A43] shadow-[0_0_15px_rgba(202,154,67,0.15)] rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer group hover:scale-[1.01] transition-all relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-[#CA9A43]/10 flex items-center justify-center shrink-0"> 
-                          <AlertTriangle className="text-[#CA9A43] animate-pulse" size={20} /> 
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-[#CA9A43]/10 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="text-[#CA9A43] animate-pulse" size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-bold text-sm md:text-base">Ciclo Financeiro Expirado</h3>
+                                <p className="text-slate-400 text-xs md:text-sm mt-0.5">Faz mais de 90 dias desde o seu último registro. Atualize agora para calibrar seu Múltiplo.</p>
+                            </div>
                         </div>
-                        <div>
-                          <h3 className="text-white font-bold text-sm md:text-base">Ciclo Financeiro Expirado</h3>
-                          <p className="text-slate-400 text-xs md:text-sm mt-0.5">Faz mais de 90 dias desde o seu último registro. Atualize agora para calibrar seu Múltiplo.</p>
-                        </div>
-                      </div>
-                      <button className="bg-[#CA9A43] text-[#031726] font-bold px-4 py-2 rounded-lg whitespace-nowrap group-hover:bg-[#FFDA71] transition-colors">Atualizar Agora</button>
+                        <button className="bg-[#CA9A43] text-[#031726] font-bold px-4 py-2 rounded-lg whitespace-nowrap group-hover:bg-[#FFDA71] transition-colors">Atualizar Agora</button>
                     </div>
                 )}
 
@@ -713,50 +713,49 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 {currentUser && (
                     <div className={`mt-4 roi-dashboard-widget ${isCLevelOpen ? '' : 'collapsed'}`} key={roiRefreshCounter}>
                         {/* CABEÇALHO CLICÁVEL PADRONIZADO */}
-                        <div 
-                          onClick={() => setIsCLevelOpen(!isCLevelOpen)}
-                          className="roi-header"
+                        <div
+                            onClick={() => setIsCLevelOpen(!isCLevelOpen)}
+                            className="roi-header"
                         >
-                          <TrendingUp className="roi-icon" size={20} />
-                          <h3>Meu Crescimento (C-Level)</h3>
-                          <ChevronUp 
-                              size={20} 
-                              className={`chevron-icon transition-transform ${isCLevelOpen ? 'rotate-0' : 'rotate-180'}`} 
-                          />
+                            <TrendingUp className="roi-icon" size={20} />
+                            <h3>Meu Crescimento</h3>
+                            <ChevronUp
+                                size={20}
+                                className={`chevron-icon transition-transform ${isCLevelOpen ? 'rotate-0' : 'rotate-180'}`}
+                            />
                         </div>
 
                         {/* WRAPPER ANIMADO (Manteve-se o CSS Grid Trick Premium) */}
-                        <div 
-                          className={`grid transition-all duration-300 ease-in-out ${
-                            isCLevelOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                          }`}
+                        <div
+                            className={`grid transition-all duration-300 ease-in-out ${isCLevelOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                                }`}
                         >
-                          <div className="overflow-hidden">
-                            <div className="pt-1 pb-4 px-5">
-                                <RoiDashboard
-                                    socioId={currentUser.id}
-                                    valorPago={currentUser.valor_pago_mentoria ?? null}
-                                    onRegistrar={(tipo) => {
-                                        setTipoRegistro(tipo || 'manual');
-                                        setShowRegistrarFaturamento(true);
-                                    }}
-                                />
+                            <div className="overflow-hidden">
+                                <div className="pt-1 pb-4 px-5">
+                                    <RoiDashboard
+                                        socioId={currentUser.id}
+                                        valorPago={currentUser.valor_pago_mentoria ?? null}
+                                        onRegistrar={(tipo) => {
+                                            setTipoRegistro(tipo || 'manual');
+                                            setShowRegistrarFaturamento(true);
+                                        }}
+                                    />
+                                </div>
                             </div>
-                          </div>
                         </div>
                     </div>
                 )}
 
                 {showRegistrarFaturamento && currentUser && (
-                    <RegistrarFaturamentoModal 
-                        socioId={currentUser.id} 
-                        tipo={tipoRegistro} 
-                        onClose={() => setShowRegistrarFaturamento(false)} 
-                        onSuccess={() => { 
+                    <RegistrarFaturamentoModal
+                        socioId={currentUser.id}
+                        tipo={tipoRegistro}
+                        onClose={() => setShowRegistrarFaturamento(false)}
+                        onSuccess={() => {
                             setShowRegistrarFaturamento(false);
                             setNeedsRoiUpdate(false);
-                            setRoiRefreshCounter(prev => prev + 1); 
-                        }} 
+                            setRoiRefreshCounter(prev => prev + 1);
+                        }}
                     />
                 )}
 
