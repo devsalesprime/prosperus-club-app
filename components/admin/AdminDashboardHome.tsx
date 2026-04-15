@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy, TrendingUp } from 'lucide-react';
+import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy, TrendingUp, Megaphone } from 'lucide-react';
 import { AdminViewState } from '../../types';
 
 interface DashboardKpi {
@@ -94,6 +94,7 @@ export const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState
         { id: AdminViewState.MESSAGES, title: 'Mensagens', icon: <MessageSquare size={24} className="text-teal-400" />, cta: 'Moderar' },
         { id: AdminViewState.CATEGORIES, title: 'Tags', icon: <Tags size={24} className="text-orange-400" />, cta: 'Gerenciar' },
         { id: AdminViewState.SETTINGS, title: 'Suporte', icon: <LifeBuoy size={24} className="text-gray-400" />, cta: 'Configurar' },
+        { id: AdminViewState.NOTIFICATION_BANNERS, title: 'Banners Fullscreen', icon: <Megaphone size={24} className="text-pink-500" />, cta: 'Gerenciar' },
       ],
     },
   ];
