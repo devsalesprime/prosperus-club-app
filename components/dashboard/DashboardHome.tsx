@@ -22,9 +22,9 @@ import {
     Lightbulb,
     BarChart2,
     Calendar,
-    Square,
     AlertTriangle,
-    ChevronUp
+    ChevronUp,
+    TrendingUp
 } from 'lucide-react';
 import {
     IconAgenda,
@@ -711,34 +711,28 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
                 {/* 4.5. Meu ROI (Delta Acumulado) */}
                 {currentUser && (
-                    <div className="mt-4" key={roiRefreshCounter}>
-                        {/* CABEÇALHO CLICÁVEL */}
+                    <div className={`mt-4 roi-dashboard-widget ${isCLevelOpen ? '' : 'collapsed'}`} key={roiRefreshCounter}>
+                        {/* CABEÇALHO CLICÁVEL PADRONIZADO */}
                         <div 
                           onClick={() => setIsCLevelOpen(!isCLevelOpen)}
-                          className="flex items-center justify-between w-full cursor-pointer group mb-4 mt-6 select-none px-1"
+                          className="roi-header"
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">📈</span>
-                            <h2 className="text-sm md:text-base font-bold text-[#CA9A43] uppercase tracking-wider group-hover:text-[#FFDA71] transition-colors">
-                              Meu Crescimento (C-Level)
-                            </h2>
-                          </div>
-                          <div className="w-8 h-8 flex items-center justify-center rounded-full bg-transparent group-hover:bg-white/5 transition-colors">
-                            <ChevronUp 
+                          <TrendingUp className="roi-icon" size={20} />
+                          <h3>Meu Crescimento (C-Level)</h3>
+                          <ChevronUp 
                               size={20} 
-                              className={`text-[#95A4B4] group-hover:text-[#CA9A43] transition-transform duration-300 ease-in-out ${isCLevelOpen ? 'rotate-0' : 'rotate-180'}`} 
-                            />
-                          </div>
+                              className={`chevron-icon transition-transform ${isCLevelOpen ? 'rotate-0' : 'rotate-180'}`} 
+                          />
                         </div>
 
-                        {/* WRAPPER ANIMADO (CSS Grid Trick para transição suave) */}
+                        {/* WRAPPER ANIMADO (Manteve-se o CSS Grid Trick Premium) */}
                         <div 
                           className={`grid transition-all duration-300 ease-in-out ${
                             isCLevelOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                           }`}
                         >
                           <div className="overflow-hidden">
-                            <div className="pt-1 pb-4">
+                            <div className="pt-1 pb-4 px-5">
                                 <RoiDashboard
                                     socioId={currentUser.id}
                                     valorPago={currentUser.valor_pago_mentoria ?? null}
