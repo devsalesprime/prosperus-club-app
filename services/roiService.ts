@@ -23,7 +23,7 @@ export interface RoiData {
   faturamentoAtual: number | null
   valorPago:        number | null
   registros:        RegistroFaturamento[]
-  status:           'ok' | 'sem_base' | 'sem_valor_pago' | 'negativo'
+  status:           'ok' | 'sem_base' | 'sem_valor_pago' | 'negativo' | 'aguardando_atual'
 }
 
 class RoiService {
@@ -80,6 +80,21 @@ class RoiService {
 
     const registrosDedupados = Array.from(porPeriodo.values())
       .sort((a, b) => a.periodo_referencia.localeCompare(b.periodo_referencia))
+
+    // PASSO 1: Estado de Calibração (Cold Start / Falso Zero)
+    if (registrosDedupados.length === 0) {
+      return {
+        roi: null,
+        roiFormatado: '?,??x',
+        fraseConcetual: 'Ponto de partida registrado com sucesso! Para revelarmos o seu Múltiplo de Crescimento, insira como está o faturamento da sua empresa hoje.',
+        deltaAcumulado: 0,
+        faturamentoBase: base,
+        faturamentoAtual: null,
+        valorPago,
+        registros,
+        status: 'aguardando_atual'
+      }
+    }
 
     // Calcular delta acumulado
     const deltaAcumulado = registrosDedupados.reduce(

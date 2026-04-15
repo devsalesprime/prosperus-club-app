@@ -95,20 +95,25 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
               Eficiência do Investimento
             </p>
             <div className="flex items-end gap-3 mb-6">
-              <span className={`text-6xl sm:text-7xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r ${gradientColor} drop-shadow-sm`}>
+              <span className={`text-6xl sm:text-7xl font-extrabold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r ${roiData.status === 'aguardando_atual' ? 'from-[#FFDA71]/60 to-[#CA9A43]/60 blur-[2px] select-none' : gradientColor} drop-shadow-sm`}>
                 {roiData.roiFormatado}
               </span>
-              <span className="text-sm font-bold text-slate-400 uppercase tracking-wide">
-                Múltiplo de<br />Crescimento
-              </span>
+              {roiData.status !== 'aguardando_atual' && (
+                <span className="text-sm font-bold text-slate-400 uppercase tracking-wide">
+                  Múltiplo de<br />Crescimento
+                </span>
+              )}
             </div>
 
-            <div className={`flex items-start gap-3 p-4 rounded-xl bg-slate-900/40 border-l-4 ${borderColor}`}>
-              <TrendingUp className={isPositivo ? 'text-emerald-500' : 'text-red-500'} size={20} />
+            <div className={`flex items-start gap-3 p-4 rounded-xl bg-slate-900/40 border-l-4 ${roiData.status === 'aguardando_atual' ? 'border-[#CA9A43]' : borderColor}`}>
+              <TrendingUp className={roiData.status === 'aguardando_atual' ? 'text-[#CA9A43]' : isPositivo ? 'text-emerald-500' : 'text-red-500'} size={20} />
               <p className="text-sm text-slate-300 leading-relaxed font-medium">
                 {roiData.fraseConcetual}
               </p>
             </div>
+            {roiData.status === 'aguardando_atual' && (
+              <button onClick={() => onRegistrar('manual')} style={{ width: '100%', marginTop: '16px', marginBottom: '8px', padding: '14px', background: 'linear-gradient(135deg, #FFDA71, #CA9A43)', color: '#031A2B', fontWeight: 'bold', fontSize: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 0 20px rgba(202,154,67,0.2)', transition: 'transform 0.2s' }} onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'} onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}> <TrendingUp size={20} /> Inserir Faturamento de Hoje </button>
+            )}
           </div>
 
           {/* Sub-métricas Direita */}
@@ -118,6 +123,8 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
               label="Faturamento Atual"
               value={formatCurrency(roiData.faturamentoAtual)}
               highlight
+              isPending={roiData.status === 'aguardando_atual'}
+              onClick={() => onRegistrar('manual')}
             />
             <MetricCard
               icon={<Calendar size={14} />}
@@ -143,30 +150,37 @@ export function RoiDashboard({ socioId, valorPago, onRegistrar }: Props) {
       )}
 
       {/* Histórico Moderno */}
-      <HistoricoRegistros
-        registros={roiData.registros}
-        onAtualizar={() => onRegistrar('manual')}
-        currentRevenue={roiData.faturamentoAtual}
-      />
+      {roiData.status !== 'aguardando_atual' && (
+        <HistoricoRegistros
+          registros={roiData.registros}
+          onAtualizar={() => onRegistrar('manual')}
+          currentRevenue={roiData.faturamentoAtual}
+        />
+      )}
     </div>
   )
 }
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
-function MetricCard({ icon, label, value, highlight, isInvestment }: { icon: React.ReactNode, label: string; value: string; highlight?: boolean, isInvestment?: boolean }) {
+function MetricCard({ icon, label, value, highlight, isInvestment, isPending, onClick }: { icon: React.ReactNode, label: string; value: string; highlight?: boolean, isInvestment?: boolean, isPending?: boolean, onClick?: () => void }) {
   return (
-    <div className={`p-4 rounded-2xl border transition-colors ${highlight
-        ? 'bg-gradient-to-br from-[#082846] to-[#041E32] border-yellow-500/30 shadow-lg shadow-yellow-900/10'
-        : isInvestment
-          ? 'bg-slate-900/50 border-slate-700/50'
-          : 'bg-[#031A2B]/60 border-[#052B48]'
+    <div 
+      onClick={isPending ? onClick : undefined}
+      className={`p-4 rounded-2xl border transition-colors ${
+        isPending
+          ? 'bg-[#CA9A43]/5 border-dashed border-[#CA9A43]/50 cursor-pointer hover:bg-[#CA9A43]/10'
+          : highlight
+            ? 'bg-gradient-to-br from-[#082846] to-[#041E32] border-yellow-500/30 shadow-lg shadow-yellow-900/10'
+            : isInvestment
+              ? 'bg-slate-900/50 border-slate-700/50'
+              : 'bg-[#031A2B]/60 border-[#052B48]'
       }`}>
-      <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider mb-1 ${highlight ? 'text-yellow-500' : isInvestment ? 'text-slate-500' : 'text-slate-400'}`}>
+      <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider mb-1 ${isPending ? 'text-[#CA9A43]' : highlight ? 'text-yellow-500' : isInvestment ? 'text-slate-500' : 'text-slate-400'}`}>
         {icon} {label}
       </div>
-      <p className={`text-lg font-bold ${highlight ? 'text-white' : isInvestment ? 'text-slate-300' : 'text-slate-200'}`}>
-        {value}
+      <p className={`text-lg font-bold ${isPending ? 'text-[#CA9A43]' : highlight ? 'text-white' : isInvestment ? 'text-slate-300' : 'text-slate-200'}`}>
+        {isPending ? 'Pendente' : value}
       </p>
     </div>
   )
