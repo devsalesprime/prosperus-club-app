@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy } from 'lucide-react';
+import { Users, CalendarDays, PlaySquare, Newspaper, FolderOpen, BellRing, BarChart3, ArrowRight, Image as ImageIcon, Wrench, Target, MessageSquare, Tags, ShieldCheck, GraduationCap, Cake, FileText, LifeBuoy, TrendingUp } from 'lucide-react';
 import { AdminViewState } from '../../types';
 
 interface DashboardKpi {
@@ -83,7 +83,7 @@ export const AdminDashboardHome = ({ setView }: { setView: (view: AdminViewState
         { id: AdminViewState.EVENTS, title: 'Eventos', icon: <CalendarDays size={24} className="text-purple-400" />, cta: 'Gerenciar' },
         { id: AdminViewState.TOOLS_PROGRESS, title: 'Relatórios', icon: <FileText size={24} className="text-violet-400" />, cta: 'Enviar' },
         { id: AdminViewState.TOOLS_SOLUTIONS, title: 'Soluções', icon: <Wrench size={24} className="text-slate-400" />, cta: 'Gerenciar' },
-        { id: AdminViewState.ROI_AUDIT, title: 'ROI & Auditoria', icon: <Target size={24} className="text-green-400" />, cta: 'Ver' },
+        { id: AdminViewState.ROI_AUDIT, title: 'Crescimento (ROI)', icon: <TrendingUp size={24} className="text-emerald-500" />, cta: 'Auditar' },
       ],
     },
     {
