@@ -55,6 +55,10 @@ export const ROIAdminModule: React.FC = () => {
     const [socios, setSocios] = useState<RoiSocio[]>([]);
     const [loading, setLoading] = useState(true);
     const [sendingPush, setSendingPush] = useState(false);
+    const [showCobrancaModal, setShowCobrancaModal] = useState(false);
+    const [cobrancaTarget, setCobrancaTarget]       = useState<'all' | string>('all');
+    const [cobrancaLoading, setCobrancaLoading]     = useState(false);
+    const [cobrancaFeedback, setCobrancaFeedback]   = useState<'success' | 'error' | null>(null);
     
     // Filters and Pagination
     const [searchTerm, setSearchTerm] = useState('');
@@ -88,17 +92,31 @@ export const ROIAdminModule: React.FC = () => {
 
     useEffect(() => { loadSocios(); }, []);
 
-    const handleTriggerPush = async () => {
-        if (!confirm('Deseja notificar TODOS os sócios para atualizarem o faturamento?')) return;
-        setSendingPush(true);
+    const handleCobrarAtualizacao = (target: 'all' | string = 'all') => {
+        setCobrancaTarget(target);
+        setCobrancaFeedback(null);
+        setShowCobrancaModal(true);
+    };
+
+    const handleConfirmarCobranca = async () => {
+        setCobrancaLoading(true);
         try {
-            const res = await notificationTriggers.notifyColetaFaturamento();
-            toast.success(`${res.count} notificações enviadas com sucesso!`);
+            if (cobrancaTarget === 'all') {
+                await notificationTriggers.notifyColetaFaturamento();
+            } else {
+                await notificationTriggers.notifyColetaFaturamento(cobrancaTarget);
+            }
+            setCobrancaFeedback('success');
+            setTimeout(() => {
+                setShowCobrancaModal(false);
+                setCobrancaFeedback(null);
+                loadSocios();
+            }, 2000);
         } catch (err) {
-            toast.error('Erro ao enviar push.');
-            console.error(err);
+            console.error('[ROI Admin] erro ao cobrar:', err);
+            setCobrancaFeedback('error');
         } finally {
-            setSendingPush(false);
+            setCobrancaLoading(false);
         }
     };
 
@@ -221,12 +239,12 @@ export const ROIAdminModule: React.FC = () => {
                 action={
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={handleTriggerPush}
-                            disabled={sendingPush}
+                            onClick={() => handleCobrarAtualizacao('all')}
+                            disabled={cobrancaLoading}
                             className="flex items-center gap-2 text-sm text-yellow-900 bg-yellow-500 hover:bg-yellow-400 px-4 py-2 font-bold rounded-lg transition"
                         >
                             <Bell size={16} />
-                            {sendingPush ? 'Notificando...' : 'Cobrar Atualização (Push)'}
+                            {cobrancaLoading ? 'Notificando...' : 'Cobrar Atualização (Push)'}
                         </button>
                         <button
                             onClick={loadSocios}
@@ -305,6 +323,13 @@ export const ROIAdminModule: React.FC = () => {
                                 <td className="px-6 py-4 text-right">
                                     {!s.is_roi_approved ? (
                                         <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => handleCobrarAtualizacao(s.socio_id)}
+                                                className="bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-500 font-bold py-1.5 px-3 rounded-lg text-xs transition shadow-lg border border-yellow-600/30 uppercase tracking-wider"
+                                                title="Enviar Push lembrete para este sócio"
+                                            >
+                                                Puxar
+                                            </button>
                                             <button
                                                 onClick={() => handleFastApprove(s)}
                                                 className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 px-4 rounded-lg text-xs transition shadow-lg shadow-emerald-900/20 uppercase tracking-wider"
@@ -455,6 +480,116 @@ export const ROIAdminModule: React.FC = () => {
                         </div>
                     </div>
                 </AdminModal>
+            )}
+
+            {/* Modal de Cobrança de Atualização */}
+            {showCobrancaModal && (
+                <div style={{
+                    position:   'fixed',
+                    inset:      0,
+                    zIndex:     200,
+                    background: 'rgba(0,0,0,0.65)',
+                    display:    'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding:    '20px',
+                }}>
+                    <div style={{
+                        background:   '#031726',
+                        border:       '1px solid #052B48',
+                        borderRadius: 20,
+                        padding:      '28px 24px',
+                        width:        '100%',
+                        maxWidth:     400,
+                        boxShadow:    '0 20px 60px rgba(0,0,0,0.5)',
+                    }}>
+
+                        {/* Ícone + título */}
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <div style={{
+                                width: 56, height: 56, borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #042034, #04253E)',
+                                border: '1px solid #052B48',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                margin: '0 auto 14px', fontSize: 24,
+                            }}>
+                                📲
+                            </div>
+                            <p style={{ fontSize: 18, fontWeight: 700, color: '#FCF7F0', margin: '0 0 8px' }}>
+                                Cobrar Atualização
+                            </p>
+                            <p style={{ fontSize: 14, color: '#95A4B4', margin: 0, lineHeight: 1.6 }}>
+                                {cobrancaTarget === 'all'
+                                    ? 'Enviar notificação push para todos os sócios que ainda não atualizaram o faturamento neste trimestre.'
+                                    : 'Enviar notificação push para este sócio pedindo atualização do faturamento.'
+                                }
+                            </p>
+                        </div>
+
+                        {/* Feedback de sucesso */}
+                        {cobrancaFeedback === 'success' && (
+                            <div style={{
+                                background: 'rgba(34,197,94,0.12)',
+                                border: '1px solid rgba(34,197,94,0.3)',
+                                borderRadius: 10, padding: '12px 16px',
+                                textAlign: 'center', marginBottom: 16,
+                            }}>
+                                <p style={{ fontSize: 14, color: '#22C55E', fontWeight: 600, margin: 0 }}>
+                                    ✅ Push enviado com sucesso!
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Feedback de erro */}
+                        {cobrancaFeedback === 'error' && (
+                            <div style={{
+                                background: 'rgba(239,68,68,0.12)',
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                borderRadius: 10, padding: '12px 16px',
+                                textAlign: 'center', marginBottom: 16,
+                            }}>
+                                <p style={{ fontSize: 14, color: '#EF4444', fontWeight: 600, margin: 0 }}>
+                                    ❌ Erro ao enviar. Tente novamente.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Botões */}
+                        {!cobrancaFeedback && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <button
+                                    onClick={handleConfirmarCobranca}
+                                    disabled={cobrancaLoading}
+                                    style={{
+                                        padding: '14px', borderRadius: 12, border: 'none',
+                                        background: cobrancaLoading
+                                            ? '#052B48'
+                                            : 'linear-gradient(135deg, #FFDA71, #CA9A43)',
+                                        color: '#031A2B', fontSize: 15, fontWeight: 700,
+                                        cursor: cobrancaLoading ? 'not-allowed' : 'pointer',
+                                        opacity: cobrancaLoading ? 0.7 : 1,
+                                        transition: 'opacity 0.2s',
+                                    }}
+                                >
+                                    {cobrancaLoading ? 'Enviando...' : '📲 Confirmar e Enviar Push'}
+                                </button>
+                                <button
+                                    onClick={() => setShowCobrancaModal(false)}
+                                    disabled={cobrancaLoading}
+                                    style={{
+                                        padding: '12px', borderRadius: 12,
+                                        background: 'none',
+                                        border: '1px solid #052B48',
+                                        color: '#95A4B4', fontSize: 14, fontWeight: 500,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             <DeleteConfirmSheet

@@ -10,12 +10,18 @@ class NotificationTriggers {
    * atualizar o faturamento trimestral. Em produção, isso rodaria via CRON
    * Edge Function, mas o Admin pode disparar manualmente.
    */
-    async notifyColetaFaturamento() {
+    async notifyColetaFaturamento(targetSocioId?: string) {
     try {
-      const { data: members, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select('id, name')
-        .in('role', ['MEMBER', 'ACCOUNT_MANAGER'])
+        .in('role', ['MEMBER', 'ACCOUNT_MANAGER']);
+        
+      if (targetSocioId && targetSocioId !== 'all') {
+          query = query.eq('id', targetSocioId);
+      }
+      
+      const { data: members, error } = await query;
       
       if (error) throw error
       if (!members || members.length === 0) return { count: 0 }
