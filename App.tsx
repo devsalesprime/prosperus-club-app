@@ -126,7 +126,7 @@ const AppShell: React.FC = () => {
             case '/app/roi-socios': setView(ViewState.DEALS); break;
             case '/app/roi-crescimento': 
                  setView(ViewState.DASHBOARD);
-                 setTimeout(() => window.dispatchEvent(new CustomEvent('open-roi-modal')), 500);
+                 sessionStorage.setItem('pending_roi_modal', 'true');
                  break;
             case '/app/notificacoes': setView(ViewState.NOTIFICATIONS); break;
             case '/app/chat': setView(ViewState.MESSAGES); break;

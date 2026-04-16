@@ -540,6 +540,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
     // Listener global para deeplink de cadastro de Faturamento (Banners)
     useEffect(() => {
+        if (sessionStorage.getItem('pending_roi_modal') === 'true') {
+            sessionStorage.removeItem('pending_roi_modal');
+            const timer = setTimeout(() => {
+                setTipoRegistro('manual');
+                setShowRegistrarFaturamento(true);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+
         const handleOpenRoi = () => {
             setTipoRegistro('manual');
             setShowRegistrarFaturamento(true);
