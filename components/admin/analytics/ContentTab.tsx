@@ -91,7 +91,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                         { label: 'Arquivos', value: sectionStats.kpis.file_downloads, icon: <Download size={20} className="text-teal-400" />, bg: 'bg-teal-500/10' },
                     ].map(item => (
                         <div key={item.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex min-w-0  items-center gap-2 mb-2">
                                 <div className={`p-1.5 rounded-lg ${item.bg}`}>{item.icon}</div>
                                 <span className="text-xs text-slate-400 font-medium">{item.label}</span>
                             </div>
@@ -106,7 +106,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Top Videos */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex min-w-0  items-center gap-2 mb-4">
                         <Video size={20} className="text-purple-500" />
                         <h3 className="font-bold text-white">Top Vídeos</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -116,9 +116,9 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                     {topVideos.length > 0 ? (
                         <div className="space-y-3">
                             {topVideos.map((video, index) => (
-                                <div key={video.id} className="flex items-center gap-3">
+                                <div key={video.id} className="flex min-w-0  items-center gap-3">
                                     <span className="text-xs font-bold text-slate-500 w-5">#{index + 1}</span>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex min-w-0 -1 min-w-0">
                                         <p className="text-sm text-white truncate">{video.title}</p>
                                     </div>
                                     <span className="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">
@@ -134,7 +134,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* Top Articles */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex min-w-0  items-center gap-2 mb-4">
                         <FileText size={20} className="text-blue-500" />
                         <h3 className="font-bold text-white">Top Artigos</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -144,9 +144,9 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                     {topArticles.length > 0 ? (
                         <div className="space-y-3">
                             {topArticles.map((article, index) => (
-                                <div key={article.id} className="flex items-center gap-3">
+                                <div key={article.id} className="flex min-w-0  items-center gap-3">
                                     <span className="text-xs font-bold text-slate-500 w-5">#{index + 1}</span>
-                                    <div className="flex-1 min-w-0">
+                                    <div className="flex min-w-0 -1 min-w-0">
                                         <p className="text-sm text-white truncate">{article.title}</p>
                                     </div>
                                     <span className="text-xs font-bold text-blue-500 bg-blue-500/10 px-2 py-1 rounded">
@@ -162,7 +162,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* Event Breakdown - Pie Chart */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex min-w-0  items-center gap-2 mb-4">
                         <Activity size={20} className="text-emerald-500" />
                         <h3 className="font-bold text-white">Tipos de Evento</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -192,8 +192,8 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                             </ResponsiveContainer>
                             <div className="mt-2 space-y-1">
                                 {eventBreakdown.slice(0, 5).map((event, index) => (
-                                    <div key={event.name} className="flex items-center justify-between text-xs">
-                                        <div className="flex items-center gap-2">
+                                    <div key={event.name} className="flex min-w-0  items-center justify-between text-xs">
+                                        <div className="flex min-w-0  items-center gap-2">
                                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
                                             <span className="text-slate-400">{event.name.replace(/_/g, ' ')}</span>
                                         </div>
@@ -211,7 +211,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             {/* FILE DOWNLOADS SECTION */}
             {fileStats.length > 0 && (
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex min-w-0  items-center gap-2 mb-4">
                         <Download size={20} className="text-teal-500" />
                         <h3 className="font-bold text-white">Downloads de Arquivos</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -220,9 +220,9 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                     </div>
                     <div className="space-y-2">
                         {fileStats.filter(s => s.total_downloads > 0).slice(0, 10).map((stat, index) => (
-                            <div key={stat.file_id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                            <div key={stat.file_id} className="flex min-w-0  items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
                                 <span className="text-xs font-bold text-slate-500 w-5 text-right">#{index + 1}</span>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex min-w-0 -1 min-w-0">
                                     <p className="text-sm text-white truncate">{stat.title}</p>
                                     <p className="text-xs text-slate-500">
                                         {stat.file_type.toUpperCase()} · {stat.unique_downloaders} sócio{Number(stat.unique_downloaders) !== 1 ? 's' : ''} único{Number(stat.unique_downloaders) !== 1 ? 's' : ''}
@@ -244,7 +244,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             {/* TOP DOWNLOADERS SECTION */}
             {topDownloaders.length > 0 && (
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex min-w-0  items-center gap-2 mb-4">
                         <Users size={20} className="text-yellow-500" />
                         <h3 className="font-bold text-white">Sócios Mais Engajados (Downloads)</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -253,7 +253,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                     </div>
                     <div className="space-y-2">
                         {topDownloaders.slice(0, 10).map((user, index) => (
-                            <div key={user.user_id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                            <div key={user.user_id} className="flex min-w-0  items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
                                 <span className={`text-xs font-bold w-5 text-right ${
                                     index === 0 ? 'text-yellow-400' :
                                     index === 1 ? 'text-slate-300' :
@@ -271,7 +271,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex-1 min-w-0">
+                                <div className="flex min-w-0 -1 min-w-0">
                                     <p className="text-sm text-white truncate font-medium">{user.user_name}</p>
                                     {user.user_company && (
                                         <p className="text-xs text-slate-500 truncate">{user.user_company}</p>
@@ -298,7 +298,7 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                         { title: 'Top Relatórios', items: sectionStats.top_reports, icon: <BarChart3 size={20} className="text-amber-400" />, color: 'text-amber-400', bg: 'bg-amber-500/10' },
                     ].map(section => (
                         <div key={section.title} className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                            <div className="flex items-center gap-2 mb-4">
+                            <div className="flex min-w-0  items-center gap-2 mb-4">
                                 {section.icon}
                                 <h3 className="font-bold text-white">{section.title}</h3>
                                 <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -308,9 +308,9 @@ export const ContentTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                             {section.items.length > 0 ? (
                                 <div className="space-y-3">
                                     {section.items.map((item, index) => (
-                                        <div key={item.name} className="flex items-center gap-3">
+                                        <div key={item.name} className="flex min-w-0  items-center gap-3">
                                             <span className="text-xs font-bold text-slate-500 w-5">#{index + 1}</span>
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex min-w-0 -1 min-w-0">
                                                 <p className="text-sm text-white truncate">{item.name}</p>
                                             </div>
                                             <span className={`text-xs font-bold ${section.color} ${section.bg} px-2 py-1 rounded`}>

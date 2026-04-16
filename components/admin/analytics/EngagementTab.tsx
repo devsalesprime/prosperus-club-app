@@ -72,7 +72,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* KPI 1: Usuários Ativos Hoje */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-yellow-500/10">
                             <Users size={24} className="text-yellow-500" />
                         </div>
@@ -85,7 +85,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* KPI 2: Novos Sócios */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-blue-500/10">
                             <UserPlus size={24} className="text-blue-500" />
                         </div>
@@ -99,7 +99,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* KPI 3: Mensagens Trocadas */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-emerald-500/10">
                             <IconChat size={24} className="text-emerald-500" />
                         </div>
@@ -113,7 +113,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* KPI 4: Vídeos Assistidos */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-purple-500/10">
                             <PlayCircle size={24} className="text-purple-500" />
                         </div>
@@ -135,7 +135,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                 return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex min-w-0  items-start justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-cyan-500/10">
                                     <LogIn size={24} className="text-cyan-500" />
                                 </div>
@@ -149,7 +149,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                             )}
                         </div>
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex min-w-0  items-start justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-teal-500/10">
                                     <Users size={24} className="text-teal-500" />
                                 </div>
@@ -161,7 +161,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                             <p className="text-xs text-slate-500 mt-1">Média: {avgDau}/dia</p>
                         </div>
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex min-w-0  items-start justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-indigo-500/10">
                                     <Activity size={24} className="text-indigo-500" />
                                 </div>
@@ -172,7 +172,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                             </p>
                         </div>
                         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition">
-                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex min-w-0  items-start justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-amber-500/10">
                                     <Users size={24} className="text-amber-500" />
                                 </div>
@@ -188,21 +188,21 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
             {/* ACTIVITY CHART */}
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex min-w-0  items-center justify-between mb-6">
                     <div>
                         <h2 className="text-lg font-bold text-white">Atividade por Dia</h2>
                         <p className="text-sm text-slate-400">Últimos {periodLabel(period)}</p>
                     </div>
-                    <div className="flex items-center gap-4 text-xs">
-                        <div className="flex items-center gap-2">
+                    <div className="flex min-w-0  items-center gap-4 text-xs">
+                        <div className="flex min-w-0  items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                             <span className="text-slate-400">Total</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0  items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                             <span className="text-slate-400">Page Views</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0  items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
                             <span className="text-slate-400">Mensagens</span>
                         </div>
@@ -238,7 +238,7 @@ export const EngagementTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
             {/* TOTAL EVENTS FOOTER */}
             <div className="bg-gradient-to-r from-yellow-600/10 to-yellow-600/5 border border-yellow-600/20 rounded-xl p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex min-w-0  items-center justify-between">
                     <div>
                         <p className="text-slate-400 text-sm">Total de eventos registrados</p>
                         <p className="text-3xl font-bold text-white">{(stats?.totalEvents || 0).toLocaleString('pt-BR')}</p>

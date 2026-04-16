@@ -93,7 +93,7 @@ export const VideoCarousel: React.FC<VideoCarouselProps> = ({
                 {/* 🚨 A PISTA DE ROLAGEM ESTRITA — carouselRef AQUI 🚨 */}
                 <div
                     ref={carouselRef}
-                    className="flex flex-row overflow-x-auto w-full gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 academy-swimlane"
+                    className="flex flex-row overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] [-webkit-overflow-scrolling:'touch'] w-full gap-4 md:gap-5 px-4 md:px-0 pb-6 snap-x snap-mandatory scroll-smooth relative z-0 academy-swimlane"
                     style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
                 >
                     {/* 🚨 CÁPSULA PROTETORA: shrink-0 + largura fixa → FORÇA overflow */}

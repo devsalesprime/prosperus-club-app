@@ -87,6 +87,7 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
             progress: progressMap.get(v.id)?.progress || 0,
         })));
         analyticsService.trackVideoStart(userId, video.id, video.title);
+        analyticsService.logEvent('video_played', { video_id: video.id }).catch(console.error);
     };
 
     const handleCloseVideo = () => {

@@ -26,6 +26,9 @@
 - [✅] Migration 062/063 — notification_banners + CTR analytics views
 - [✅] App.tsx — injeção blindada do interstitial
 
+### Fixes & Estabilização Pós-Deploy
+- [✅] **Push Race-Condition (Hotfix):** Resolução de queda de eventos na navegação via push. Deep links como `/app/roi-crescimento` agora preservam intenção em `sessionStorage` até o DashboardHome renderizar completamente.
+- [✅] **Correção de Dados Históricos (Database):** Patch cirúrgico nativo via SQL em `notifications` e `user_notifications` corrigindo o redirecionamento de antigas pushes de faturamento de `/` para `/app/roi-crescimento`.
 ### Calibração de Engajamento
 - [✅] Onboarding com calibração dupla (faturamento base + atual)
 - [✅] Remoção definitiva da terminologia "Matches Forte", agora é "Conexão Estratégica".

@@ -22,7 +22,7 @@ export const AnalyticsDashboard: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState(0);
 
     const PeriodFilter = (
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0  items-center gap-3">
             <AnalyticsExclusions />
             <button
                 onClick={() => setRefreshKey(k => k + 1)}
@@ -31,7 +31,7 @@ export const AnalyticsDashboard: React.FC = () => {
             >
                 <RefreshCw size={18} />
             </button>
-            <div className="flex bg-slate-800 rounded-lg p-1">
+            <div className="flex min-w-0  bg-slate-800 rounded-lg p-1">
                 {(['7d', '30d', '90d'] as Period[]).map((p) => (
                     <button
                         key={p}
@@ -58,7 +58,7 @@ export const AnalyticsDashboard: React.FC = () => {
             />
 
             {/* TAB NAVIGATION */}
-            <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1">
+            <div className="flex min-w-0  gap-1 bg-slate-800/50 rounded-lg p-1">
                 {([
                     { id: 'engajamento' as const, label: 'Engajamento', icon: <Activity size={16} /> },
                     { id: 'business' as const, label: 'Business', icon: <DollarSign size={16} /> },

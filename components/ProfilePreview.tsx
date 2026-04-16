@@ -256,6 +256,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = ({ profile, onClose
                                         href={`https://wa.me/${profile.socials.whatsapp}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={() => analyticsService.logEvent('member_contact_clicked', { target_user_id: profile.id }).catch(console.error)}
                                         className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-green-600 border border-slate-700 hover:border-green-600 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg text-sm transition"
                                     >
                                         <IconChat size={16} />

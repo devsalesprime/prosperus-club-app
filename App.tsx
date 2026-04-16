@@ -13,11 +13,11 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ViewState } from './types';
-import { AppLayout } from './components/layout/AppLayout';
-import { ViewSwitcher } from './components/layout/ViewSwitcher';
-import { LoginModal } from './components/auth/LoginModal';
-import { UpdatePasswordModal } from './components/auth/UpdatePasswordModal';
-import { RoleSelector } from './components/auth/RoleSelector';
+const AppLayout = React.lazy(() => import('./components/layout/AppLayout').then(m => ({ default: m.AppLayout })));
+const ViewSwitcher = React.lazy(() => import('./components/layout/ViewSwitcher').then(m => ({ default: m.ViewSwitcher })));
+const LoginModal = React.lazy(() => import('./components/auth/LoginModal').then(m => ({ default: m.LoginModal })));
+const UpdatePasswordModal = React.lazy(() => import('./components/auth/UpdatePasswordModal').then(m => ({ default: m.UpdatePasswordModal })));
+const RoleSelector = React.lazy(() => import('./components/auth/RoleSelector').then(m => ({ default: m.RoleSelector })));
 import { InstallPrompt } from './components/push/InstallPrompt';
 import { PushPermissionPrompt } from './components/push/PushPermissionPrompt';
 import { PushAutoSubscriber } from './components/push/PushAutoSubscriber';
@@ -31,25 +31,7 @@ import { useNotificationBanner } from './hooks/useNotificationBanner';
 const OnboardingWizard = React.lazy(() => import('./components/onboarding/OnboardingWizard').then(m => ({ default: m.OnboardingWizard })));
 const AdminApp = React.lazy(() => import('./AdminApp.tsx').then(m => ({ default: m.AdminApp })));
 
-// Skeleton do app enquanto carrega
-const AppSkeleton = () => (
-  <div style={{
-    minHeight: '100dvh',
-    background: '#031A2B',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }}>
-    <div style={{
-      width: 40, height: 40,
-      border: '2px solid #052B48',
-      borderTop: '2px solid #FFDA71',
-      borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite',
-    }} />
-    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-  </div>
-);
+import { PremiumLoader } from './components/ui/PremiumLoader';
 
 // Background decoration shared by auth screens
 const AuthBackground = () => (
@@ -242,7 +224,7 @@ const AppShell: React.FC = () => {
     if (isAdmin) {
         return (
             <UnreadCountProvider userId={currentUser.id}>
-                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><AppSkeleton /></div>}>
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
                     <AdminApp
                         currentUser={currentUser}
                         onLogout={() => { setIsAdmin(false); setSession(null); }}
@@ -263,7 +245,7 @@ const AppShell: React.FC = () => {
     // ─── Guard 8: Onboarding Wizard (MEMBER only) ────
     if (showOnboarding && userProfile && !userProfile.has_completed_onboarding) {
         return (
-            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><AppSkeleton /></div>}>
+            <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
                 <>
                     <div className="min-h-screen bg-slate-950" />
                     <OnboardingWizard
@@ -296,7 +278,7 @@ const AppShell: React.FC = () => {
               />
             )}
             <AppLayout>
-                <Suspense fallback={<AppSkeleton />}>
+                <Suspense fallback={<PremiumLoader />}>
                     <ViewSwitcher />
                 </Suspense>
                 {/* Always mounted — silently saves push subscription */}

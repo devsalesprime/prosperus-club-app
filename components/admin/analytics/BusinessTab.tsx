@@ -115,7 +115,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* BI KPI 1: Volume ROI Auditado */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-emerald-800/50 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-emerald-500/10">
                             <DollarSign size={24} className="text-emerald-500" />
                         </div>
@@ -134,7 +134,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* BI KPI 2: Taxa de Conversão do Funil */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-blue-800/50 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-blue-500/10">
                             <ArrowRight size={24} className="text-blue-500" />
                         </div>
@@ -150,7 +150,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* BI KPI 3: Academy Completion */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-purple-800/50 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-purple-500/10">
                             <GraduationCap size={24} className="text-purple-500" />
                         </div>
@@ -166,7 +166,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
 
                 {/* BI KPI 4: Event Attendance */}
                 <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 hover:border-cyan-800/50 transition">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex min-w-0  items-start justify-between mb-4">
                         <div className="p-3 rounded-lg bg-cyan-500/10">
                             <CalendarCheck size={24} className="text-cyan-500" />
                         </div>
@@ -185,7 +185,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Networking Funnel Chart */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                    <div className="flex items-center gap-2 mb-6">
+                    <div className="flex min-w-0  items-center gap-2 mb-6">
                         <ArrowRight size={20} className="text-blue-500" />
                         <h3 className="font-bold text-white">Funil de Networking</h3>
                         <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded ml-auto">
@@ -208,7 +208,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                                 </BarChart>
                             </ResponsiveContainer>
                             <div className="mt-4 pt-4 border-t border-slate-800">
-                                <div className="flex items-center justify-between text-sm">
+                                <div className="flex min-w-0  items-center justify-between text-sm">
                                     <span className="text-slate-400">Volume auditado</span>
                                     <span className="text-emerald-400 font-bold">
                                         {formatCurrency(funnel?.auditedVolume || 0)}
@@ -247,7 +247,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                                             </span>
                                         </td>
                                         <td className="py-3">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex min-w-0  items-center gap-3">
                                                 {member.memberImage ? (
                                                     <img src={member.memberImage} alt={member.memberName} className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0" />
                                                 ) : (
@@ -307,7 +307,7 @@ export const BusinessTab: React.FC<AnalyticsTabProps> = ({ period }) => {
                                 return (
                                     <tr key={member.memberId} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
                                         <td className="px-5 py-3">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex min-w-0  items-center gap-2">
                                                 {member.memberImage ? (
                                                     <img src={member.memberImage} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
                                                 ) : (

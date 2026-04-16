@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { ClubEvent, EventSession } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { notificationService } from '../../services/notificationService';
+import { analyticsService } from '../../services/analyticsService';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { registerSilentVirtualCheckIn } from '../../services/ticketService';
@@ -281,6 +283,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 .from('event_rsvps')
                 .insert({ event_id: event.id, user_id: userId, status: 'PENDING' });
             if (error) throw error;
+            analyticsService.logEvent('event_rsvp_confirmed', { event_id: event.id }).catch(console.error);
             setRsvpToast('Sua solicitação foi enviada para análise! ⏳');
         } catch (err: any) {
             console.error('RSVP request failed:', err);

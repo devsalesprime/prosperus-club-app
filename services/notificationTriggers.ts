@@ -48,14 +48,66 @@ class NotificationTriggers {
     }
   }
 
-  // --- Funções de Compatibilidade (Typescript Build Completo) ---
-  
+  async notifyNewArticle(articleTitle: string) {
+    try {
+      const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
+      if (error) throw error;
+      if (!members) return { count: 0 };
+      for (const member of members) {
+        await notificationService.createNotification(
+          '📰 Novo Artigo na Prosperus', 
+          `Acabamos de publicar: ${articleTitle}. Leia agora na aba News!`, 
+          'INDIVIDUAL', '/app/noticias', member.id
+        ).catch(console.error);
+      }
+      return { count: members.length };
+    } catch (e) {
+      console.error(e);
+      return { count: 0 };
+    }
+  }
+
+  async notifyNewSolution(providerName: string) {
+    try {
+      const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
+      if (error) throw error;
+      if (!members) return { count: 0 };
+      for (const member of members) {
+        await notificationService.createNotification(
+          '💼 Nova Parceria Estratégica', 
+          `Um novo parceiro entrou no clube: ${providerName}. Acesse a aba de Soluções para resgatar seus benefícios!`, 
+          'INDIVIDUAL', '/app/tools/solucoes', member.id
+        ).catch(console.error);
+      }
+      return { count: members.length };
+    } catch (e) {
+      console.error(e);
+      return { count: 0 };
+    }
+  }
+
+  async notifyEventUpdated(eventName: string) {
+    try {
+      const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
+      if (error) throw error;
+      if (!members) return { count: 0 };
+      for (const member of members) {
+        await notificationService.createNotification(
+          '📅 Atualização de Evento', 
+          `O evento "${eventName}" sofreu alterações. Verifique sua agenda para mais detalhes.`, 
+          'INDIVIDUAL', '/app/agenda', member.id
+        ).catch(console.error);
+      }
+      return { count: members.length };
+    } catch (e) {
+      console.error(e);
+      return { count: 0 };
+    }
+  }
+
   async notifyNewVideo(...args: any[]) {}
-  async notifyNewArticle(...args: any[]) {}
-  async notifyNewSolution(...args: any[]) {}
   async notifyNewGallery(...args: any[]) {}
   async notifyNewEvent(...args: any[]) {}
-  async notifyEventUpdated(...args: any[]) {}
   async notifyNewMessage(...args: any[]) {}
 
 }

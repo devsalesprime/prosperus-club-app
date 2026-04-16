@@ -116,7 +116,10 @@ function SolutionMemberCard({
                         href={solution.external_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => analyticsService.trackSolutionClick(currentUser?.id || null, solution.id, solution.title)}
+                        onClick={() => {
+                            analyticsService.trackSolutionClick(currentUser?.id || null, solution.id, solution.title);
+                            analyticsService.logEvent('benefit_cta_clicked', { solution_id: solution.id }).catch(console.error);
+                        }}
                         className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-sm font-semibold text-white transition-all active:scale-[0.98]"
                     >
                         Acessar Ferramenta
