@@ -9,7 +9,7 @@
 //     ├── Loading/Login/Recovery/Onboarding screens (guards)
 //     └── AppLayout > ViewSwitcher (main app)
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { ViewState } from './types';
