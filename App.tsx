@@ -84,15 +84,35 @@ const AppShell: React.FC = () => {
         refreshProfile
     } = useApp();
 
-    // ─── Deep link interception (push notification → ?chat=ID) ────
+    const resolveDeepLink = useCallback((link: string) => {
+        switch (link) {
+            case '/app/dashboard': setView(ViewState.DASHBOARD); break;
+            case '/app/socios': setView(ViewState.MEMBERS); break;
+            case '/app/agenda': setView(ViewState.AGENDA); break;
+            case '/app/tools/solucoes': setView(ViewState.SOLUTIONS); break;
+            case '/app/roi-socios': setView(ViewState.DEALS); break;
+            case '/app/roi-crescimento': 
+                 setView(ViewState.DASHBOARD);
+                 setTimeout(() => window.dispatchEvent(new CustomEvent('open-roi-modal')), 500);
+                 break;
+            case '/app/notificacoes': setView(ViewState.NOTIFICATIONS); break;
+            case '/app/chat': setView(ViewState.MESSAGES); break;
+            default: break;
+        }
+    }, [setView]);
+
+    // ─── Deep link interception (push notification → ?chat=ID ou /app/...) ────
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const chatId = params.get('chat');
         if (chatId) {
             setView(ViewState.MESSAGES);
             window.history.replaceState({}, '', '/');
+        } else if (window.location.pathname && window.location.pathname !== '/') {
+            resolveDeepLink(window.location.pathname);
+            window.history.replaceState({}, '', '/');
         }
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [resolveDeepLink, setView]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ─── Push notification prompt (shows 5s after onboarding) ────
     const [showPushPrompt, setShowPushPrompt] = useState(false);
@@ -116,23 +136,6 @@ const AppShell: React.FC = () => {
         currentUser?.id ?? null,
         currentUser?.role ?? null
     );
-
-    const resolveDeepLink = (link: string) => {
-        switch (link) {
-            case '/app/dashboard': setView(ViewState.DASHBOARD); break;
-            case '/app/socios': setView(ViewState.MEMBERS); break;
-            case '/app/agenda': setView(ViewState.AGENDA); break;
-            case '/app/tools/solucoes': setView(ViewState.SOLUTIONS); break;
-            case '/app/roi-socios': setView(ViewState.DEALS); break;
-            case '/app/roi-crescimento': 
-                 setView(ViewState.DASHBOARD);
-                 setTimeout(() => window.dispatchEvent(new CustomEvent('open-roi-modal')), 500);
-                 break;
-            case '/app/notificacoes': setView(ViewState.NOTIFICATIONS); break;
-            case '/app/chat': setView(ViewState.MESSAGES); break;
-            default: setView(ViewState.DASHBOARD); break;
-        }
-    };
 
     // ─── Guard 0: Blocked User ───────────────────────
     if (isBlocked) {
