@@ -16,19 +16,10 @@ const corsHeaders = {
 }
 
 /**
- * Converte YYYY-MM-DD para Unix timestamp em milissegundos (midnight UTC).
- * Formato esperado pela API HubSpot para propriedades do tipo "date".
- * Ex: "1990-05-15" → 641952000000
- *
- * NOTA: HubSpot exibe no frontend como DD/MM/YYYY (timezone Brasil),
- * mas a API armazena como timestamp UTC.
+ * NOTA: A API CRM v3 do HubSpot padronizou as propriedades do tipo 'date' (apenas data).
+ * Elas DEVEM receber uma string no formato 'YYYY-MM-DD'.
+ * O envio de timestamps em milissegundos era exigido apenas na v1 (ou para tipos 'datetime').
  */
-function toHubSpotTimestamp(dateStr: string): string {
-    const [year, month, day] = dateStr.split('-').map(Number)
-    // Midnight UTC — evita day-shift por fuso horário
-    const ts = Date.UTC(year, month - 1, day, 0, 0, 0, 0)
-    return String(ts)
-}
 
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
@@ -61,9 +52,7 @@ Deno.serve(async (req: Request) => {
             )
         }
 
-        const timestamp = toHubSpotTimestamp(birth_date)
-
-        console.log(`📤 PUSH birth_date para HubSpot: ${email} → ${birth_date} (ts: ${timestamp})`)
+        console.log(`📤 PUSH birth_date para HubSpot: ${email} → ${birth_date}`)
 
         // PATCH via email como identificador (idProperty=email)
         // Não precisamos do contactId — a API aceita email como key primária
@@ -77,7 +66,7 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
                 properties: {
-                    data_de_nascimento_: timestamp,
+                    data_de_nascimento_: birth_date,
                 },
             }),
         })
