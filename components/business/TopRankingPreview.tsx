@@ -89,77 +89,71 @@ export const TopRankingPreview: React.FC<TopRankingPreviewProps> = ({ onViewFull
     // Podium Layout
     return (
         <div className="top-ranking-preview">
-            {/* Clickable Header */}
+            {/* CABEÇALHO CLICÁVEL PADRONIZADO */}
             <div
                 className="ranking-header"
                 onClick={() => setIsOpen(!isOpen)}
                 role="button"
                 aria-expanded={isOpen}
                 aria-label="Toggle ranking details"
-                style={{
-                    marginBottom: isOpen ? '20px' : '0'
-                }}
             >
                 <Trophy className="trophy-icon" size={20} />
                 <h3>Top Sócios (Vendas)</h3>
-                {isOpen ? (
-                    <ChevronUp className="chevron-icon" size={20} />
-                ) : (
-                    <ChevronDown className="chevron-icon" size={20} />
-                )}
+                <ChevronUp
+                    size={20}
+                    className={`chevron-icon transition-transform ${isOpen ? 'rotate-0' : 'rotate-180'}`}
+                />
             </div>
 
-            {/* Collapsible Content */}
+            {/* WRAPPER ANIMADO (CSS Grid Trick Premium) */}
             <div
-                className="ranking-content"
-                style={{
-                    maxHeight: isOpen ? '1000px' : '0',
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out'
-                }}
+                className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
             >
+                <div className="overflow-hidden">
+                    <div className="pt-1 pb-5 px-5">
+                        <div className="podium-container">
+                            {topSellers.map((seller, index) => {
+                                const position = index + 1;
+                                const medalColor = getMedalColor(position);
+                                const medalEmoji = getMedalEmoji(position);
 
-                <div className="podium-container">
-                    {topSellers.map((seller, index) => {
-                        const position = index + 1;
-                        const medalColor = getMedalColor(position);
-                        const medalEmoji = getMedalEmoji(position);
+                                return (
+                                    <div
+                                        key={seller.user_id}
+                                        className={`podium-card position-${position}`}
+                                        onClick={() => onProfileClick?.(seller.user_id)}
+                                        role={onProfileClick ? 'button' : undefined}
+                                        tabIndex={onProfileClick ? 0 : undefined}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && onProfileClick) onProfileClick(seller.user_id); }}
+                                    >
+                                        <div className="medal-badge">{medalEmoji}</div>
+                                        <div className={`avatar-wrapper ${medalColor}`}>
+                                            <Avatar
+                                                src={seller.image_url}
+                                                alt={seller.name}
+                                                size="xl"
+                                            />
+                                        </div>
+                                        <div className="seller-info">
+                                            <p className="seller-name">{seller.name}</p>
+                                            <p className="seller-amount">
+                                                <TrendingUp size={20} className="trend-icon" />
+                                            </p>
+                                            <p className="seller-deals">
+                                                {seller.deal_count || 0} negócio{seller.deal_count !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
 
-                        return (
-                            <div
-                                key={seller.user_id}
-                                className={`podium-card position-${position}`}
-                                onClick={() => onProfileClick?.(seller.user_id)}
-                                role={onProfileClick ? 'button' : undefined}
-                                tabIndex={onProfileClick ? 0 : undefined}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && onProfileClick) onProfileClick(seller.user_id); }}
-                            >
-                                <div className="medal-badge">{medalEmoji}</div>
-                                <div className={`avatar-wrapper ${medalColor}`}>
-                                    <Avatar
-                                        src={seller.image_url}
-                                        alt={seller.name}
-                                        size="xl"
-                                    />
-                                </div>
-                                <div className="seller-info">
-                                    <p className="seller-name">{seller.name}</p>
-                                    <p className="seller-amount">
-                                        <TrendingUp size={20} className="trend-icon" />
-                                    </p>
-                                    <p className="seller-deals">
-                                        {seller.deal_count || 0} negócio{seller.deal_count !== 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })}
+                        <button className="view-full-btn" onClick={onViewFullRankings}>
+                            Ver Ranking Completo
+                            <ArrowRight size={16} />
+                        </button>
+                    </div>
                 </div>
-
-                <button className="view-full-btn" onClick={onViewFullRankings}>
-                    Ver Ranking Completo
-                    <ArrowRight size={16} />
-                </button>
             </div>
 
             <style>{styles}</style>
@@ -172,16 +166,23 @@ const styles = `
                 background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             border: 1px solid #334155;
             border-radius: 12px;
-            padding: 20px;
             color: white;
+            transition: all 0.3s ease;
     }
 
             .ranking-header {
         display: flex;
         align-items: center;
         gap: 10px;
+        padding: 16px 20px;
         cursor: pointer;
         user-select: none;
+        transition: background-color 0.2s;
+        border-radius: 12px;
+    }
+
+    .ranking-header:hover {
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .ranking-header h3 {
