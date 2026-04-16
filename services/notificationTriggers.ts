@@ -33,7 +33,7 @@ class NotificationTriggers {
             'Atualização de Faturamento',
             `Olá ${member.name.split(' ')[0]}, o trimestre virou! É hora de atualizar seu faturamento para recalcularmos seu Múltiplo de Crescimento no clube.`,
             'INDIVIDUAL',
-            '/',   
+            '/app/roi-crescimento',   
             member.id
           )
           successCount++
