@@ -63,64 +63,70 @@ function mapProfileToHubSpot(profile: any) {
     const phone = formatPhoneInternational(profile.phone || '')
 
     // Core HubSpot properties
-    const properties: Record<string, string> = {
+    const contactProperties: Record<string, string> = {
         email: profile.email,
         firstname,
         lastname,
         nome_do_cliente: profile.name || '',
         jobtitle: profile.job_title || '',
         cargo_na_empresa_2_: profile.job_title || '',
-        company: profile.company || '',
-        nome_fantasia: profile.company || '',
         sobre_voce: profile.bio || '',
     }
 
+    // Company HubSpot properties
+    const companyProperties: Record<string, string> = {
+        name: profile.company || '', // HubSpot default
+        nome_fantasia: profile.company || '',
+        domain: profile.socials?.website || '', // HubSpot default domain
+        website: profile.socials?.website || ''
+    }
+
     if (profile.birth_date) {
-        properties.data_de_nascimento_ = profile.birth_date;
+        contactProperties.data_de_nascimento_ = profile.birth_date;
         // The user also mentioned data_de_aniversario at one point, setting both just in case
-        properties.data_de_aniversario = profile.birth_date;
+        contactProperties.data_de_aniversario = profile.birth_date;
     }
 
     // Phone in international format
     if (phone) {
-        properties.phone = phone
-        properties.mobilephone = phone
+        contactProperties.phone = phone
+        contactProperties.mobilephone = phone
     }
 
     // Custom Prosperus properties → HubSpot internal names
     if (profile.what_i_sell) {
-        properties.produto_servico = profile.what_i_sell;
-        properties.necessidade = profile.what_i_sell; // Mapped to the actual UI label
+        contactProperties.produto_servico = profile.what_i_sell;
+        contactProperties.necessidade = profile.what_i_sell; // Mapped to the actual UI label
     }
     if (profile.what_i_need) {
-        properties.o_que_precisa = profile.what_i_need;
-        properties.frequencia_de_consumo = profile.what_i_need; // Mapped to the actual UI label
+        contactProperties.o_que_precisa = profile.what_i_need;
+        contactProperties.frequencia_de_consumo = profile.what_i_need; // Mapped to the actual UI label
     }
 
     // Tags
     if (profile.tags?.length) {
-        properties.tags_de_interesse = profile.tags.join(';')
+        contactProperties.tags_de_interesse = profile.tags.join(';')
     }
 
     // Social media
-    if (profile.socials?.linkedin) properties.hs_linkedin_url = profile.socials.linkedin
-    if (profile.socials?.instagram) properties.redes_sociais = profile.socials.instagram
-    if (profile.socials?.website) properties.website = profile.socials.website
+    if (profile.socials?.linkedin) contactProperties.hs_linkedin_url = profile.socials.linkedin
+    if (profile.socials?.instagram) contactProperties.redes_sociais = profile.socials.instagram
     if (profile.socials?.whatsapp) {
         const whatsappPhone = formatPhoneInternational(profile.socials.whatsapp)
-        if (whatsappPhone) properties.hs_whatsapp_phone_number = whatsappPhone
+        if (whatsappPhone) contactProperties.hs_whatsapp_phone_number = whatsappPhone
     }
 
     // Avatar — custom property with public Supabase Storage URL
-    if (profile.image_url) properties.avatar_url = profile.image_url
+    if (profile.image_url) contactProperties.avatar_url = profile.image_url
 
     if (profile.partnership_interests?.length) {
-        properties.setores_de_interesse = profile.partnership_interests.join(';')
-        properties.setor_de_interesse = profile.partnership_interests.join(';')
+        contactProperties.setores_de_interesse = profile.partnership_interests.join(';')
+        contactProperties.setor_de_interesse = profile.partnership_interests.join(';')
     }
 
-    return properties
+    return { contactProperties, companyProperties }
 }
+
 
 
 /**
@@ -256,6 +262,90 @@ async function updateHubSpotContact(contactId: string, properties: any): Promise
 }
 
 /**
+ * Get associated company for a contact
+ */
+async function getAssociatedCompany(contactId: string): Promise<string | null> {
+    const assocUrl = `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/company`
+    const response = await fetch(assocUrl, { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } })
+
+    if (response.ok) {
+        const data = await response.json()
+        if (data.results && data.results.length > 0) {
+            return data.results[0].id
+        }
+    }
+    return null
+}
+
+/**
+ * Create new company in HubSpot and associate with contact
+ */
+async function createHubSpotCompany(properties: any, associatedContactId: string): Promise<string | void> {
+    // Only create if there's actually a company name provided
+    if (!properties.name && !properties.nome_fantasia) return;
+    
+    // Clean properties -> remove empty string values which hubspot sometimes rejects for website/domain
+    const cleanProps: any = {};
+    for (const k in properties) {
+        if (properties[k]) cleanProps[k] = properties[k];
+    }
+    
+    const response = await fetch('https://api.hubapi.com/crm/v3/objects/companies', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`
+        },
+        body: JSON.stringify({ properties: cleanProps })
+    })
+
+    if (!response.ok) {
+        console.warn('HubSpot Create Company Warn:', await response.text())
+        return;
+    }
+
+    const data = await response.json()
+    const companyId = data.id
+    console.log('✅ Created HubSpot company:', companyId)
+
+    // Associate
+    const assocResp = await fetch(`https://api.hubapi.com/crm/v3/objects/companies/${companyId}/associations/contacts/${associatedContactId}/company_to_contact`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+    })
+    
+    if (assocResp.ok) console.log('✅ Associated newly created company to contact:', associatedContactId)
+}
+
+/**
+ * Update existing company in HubSpot
+ */
+async function updateHubSpotCompany(companyId: string, properties: any): Promise<void> {
+    const cleanProps: any = {};
+    for (const k in properties) {
+        if (properties[k]) cleanProps[k] = properties[k];
+    }
+    
+    if (Object.keys(cleanProps).length === 0) return;
+
+    const updateUrl = `https://api.hubapi.com/crm/v3/objects/companies/${companyId}`
+    const response = await fetch(updateUrl, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`
+        },
+        body: JSON.stringify({ properties: cleanProps })
+    })
+
+    if (!response.ok) {
+        console.warn('HubSpot Update Company Warn:', await response.text())
+    } else {
+        console.log('✅ Updated HubSpot company:', companyId)
+    }
+}
+
+/**
  * Update hubspot_contact_id in Supabase profiles table
  */
 async function updateSupabaseContactId(userId: string, hubspotContactId: string): Promise<void> {
@@ -298,14 +388,14 @@ Deno.serve(async (req: Request) => {
         })
 
         // Map profile to HubSpot properties
-        const hubspotProperties = mapProfileToHubSpot(profile)
+        const { contactProperties, companyProperties } = mapProfileToHubSpot(profile)
 
         let hubspotContactId = profile.hubspot_contact_id
 
         // SCENARIO A: Profile already has hubspot_contact_id
         if (hubspotContactId) {
             console.log('📝 Updating existing HubSpot contact:', hubspotContactId)
-            await updateHubSpotContact(hubspotContactId, hubspotProperties)
+            await updateHubSpotContact(hubspotContactId, contactProperties)
         }
         // SCENARIO B: No hubspot_contact_id - search or create
         else {
@@ -316,15 +406,29 @@ Deno.serve(async (req: Request) => {
                 // Found existing contact - update it
                 hubspotContactId = existingContact.id
                 console.log('📝 Found existing contact, updating:', hubspotContactId)
-                await updateHubSpotContact(hubspotContactId, hubspotProperties)
+                await updateHubSpotContact(hubspotContactId, contactProperties)
             } else {
                 // Contact doesn't exist - create new
                 console.log('➕ Creating new HubSpot contact')
-                hubspotContactId = await createHubSpotContact(hubspotProperties)
+                hubspotContactId = await createHubSpotContact(contactProperties)
             }
 
             // Save hubspot_contact_id back to Supabase
             await updateSupabaseContactId(profile.id, hubspotContactId)
+        }
+
+        // ==========================================
+        // Sync Company Data
+        // ==========================================
+        if (hubspotContactId && (companyProperties.name || companyProperties.website)) {
+            const companyId = await getAssociatedCompany(hubspotContactId)
+            if (companyId) {
+                console.log('📝 Updating associated company:', companyId)
+                await updateHubSpotCompany(companyId, companyProperties)
+            } else {
+                console.log('➕ Creating associated company')
+                await createHubSpotCompany(companyProperties, hubspotContactId)
+            }
         }
 
 
