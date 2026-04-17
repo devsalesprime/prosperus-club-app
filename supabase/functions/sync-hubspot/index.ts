@@ -338,8 +338,9 @@ async function createHubSpotCompany(properties: any, associatedContactId: string
     })
 
     if (!response.ok) {
-        console.warn('HubSpot Create Company Warn:', await response.text())
-        return;
+        const errText = await response.text();
+        console.warn('HubSpot Create Company Warn:', errText)
+        throw new Error('HubSpot Create Company Error: ' + errText);
     }
 
     const data = await response.json()
@@ -377,7 +378,9 @@ async function updateHubSpotCompany(companyId: string, properties: any): Promise
     })
 
     if (!response.ok) {
-        console.warn('HubSpot Update Company Warn:', await response.text())
+        const errText = await response.text();
+        console.warn('HubSpot Update Company Warn:', errText)
+        throw new Error('HubSpot Update Company Error: ' + errText);
     } else {
         console.log('✅ Updated HubSpot company:', companyId)
     }
