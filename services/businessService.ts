@@ -72,14 +72,16 @@ export interface RankingEntry {
 }
 
 export interface CreateDealInput {
-    buyer_id: string;
+    buyer_id: string | null;
+    hubspot_buyer_id?: string | null;
     amount: number;
-    description: string;
+    description?: string;
     deal_date?: string;
 }
 
 export interface CreateReferralInput {
-    receiver_id: string;
+    receiver_id: string | null;
+    hubspot_receiver_id?: string | null;
     lead_name: string;
     lead_email?: string;
     lead_phone?: string;
@@ -113,6 +115,7 @@ class BusinessService {
             .insert({
                 seller_id: user.id,
                 buyer_id: data.buyer_id,
+                hubspot_buyer_id: data.hubspot_buyer_id,
                 amount: data.amount,
                 description: data.description,
                 deal_date: data.deal_date || new Date().toISOString().split('T')[0],
@@ -246,11 +249,12 @@ class BusinessService {
             .insert({
                 referrer_id: user.id,
                 receiver_id: data.receiver_id,
+                hubspot_receiver_id: data.hubspot_receiver_id,
                 lead_name: data.lead_name,
                 lead_email: data.lead_email,
                 lead_phone: data.lead_phone,
                 notes: data.notes,
-                status: 'NEW'
+                status: 'PENDING'
             })
             .select(`
                 *,

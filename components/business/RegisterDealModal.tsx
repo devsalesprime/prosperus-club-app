@@ -1,25 +1,18 @@
 // components/business/RegisterDealModal.tsx
-// Modal para registrar novo negócio - Prosperus Club App v2.5
+// Modal para registrar novo negócio - Prosperus Club App v2.5 (Omnichannel)
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, Calendar, FileText, User, Loader2, Trash2 } from 'lucide-react';
+import { X, DollarSign, Calendar, FileText, User, Loader2 } from 'lucide-react';
 import { businessService } from '../../services/businessService';
-import { supabase } from '../../lib/supabase';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { notify } from '../../utils/toast';
+import { SmartMemberSelect } from '../ui/SmartMemberSelect';
 
 interface RegisterDealModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-}
-
-interface MemberOption {
-    id: string;
-    name: string;
-    image_url: string;
-    company: string;
 }
 
 export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
@@ -33,7 +26,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     // iOS-proof scroll lock
     useScrollLock({ enabled: isOpen, modalId: 'register-deal' });
 
-    // iOS touchmove prevention — block scroll on overlay, allow inside .modal-content
+    // iOS touchmove prevention
     const handleTouchMove = useCallback((e: TouchEvent) => {
         const target = e.target as HTMLElement;
         const content = contentRef.current;
@@ -50,30 +43,23 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
         return () => overlay.removeEventListener('touchmove', handleTouchMove);
     }, [isOpen, handleTouchMove]);
 
-    const [members, setMembers] = useState<MemberOption[]>([]);
-    const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
 
     // Form state
     const [selectedBuyer, setSelectedBuyer] = useState<string>('');
+    const [selectedAppProfileId, setSelectedAppProfileId] = useState<string | null>(null);
+    const [selectedHubSpotId, setSelectedHubSpotId] = useState<string>('');
     const [amount, setAmount] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [dealDate, setDealDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [error, setError] = useState<string>('');
 
-    // Load members when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            loadMembers();
-        }
-    }, [isOpen]);
-
-    // CRITICAL: Cleanup state when modal closes (fixes lag/persistence bug)
+    // CRITICAL: Cleanup state when modal closes
     useEffect(() => {
         if (!isOpen) {
             setSelectedBuyer('');
-            setSearchTerm('');
+            setSelectedAppProfileId(null);
+            setSelectedHubSpotId('');
             setAmount('');
             setDescription('');
             setDealDate(new Date().toISOString().split('T')[0]);
@@ -81,32 +67,9 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
         }
     }, [isOpen]);
 
-    const loadMembers = async () => {
-        setLoading(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, name, image_url, company')
-                .eq('role', 'MEMBER')
-                .neq('id', user?.id)
-                .order('name');
-
-            if (error) throw error;
-            setMembers(data || []);
-        } catch (err) {
-            console.error('Error loading members:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const formatCurrencyInput = (value: string) => {
-        // Remove tudo que não é número
         const numbers = value.replace(/\D/g, '');
-        // Converte para centavos
         const cents = parseInt(numbers) || 0;
-        // Formata como moeda
         return (cents / 100).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
@@ -119,7 +82,6 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
     };
 
     const parseAmount = (): number => {
-        // Converte "1.234,56" para 1234.56
         return parseFloat(amount.replace(/\./g, '').replace(',', '.')) || 0;
     };
 
@@ -146,7 +108,8 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
         setSubmitting(true);
         try {
             await businessService.registerDeal({
-                buyer_id: selectedBuyer,
+                buyer_id: selectedAppProfileId,
+                hubspot_buyer_id: !selectedAppProfileId ? selectedHubSpotId : null,
                 amount: numericAmount,
                 description: description.trim(),
                 deal_date: dealDate
@@ -154,6 +117,8 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
 
             // Reset form
             setSelectedBuyer('');
+            setSelectedAppProfileId(null);
+            setSelectedHubSpotId('');
             setAmount('');
             setDescription('');
             setDealDate(new Date().toISOString().split('T')[0]);
@@ -168,25 +133,6 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
         } finally {
             setSubmitting(false);
         }
-    };
-
-    // Optimized filtering with useMemo (prevents re-computation on every render)
-    const filteredMembers = useMemo(() => {
-        return members.filter(m =>
-            m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            m.company?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [members, searchTerm]);
-
-    // Get selected member data for display
-    const selectedMember = useMemo(() => {
-        return members.find(m => m.id === selectedBuyer);
-    }, [members, selectedBuyer]);
-
-    // Clear selection handler
-    const handleClearSelection = () => {
-        setSelectedBuyer('');
-        setSearchTerm('');
     };
 
     if (!isOpen) return null;
@@ -208,75 +154,23 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         </div>
                     )}
 
-                    <div className="form-group">
+                    <div className="form-group z-50">
                         <label>
                             <User size={16} />
                             Comprador
                         </label>
-
-                        {/* Show selected member card OR search input */}
-                        {selectedMember ? (
-                            <div className="selected-member-card">
-                                <img
-                                    src={selectedMember.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                    alt={selectedMember.name}
-                                    className="selected-avatar"
-                                />
-                                <div className="selected-info">
-                                    <span className="selected-name">{selectedMember.name}</span>
-                                    <span className="selected-company">{selectedMember.company}</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleClearSelection}
-                                    className="remove-selection-btn"
-                                    title="Remover seleção"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar membro..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="search-input"
-                                />
-                                <div className="member-list">
-                                    {loading ? (
-                                        <div className="loading-state">
-                                            <Loader2 className="animate-spin" size={20} />
-                                        </div>
-                                    ) : (
-                                        filteredMembers.slice(0, 5).map(member => (
-                                            <div
-                                                key={member.id}
-                                                className="member-option"
-                                                onClick={() => {
-                                                    setSelectedBuyer(member.id);
-                                                    setSearchTerm(member.name);
-                                                }}
-                                            >
-                                                <img
-                                                    src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                                    alt={member.name}
-                                                    className="member-avatar"
-                                                />
-                                                <div className="member-info">
-                                                    <span className="member-name">{member.name}</span>
-                                                    <span className="member-company">{member.company}</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </>
-                        )}
+                        <SmartMemberSelect
+                            value={selectedBuyer}
+                            onChange={(val, appId, hubId) => {
+                                setSelectedBuyer(val);
+                                setSelectedAppProfileId(appId);
+                                setSelectedHubSpotId(hubId);
+                            }}
+                            placeholder="Buscar comprador (Sócio ou CRM)..."
+                        />
                     </div>
 
-                    <div className="form-group">
+                    <div className="form-group mt-6">
                         <label>
                             <DollarSign size={16} />
                             Valor do Negócio
@@ -436,8 +330,7 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                         font-size: 14px;
                     }
 
-                    .search-input,
-                    .form-group input,
+                    .form-group input:not([type="date"]),
                     .form-group textarea {
                         width: 100%;
                         padding: 12px;
@@ -456,131 +349,26 @@ export const RegisterDealModal: React.FC<RegisterDealModalProps> = ({
                     }
 
                     .form-group input[type="date"] {
+                        width: 100%;
+                        padding: 12px;
+                        border: 1px solid #334155;
+                        border-radius: 8px;
+                        background: #1e293b;
+                        color: #f1f5f9;
                         height: 48px;
                         -webkit-appearance: none;
                         appearance: none;
                     }
 
-                    .search-input::placeholder,
                     .form-group input::placeholder,
                     .form-group textarea::placeholder {
                         color: #64748b;
                     }
 
                     .form-group input:focus,
-                    .form-group textarea:focus,
-                    .search-input:focus {
+                    .form-group textarea:focus {
                         outline: none;
                         border-color: #FFDA71;
-                    }
-
-                    .member-list {
-                        max-height: 200px;
-                        overflow-y: auto;
-                        border: 1px solid #334155;
-                        border-radius: 8px;
-                        margin-top: 8px;
-                        background: #1e293b;
-                    }
-
-                    .loading-state {
-                        display: flex;
-                        justify-content: center;
-                        padding: 20px;
-                        color: #94a3b8;
-                    }
-
-                    .member-option {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        padding: 12px;
-                        cursor: pointer;
-                        transition: background 0.2s;
-                    }
-
-                    .member-option:hover {
-                        background: #334155;
-                    }
-
-                    .member-avatar {
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                    }
-
-                    .member-info {
-                        display: flex;
-                        flex-direction: column;
-                    }
-
-                    .member-name {
-                        font-weight: 600;
-                        color: #f1f5f9;
-                    }
-
-                    .member-company {
-                        font-size: 12px;
-                        color: #94a3b8;
-                    }
-
-                    /* Selected Member Card Styles */
-                    .selected-member-card {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        padding: 12px;
-                        background: rgba(255, 218, 113, 0.08);
-                        border: 2px solid rgba(255, 218, 113, 0.4);
-                        border-radius: 8px;
-                        position: relative;
-                    }
-
-                    .selected-avatar {
-                        width: 48px;
-                        height: 48px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                    }
-
-                    .selected-info {
-                        display: flex;
-                        flex-direction: column;
-                        flex: 1;
-                    }
-
-                    .selected-name {
-                        font-weight: 600;
-                        color: #f1f5f9;
-                        font-size: 15px;
-                    }
-
-                    .selected-company {
-                        font-size: 13px;
-                        color: #94a3b8;
-                    }
-
-                    .remove-selection-btn {
-                        background: rgba(220, 38, 38, 0.15);
-                        border: none;
-                        border-radius: 6px;
-                        padding: 8px;
-                        cursor: pointer;
-                        color: #f87171;
-                        transition: all 0.2s;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-
-                    .remove-selection-btn:hover {
-                        background: rgba(220, 38, 38, 0.25);
-                        transform: scale(1.05);
-                    }
-
-                    .remove-selection-btn:active {
-                        transform: scale(0.95);
                     }
 
                     .currency-input {

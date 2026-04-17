@@ -158,7 +158,7 @@ async function handleContactCreatedOrUpdated(eventData: any) {
         return { success: false, reason: 'Contact has no email' }
     }
 
-    console.log('📋 Processing contact:', { email, fullName, situacao, isActive, hubspotId })
+    console.log('HubSpot Processing contact:', { email, fullName, situacao, isActive, hubspotId })
 
     // Check if profile already exists by hubspot_contact_id or email
     const { data: existingProfile } = await supabase
@@ -167,6 +167,17 @@ async function handleContactCreatedOrUpdated(eventData: any) {
         .or(`hubspot_contact_id.eq.${hubspotId},email.eq.${email}`)
         .limit(1)
         .single()
+        
+    // UNIVERSAL DIRECTORY UPSERT (Shadow Profiles)
+    await supabase.from('hubspot_directory').upsert({
+        hubspot_id: hubspotId,
+        full_name: fullName,
+        email,
+        company,
+        app_profile_id: existingProfile?.id || null,
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'hubspot_id' });
 
     if (existingProfile) {
         // ── UPDATE existing profile ──

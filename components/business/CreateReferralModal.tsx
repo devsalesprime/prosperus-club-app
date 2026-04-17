@@ -1,25 +1,18 @@
 // components/business/CreateReferralModal.tsx
-// Modal para criar nova indicação - Prosperus Club App v2.5
+// Modal para criar nova indicação - Prosperus Club App v2.5 (Omnichannel)
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, User, Mail, Phone, FileText, Loader2, Send } from 'lucide-react';
 import { businessService } from '../../services/businessService';
-import { supabase } from '../../lib/supabase';
 import { useScrollLock } from '../../hooks/useScrollLock';
 import { notify } from '../../utils/toast';
+import { SmartMemberSelect } from '../ui/SmartMemberSelect';
 
 interface CreateReferralModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
-}
-
-interface MemberOption {
-    id: string;
-    name: string;
-    image_url: string;
-    company: string;
 }
 
 export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
@@ -50,13 +43,12 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
         return () => overlay.removeEventListener('touchmove', handleTouchMove);
     }, [isOpen, handleTouchMove]);
 
-    const [members, setMembers] = useState<MemberOption[]>([]);
-    const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
 
     // Form state
     const [selectedReceiver, setSelectedReceiver] = useState<string>('');
+    const [selectedAppProfileId, setSelectedAppProfileId] = useState<string | null>(null);
+    const [selectedHubSpotId, setSelectedHubSpotId] = useState<string>('');
     const [leadName, setLeadName] = useState('');
     const [leadEmail, setLeadEmail] = useState('');
     const [leadPhone, setLeadPhone] = useState('');
@@ -64,30 +56,17 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (isOpen) {
-            loadMembers();
+        if (!isOpen) {
+            setSelectedReceiver('');
+            setSelectedAppProfileId(null);
+            setSelectedHubSpotId('');
+            setLeadName('');
+            setLeadEmail('');
+            setLeadPhone('');
+            setNotes('');
+            setError('');
         }
     }, [isOpen]);
-
-    const loadMembers = async () => {
-        setLoading(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, name, image_url, company')
-                .eq('role', 'MEMBER')
-                .neq('id', user?.id)
-                .order('name');
-
-            if (error) throw error;
-            setMembers(data || []);
-        } catch (err) {
-            console.error('Error loading members:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -106,7 +85,8 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
         setSubmitting(true);
         try {
             await businessService.createReferral({
-                receiver_id: selectedReceiver,
+                receiver_id: selectedAppProfileId,
+                hubspot_receiver_id: !selectedAppProfileId ? selectedHubSpotId : null,
                 lead_name: leadName.trim(),
                 lead_email: leadEmail.trim() || undefined,
                 lead_phone: leadPhone.trim() || undefined,
@@ -115,11 +95,12 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
 
             // Reset form
             setSelectedReceiver('');
+            setSelectedAppProfileId(null);
+            setSelectedHubSpotId('');
             setLeadName('');
             setLeadEmail('');
             setLeadPhone('');
             setNotes('');
-            setSearchTerm('');
 
             notify.success('Indicação enviada. Os dois serão notificados.');
             onSuccess();
@@ -132,11 +113,6 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
             setSubmitting(false);
         }
     };
-
-    const filteredMembers = members.filter(m =>
-        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        m.company?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
     if (!isOpen) return null;
 
@@ -157,49 +133,23 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         </div>
                     )}
 
-                    <div className="form-group">
+                    <div className="form-group z-50">
                         <label>
                             <User size={16} />
                             Indicar para
                         </label>
-                        <input
-                            type="text"
-                            placeholder="Buscar membro..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="search-input"
+                        <SmartMemberSelect
+                            value={selectedReceiver}
+                            onChange={(val, appId, hubId) => {
+                                setSelectedReceiver(val);
+                                setSelectedAppProfileId(appId);
+                                setSelectedHubSpotId(hubId);
+                            }}
+                            placeholder="Buscar contato alvo (Sócio ou CRM)..."
                         />
-                        <div className="member-list">
-                            {loading ? (
-                                <div className="loading-state">
-                                    <Loader2 className="animate-spin" size={20} />
-                                </div>
-                            ) : (
-                                filteredMembers.slice(0, 5).map(member => (
-                                    <div
-                                        key={member.id}
-                                        className={`member-option ${selectedReceiver === member.id ? 'selected' : ''}`}
-                                        onClick={() => {
-                                            setSelectedReceiver(member.id);
-                                            setSearchTerm(member.name);
-                                        }}
-                                    >
-                                        <img
-                                            src={member.image_url || `${import.meta.env.BASE_URL}default-avatar.svg`}
-                                            alt={member.name}
-                                            className="member-avatar"
-                                        />
-                                        <div className="member-info">
-                                            <span className="member-name">{member.name}</span>
-                                            <span className="member-company">{member.company}</span>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
                     </div>
 
-                    <div className="section-title">Dados do Lead</div>
+                    <div className="section-title mt-6">Dados do Lead</div>
 
                     <div className="form-group">
                         <label>
@@ -387,7 +337,6 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         gap: 16px;
                     }
 
-                    .search-input,
                     .form-group input,
                     .form-group textarea {
                         width: 100%;
@@ -398,11 +347,11 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                         color: #f1f5f9 !important;
                         background: #1e293b !important;
                         transition: border-color 0.2s;
+                        box-sizing: border-box;
                     }
 
                     .form-group input::placeholder,
-                    .form-group textarea::placeholder,
-                    .search-input::placeholder {
+                    .form-group textarea::placeholder {
                         color: #64748b;
                     }
 
@@ -410,61 +359,6 @@ export const CreateReferralModal: React.FC<CreateReferralModalProps> = ({
                     .form-group textarea:focus {
                         outline: none;
                         border-color: #FFDA71;
-                    }
-
-                    .member-list {
-                        max-height: 180px;
-                        overflow-y: auto;
-                        border: 1px solid #334155;
-                        border-radius: 8px;
-                        margin-top: 8px;
-                    }
-
-                    .loading-state {
-                        display: flex;
-                        justify-content: center;
-                        padding: 20px;
-                        color: #94a3b8;
-                    }
-
-                    .member-option {
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        padding: 12px;
-                        cursor: pointer;
-                        transition: background 0.2s;
-                    }
-
-                    .member-option:hover {
-                        background: #1e293b;
-                    }
-
-                    .member-option.selected {
-                        background: rgba(255, 218, 113, 0.1);
-                        border-left: 3px solid #FFDA71;
-                    }
-
-                    .member-avatar {
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                    }
-
-                    .member-info {
-                        display: flex;
-                        flex-direction: column;
-                    }
-
-                    .member-name {
-                        font-weight: 600;
-                        color: #f1f5f9;
-                    }
-
-                    .member-company {
-                        font-size: 12px;
-                        color: #94a3b8 !important;
                     }
 
                     .modal-actions {
