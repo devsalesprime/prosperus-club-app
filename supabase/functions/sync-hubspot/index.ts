@@ -62,14 +62,36 @@ function mapProfileToHubSpot(profile: any) {
     const { firstname, lastname } = splitName(profile.name || '')
     const phone = formatPhoneInternational(profile.phone || '')
 
+    // Map free-text job title to strict CRM options
+    const ALLOWED_JOBS = [
+        "Vice Presidete ou C-Level", "Gerente", "Vendedor", "CEO", "Sócio/Fundador",
+        "Autônomo", "Não Informado", "Sócio ou dono de operação comercial", 
+        "Presidente/CEO", "Diretor ou Gerente", "Diretor", "Outro", "Dono", 
+        "Sócio ou CEO", "Gerente de equipe de vendas"
+    ];
+    let cargo_2 = "Outro";
+    const jobTitleRaw = profile.job_title || '';
+    if (ALLOWED_JOBS.includes(jobTitleRaw)) {
+        cargo_2 = jobTitleRaw;
+    } else {
+        const titleUpper = jobTitleRaw.toUpperCase();
+        if (titleUpper.includes("CEO") || titleUpper.includes("C-LEVEL") || titleUpper.includes("PRESIDENTE")) cargo_2 = "CEO";
+        else if (titleUpper.includes("DIRETOR") || titleUpper.includes("HEAD")) cargo_2 = "Diretor";
+        else if (titleUpper.includes("GERENTE") || titleUpper.includes("COORDENADOR")) cargo_2 = "Gerente";
+        else if (titleUpper.includes("SÓCIO") || titleUpper.includes("SOCIO") || titleUpper.includes("FUNDADOR") || titleUpper.includes("DONO")) cargo_2 = "Sócio/Fundador";
+        else if (titleUpper.includes("VENDAS") || titleUpper.includes("VENDEDOR") || titleUpper.includes("COMERCIAL")) cargo_2 = "Vendedor";
+        else if (jobTitleRaw.trim() !== '') cargo_2 = "Outro";
+        else cargo_2 = "Não Informado";
+    }
+
     // Core HubSpot properties
     const contactProperties: Record<string, string> = {
         email: profile.email,
         firstname,
         lastname,
         nome_do_cliente: profile.name || '',
-        jobtitle: profile.job_title || '',
-        cargo_na_empresa_2_: profile.job_title || '',
+        jobtitle: jobTitleRaw,
+        cargo_na_empresa_2_: cargo_2,
         sobre_voce: profile.bio || '',
     }
 
