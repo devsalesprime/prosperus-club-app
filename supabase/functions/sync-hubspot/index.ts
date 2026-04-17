@@ -103,9 +103,12 @@ function mapProfileToHubSpot(profile: any) {
         contactProperties.frequencia_de_consumo = profile.what_i_need; // Mapped to the actual UI label
     }
 
+    // Helper to format options to match HubSpot's internal strict options (which use " e " instead of " & ")
+    const formatHubspotOption = (val: string) => val.replace(/ & /g, ' e ');
+
     // Tags
     if (profile.tags?.length) {
-        contactProperties.tags_de_interesse = profile.tags.join(';')
+        contactProperties.tags_de_interesse = profile.tags.map(formatHubspotOption).join(';')
     }
 
     // Social media
@@ -120,8 +123,8 @@ function mapProfileToHubSpot(profile: any) {
     if (profile.image_url) contactProperties.avatar_url = profile.image_url
 
     if (profile.partnership_interests?.length) {
-        contactProperties.setores_de_interesse = profile.partnership_interests.join(';')
-        contactProperties.setor_de_interesse = profile.partnership_interests.join(';')
+        contactProperties.setores_de_interesse = profile.partnership_interests.map(formatHubspotOption).join(';')
+        contactProperties.setor_de_interesse = profile.partnership_interests.map(formatHubspotOption).join(';')
     }
 
     return { contactProperties, companyProperties }
@@ -229,7 +232,7 @@ async function createHubSpotContact(properties: any): Promise<string> {
     if (!response.ok) {
         const errorText = await response.text()
         console.error('HubSpot Create Error:', errorText)
-        throw new Error('Failed to create HubSpot contact')
+        throw new Error('Failed to create HubSpot contact: ' + errorText)
     }
 
     const data = await response.json()
@@ -255,7 +258,7 @@ async function updateHubSpotContact(contactId: string, properties: any): Promise
     if (!response.ok) {
         const errorText = await response.text()
         console.error('HubSpot Update Error:', errorText)
-        throw new Error('Failed to update HubSpot contact')
+        throw new Error('Failed to update HubSpot contact: ' + errorText)
     }
 
     console.log('✅ Updated HubSpot contact:', contactId)
