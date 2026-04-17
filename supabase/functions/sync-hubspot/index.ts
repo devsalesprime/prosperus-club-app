@@ -105,10 +105,20 @@ function mapProfileToHubSpot(profile: any) {
 
     // Helper to format options to match HubSpot's internal strict options (which use " e " instead of " & ")
     const formatHubspotOption = (val: string) => val.replace(/ & /g, ' e ');
+    const ALLOWED_HUBSPOT_OPTIONS = [
+        "Tecnologia e Inovação", "Saúde e Bem-estar", "Finanças e Investimentos", 
+        "Consultoria e Gestão", "Jurídico e Compliance", "Agronegócio", 
+        "Logística e Supply Chain", "E-commerce e Digital", "Energia e Sustentabilidade", 
+        "Food e Beverage", "Educação", "Imóveis e Construção", 
+        "Marketing e Publicidade", "Indústria e Manufatura", "Comércio e Varejo"
+    ];
 
     // Tags
     if (profile.tags?.length) {
-        contactProperties.tags_de_interesse = profile.tags.map(formatHubspotOption).join(';')
+        const validTags = profile.tags.map(formatHubspotOption).filter((v: string) => ALLOWED_HUBSPOT_OPTIONS.includes(v));
+        if (validTags.length > 0) {
+            contactProperties.tags_de_interesse = validTags.join(';')
+        }
     }
 
     // Social media
@@ -123,8 +133,11 @@ function mapProfileToHubSpot(profile: any) {
     if (profile.image_url) contactProperties.avatar_url = profile.image_url
 
     if (profile.partnership_interests?.length) {
-        contactProperties.setores_de_interesse = profile.partnership_interests.map(formatHubspotOption).join(';')
-        contactProperties.setor_de_interesse = profile.partnership_interests.map(formatHubspotOption).join(';')
+        const validSectors = profile.partnership_interests.map(formatHubspotOption).filter((v: string) => ALLOWED_HUBSPOT_OPTIONS.includes(v));
+        if (validSectors.length > 0) {
+            contactProperties.setores_de_interesse = validSectors.join(';')
+            contactProperties.setor_de_interesse = validSectors.join(';')
+        }
     }
 
     return { contactProperties, companyProperties }
