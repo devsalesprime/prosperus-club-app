@@ -62,13 +62,23 @@ function mapProfileToHubSpot(profile: any) {
     const { firstname, lastname } = splitName(profile.name || '')
     const phone = formatPhoneInternational(profile.phone || '')
 
-    // Core HubSpot properties (always exist)
+    // Core HubSpot properties
     const properties: Record<string, string> = {
         email: profile.email,
         firstname,
         lastname,
+        nome_do_cliente: profile.name || '',
         jobtitle: profile.job_title || '',
+        cargo_na_empresa_2_: profile.job_title || '',
         company: profile.company || '',
+        nome_fantasia: profile.company || '',
+        sobre_voce: profile.bio || '',
+    }
+
+    if (profile.birth_date) {
+        properties.data_de_nascimento_ = profile.birth_date;
+        // The user also mentioned data_de_aniversario at one point, setting both just in case
+        properties.data_de_aniversario = profile.birth_date;
     }
 
     // Phone in international format
@@ -78,13 +88,24 @@ function mapProfileToHubSpot(profile: any) {
     }
 
     // Custom Prosperus properties → HubSpot internal names
-    // These are optional — only sent if properties exist in HubSpot
-    if (profile.what_i_sell) properties.produto_servico = profile.what_i_sell
-    if (profile.what_i_need) properties.o_que_precisa = profile.what_i_need
+    if (profile.what_i_sell) {
+        properties.produto_servico = profile.what_i_sell;
+        properties.necessidade = profile.what_i_sell; // Mapped to the actual UI label
+    }
+    if (profile.what_i_need) {
+        properties.o_que_precisa = profile.what_i_need;
+        properties.frequencia_de_consumo = profile.what_i_need; // Mapped to the actual UI label
+    }
+
+    // Tags
+    if (profile.tags?.length) {
+        properties.tags_de_interesse = profile.tags.join(';')
+    }
 
     // Social media
     if (profile.socials?.linkedin) properties.hs_linkedin_url = profile.socials.linkedin
     if (profile.socials?.instagram) properties.redes_sociais = profile.socials.instagram
+    if (profile.socials?.website) properties.website = profile.socials.website
     if (profile.socials?.whatsapp) {
         const whatsappPhone = formatPhoneInternational(profile.socials.whatsapp)
         if (whatsappPhone) properties.hs_whatsapp_phone_number = whatsappPhone
@@ -95,6 +116,7 @@ function mapProfileToHubSpot(profile: any) {
 
     if (profile.partnership_interests?.length) {
         properties.setores_de_interesse = profile.partnership_interests.join(';')
+        properties.setor_de_interesse = profile.partnership_interests.join(';')
     }
 
     return properties
