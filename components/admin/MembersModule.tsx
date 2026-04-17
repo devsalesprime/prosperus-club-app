@@ -41,7 +41,7 @@ export const MembersModule: React.FC = () => {
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingMember, setEditingMember] = useState<MemberRow | null>(null);
-    const [editFormData, setEditFormData] = useState({ pitch_video_url: '', role: '' });
+    const [editFormData, setEditFormData] = useState({ pitch_video_url: '', role: '', valor_pago_mentoria: '' });
     const [saving, setSaving] = useState(false);
     const [videoUrlStatus, setVideoUrlStatus] = useState<{ type: 'youtube' | 'vimeo' | 'drive' | 'loom' | 'invalid' | null; message: string }>({ type: null, message: '' });
 
@@ -179,7 +179,11 @@ export const MembersModule: React.FC = () => {
 
     const handleEditMember = (member: MemberRow) => {
         setEditingMember(member);
-        setEditFormData({ pitch_video_url: member.pitch_video_url || '', role: member.role || 'MEMBER' });
+        setEditFormData({ 
+            pitch_video_url: member.pitch_video_url || '', 
+            role: member.role || 'MEMBER',
+            valor_pago_mentoria: member.valor_pago_mentoria !== undefined && member.valor_pago_mentoria !== null ? String(member.valor_pago_mentoria) : ''
+        });
         detectVideoPlatform(member.pitch_video_url || '');
         setIsEditModalOpen(true);
     };
@@ -192,9 +196,11 @@ export const MembersModule: React.FC = () => {
         }
         try {
             setSaving(true);
+            const numValorPago = parseFloat(editFormData.valor_pago_mentoria.replace(',', '.'));
             await adminMemberService.updateMember(editingMember.id, {
                 pitch_video_url: editFormData.pitch_video_url || null,
                 role: editFormData.role || undefined,
+                valor_pago_mentoria: isNaN(numValorPago) ? null : numValorPago,
             });
             await loadMembers();
             setIsEditModalOpen(false);
@@ -781,6 +787,22 @@ export const MembersModule: React.FC = () => {
                                 <option value="ADMIN">Administrador do Sistema</option>
                             </select>
                             <p className="text-xs text-slate-500">Define a função e regras de privacidade no app.</p>
+                        </div>
+
+                        {/* Investimento Base Input */}
+                        <div className="space-y-2">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                💰 Investimento Base (Custo da Mentoria)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                placeholder="Ex: 5000.00"
+                                value={editFormData.valor_pago_mentoria}
+                                onChange={(e) => setEditFormData({ ...editFormData, valor_pago_mentoria: e.target.value })}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-slate-200 outline-none focus:border-yellow-600 transition"
+                            />
+                            <p className="text-xs text-slate-500">O valor investido (Amount) reflete no módulo Crescimento ROI. É sincronizado automaticamente via HubSpot Deal Amount.</p>
                         </div>
 
                         {/* Actions */}

@@ -23,6 +23,7 @@ export interface MemberRow {
     pitch_video_url?: string | null;
     is_active?: boolean;
     birth_date?: string | null;
+    valor_pago_mentoria?: number | null;
 }
 
 export interface MemberListResult {
@@ -67,7 +68,7 @@ class AdminMemberService {
 
         let query = supabase
             .from('profiles')
-            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url, is_active, birth_date', { count: 'exact' });
+            .select('id, name, email, company, job_title, role, image_url, created_at, pitch_video_url, is_active, birth_date, valor_pago_mentoria', { count: 'exact' });
 
         // Server-side role filter
         if (filters?.role && filters.role !== 'ALL') {
@@ -188,7 +189,7 @@ class AdminMemberService {
      * Update a member's profile fields (e.g. pitch_video_url, role).
      * Audit-logged.
      */
-    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url' | 'role'>>,): Promise<void> {
+    async updateMember(memberId: string, updates: Partial<Pick<MemberRow, 'pitch_video_url' | 'role' | 'valor_pago_mentoria'>>,): Promise<void> {
         const { error } = await supabase
             .from('profiles')
             .update({ ...updates, updated_at: new Date().toISOString() })
