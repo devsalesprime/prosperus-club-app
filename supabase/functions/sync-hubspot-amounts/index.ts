@@ -69,6 +69,11 @@ Deno.serve(async (req: Request) => {
                     if (!dealRes.ok) continue;
                     const dealData = await dealRes.json();
                     
+                    const dealAmount = parseFloat(dealData.properties?.amount);
+                    if (isNaN(dealAmount) || dealAmount <= 0) {
+                        continue;
+                    }
+                    
                     if (!bestDeal) {
                         bestDeal = dealData;
                     } else {
