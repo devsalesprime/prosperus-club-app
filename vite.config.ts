@@ -301,10 +301,25 @@ export default defineConfig(async ({ mode }) => {
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-ui': ['lucide-react', 'date-fns']
+          manualChunks: (id) => {
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+              return 'vendor-react';
+            }
+            if (id.includes('node_modules/@supabase/')) {
+              return 'vendor-supabase';
+            }
+            if (id.includes('node_modules/@tanstack/')) {
+              return 'vendor-query';
+            }
+            if (id.includes('node_modules/lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('node_modules/date-fns') || id.includes('node_modules/dayjs')) {
+              return 'vendor-date';
+            }
+            if (id.includes('/components/admin/') || id.includes('/AdminApp')) {
+              return 'admin-bundle';
+            }
           }
         }
       },
