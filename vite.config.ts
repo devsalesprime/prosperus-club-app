@@ -301,11 +301,15 @@ export default defineConfig(async ({ mode }) => {
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-ui': ['lucide-react', 'date-fns', 'dayjs'],
-            'vendor-query': ['@tanstack/react-query']
+          manualChunks: (id) => {
+            if (id.includes('/components/admin/') || id.includes('/AdminApp')) {
+              return 'admin-bundle';
+            }
+            if (id.includes('node_modules')) {
+              if (id.includes('@supabase')) return 'vendor-supabase';
+              if (id.includes('@tanstack')) return 'vendor-query';
+              return 'vendor-ui'; // Agrupa React, Lucide e Date-fns juntos para evitar o erro do forwardRef
+            }
           }
         }
       },
