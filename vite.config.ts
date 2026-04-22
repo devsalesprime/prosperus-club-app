@@ -214,9 +214,9 @@ export default defineConfig(async ({ mode }) => {
           screenshots: [
             {
               src: '/app/fundo-prosperus-app.webp',
-              sizes: '1080x1920',
+              sizes: '1600x900',
               type: 'image/webp',
-              form_factor: 'narrow',
+              form_factor: 'wide',
               label: 'Prosperus Club — Dashboard'
             }
           ] as any,
