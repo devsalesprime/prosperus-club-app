@@ -1,11 +1,69 @@
-# 🏛️ Architectural Decision Records (ADRs)
+# .context/memory/decisions.md — ADRs (Architectural Decision Records)
+# Prosperus Club App · Abril 2026
+# Consultar antes de tomar decisões arquiteturais
 
-1. **ADR 001 - Separação de Camadas (SoC):** Isolar 100% das chamadas do Supabase na pasta `services/`. Motivo: Facilita testes, reutilização e limpa a UI.
-2. **ADR 002 - Erradicação de Alertas Nativos:** Banidos `window.alert` e `window.confirm`. Solução: `<AdminConfirmDialog>` e `react-hot-toast`.
-3. **ADR 003 - Tailwind v4 + Tokens:** Diretiva `@theme` com variáveis `--color-prosperus-*`. Single Source of Truth em `docs/DESIGN_SYSTEM.md`.
-4. **ADR 004 - Transformação de Imagem no Edge:** Supabase Storage retorna `.webp` com redimensionamento no servidor (`48x48`, `40x40`).
-5. **ADR 005 - Exportação CSV Nativa (BOM UTF-8):** Prefixo `\uFEFF` nos CSVs para compatibilidade pt-BR no Excel.
-6. **ADR 006 - Tratamento de Datas (HubSpot):** Extração UTC-safe de datas do CRM para prevenir day-shift no fuso de Brasília.
-7. **ADR 007 - Acesso por `situacao_do_negocio` (HubSpot):** Toda validação de acesso usa SOMENTE `situacao_do_negocio`. Valores ativos: `['ativo', 'solicitacao de cancelamento']` (normalizado via NFD). Removida dependência de `dealstage` e `comprovante_de_pagamento_arq` — que são campos do sócio principal e não dos participantes vinculados.
-8. **ADR 008 - Ícones de Categoria (Academy):** Ícones armazenados no bucket `category-icons`. Cor padronizada por CSS filter `brightness(0) saturate(100%) invert(67%) sepia(45%) saturate(700%) hue-rotate(3deg)` em vez de forçar SVG colorido — funciona com PNG, SVG e WebP.
-9. **ADR 009 - Deploy de Functions do Windows:** Para funções Supabase Edge, o deploy direto do Windows (`supabase functions deploy NOME --project-ref ID`) é preferível ao ciclo VPS git-pull, pois a pasta `supabase/functions/` não é sempre sincronizada via git em todos os ambientes.
+## ADR-001 · Singleton Supabase
+**Decisão:** Um único `createClient()` em `lib/supabase.ts`.
+**Contexto:** Múltiplos `createClient()` causavam AbortError no PushAutoSubscriber.
+**Consequência:** Todos os arquivos importam `{ supabase }` de `../lib/supabase`.
+**Status:** IMUTÁVEL
+
+## ADR-002 · Canal único Realtime para messages
+**Decisão:** `useUnreadMessageCount.ts` é o único canal. Componentes usam DOM events.
+**Contexto:** Múltiplos channels causavam `mismatch between server and client bindings`.
+**Consequência:** ChatWindow, ConversationList, AdminChatManager escutam `window.addEventListener('prosperus:new-message')`.
+**Status:** IMUTÁVEL
+
+## ADR-003 · sessionStorage no PushAutoSubscriber
+**Decisão:** `sessionStorage` (não `useRef`) como guard de execução única.
+**Contexto:** React.StrictMode monta/desmonta/remonta → `useRef` reseta → AbortError → subscription não salva.
+**Consequência:** `const sessionKey = \`push-subscribing-\${userId}\``
+**Status:** IMUTÁVEL
+
+## ADR-004 · Nomes de channel fixos
+**Decisão:** Channel names sempre determinísticos, sem `Math.random()`.
+**Contexto:** `Math.random()` causava `mismatch between server and client bindings`.
+**Consequência:** Padrão: `` `unread-msgs-${userId}` ``
+**Status:** IMUTÁVEL
+
+## ADR-005 · messages sem SECURITY DEFINER
+**Decisão:** RLS de `messages` usa subquery direta, sem `SECURITY DEFINER`.
+**Contexto:** `SECURITY DEFINER` faz `auth.uid()` retornar null no contexto Realtime → eventos bloqueados.
+**Consequência:** SELECT policy usa `conversation_id IN (SELECT ... WHERE user_id = auth.uid())`.
+**Status:** IMUTÁVEL
+
+## ADR-006 · messages REPLICA IDENTITY FULL
+**Decisão:** `ALTER TABLE messages REPLICA IDENTITY FULL`.
+**Contexto:** Filtros no Realtime (ex: `filter: conversation_id=eq.X`) exigem FULL para funcionar.
+**Consequência:** Todos os campos são enviados no payload do evento Realtime.
+**Status:** IMUTÁVEL
+
+## ADR-007 · Inline styles + designTokens (sem Tailwind)
+**Decisão:** Inline styles com tokens centralizados em `utils/designTokens.ts`.
+**Contexto:** Tailwind não tem acesso ao compilador no ambiente de produção do clube.
+**Consequência:** Cores SEMPRE via `TOKENS.bgPrimary` etc., nunca hardcoded.
+**Status:** ATIVO
+
+## ADR-008 · HubSpot dropdowns (ALLOWED values)
+**Decisão:** Sempre validar valores antes de enviar para propriedades dropdown do HubSpot.
+**Contexto:** HubSpot aborta o pacote inteiro com `INVALID_OPTION` se um valor não estiver no enum.
+**Consequência:** Arrays `ALLOWED_JOBS`, `ALLOWED_HUBSPOT_OPTIONS` — traduzir antes de enviar.
+**Status:** ATIVO
+
+## ADR-009 · Shadow Profiles (hubspot_directory)
+**Decisão:** Sócios que não fizeram onboarding existem como Shadow Profiles em `hubspot_directory`.
+**Contexto:** SmartMemberSelect precisa incluir todos os contatos do HubSpot, não só os com conta ativa.
+**Consequência:** `profiles + hubspot_directory = Universal Directory`.
+**Status:** ATIVO
+
+## ADR-010 · --no-verify-jwt nas Edge Functions externas
+**Decisão:** Edge Functions acionadas por webhooks externos usam `--no-verify-jwt`.
+**Contexto:** HubSpot não consegue enviar JWT do Supabase. Segurança garantida por HMAC.
+**Consequência:** hubspot-webhook usa HMAC V3 + fallback V1 para ambiente de testes.
+**Status:** ATIVO
+
+## ADR-011 · fire-and-forget em notify*
+**Decisão:** Funções `notify*` nunca propagam erro para o caller.
+**Contexto:** Falha de notificação nunca deve interromper o fluxo principal (salvar deal, criar evento etc.).
+**Consequência:** `try { ... } catch(e) { console.error(e) }` — sem `throw`.
+**Status:** IMUTÁVEL

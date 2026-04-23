@@ -1,0 +1,44 @@
+# .context/index.toml — Roteador Principal
+# Lido primeiro por qualquer agente de IA
+# Versão: Abril 2026
+
+[meta]
+project     = "Prosperus Club App"
+version     = "10/10"
+updated_at  = "2026-04-23"
+score       = "10/10 — 18 módulos auditados"
+
+[reading_order]
+# Ler NESTA ORDEM antes de qualquer ação
+1 = ".context/rules.md"
+2 = ".context/project.toml"
+3 = ".context/soul.md"
+4 = ".context/memory/progress.md"
+5 = ".context/memory/decisions.md"
+6 = ".context/memory/issues.md"
+
+[conditional_reading]
+# Ler apenas quando relevante
+ui_changes    = "docs/DESIGN_SYSTEM.md"
+db_changes    = "supabase/migrations/ (ver última migration)"
+push_changes  = "services/notificationTriggers.ts"
+realtime      = "hooks/useUnreadMessageCount.ts + contexts/UnreadCountContext.tsx"
+hubspot       = ".context/memory/decisions.md#hubspot"
+
+[permissions]
+# O que o agente pode fazer sem perguntar
+can_create    = ["componentes novos", "services novos", "migrations novas", "docs"]
+can_edit      = ["arquivos listados na tarefa", "docs existentes"]
+must_ask      = ["deletar arquivos com > 5 referências", "alterar migrations executadas", "mudar Edge Functions ativas"]
+never_touch   = ["supabase/migrations/* (executadas)", "lib/supabase.ts (singleton)", "public/sw.js (sem permissão explícita)"]
+
+[key_files]
+singleton_supabase  = "lib/supabase.ts"
+design_tokens       = "utils/designTokens.ts"
+notify_functions    = "services/notificationTriggers.ts"
+realtime_singleton  = "hooks/useUnreadMessageCount.ts"
+realtime_provider   = "contexts/UnreadCountContext.tsx"
+push_subscriber     = "components/push/PushAutoSubscriber.tsx"
+deep_links          = "utils/deepLinks.ts"
+entry_member        = "App.tsx"
+entry_admin         = "AdminApp.tsx"

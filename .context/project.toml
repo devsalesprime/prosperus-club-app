@@ -1,19 +1,68 @@
+# .context/project.toml — Identidade do Sistema
+# Prosperus Club App · Abril 2026
+
 [identity]
-name = "Prosperus Club App"
-version = "3.2.0"
-type = "Progressive Web App (PWA) & Admin Dashboard"
-description = "Plataforma premium e exclusiva para membros de um clube de negócios."
-status = "production (Hypercare)"
+name        = "Prosperus Club App"
+type        = "PWA"
+score       = "10/10"
+description = "Clube de networking high-ticket para C-Level, fundadores e gestores"
+platforms   = ["iOS (PWA)", "Android (PWA)", "Desktop (browser)"]
 
 [stack]
-frontend = ["React 18.2", "TypeScript 5.8", "Vite 6", "vite-plugin-pwa", "Tailwind CSS v4"]
-ui_ux = ["Lucide React", "React Hot Toast", "Recharts", "react-big-calendar"]
-backend = ["Supabase (PostgreSQL, Auth, Storage, Realtime)"]
-functions = ["Deno (Supabase Edge Functions)"]
-integrations = ["HubSpot CRM (Webhooks)", "CursEduca", "Zoom"]
+frontend    = "React 18 + TypeScript + Vite 5.6.x"
+styling     = "Inline styles + utils/designTokens.ts"
+state       = "React Context + TanStack Query"
+backend     = "Supabase (PostgreSQL 15 + Realtime + Storage + Edge Functions)"
+push        = "Web Push API + VAPID + send-push Edge Function"
+pwa         = "Vite PWA Plugin v1.2.0 + Workbox"
+crm         = "HubSpot (webhook + sync-hubspot + shadow profiles + sync-amounts)"
+supabase_ref = "ptvsctwwonvirdwprugv"
 
-[architecture]
-pattern = "Clean Architecture / Separation of Concerns"
-data_layer = "services/"
-ui_layer = "components/"
-state_management = ["React Context API", "React Query v5"]
+[metrics]
+tsx_files        = 179
+ts_files         = 102
+migrations       = 91
+edge_functions   = 12
+total_lines      = 59945
+console_log_prod = 0
+any_instances    = 183  # backlog — não aumentar
+
+[folders]
+# Responsabilidade de cada pasta
+"components/"        = "Componentes React — organizados por domínio"
+"components/admin/"  = "Módulos do painel admin (13 módulos)"
+"components/banners/"= "NotificationBannerInterstitial"
+"components/chat/"   = "ChatWindow, ConversationList"
+"components/layout/" = "AppHeader, BottomNav, AppLayout"
+"components/push/"   = "PushAutoSubscriber, PushPermissionPrompt"
+"components/roi/"    = "RoiDashboard, RegistrarFaturamentoModal"
+"contexts/"          = "Providers globais (Auth + UnreadCount)"
+"hooks/"             = "Custom hooks — useXxx pattern"
+"services/"          = "Data layer — ÚNICO lugar com lógica de banco"
+"utils/"             = "Funções puras sem efeitos colaterais"
+"pages/"             = "Páginas standalone (SolutionsListPage, etc.)"
+"supabase/functions/"= "Edge Functions deployadas"
+"supabase/migrations/"= "91 migrations (NÃO editar migrations executadas)"
+"public/"            = "Assets estáticos + sw.js"
+"lib/"               = "lib/supabase.ts — singleton"
+
+[key_files]
+# Arquivos que NUNCA devem ser editados sem permissão explícita
+"lib/supabase.ts"           = "Singleton Supabase — um único createClient()"
+"public/sw.js"              = "Service Worker — editar com extremo cuidado"
+"contexts/UnreadCountContext.tsx" = "Provider do canal Realtime de messages"
+"hooks/useUnreadMessageCount.ts"  = "SINGLETON do canal Supabase para messages"
+
+[database]
+# Tabelas com configurações especiais
+"messages.replica_identity"        = "FULL"
+"messages.rls_note"                = "sem SECURITY DEFINER — subquery direta"
+"push_subscriptions.constraint"    = "1 por user_id + platform"
+
+[edge_functions]
+# Funções com --no-verify-jwt (acesso externo)
+no_verify = ["hubspot-webhook", "sync-hubspot", "sync-hubspot-amounts",
+             "sync-hubspot-birthdays", "sync-shadow-profiles",
+             "update-hubspot-contact", "login-socio", "roi-coleta-cron",
+             "send-birthday-pushes"]
+with_verify = ["send-push", "check-email-exists", "receive-report"]

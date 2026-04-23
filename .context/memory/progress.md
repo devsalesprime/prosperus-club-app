@@ -1,15 +1,70 @@
-# 📈 Estado Atual do Projeto
+# .context/memory/progress.md — Status Atual
+# Prosperus Club App · Abril 2026
+# Atualizar após cada sprint
 
-**Data de Atualização:** Abril 2026
-**Versão Atual:** 3.3.0 (Academy Visual Wayfinding + Multi-Participant HubSpot)
-**Status Geral:** Plataforma em produção ativa. Sustentação contínua + evolução incremental.
+## Score: 10/10
 
-## Últimos Marcos Atingidos (Concluídos):
-- **Academy — Visual Wayfinding (Ícones de Categoria):** Migration `079_add_category_icon.sql` adicionou `icon_url` à tabela `video_categories` e criou bucket `category-icons`. Admin pode fazer upload PNG/SVG/WebP por categoria. Frontend exibe ícone com filtro CSS `#CA9A43` ao lado do título do swimlane.
-- **HubSpot — Multi-Sócios por Contrato:** `login-socio` e `check-email-exists` agora suportam 5 propriedades de email de participante vinculado no deal (`e_mail___participante_vinculado__01_`, `c_e_mail`, `02_`, `03_`, `04_`). Fallback via busca de deals por propriedade usando `filterGroups` OR.
-- **Acesso por `situacao_do_negocio`:** Removida dependência de `dealstage=closedwon` e `comprovante_de_pagamento_arq`. Critério único: `situacao_do_negocio` ∈ {Ativo, Solicitação de cancelamento}. Normalização via NFD (remove acentos e case).
-- **Deploy Workflow:** Descoberto que Supabase CLI no Windows pode deployar functions diretamente (`supabase functions deploy NOME --project-ref ptvsctwwonvirdwprugv`), sem dependência do ciclo git VPS.
-- **Otimização de Performance (WPO):** Code Splitting, Extração de Vendors, WebP Transformation via Edge Supabase, Anti-FOUC.
-- **Arquitetura & Desacoplamento:** Lógica de banco 100% em `/services`. Componentes monolíticos fatiados.
-- **Produtividade Admin:** Paginação Server-side, Ações em Massa, Busca Global, Exportação CSV Universal (UTF-8 BOM).
-- **Compliance & Resiliência:** Logs de Auditoria (`admin_audit_log`), Error Boundaries globais, RLS revisado.
+| Módulo | Score | Entregue em |
+|--------|-------|-------------|
+| Smart Login + Auth | 10/10 | Fev/2026 |
+| Onboarding (7 steps + calibração ROI) | 10/10 | Abr/2026 |
+| Dashboard + Analytics | 10/10 | Mar/2026 |
+| Member Book + Conexão Estratégica | 10/10 | Mar/2026 |
+| Business Core + Rankings | 10/10 | Mar/2026 |
+| Agenda + RSVP + QR Tickets | 10/10 | Abr/2026 |
+| Chat Realtime (DOM events) | 10/10 | Mar/2026 |
+| Academy + Materiais | 10/10 | Mar/2026 |
+| Galeria | 10/10 | Mar/2026 |
+| Prosperus Tools | 10/10 | Mar/2026 |
+| Push iOS + Android + Desktop | 10/10 | Mar/2026 |
+| Crescimento (ROI / Múltiplo) | 10/10 | Abr/2026 |
+| Banners de Notificação | 10/10 | Abr/2026 |
+| HubSpot Integration (omnichannel) | 10/10 | Abr/2026 |
+| Universal Directory + Shadow Profiles | 10/10 | Abr/2026 |
+| Aniversários (sync + push) | 10/10 | Abr/2026 |
+| Admin Panel (13 módulos) | 10/10 | Mar/2026 |
+| Banco + RLS + Realtime | 10/10 | Mar/2026 |
+
+## Métricas do codebase
+
+```
+Arquivos TS/TSX:     276 (após limpeza de 6 arquivos mortos)
+Migrations:          91 (001 → 080 + 20260331_*)
+Edge Functions:      12 deployadas
+Linhas de código:    ~59.945
+console.log prod:    0
+:any remanescentes:  183 (backlog técnico)
+```
+
+## Limpeza executada (Abr/2026)
+
+Deletados com 0 importações confirmadas:
+- services/exportService.ts
+- hooks/useGlobalSubscription.ts
+- hooks/useLongPress.ts
+- hooks/useTypingIndicator.ts
+- utils/profileUtils.ts
+- utils/clearSupabaseCache.js
+
+## Pendentes (próxima sprint)
+
+```
+CRÍTICO:
+□ Performance Lighthouse 29 → 75+ (PROMPT_PERFORMANCE_SPRINT.md pronto)
+
+ALTA:
+□ Photo Editor circular (PROMPT_PHOTO_EDITOR_PRO.md pronto)
+□ Design System tokens em todo o app (PROMPT_DESIGN_SYSTEM_UPDATE.md pronto)
+□ Fix carrossel Academy + sidebar vídeo (PROMPT_FIX_CAROUSEL_VIDEO_SCROLL.md)
+
+MÉDIA:
+□ notifyNewSolution (PROMPT_NOTIFY_NEW_SOLUTION.md pronto)
+□ notifyNewArticle + notifyEventUpdated
+□ 4 plugs de analytics
+□ Remediação dos 183 :any
+
+NEGÓCIO:
+□ App Stores: Apple US$99/ano + Google US$25 (burocracia pendente)
+□ D-U-N-S Number para conta empresa Apple
+□ HubSpot: scope crm.objects.companies.write
+```
