@@ -21,6 +21,7 @@ function formatDate(dateStr: string): string {
 function daysLabel(days: number): string {
     if (days === 0) return '🎂 É HOJE!';
     if (days === 1) return 'Amanhã';
+    if (days < 0) return `Há ${Math.abs(days)} dias`;
     return `${days} dias`;
 }
 

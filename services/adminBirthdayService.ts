@@ -52,14 +52,20 @@ export const adminBirthdayService = {
             const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
 
             const banners: BirthdayBanner[] = profiles.map((profile) => {
+                const profileBanners: BirthdayBanner[] = [];
+
                 const birthDateObj = new Date(profile.birth_date);
-                let nextBirthday = new Date(Date.UTC(
+                const currentYearBirthday = new Date(Date.UTC(
                     todayUTC.getUTCFullYear(),
                     birthDateObj.getUTCMonth(),
                     birthDateObj.getUTCDate()
                 ));
 
-                if (nextBirthday < todayUTC) {
+                let nextBirthday = currentYearBirthday;
+                let pastBirthday: Date | null = null;
+
+                if (currentYearBirthday < todayUTC) {
+                    pastBirthday = currentYearBirthday;
                     nextBirthday = new Date(Date.UTC(
                         todayUTC.getUTCFullYear() + 1,
                         birthDateObj.getUTCMonth(),
@@ -67,33 +73,51 @@ export const adminBirthdayService = {
                     ));
                 }
 
-                const diffMs = nextBirthday.getTime() - todayUTC.getTime();
-                const daysRemaining = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                const scheduledDate = nextBirthday.toISOString().split('T')[0];
+                const userCards = cards?.filter(c => c.user_id === profile.id) || [];
 
-                const card = cards?.find(
-                    (c) => c.user_id === profile.id && c.trigger_date === scheduledDate
-                );
-
-                let status: BirthdayBanner['status'] = 'no_banner';
-                if (card) {
-                    status = (card.status as 'scheduled' | 'sent') ?? 'scheduled';
+                // 1. Process past birthday of this year (if it has a card)
+                if (pastBirthday) {
+                    const pastDateStr = pastBirthday.toISOString().split('T')[0];
+                    const pastCard = userCards.find(c => c.trigger_date === pastDateStr);
+                    
+                    if (pastCard) {
+                        const diffMs = pastBirthday.getTime() - todayUTC.getTime();
+                        profileBanners.push({
+                            userId: profile.id,
+                            name: profile.name || 'Sem nome',
+                            email: profile.email || '',
+                            birthDate: profile.birth_date,
+                            scheduledDate: pastDateStr,
+                            triggerDate: pastDateStr, // compat
+                            daysRemaining: Math.floor(diffMs / (1000 * 60 * 60 * 24)),
+                            cardId: pastCard.id,
+                            imageUrl: pastCard.image_url,
+                            isViewed: pastCard.status === 'sent', // compat
+                            status: (pastCard.status as 'scheduled' | 'sent') ?? 'scheduled',
+                        });
+                    }
                 }
 
-                return {
+                // 2. Process next upcoming birthday
+                const nextDateStr = nextBirthday.toISOString().split('T')[0];
+                const nextCard = userCards.find(c => c.trigger_date === nextDateStr);
+
+                profileBanners.push({
                     userId: profile.id,
                     name: profile.name || 'Sem nome',
                     email: profile.email || '',
                     birthDate: profile.birth_date,
-                    scheduledDate,
-                    triggerDate: scheduledDate, // compat
-                    daysRemaining,
-                    cardId: card?.id || null,
-                    imageUrl: card?.image_url || null,
-                    isViewed: card?.status === 'sent', // compat
-                    status,
-                };
-            });
+                    scheduledDate: nextDateStr,
+                    triggerDate: nextDateStr, // compat
+                    daysRemaining: Math.floor((nextBirthday.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24)),
+                    cardId: nextCard?.id || null,
+                    imageUrl: nextCard?.image_url || null,
+                    isViewed: nextCard?.status === 'sent', // compat
+                    status: (nextCard?.status as 'scheduled' | 'sent') ?? 'no_banner',
+                });
+
+                return profileBanners;
+            }).flat();
 
             return banners.sort((a, b) => a.daysRemaining - b.daysRemaining);
         } catch (error) {
