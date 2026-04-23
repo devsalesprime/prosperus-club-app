@@ -96,17 +96,31 @@ class AdminSearchService {
                 ? []
                 : (eventsRes.data as AdminSearchEvent[]) || [];
 
+            interface DBDealRow {
+                id: string;
+                description: string;
+                amount: number;
+                status: string;
+                deal_date: string;
+                seller?: { name: string } | { name: string }[] | null;
+                buyer?: { name: string } | { name: string }[] | null;
+            }
+
             const deals: AdminSearchDeal[] = dealsRes.error
                 ? []
-                : (dealsRes.data || []).map((d: any) => ({
-                    id: d.id,
-                    description: d.description,
-                    amount: d.amount,
-                    status: d.status,
-                    deal_date: d.deal_date,
-                    seller_name: d.seller?.name || null,
-                    buyer_name: d.buyer?.name || null,
-                }));
+                : ((dealsRes.data as unknown as DBDealRow[]) || []).map((d: DBDealRow) => {
+                    const sellerName = Array.isArray(d.seller) ? d.seller[0]?.name : d.seller?.name;
+                    const buyerName = Array.isArray(d.buyer) ? d.buyer[0]?.name : d.buyer?.name;
+                    return {
+                        id: d.id,
+                        description: d.description,
+                        amount: d.amount,
+                        status: d.status,
+                        deal_date: d.deal_date,
+                        seller_name: sellerName || null,
+                        buyer_name: buyerName || null,
+                    };
+                });
 
             return { members, events, deals };
         } catch (err) {

@@ -32,7 +32,16 @@ const parseBRL = (value: string) => {
     return parseFloat(value.replace(/\./g, '').replace(',', '.'));
 };
 
-const HistoricoInput = ({ registro, onSave }: { registro: any, onSave: (id: string, val: number) => void }) => {
+interface RegistroFaturamento {
+    id: string;
+    socio_id: string;
+    valor: number;
+    periodo_referencia: string;
+    tipo: string;
+    data_registro: string;
+}
+
+const HistoricoInput = ({ registro, onSave }: { registro: RegistroFaturamento, onSave: (id: string, val: number) => void }) => {
     const [val, setVal] = useState(maskBRL(registro.valor));
     return (
         <input 
@@ -69,7 +78,7 @@ export const ROIAdminModule: React.FC = () => {
     // Modal Edit
     const [editingSocio, setEditingSocio] = useState<RoiSocio | null>(null);
     const [valorPagoStr, setValorPagoStr] = useState('');
-    const [historicoRegistros, setHistoricoRegistros] = useState<any[]>([]);
+    const [historicoRegistros, setHistoricoRegistros] = useState<RegistroFaturamento[]>([]);
     const [registroToDelete, setRegistroToDelete] = useState<string | null>(null);
 
     const loadSocios = async () => {
@@ -282,7 +291,7 @@ export const ROIAdminModule: React.FC = () => {
                     <Filter size={14} className="text-slate-500 hidden md:block" />
                     <select
                         value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                        onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'APPROVED' | 'PENDING')}
                         className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-emerald-600/50 transition w-full md:w-auto min-w-[140px]"
                     >
                         <option value="ALL">Status: Todos</option>

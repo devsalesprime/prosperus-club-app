@@ -318,7 +318,7 @@ export const ViewSwitcher: React.FC = () => {
                                                 {['agenda', 'day', 'week', 'month'].map(v => (
                                                     <button
                                                         key={v}
-                                                        onClick={() => { setMobileView(v === 'agenda' ? 'LIST' : v === 'month' ? 'MONTH' : 'MONTH'); props.onView(v as any); }}
+                                                        onClick={() => { setMobileView(v === 'agenda' ? 'LIST' : v === 'month' ? 'MONTH' : 'MONTH'); props.onView(v as import('react-big-calendar').View); }}
                                                         className={`px-4 py-2 text-sm font-bold transition-all ${props.view === v ? 'bg-yellow-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                                                     >
                                                         {v === 'agenda' ? 'Lista' : v === 'month' ? 'Mês' : v === 'week' ? 'Semana' : 'Dia'}

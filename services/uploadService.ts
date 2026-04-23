@@ -109,11 +109,11 @@ class UploadService {
                 xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
                 xhr.send(formData);
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Upload error:', error);
             return {
                 success: false,
-                error: error.message || 'Erro desconhecido no upload'
+                error: (error as Error).message || 'Erro desconhecido no upload'
             };
         }
     }

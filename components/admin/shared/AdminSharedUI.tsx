@@ -42,7 +42,7 @@ export function DataTable<T extends { id: string }>({ columns, data, onEdit, onD
           </thead>
           <tbody className="divide-y divide-slate-800">
             {data.map((row) => {
-              const r = row as Record<string, any>;
+              const r = row as Record<string, unknown>;
               return (
                 <tr key={row.id} className="hover:bg-slate-800/50 transition-colors">
                   {columns.map((col: string, idx: number) => {

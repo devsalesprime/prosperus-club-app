@@ -331,7 +331,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                             URL.revokeObjectURL(optimisticUrl);
                             handleInputChange('image_url', publicUrl);
 
-                            await profileService.updateProfile(currentUser.id, { image_url: publicUrl } as any);
+                            await profileService.updateProfile(currentUser.id, { image_url: publicUrl } as Partial<MemberRow>);
                             await refreshProfile();
                             setSuccess(true);
                             setTimeout(() => setSuccess(false), 3000);
@@ -345,7 +345,7 @@ export const ProfileEdit: React.FC<ProfileEditProps> = ({ currentUser, supabase,
                     }}
                     onRemove={async () => {
                         try {
-                            await profileService.updateProfile(currentUser.id, { image_url: null } as any);
+                            await profileService.updateProfile(currentUser.id, { image_url: null } as Partial<MemberRow>);
                             handleInputChange('image_url', '');
                             await refreshProfile();
                         } catch (err) {

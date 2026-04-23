@@ -215,7 +215,7 @@ class ConversationService {
                 participants: participants || [],
                 lastMessage: lastMessage || undefined,
                 unreadCount: unreadCount || 0,
-                otherParticipant: otherParticipant?.profiles as any
+                otherParticipant: otherParticipant?.profiles as unknown as ConversationWithDetails['otherParticipant']
             };
         } catch (error) {
             logger.error('Error getting conversation by ID:', error);
@@ -344,7 +344,7 @@ class ConversationService {
                         participants: participants || [],
                         lastMessage: lastMessage || undefined,
                         unreadCount: unreadCount || 0,
-                        otherParticipant: otherParticipant?.profiles as any
+                        otherParticipant: otherParticipant?.profiles as unknown as ConversationWithDetails['otherParticipant']
                     };
                 })
             );

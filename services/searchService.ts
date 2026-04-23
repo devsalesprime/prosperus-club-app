@@ -179,7 +179,7 @@ class SearchService {
 
             const events = eventsResult.error || !eventsResult.data
                 ? []
-                : eventsResult.data.map((e: any) => ({
+                : eventsResult.data.map((e: Record<string, unknown>) => ({
                     ...e,
                     endDate: e.end_date // Map end_date to endDate for ClubEvent compatibility
                 } as ClubEvent));

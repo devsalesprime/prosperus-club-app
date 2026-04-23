@@ -203,9 +203,9 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
             }
 
             return true;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[Push] Error requesting permission:', err);
-            setError(err.message || 'Erro ao configurar notificações');
+            setError((err as Error).message || 'Erro ao configurar notificações');
             return false;
         } finally {
             setIsLoading(false);
@@ -236,9 +236,9 @@ export function usePushNotifications(userId?: string): UsePushNotificationsRetur
             }
 
             return true;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[Push] Error unsubscribing:', err);
-            setError(err.message || 'Erro ao cancelar notificações');
+            setError((err as Error).message || 'Erro ao cancelar notificações');
             return false;
         } finally {
             setIsLoading(false);

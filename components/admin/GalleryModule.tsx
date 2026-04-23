@@ -18,13 +18,14 @@ import {
 } from './shared';
 
 interface GalleryModuleProps {
-    DataTable: React.FC<any>;
+    DataTable: React.FC<Record<string, unknown>>;
 }
 
 export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
-    const [albums, setAlbums] = useState<any[]>([]);
+    const [albums, setAlbums] = useState<Record<string, unknown>[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingAlbum, setEditingAlbum] = useState<any>({});
+    const [loading, setLoading] = useState(true);
+    const [editingAlbum, setEditingAlbum] = useState<Record<string, unknown>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
 
@@ -39,7 +40,7 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
         try {
             const { galleryService } = await import('../../services/galleryService');
             setAlbums(await galleryService.getAllAlbums());
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading albums:', error);
             toast.error('Erro ao carregar galerias.');
@@ -50,7 +51,7 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
 
     useEffect(() => { loadAlbums(); }, []);
 
-    const openModal = (album?: any) => { setEditingAlbum(album || {}); setIsModalOpen(true); };
+    const openModal = (album?: Record<string, unknown>) => { setEditingAlbum(album || {}); setIsModalOpen(true); };
 
     const handleSave = async () => {
         if (!editingAlbum.title || !editingAlbum.embedUrl) {
@@ -79,8 +80,8 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
             setEditingAlbum({});
             await loadAlbums();
             toast.success('Galeria salva com sucesso!');
-        } catch (error) {
-            console.error('Error saving album:', error);
+        } catch (error: unknown) {
+            console.error('Error loading gallery data:', error);
             toast.error('Erro ao salvar galeria.');
         } finally {
             setIsLoading(false);
@@ -155,7 +156,7 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
                     <DataTable
                         columns={['Título', 'Data']}
                         data={albums.map(a => ({ ...a, data: a.createdAt }))}
-                        onEdit={(a: any) => openModal(a)}
+                        onEdit={(a: Record<string, unknown>) => openModal(a)}
                         onDelete={(id: string) => requestDelete(id)}
                     />
                 </AdminTable>

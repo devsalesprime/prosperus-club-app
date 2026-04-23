@@ -67,7 +67,21 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
 
     // --- RSVP MANAGEMENT STATE ---
     const [expandedRsvpEventId, setExpandedRsvpEventId] = useState<string | null>(null);
-    const [rsvpList, setRsvpList] = useState<any[]>([]);
+    interface RsvpItem {
+        id: string;
+        status: 'PENDING' | 'CONFIRMED' | 'REJECTED';
+        created_at: string;
+        user_id: string;
+        profiles?: {
+            id: string;
+            name: string | null;
+            company: string | null;
+            job_title: string | null;
+            image_url: string | null;
+            email: string;
+        } | null;
+    }
+    const [rsvpList, setRsvpList] = useState<RsvpItem[]>([]);
     const [rsvpLoading, setRsvpLoading] = useState(false);
     const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED'>('ALL');
 
@@ -108,10 +122,10 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
             }
             await onRefresh();
             toast.success('Evento excluído com sucesso!');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error deleting event:', err);
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
-            toast.error('Erro ao excluir evento: ' + (err?.message || 'Erro desconhecido'));
+            toast.error('Erro ao excluir evento: ' + ((err as Error)?.message || 'Erro desconhecido'));
         }
     };
 
@@ -264,7 +278,7 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 </div>
                 <select
                     value={evtCatFilter}
-                    onChange={e => setEvtCatFilter(e.target.value as any)}
+                    onChange={e => setEvtCatFilter(e.target.value as 'ALL' | 'ONLINE' | 'PRESENTIAL')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
                 >
                     <option value="ALL">Todas categorias</option>
@@ -273,7 +287,7 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 </select>
                 <select
                     value={evtAudienceFilter}
-                    onChange={e => setEvtAudienceFilter(e.target.value as any)}
+                    onChange={e => setEvtAudienceFilter(e.target.value as 'ALL' | 'MEMBER' | 'TEAM' | 'PRIVATE')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
                 >
                     <option value="ALL">Todo público</option>
@@ -283,7 +297,7 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 </select>
                 <select
                     value={evtSortOrder}
-                    onChange={e => setEvtSortOrder(e.target.value as any)}
+                    onChange={e => setEvtSortOrder(e.target.value as 'newest' | 'oldest')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
                 >
                     <option value="newest">Mais recentes</option>

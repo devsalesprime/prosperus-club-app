@@ -170,7 +170,9 @@ const AppShell: React.FC = () => {
         return (
             <div className="min-h-screen bg-prosperus-navy flex items-center justify-center relative overflow-hidden">
                 <AuthBackground />
-                <UpdatePasswordModal />
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
+                    <UpdatePasswordModal />
+                </Suspense>
                 <InstallPrompt />
             </div>
         );
@@ -181,11 +183,13 @@ const AppShell: React.FC = () => {
         return (
             <div className="min-h-screen bg-prosperus-navy flex items-center justify-center relative overflow-hidden">
                 <AuthBackground />
-                <LoginModal
-                    isOpen={true}
-                    onClose={() => { }}
-                    onLoginSuccess={handleLoginSuccess}
-                />
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
+                    <LoginModal
+                        isOpen={true}
+                        onClose={() => { }}
+                        onLoginSuccess={handleLoginSuccess}
+                    />
+                </Suspense>
                 <InstallPrompt />
             </div>
         );
@@ -196,12 +200,14 @@ const AppShell: React.FC = () => {
         return (
             <div className="min-h-screen bg-prosperus-navy flex items-center justify-center relative overflow-hidden">
                 <AuthBackground />
-                <RoleSelector
-                    isOpen={true}
-                    onClose={() => { }}
-                    onSelectRole={handleRoleSelection}
-                    userName={pendingUser.name}
-                />
+                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
+                    <RoleSelector
+                        isOpen={true}
+                        onClose={() => { }}
+                        onSelectRole={handleRoleSelection}
+                        userName={pendingUser.name}
+                    />
+                </Suspense>
             </div>
         );
     }

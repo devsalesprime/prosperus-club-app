@@ -28,7 +28,7 @@ interface ProfileStrategicFieldsProps {
     whatISell: string;
     whatINeed: string;
     partnershipInterests: string[];
-    onChange: (field: keyof ProfileUpdateData, value: any) => void;
+    onChange: (field: keyof ProfileUpdateData, value: string | string[]) => void;
 }
 
 export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
@@ -46,17 +46,17 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
             // Deselecting "Outros" also removes all custom tags
             if (sector === 'Outros') {
                 onChange('partnership_interests',
-                    interests.filter((s: string) => s !== 'Outros' && SECTOR_OPTIONS.includes(s)) as any
+                    interests.filter((s: string) => s !== 'Outros' && SECTOR_OPTIONS.includes(s))
                 );
             } else {
                 onChange('partnership_interests',
-                    interests.filter((s: string) => s !== sector) as any
+                    interests.filter((s: string) => s !== sector)
                 );
             }
         } else {
             if (interests.length >= MAX_INTERESTS) return; // Block above max
             onChange('partnership_interests',
-                [...interests, sector] as any
+                [...interests, sector]
             );
         }
     };
@@ -65,7 +65,7 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
         const val = value.trim();
         if (!val || interests.includes(val)) return;
         if (interests.length >= MAX_INTERESTS) return; // Block above max
-        onChange('partnership_interests', [...interests, val] as any);
+        onChange('partnership_interests', [...interests, val]);
     };
 
     const removeCustomTag = (tag: string) => {
@@ -74,10 +74,10 @@ export const ProfileStrategicFields: React.FC<ProfileStrategicFieldsProps> = ({
         const remainingCustom = updated.filter((s: string) => !SECTOR_OPTIONS.includes(s));
         if (remainingCustom.length === 0) {
             onChange('partnership_interests',
-                updated.filter((s: string) => s !== 'Outros') as any
+                updated.filter((s: string) => s !== 'Outros')
             );
         } else {
-            onChange('partnership_interests', updated as any);
+            onChange('partnership_interests', updated);
         }
     };
 

@@ -50,8 +50,8 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
     // New conversation states
     const [showNewConversationModal, setShowNewConversationModal] = useState(false);
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
-    const [selectedUser, setSelectedUser] = useState<any | null>(null);
+    const [searchedUsers, setSearchedUsers] = useState<Record<string, unknown>[]>([]);
+    const [selectedUser, setSelectedUser] = useState<Record<string, unknown> | null>(null);
     const [newConversationMessage, setNewConversationMessage] = useState('');
     const [creatingConversation, setCreatingConversation] = useState(false);
 
@@ -124,7 +124,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
                 const messageWithSender: MessageWithSender = {
                     ...msg,
                     is_deleted: msg.is_deleted || false,
-                    sender: msg.sender as any || { id: msg.sender_id, name: 'Sócio', email: '', image_url: null },
+                    sender: (msg.sender as { id: string; name: string; email: string; image_url: string | null }) || { id: msg.sender_id, name: 'Sócio', email: '', image_url: null },
                 };
                 if (exists) return prev.map(m => m.id === msg.id ? messageWithSender : m);
                 return [...prev, messageWithSender];

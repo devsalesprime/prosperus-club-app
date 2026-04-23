@@ -41,7 +41,7 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             list = list.filter(t => {
-                const profile = (t.rsvp as any)?.profile;
+                const profile = (t.rsvp as Record<string, unknown>)?.profile as Record<string, string> | undefined;
                 return (
                     t.owner_name?.toLowerCase().includes(term) ||
                     profile?.name?.toLowerCase().includes(term) ||
@@ -64,7 +64,7 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
         const BOM = '\uFEFF';
         const header = 'Nome;Tipo;Empresa;Cargo;Data Ingresso;Status;Horário Check-in\n';
         const rows = stats.ticketsList.map(t => {
-            const profile = (t.rsvp as any)?.profile;
+            const profile = (t.rsvp as Record<string, unknown>)?.profile as Record<string, string> | undefined;
             const name = t.owner_name || profile?.name || 'Sem nome';
             const type = t.owner_type === 'GUEST' ? 'Convidado' : 'Sócio';
             const company = profile?.company || '';
@@ -277,7 +277,7 @@ export const EventAuditDashboard: React.FC<EventAuditDashboardProps> = ({ eventI
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/50">
                                             {filteredAttendees.map(ticket => {
-                                                const profile = (ticket.rsvp as any)?.profile;
+                                                const profile = (ticket.rsvp as Record<string, unknown>)?.profile as Record<string, string> | undefined;
                                                 return (
                                                     <tr key={ticket.id} className="hover:bg-slate-800/30 transition-colors">
                                                         

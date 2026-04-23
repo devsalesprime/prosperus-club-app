@@ -221,7 +221,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     // Play notification sound
     const playNotificationSound = useCallback(() => {
         try {
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioContext = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -306,7 +306,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const isMobile = window.innerWidth < 768;
         if (!isMobile && e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSendMessage(e as any);
+            handleSendMessage(e as unknown as React.FormEvent);
         }
     }, [newMessage, sending]);
 

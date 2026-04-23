@@ -125,9 +125,9 @@ class SettingsService {
 
             logger.info('✅ Settings updated');
             return { success: true, data };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error in updateSettings:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 

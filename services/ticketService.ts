@@ -9,6 +9,7 @@ import { EventTicket, TicketOwnerType } from '../types';
 export interface TicketWithProfile extends EventTicket {
     rsvp?: {
         user_id: string;
+        status?: string;
         profile?: {
             id: string;
             name: string;
@@ -226,7 +227,7 @@ export async function validateTicketV2(ticketCode: string): Promise<TicketValida
     const ticket = data as unknown as TicketWithProfile;
 
     // Check RSVP status
-    if ((ticket.rsvp as any)?.status !== 'CONFIRMED') {
+    if (ticket.rsvp?.status !== 'CONFIRMED') {
         return { valid: false, error: 'RSVP não está confirmado para este evento.' };
     }
 

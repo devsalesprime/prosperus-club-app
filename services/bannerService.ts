@@ -173,9 +173,9 @@ class BannerService {
 
             logger.info('✅ Banner created:', data.id);
             return { success: true, data };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error in createBanner:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
@@ -187,7 +187,7 @@ class BannerService {
         input: Partial<BannerInput>
     ): Promise<{ success: boolean; data?: Banner; error?: string }> {
         try {
-            const updateData: any = {
+            const updateData: Record<string, unknown> = {
                 updated_at: new Date().toISOString()
             };
 
@@ -217,9 +217,9 @@ class BannerService {
 
             logger.info('✅ Banner updated:', id);
             return { success: true, data };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error in updateBanner:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
@@ -240,9 +240,9 @@ class BannerService {
 
             logger.info('✅ Banner deleted:', id);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error in deleteBanner:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
@@ -275,9 +275,9 @@ class BannerService {
 
             logger.info(`✅ Banner ${id} toggled to ${newStatus ? 'active' : 'inactive'}`);
             return { success: true, isActive: newStatus };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error toggling banner:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
@@ -305,9 +305,9 @@ class BannerService {
 
             logger.info('✅ Banners reordered');
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error reordering banners:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 

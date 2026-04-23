@@ -93,9 +93,9 @@ export async function uploadMemberFile(
         if (dbErr) throw dbErr;
         return { data, error: null };
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error('[filesService] uploadMemberFile error:', err);
-        return { data: null, error: err?.message ?? 'Erro ao enviar arquivo.' };
+        return { data: null, error: (err as Error)?.message ?? 'Erro ao enviar arquivo.' };
     }
 }
 

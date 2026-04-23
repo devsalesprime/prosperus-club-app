@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Scanner, IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { X, CheckCircle, XCircle, Loader2, User, CalendarDays, Users2, ShieldCheck, ShieldX, Briefcase } from 'lucide-react';
 import { validateTicketV2, confirmCheckInV2, TicketValidationResultV2 } from '../../../services/ticketService';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
     const [scanDelay] = useState(2000);
 
     // Step 1: Scan and VALIDATE ONLY (do NOT auto-confirm)
-    const handleScan = useCallback(async (detectedCodes: any[]) => {
+    const handleScan = useCallback(async (detectedCodes: IDetectedBarcode[]) => {
         if (!detectedCodes || detectedCodes.length === 0 || scannerState !== 'SCANNING') return;
         
         const code = detectedCodes[0].rawValue;
@@ -81,11 +81,12 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
         setScannerState('SCANNING');
     };
 
-    const handleError = (error: any) => {
+    const handleError = (error: unknown) => {
         console.error('Camera error:', error);
-        if (error?.name === 'NotAllowedError') {
+        const err = error as { name?: string };
+        if (err?.name === 'NotAllowedError') {
             toast.error('Permissão de câmera negada pelo navegador.');
-        } else if (error?.name === 'NotFoundError') {
+        } else if (err?.name === 'NotFoundError') {
             toast.error('Nenhuma câmera encontrada no dispositivo.');
         } else {
             toast.error('Erro ao acessar a câmera. Verifique se está usando HTTPS.');
@@ -94,7 +95,7 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
 
     // Extract profile from the V2 nested structure
     const getProfile = () => {
-        const rsvp = validationResult?.ticket?.rsvp as any;
+        const rsvp = validationResult?.ticket?.rsvp as { profile?: { image_url?: string; name?: string; company?: string; job_title?: string; } } | undefined;
         return rsvp?.profile || null;
     };
 

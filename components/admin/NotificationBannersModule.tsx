@@ -289,7 +289,7 @@ export const NotificationBannersModule: React.FC = () => {
     const paginatedBanners = filteredBanners.slice((bnrPage - 1) * bnrPageSize, bnrPage * bnrPageSize);
     const isBnrFiltered = bnrSearch || bnrStatus !== 'ALL';
 
-    const getLabelByDeepLink = (val: string) => DEEP_LINKS.flatMap(g => g.items).find(i => (i as any).value === val)?.label || val;
+    const getLabelByDeepLink = (val: string) => DEEP_LINKS.flatMap(g => g.items).find(i => (i as { value: string; label: string }).value === val)?.label || val;
 
     return (
         <div className="space-y-6">
@@ -325,7 +325,7 @@ export const NotificationBannersModule: React.FC = () => {
                 </div>
                 <select
                     value={bnrStatus}
-                    onChange={e => setBnrStatus(e.target.value as any)}
+                    onChange={e => setBnrStatus(e.target.value as 'ALL' | 'Ativo' | 'Inativo' | 'Agendado' | 'Expirado')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
                 >
                     <option value="ALL">Todos status</option>
@@ -536,7 +536,7 @@ export const NotificationBannersModule: React.FC = () => {
                                                   
                                                   const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
                                                   return { success: true, url: publicData.publicUrl };
-                                              } catch (err: any) {
+                                              } catch (err: unknown) {
                                                   return { success: false, error: err.message || 'Erro ao realizar upload da imagem.' };
                                               }
                                           }}

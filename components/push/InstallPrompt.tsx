@@ -64,7 +64,7 @@ function getBannerBottom(): number {
 export const InstallPrompt: React.FC = () => {
     const [visible, setVisible] = useState(false);
     const [guideOpen, setGuideOpen] = useState(false);
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
     const [bannerBottom, setBannerBottom] = useState(92); // FIX B: default fallback
 
     const platform = detectPlatform();
@@ -81,7 +81,7 @@ export const InstallPrompt: React.FC = () => {
             standalone,
             dismissed,
             dismissKey: localStorage.getItem(DISMISS_KEY),
-            globalPrompt: !!(window as any).__pwaInstallPrompt,
+            globalPrompt: !!(window as unknown as { __pwaInstallPrompt?: Event }).__pwaInstallPrompt,
             ua: navigator.userAgent.substring(0, 80)
         });
 
@@ -99,8 +99,9 @@ export const InstallPrompt: React.FC = () => {
         }
 
         // FIX D: Check if beforeinstallprompt was already captured globally
-        if ((window as any).__pwaInstallPrompt) {
-            setDeferredPrompt((window as any).__pwaInstallPrompt);
+        const winPWA = window as unknown as { __pwaInstallPrompt?: Event };
+        if (winPWA.__pwaInstallPrompt) {
+            setDeferredPrompt(winPWA.__pwaInstallPrompt);
             logger.debug('📱 Loaded deferredPrompt from global capture');
         }
 
@@ -108,7 +109,7 @@ export const InstallPrompt: React.FC = () => {
         const handleBeforeInstall = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            (window as any).__pwaInstallPrompt = e;
+            (window as unknown as { __pwaInstallPrompt?: Event }).__pwaInstallPrompt = e;
             logger.debug('📱 beforeinstallprompt captured in listener');
         };
         window.addEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -142,12 +143,13 @@ export const InstallPrompt: React.FC = () => {
 
     const handleCTA = useCallback(async () => {
         if (instructions.type === 'native' && deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
+            const promptEvent = deferredPrompt as unknown as { prompt: () => void; userChoice: Promise<{ outcome: string }> };
+            promptEvent.prompt();
+            const { outcome } = await promptEvent.userChoice;
             if (outcome === 'accepted') setVisible(false);
             else handleDismiss();
             setDeferredPrompt(null);
-            (window as any).__pwaInstallPrompt = null;
+            (window as unknown as { __pwaInstallPrompt?: null }).__pwaInstallPrompt = null;
         } else if (instructions.type === 'guide') {
             setGuideOpen(true);
         } else if (instructions.type === 'info') {

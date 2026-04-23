@@ -4,7 +4,7 @@
 // Migrated from App.tsx during God Component decomposition.
 // Provides useApp() hook for all descendant components.
 
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, startTransition } from 'react';
 import { ViewState, Member, Video, ClubEvent as Event, Article } from '../types';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
@@ -303,15 +303,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!mounted) return;
-            setSession(session);
-            if (session) {
-                setIsLoginOpen(false);
-            } else {
-                setPendingUser(null);
-                setShowRoleSelector(false);
-                profileFetchedRef.current = false;
-                setIsLoginOpen(true);
-            }
+            startTransition(() => {
+                setSession(session);
+                if (session) {
+                    setIsLoginOpen(false);
+                } else {
+                    setPendingUser(null);
+                    setShowRoleSelector(false);
+                    profileFetchedRef.current = false;
+                    setIsLoginOpen(true);
+                }
+            });
         });
 
         return () => {
@@ -421,14 +423,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } catch (err) {
             logger.error('Logout exception:', err);
         } finally {
-            setSession(null);
-            setPendingUser(null);
-            setShowRoleSelector(false);
-            setIsAdmin(false);
-            setIsMockMode(false);
-            profileFetchedRef.current = false;
-            setIsLoginOpen(true);
-            setView(ViewState.DASHBOARD);
+            startTransition(() => {
+                setSession(null);
+                setPendingUser(null);
+                setShowRoleSelector(false);
+                setIsAdmin(false);
+                setIsMockMode(false);
+                profileFetchedRef.current = false;
+                setIsLoginOpen(true);
+                setView(ViewState.DASHBOARD);
+            });
         }
     };
 

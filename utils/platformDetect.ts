@@ -18,7 +18,7 @@ export type Platform =
 export function detectPlatform(): Platform {
     const ua = navigator.userAgent;
 
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !("MSStream" in window);
     const isAndroid = /Android/.test(ua);
 
     if (isIOS) {
@@ -51,6 +51,6 @@ export function detectPlatform(): Platform {
 export function isStandaloneMode(): boolean {
     return (
         window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true
+        ("standalone" in window.navigator && (window.navigator as unknown as { standalone: boolean }).standalone === true)
     );
 }

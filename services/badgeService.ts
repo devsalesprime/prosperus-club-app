@@ -40,9 +40,9 @@ class BadgeService {
 
         try {
             if (count > 0) {
-                (navigator as any).setAppBadge(count);
+                (navigator as unknown as { setAppBadge: (count: number) => void }).setAppBadge(count);
             } else {
-                (navigator as any).clearAppBadge();
+                (navigator as unknown as { clearAppBadge: () => void }).clearAppBadge();
             }
         } catch (error) {
             // Silently fail — user may not have granted permission

@@ -425,7 +425,7 @@ export const videoService = {
         return data
             .filter(item => item.videos)
             .map(item => ({
-                ...mapVideoFromDB(item.videos),
+                ...mapVideoFromDB(item.videos as unknown as DBVideoRow),
                 progress: item.progress
             }));
     },
@@ -447,7 +447,7 @@ export const videoService = {
         return data
             .filter(item => item.videos)
             .map(item => ({
-                ...mapVideoFromDB(item.videos),
+                ...mapVideoFromDB(item.videos as unknown as DBVideoRow),
                 progress: 100
             }));
     },
@@ -629,9 +629,9 @@ export const videoService = {
 
             if (dbErr) throw dbErr;
             return { data, error: null };
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('uploadVideoMaterial error:', err);
-            return { data: null, error: err?.message ?? 'Erro ao enviar material.' };
+            return { data: null, error: (err as Error)?.message ?? 'Erro ao enviar material.' };
         }
     },
 
@@ -662,9 +662,9 @@ export const videoService = {
 
             if (error) throw error;
             return { data, error: null };
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('addVideoMaterialLink error:', err);
-            return { data: null, error: err?.message ?? 'Erro ao adicionar link.' };
+            return { data: null, error: (err as Error)?.message ?? 'Erro ao adicionar link.' };
         }
     },
 
@@ -727,10 +727,25 @@ export const videoService = {
     },
 };
 
+interface DBVideoRow {
+    id: string;
+    title: string;
+    description?: string;
+    thumbnail_url?: string;
+    video_url?: string;
+    duration?: string;
+    category?: string;
+    category_id?: string;
+    series_id?: string;
+    series_order?: number;
+    order_index?: number;
+    is_pinned?: boolean;
+}
+
 /**
  * Map database video to Video interface
  */
-function mapVideoFromDB(dbVideo: any): Video {
+function mapVideoFromDB(dbVideo: DBVideoRow): Video {
     return {
         id: dbVideo.id,
         title: dbVideo.title,
@@ -750,10 +765,19 @@ function mapVideoFromDB(dbVideo: any): Video {
     };
 }
 
+interface DBCategoryRow {
+    id: string;
+    name: string;
+    description?: string;
+    cover_image?: string;
+    icon_url?: string;
+    created_at?: string;
+}
+
 /**
  * Map database category to VideoCategory interface
  */
-function mapCategoryFromDB(dbCategory: any): VideoCategory {
+function mapCategoryFromDB(dbCategory: DBCategoryRow): VideoCategory {
     return {
         id: dbCategory.id,
         name: dbCategory.name,

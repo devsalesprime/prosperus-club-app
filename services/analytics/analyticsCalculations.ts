@@ -64,7 +64,7 @@ export function calcTrend(current: number, previous: number): number | null {
 /**
  * Parse daily activity row from RPC into typed object
  */
-export function parseDailyActivityRow(row: any): {
+export function parseDailyActivityRow(row: Record<string, unknown>): {
     date: string;
     label: string;
     total: number;
@@ -88,10 +88,10 @@ export function parseDailyActivityRow(row: any): {
 /**
  * Parse top content row from RPC into typed object
  */
-export function parseTopContentRow(row: any): { id: string; title: string; count: number } {
+export function parseTopContentRow(row: Record<string, unknown>): { id: string; title: string; count: number } {
     return {
-        id: row.content_id,
-        title: row.content_title || 'Sem título',
+        id: String(row.content_id || ''),
+        title: String(row.content_title || 'Sem título'),
         count: Number(row.view_count) || 0
     };
 }
@@ -99,9 +99,9 @@ export function parseTopContentRow(row: any): { id: string; title: string; count
 /**
  * Parse event breakdown row from RPC
  */
-export function parseEventBreakdownRow(row: any): { name: string; value: number } {
+export function parseEventBreakdownRow(row: Record<string, unknown>): { name: string; value: number } {
     return {
-        name: row.event_name,
+        name: String(row.event_name || ''),
         value: Number(row.event_count) || 0
     };
 }

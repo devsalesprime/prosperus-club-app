@@ -37,12 +37,20 @@ export const DesktopSidebar: React.FC = () => {
         hasNews, handleNotificationNavigate
     } = useApp();
 
+    interface NavItem {
+        id: ViewState | string;
+        label: string;
+        icon: React.ReactNode;
+        view?: ViewState;
+        children?: { id: ViewState; label: string; icon: React.ReactNode }[];
+    }
+
     // Full nav items for sidebar
-    const navItems = [
+    const navItems: NavItem[] = [
         { id: ViewState.DASHBOARD, label: 'Início', icon: <IconHome size={20} /> },
         { id: ViewState.AGENDA, label: 'Agenda', icon: <IconAgenda size={20} /> },
         {
-            id: 'prosperus-tools' as any,
+            id: 'prosperus-tools',
             label: 'Prosperus Tools',
             icon: <IconProsperus size={20} />,
             view: ViewState.PROSPERUS_TOOLS,
@@ -117,7 +125,7 @@ export const DesktopSidebar: React.FC = () => {
                                 </button>
                                 {isExpanded && (
                                     <div className="mt-1 ml-4 space-y-1 border-l-2 border-prosperus-gold/30 pl-2">
-                                        {item.children.map((child: any) => (
+                                        {item.children.map((child) => (
                                             <button
                                                 key={child.id}
                                                 onClick={() => setView(child.id)}

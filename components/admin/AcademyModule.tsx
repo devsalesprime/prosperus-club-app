@@ -22,7 +22,7 @@ import {
 import { AcademyHeader, AcademyVideoGrid, AcademyVideoModal, AcademyCategoryGrid } from './academy';
 
 interface AcademyModuleProps {
-    DataTable: React.FC<any>;
+    DataTable: React.FC<Record<string, unknown>>;
 }
 
 type AdminTab = 'videos' | 'categories';
@@ -70,7 +70,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const result = await videoService.listVideosPaginated(currentPage, pageSize);
             setVideos(result.data);
             setTotalVideos(result.total);
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading videos:', error);
             toast.error('Erro ao carregar vídeos. Verifique a conexão com o banco de dados.');
@@ -82,7 +82,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const { videoService } = await import('../../services/videoService');
             const data = await videoService.getCategories();
             setCategories(data);
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
             console.error('Error loading categories:', error);
         }
@@ -156,7 +156,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setPendingMaterials([]);
             await loadVideos();
             toast.success('Vídeo salvo com sucesso!');
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error saving video:', error);
             toast.error('Erro ao salvar vídeo. Tente novamente.');
         } finally {
@@ -181,7 +181,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             await loadVideos();
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
             toast.success('Vídeo excluído com sucesso!');
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error deleting video:', error);
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
             toast.error('Erro ao excluir vídeo. Tente novamente.');

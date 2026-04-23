@@ -25,7 +25,7 @@ function getDevicePlatform(): string {
 function isPWA(): boolean {
     return (
         window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
         document.referrer.includes('android-app://')
     );
 }
@@ -122,8 +122,8 @@ export function PushAutoSubscriber({ userId }: Props) {
                     } else {
                         logger.debug('[PushAuto] Subscription já existe, atualizando banco');
                     }
-                } catch (err: any) {
-                    logger.error('[PushAuto] Erro ao criar subscription:', err.message);
+                } catch (err: unknown) {
+                    logger.error('[PushAuto] Erro ao criar subscription:', (err as Error).message);
                     return;
                 }
 

@@ -53,6 +53,34 @@ export interface PaginatedResult<T> {
     hasMore: boolean;
 }
 
+interface DBParticipantRow {
+    user_id: string;
+    profiles?: {
+        id: string;
+        name: string;
+        email: string;
+        image_url: string | null;
+    };
+}
+
+interface DBMessageRow {
+    id: string;
+    conversation_id: string;
+    sender_id: string;
+    content: string;
+    created_at: string;
+    is_read: boolean;
+    is_deleted: boolean;
+    deleted_at?: string | null;
+    deleted_by?: string | null;
+    profiles?: {
+        id: string;
+        name: string;
+        email: string;
+        image_url: string | null;
+    };
+}
+
 class AdminChatService {
     /**
      * Verifica se o usuário atual tem permissão de admin
@@ -138,14 +166,22 @@ class AdminChatService {
                         .eq('conversation_id', conv.id);
 
                     // Mapear participantes
-                    const mappedParticipants = (participants || [])
-                        .map((p: any) => p.profiles)
-                        .filter(Boolean);
+                    const mappedParticipants = ((participants as unknown as DBParticipantRow[]) || [])
+                        .map((p: DBParticipantRow) => {
+                            const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
+                            return profile ? {
+                                id: profile.id,
+                                name: profile.name,
+                                email: profile.email,
+                                image_url: profile.image_url
+                            } : null;
+                        })
+                        .filter(Boolean) as ConversationWithParticipants['participants'];
 
                     // Filtrar por search se fornecido
                     if (search) {
                         const searchLower = search.toLowerCase();
-                        const matchesSearch = mappedParticipants.some((p: any) =>
+                        const matchesSearch = mappedParticipants.some((p) =>
                             p.name?.toLowerCase().includes(searchLower) ||
                             p.email?.toLowerCase().includes(searchLower)
                         );
@@ -222,7 +258,7 @@ class AdminChatService {
             }
 
             // Mapear para o formato esperado
-            const mappedMessages: MessageWithSender[] = (messages || []).map((msg: any) => ({
+            const mappedMessages: MessageWithSender[] = ((messages as unknown as DBMessageRow[]) || []).map((msg: DBMessageRow) => ({
                 id: msg.id,
                 conversation_id: msg.conversation_id,
                 sender_id: msg.sender_id,

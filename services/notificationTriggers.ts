@@ -105,20 +105,20 @@ class NotificationTriggers {
     }
   }
 
-  async notifyNewVideo(...args: any[]) {}
-  async notifyNewGallery(...args: any[]) {}
-  async notifyNewEvent(...args: any[]) {}
-  async notifyNewMessage(...args: any[]) {}
+  async notifyNewVideo(title: string, url?: string) {}
+  async notifyNewGallery(title: string, albumId?: string) {}
+  async notifyNewEvent(id: string, title: string, date: string, authorId?: string) {}
+  async notifyNewMessage(conversationId: string, senderId: string, receiverId: string, content: string) {}
 
 }
 
 export const notificationTriggers = new NotificationTriggers()
 
 // Exports soltos para retrocompatibilidade
-export const notifyNewVideo = async (...args: any[]) => {}
-export const notifyNewArticle = async (...args: any[]) => {}
-export const notifyNewSolution = async (...args: any[]) => {}
-export const notifyNewGallery = async (...args: any[]) => {}
-export const notifyNewEvent = async (...args: any[]) => {}
-export const notifyEventUpdated = async (...args: any[]) => {}
-export const notifyNewMessage = async (...args: any[]) => {}
+export const notifyNewVideo = async (title: string, url?: string) => notificationTriggers.notifyNewVideo(title, url);
+export const notifyNewArticle = async (id: string, title: string, authorId?: string) => notificationTriggers.notifyNewArticle(title);
+export const notifyNewSolution = async (id: string, title: string, type?: string) => notificationTriggers.notifyNewSolution(title);
+export const notifyNewGallery = async (title: string, albumId?: string) => notificationTriggers.notifyNewGallery(title, albumId);
+export const notifyNewEvent = async (id: string, title: string, date: string, authorId?: string) => notificationTriggers.notifyNewEvent(id, title, date, authorId);
+export const notifyEventUpdated = async (payload: { eventTitle: string; [key: string]: unknown }) => notificationTriggers.notifyEventUpdated(payload.eventTitle);
+export const notifyNewMessage = async (conversationId: string, senderId: string, receiverId: string, content: string) => notificationTriggers.notifyNewMessage(conversationId, senderId, receiverId, content);

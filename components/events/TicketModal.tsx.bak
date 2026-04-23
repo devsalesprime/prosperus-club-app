@@ -7,9 +7,6 @@ import { getTicketsForRsvp, addGuestToRsvp, removeGuestFromRsvp, generateTickets
 import { toPng } from 'html-to-image';
 import { useDrag } from '@use-gesture/react';
 import toast from 'react-hot-toast';
-import { DESIGN_TOKENS } from '../../utils/designTokens';
-
-const TOKENS = DESIGN_TOKENS.colors;
 
 interface TicketModalProps {
     isOpen: boolean;
@@ -45,7 +42,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
     // Fetch tickets
     const fetchTickets = useCallback(async () => {
         try {
+            // Ensure tickets exist for all event days (idempotent — safe to call every time)
             await generateTicketsForRsvp(rsvpId, eventId, memberName);
+            // Then fetch all tickets
             const data = await getTicketsForRsvp(rsvpId);
             setTickets(data);
         } catch (error) {
@@ -76,6 +75,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             setDragX(mx);
             return;
         }
+        // Swipe threshold: 50px
         if (mx < -50 && activeIndex < tickets.length - 1) {
             setActiveIndex(i => i + 1);
         } else if (mx > 50 && activeIndex > 0) {
@@ -93,8 +93,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         try {
             const dataUrl = await toPng(ticketRef.current, {
                 cacheBust: true,
-                pixelRatio: 3,
-                backgroundColor: TOKENS.bgPrimary,
+                pixelRatio: 3, // High quality for retina
+                backgroundColor: '#0f172a',
             });
 
             const link = document.createElement('a');
@@ -126,9 +126,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             setGuestRole('Social Media');
             setShowGuestForm(false);
             await fetchTickets();
-        } catch (err: unknown) {
-            const error = err as Error;
-            toast.error(error.message || 'Erro ao adicionar convidado.');
+        } catch (err: any) {
+            toast.error(err.message || 'Erro ao adicionar convidado.');
         } finally {
             setGuestLoading(false);
         }
@@ -153,29 +152,28 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[80] flex items-center justify-center backdrop-blur-sm animate-in fade-in"
-            style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px) 16px' }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in"
+            style={{ padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px) 16px' }}
         >
             <div className="relative w-full max-w-sm flex flex-col items-center max-h-full overflow-y-auto">
 
                 {/* ── CLOSE BUTTON ── */}
                 <button
                     onClick={onClose}
-                    className="absolute top-0 right-0 z-20 w-10 h-10 rounded-full border flex items-center justify-center transition shadow-lg hover:opacity-80"
-                    style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke }}
+                    className="absolute top-0 right-0 z-20 w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center hover:bg-slate-700 transition shadow-lg"
                 >
-                    <X size={18} style={{ color: TOKENS.textPrimary }} />
+                    <X size={18} className="text-white" />
                 </button>
 
                 {loading ? (
-                    <div className="rounded-3xl p-12 flex flex-col items-center border" style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke }}>
-                        <Loader2 size={32} className="animate-spin mb-4" style={{ color: TOKENS.gold }} />
-                        <p className="text-sm" style={{ color: TOKENS.textOff }}>Carregando ingressos...</p>
+                    <div className="bg-slate-900 rounded-3xl p-12 flex flex-col items-center border border-slate-800">
+                        <Loader2 size={32} className="text-yellow-500 animate-spin mb-4" />
+                        <p className="text-slate-400 text-sm">Carregando ingressos...</p>
                     </div>
                 ) : tickets.length === 0 ? (
-                    <div className="rounded-3xl p-12 flex flex-col items-center border" style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke }}>
-                        <QrCode size={32} className="mb-4" style={{ color: TOKENS.inactive }} />
-                        <p className="text-sm" style={{ color: TOKENS.textOff }}>Nenhum ingresso encontrado.</p>
+                    <div className="bg-slate-900 rounded-3xl p-12 flex flex-col items-center border border-slate-800">
+                        <QrCode size={32} className="text-slate-600 mb-4" />
+                        <p className="text-slate-400 text-sm">Nenhum ingresso encontrado.</p>
                     </div>
                 ) : (
                     <>
@@ -191,12 +189,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                         <button
                                             key={ticket.id}
                                             onClick={() => setActiveIndex(idx)}
-                                            className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all border"
-                                            style={{
-                                                backgroundColor: activeIndex === idx ? (isGuest ? 'rgba(147,51,234,0.2)' : `${TOKENS.gold}33`) : TOKENS.bgBox,
-                                                borderColor: activeIndex === idx ? (isGuest ? 'rgba(147,51,234,0.4)' : TOKENS.gold) : TOKENS.stroke,
-                                                color: activeIndex === idx ? (isGuest ? '#d8b4fe' : TOKENS.gold) : TOKENS.textOff,
-                                            }}
+                                            className={`flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                                activeIndex === idx
+                                                    ? isGuest
+                                                        ? 'bg-purple-600/20 border-purple-500/40 text-purple-300 shadow'
+                                                        : 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300 shadow'
+                                                    : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
+                                            }`}
                                         >
                                             {isGuest ? '👤 Convidado' : `📅 ${dateLabel}`}
                                         </button>
@@ -214,27 +213,29 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                     transform: `translateX(${dragX}px)`,
                                     transition: dragX === 0 ? 'transform 0.3s ease' : 'none',
                                     touchAction: 'pan-y',
-                                    backgroundColor: TOKENS.bgBox,
-                                    borderColor: `${TOKENS.gold}4D`,
                                 }}
-                                className="relative w-full rounded-3xl overflow-hidden shadow-2xl border flex flex-col cursor-grab active:cursor-grabbing select-none"
+                                className="relative w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-yellow-600/30 flex flex-col cursor-grab active:cursor-grabbing select-none"
                             >
-                                <div className="h-28 relative flex items-center justify-center p-6 text-center" style={{ background: DESIGN_TOKENS.gradients.gold }}>
+                                <div className={`h-28 relative flex items-center justify-center p-6 text-center ${
+                                    activeTicket.owner_type === 'GUEST'
+                                        ? 'bg-gradient-to-br from-purple-600 to-purple-800'
+                                        : 'bg-gradient-to-br from-yellow-600 to-yellow-800'
+                                }`}>
                                     <div>
                                         <div className="flex items-center justify-center gap-2 mb-1">
                                             {activeTicket.owner_type === 'GUEST' ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-[10px] font-bold text-white uppercase tracking-wider">
                                                     <Users2 size={10} /> Convidado
                                                 </span>
                                             ) : (
-                                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-80" style={{ color: TOKENS.bgPrimary }}>
+                                                <span className="text-slate-100 text-[10px] font-bold uppercase tracking-widest opacity-80">
                                                     Ingresso Exclusivo
                                                 </span>
                                             )}
                                         </div>
-                                        <h1 className="text-lg font-bold line-clamp-2 leading-tight" style={{ color: TOKENS.bgPrimary }}>{event.title}</h1>
+                                        <h1 className="text-white text-lg font-bold line-clamp-2 leading-tight">{event.title}</h1>
                                         {activeTicket.event_date && (
-                                            <p className="text-xs mt-1 flex items-center justify-center gap-1" style={{ color: TOKENS.bgBox }}>
+                                            <p className="text-white/70 text-xs mt-1 flex items-center justify-center gap-1">
                                                 <CalendarDays size={11} />
                                                 {new Date(activeTicket.event_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long' })}
                                             </p>
@@ -243,24 +244,26 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 </div>
 
                                 {/* Ticket Body */}
-                                <div className="p-6 flex flex-col items-center relative" style={{ backgroundColor: TOKENS.bgBox }}>
+                                <div className="p-6 flex flex-col items-center bg-slate-900 relative">
                                     {/* Cutout circles for ticket effect */}
-                                    <div className="absolute top-0 left-0 w-6 h-6 rounded-full -translate-x-3 -translate-y-3" style={{ backgroundColor: TOKENS.bgPrimary }}></div>
-                                    <div className="absolute top-0 right-0 w-6 h-6 rounded-full translate-x-3 -translate-y-3" style={{ backgroundColor: TOKENS.bgPrimary }}></div>
+                                    <div className="absolute top-0 left-0 w-6 h-6 bg-black rounded-full -translate-x-3 -translate-y-3"></div>
+                                    <div className="absolute top-0 right-0 w-6 h-6 bg-black rounded-full translate-x-3 -translate-y-3"></div>
                                     
                                     {/* Dotted line */}
-                                    <div className="absolute top-0 left-6 right-6 border-t-2 border-dashed" style={{ borderColor: TOKENS.stroke }}></div>
+                                    <div className="absolute top-0 left-6 right-6 border-t-2 border-dashed border-slate-700/50"></div>
 
                                     <div className="mb-5 mt-1 text-center w-full">
-                                        <p className="text-xs uppercase tracking-wide mb-1" style={{ color: TOKENS.textOff }}>
+                                        <p className="text-slate-400 text-xs uppercase tracking-wide mb-1">
                                             {activeTicket.owner_type === 'GUEST' ? 'Convidado(a)' : 'Membro Confirmado'}
                                         </p>
-                                        <p className="font-bold text-lg" style={{ color: TOKENS.textPrimary }}>{activeTicket.owner_name || memberName}</p>
+                                        <p className="text-white font-bold text-lg">{activeTicket.owner_name || memberName}</p>
                                     </div>
 
                                     {/* QR Code Wrapper */}
-                                    <div className="p-4 rounded-2xl shadow-lg border mb-5 relative" style={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0' }}>
-                                        <div className="absolute -top-3 -right-3 p-1.5 rounded-full shadow border-2" style={{ backgroundColor: activeTicket.owner_type === 'GUEST' ? '#a855f7' : TOKENS.gold, borderColor: TOKENS.bgPrimary, color: TOKENS.bgPrimary }}>
+                                    <div className="bg-white p-4 rounded-2xl shadow-lg border border-slate-200 mb-5 relative">
+                                        <div className={`absolute -top-3 -right-3 p-1.5 rounded-full shadow border-2 border-slate-900 ${
+                                            activeTicket.owner_type === 'GUEST' ? 'bg-purple-500 text-purple-900' : 'bg-yellow-500 text-yellow-900'
+                                        }`}>
                                             <QrCode size={16} />
                                         </div>
                                         <QRCodeSVG
@@ -274,7 +277,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                     </div>
 
                                     <div className="w-full text-center">
-                                        <p className="font-bold tracking-widest text-sm mb-2" style={{ color: activeTicket.owner_type === 'GUEST' ? '#c084fc' : TOKENS.gold }}>
+                                        <p className={`font-bold tracking-widest text-sm mb-2 ${
+                                            activeTicket.owner_type === 'GUEST' ? 'text-purple-400' : 'text-yellow-500'
+                                        }`}>
                                             {activeTicket.ticket_code.split('-')[0].toUpperCase()}
                                         </p>
                                     </div>
@@ -283,8 +288,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                     <button
                                         onClick={handleDownloadTicket}
                                         disabled={downloading}
-                                        className="w-full mt-2 flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl font-bold text-sm transition shadow-lg active:scale-[0.97] disabled:opacity-50"
-                                        style={{ background: DESIGN_TOKENS.gradients.gold, color: TOKENS.bgPrimary }}
+                                        className="w-full mt-2 flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold text-sm transition shadow-lg shadow-yellow-900/30 active:scale-[0.97] disabled:opacity-50"
                                     >
                                         {downloading ? (
                                             <Loader2 size={18} className="animate-spin" />
@@ -293,7 +297,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                         )}
                                         {downloading ? 'Gerando...' : '📥 Salvar Ingresso (Imagem)'}
                                     </button>
-                                    <p className="text-[10px] mt-2 text-center leading-relaxed max-w-[260px]" style={{ color: TOKENS.textOff }}>
+                                    <p className="text-slate-500 text-[10px] mt-2 text-center leading-relaxed max-w-[260px]">
                                         Recomendado: Salve a imagem para acesso rápido caso falte internet no local.
                                     </p>
 
@@ -302,8 +306,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                         <button
                                             onClick={handleRemoveGuest}
                                             disabled={guestLoading}
-                                            className="mt-3 flex items-center gap-1.5 text-xs transition underline hover:opacity-80"
-                                            style={{ color: '#ef4444' }}
+                                            className="mt-3 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition underline"
                                         >
                                             <Trash2 size={12} />
                                             Remover convidado
@@ -319,8 +322,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                 <button
                                     onClick={handlePrev}
                                     disabled={activeIndex === 0}
-                                    className="p-2 rounded-full border disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition"
-                                    style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textOff }}
+                                    className="p-2 rounded-full bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700 transition"
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
@@ -329,16 +331,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                         <button
                                             key={idx}
                                             onClick={() => setActiveIndex(idx)}
-                                            className={`w-2 h-2 rounded-full transition-all ${activeIndex === idx ? 'scale-125' : ''}`}
-                                            style={{ backgroundColor: activeIndex === idx ? TOKENS.gold : TOKENS.inactive }}
+                                            className={`w-2 h-2 rounded-full transition-all ${
+                                                activeIndex === idx ? 'bg-yellow-500 scale-125' : 'bg-slate-600'
+                                            }`}
                                         />
                                     ))}
                                 </div>
                                 <button
                                     onClick={handleNext}
                                     disabled={activeIndex === tickets.length - 1}
-                                    className="p-2 rounded-full border disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition"
-                                    style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textOff }}
+                                    className="p-2 rounded-full bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700 transition"
                                 >
                                     <ChevronRight size={20} />
                                 </button>
@@ -349,8 +351,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         {!hasGuest && !showGuestForm && (
                             <button
                                 onClick={() => setShowGuestForm(true)}
-                                className="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-dashed text-sm font-medium transition hover:opacity-80"
-                                style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textOff }}
+                                className="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-slate-800/80 border border-dashed border-slate-600 text-slate-400 hover:text-purple-300 hover:border-purple-500/40 text-sm font-medium transition"
                             >
                                 <UserPlus size={16} />
                                 Adicionar Convidado (Social Media/Staff)
@@ -358,22 +359,20 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                         )}
 
                         {showGuestForm && (
-                            <div className="mt-4 w-full rounded-xl border p-4 flex flex-col gap-3" style={{ backgroundColor: TOKENS.bgBox, borderColor: 'rgba(147,51,234,0.3)' }}>
-                                <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#d8b4fe' }}>Novo Convidado</p>
+                            <div className="mt-4 w-full bg-slate-900 rounded-xl border border-purple-500/30 p-4 flex flex-col gap-3">
+                                <p className="text-xs text-purple-300 font-bold uppercase tracking-wider">Novo Convidado</p>
                                 <input
                                     type="text"
                                     value={guestName}
                                     onChange={e => setGuestName(e.target.value)}
                                     placeholder="Nome completo do convidado..."
-                                    className="w-full px-4 py-3 border rounded-lg text-sm outline-none transition"
-                                    style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textPrimary }}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white placeholder:text-slate-500 outline-none focus:border-purple-500/50 transition"
                                     autoFocus
                                 />
                                 <select
                                     value={guestRole}
                                     onChange={e => setGuestRole(e.target.value)}
-                                    className="w-full px-4 py-3 border rounded-lg text-sm outline-none transition appearance-none"
-                                    style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textPrimary }}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-purple-500/50 transition appearance-none"
                                 >
                                     <option value="Social Media">📱 Social Media</option>
                                     <option value="Staff">👔 Staff</option>
@@ -385,16 +384,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                                     <button
                                         onClick={handleAddGuest}
                                         disabled={!guestName.trim() || guestLoading}
-                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-bold text-sm transition disabled:opacity-40 active:scale-95"
-                                        style={{ backgroundColor: '#9333ea', color: '#fff' }}
+                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition disabled:opacity-40 active:scale-95"
                                     >
                                         {guestLoading ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
                                         Gerar Ingresso
                                     </button>
                                     <button
                                         onClick={() => { setShowGuestForm(false); setGuestName(''); setGuestRole('Social Media'); }}
-                                        className="px-4 py-2.5 rounded-lg border text-sm transition hover:opacity-80"
-                                        style={{ backgroundColor: TOKENS.bgBox, borderColor: TOKENS.stroke, color: TOKENS.textOff }}
+                                        className="px-4 py-2.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white border border-slate-700 text-sm transition"
                                     >
                                         Cancelar
                                     </button>
@@ -410,3 +407,4 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 };
 
 export default TicketModal;
+

@@ -56,7 +56,7 @@ export const useUnreadMessageCount = (userId: string | null) => {
                     },
                     async (payload) => {
                         const eventType = payload.eventType;
-                        const messageRecord = payload.new as any;
+                        const messageRecord = payload.new as { sender_id?: string; conversation_id?: string };
 
                         if (eventType === 'INSERT') {
                             // Broadcast to other hooks (useChatSubscription)

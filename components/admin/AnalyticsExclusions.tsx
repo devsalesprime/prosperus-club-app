@@ -48,8 +48,9 @@ export const AnalyticsExclusions: React.FC = () => {
             const { data, error } = await supabase.rpc('get_analytics_excluded_users');
             if (error) throw error;
             setExcluded(data || []);
-        } catch (err) {
-            console.error('Error loading excluded users:', err);
+        } catch (err: unknown) {
+            console.error('Error fetching excluded IPS:', err);
+            toast.error('Erro ao buscar exclusões: ' + ((err as Error)?.message || 'Desconhecido'));
         } finally {
             setLoading(false);
         }
@@ -81,8 +82,9 @@ export const AnalyticsExclusions: React.FC = () => {
                 // Filter out already excluded
                 const excludedIds = new Set(excluded.map(e => e.user_id));
                 setSearchResults((data || []).filter(m => !excludedIds.has(m.id)));
-            } catch (err) {
-                console.error('Error searching members:', err);
+            } catch (err: unknown) {
+                console.error('Error saving IP:', err);
+                toast.error('Erro ao salvar IP: ' + ((err as Error)?.message || 'Desconhecido'));
             } finally {
                 setSearching(false);
             }
@@ -103,8 +105,8 @@ export const AnalyticsExclusions: React.FC = () => {
             setSearchTerm('');
             setSearchResults([]);
             await loadExcluded();
-        } catch (err: any) {
-            toast.error('Erro ao excluir: ' + (err?.message || ''));
+        } catch (err: unknown) {
+            toast.error('Erro ao excluir: ' + ((err as Error)?.message || ''));
         } finally {
             setAdding(null);
         }
@@ -119,8 +121,8 @@ export const AnalyticsExclusions: React.FC = () => {
             if (error) throw error;
             toast.success(`${user.email} voltou para as métricas`);
             await loadExcluded();
-        } catch (err: any) {
-            toast.error('Erro ao remover: ' + (err?.message || ''));
+        } catch (err: unknown) {
+            toast.error('Erro ao remover: ' + ((err as Error)?.message || ''));
         }
     };
 

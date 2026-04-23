@@ -27,7 +27,7 @@ interface UseSwipeCarouselReturn {
     /** Whether user is currently dragging */
     isDragging: boolean;
     /** Bind props — spread on the swipeable container */
-    bind: (...args: any[]) => any;
+    bind: (...args: unknown[]) => Record<string, unknown>;
     /** CSS transition to apply (none during drag, spring on release) */
     transition: string;
 }

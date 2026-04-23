@@ -6,9 +6,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { Camera, Trash2 } from 'lucide-react';
-import { DESIGN_TOKENS } from '../../utils/designTokens';
-
-const TOKENS = DESIGN_TOKENS.colors;
 
 interface Props {
     currentImageUrl?: string | null;
@@ -133,24 +130,34 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
         if (!imageEl || nativeSize.w === 0) return;
         setIsProcessing(true);
 
+        // A escala base (cover)
         const coverScale = Math.max(maskSize / nativeSize.w, maskSize / nativeSize.h);
+        
+        // Vamos renderizar em 500x500 (alta definição, leve)
         const canvasSize = 500;
         const canvas = document.createElement('canvas');
         canvas.width = canvasSize;
         canvas.height = canvasSize;
         const ctx = canvas.getContext('2d')!;
 
-        ctx.fillStyle = TOKENS.bgBox;
+        // Fundo preto (prevenção PNG)
+        ctx.fillStyle = '#031726';
         ctx.fillRect(0, 0, canvasSize, canvasSize);
 
+        // Recorte circular
         ctx.beginPath();
         ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, 2 * Math.PI);
         ctx.clip();
 
+        // Escala matemática do UI para o Canvas (500 / maskSize)
         const uiScale = canvasSize / maskSize;
         const finalScale = coverScale * zoom * uiScale;
+
         const renderW = nativeSize.w * finalScale;
         const renderH = nativeSize.h * finalScale;
+
+        // O centro da imagem na UI cai exatamente no centro do viewport ANTES do translate.
+        // position.x e y deslocam esse centro.
         const cCenter = canvasSize / 2;
         const dx = cCenter - (renderW / 2) + (position.x * uiScale);
         const dy = cCenter - (renderH / 2) + (position.y * uiScale);
@@ -159,12 +166,13 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
 
         canvas.toBlob((blob) => {
             if (blob) {
+                // Instantly optimistic update is triggered by the parent via onConfirm
                 onConfirm(blob);
             } else {
                 toast.error('Erro ao gerar recorte.');
                 setIsProcessing(false);
             }
-        }, 'image/webp', 0.85);
+        }, 'image/webp', 0.85); // Compressão WebP nativa
     };
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -173,29 +181,27 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
     if (step === 'select') {
         return (
             <>
-                <div onClick={onClose} className="fixed inset-0 z-[9998] backdrop-blur-sm" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} />
+                <div onClick={onClose} className="fixed inset-0 z-[9998] bg-black/55 backdrop-blur-sm" />
                 <div className="fixed bottom-0 left-0 right-0 z-[9999] flex justify-center">
-                    <div className="w-full max-w-[440px] rounded-t-[28px] pb-[max(28px,env(safe-area-inset-bottom,28px))] animate-in slide-in-from-bottom shadow-2xl relative" style={{ backgroundColor: TOKENS.bgBox }}>
-                        <div className="w-9 h-1 rounded-full mx-auto mt-3" style={{ backgroundColor: TOKENS.stroke }} />
+                    <div className="w-full max-w-[440px] bg-[#0F3249] rounded-t-[28px] pb-[max(28px,env(safe-area-inset-bottom,28px))] animate-in slide-in-from-bottom shadow-2xl relative">
+                        <div className="w-9 h-1 bg-[#1A4A6B] rounded-full mx-auto mt-3" />
                         
                         <div className="flex justify-center mt-5 mb-4">
                             <img
                                 src={currentImageUrl || `${import.meta.env.BASE_URL}default-avatar.svg`}
                                 alt="Foto do Sócio"
-                                className="w-[88px] h-[88px] rounded-full object-cover border-[3px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
-                                style={{ borderColor: TOKENS.gold, backgroundColor: TOKENS.stroke }}
+                                className="w-[88px] h-[88px] rounded-full object-cover border-[3px] border-[#FFDA71] bg-[#1A4A6B] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
                             />
                         </div>
 
-                        <p className="text-center text-[17px] font-semibold mb-6 tracking-tight" style={{ color: TOKENS.textPrimary }}>Alterar foto de perfil</p>
+                        <p className="text-center text-[#FCF7F0] text-[17px] font-semibold mb-6 tracking-tight">Alterar foto de perfil</p>
 
                         <div className="px-5 flex flex-col gap-3">
                             <button
                                 onClick={() => fileRef.current?.click()}
-                                className="flex items-center justify-center gap-2.5 w-full py-4 rounded-full border-[1.5px] text-base font-semibold hover:opacity-80 transition-colors"
-                                style={{ borderColor: TOKENS.gold, color: TOKENS.gold, backgroundColor: `${TOKENS.gold}1A` }}
+                                className="flex items-center justify-center gap-2.5 w-full py-4 rounded-full border-[1.5px] border-[#FFDA71] bg-[#FFDA71]/5 text-[#FFDA71] text-base font-semibold hover:bg-[#FFDA71]/10 transition-colors"
                             >
-                                <Camera size={18} style={{ color: TOKENS.gold }} />
+                                <Camera size={18} className="text-[#FFDA71]" />
                                 {currentImageUrl ? 'Trocar foto' : 'Adicionar foto'}
                             </button>
 
@@ -211,8 +217,7 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
 
                             <button
                                 onClick={onClose}
-                                className="w-full py-4 rounded-full text-base font-medium mt-1 hover:opacity-80 transition-colors"
-                                style={{ color: TOKENS.textOff }}
+                                className="w-full py-4 rounded-full text-[#8BA3B4] text-base font-medium mt-1 hover:text-[#FCF7F0] transition-colors"
                             >
                                 Cancelar
                             </button>
@@ -231,28 +236,27 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
     const coverScale = Math.max(maskSize / nativeSize.w, maskSize / nativeSize.h);
 
     return (
-        <div className="fixed inset-0 z-[100] backdrop-blur-md flex flex-col overflow-hidden touch-none" style={{ backgroundColor: `${TOKENS.bgPrimary}F2` }}>
+        <div className="fixed inset-0 z-[100] bg-[#031726]/95 backdrop-blur-md flex flex-col overflow-hidden touch-none text-white">
             
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-[env(safe-area-inset-top,44px)] pb-3 flex-shrink-0 z-50">
-                <button onClick={() => setStep('select')} className="py-2 text-base font-medium active:opacity-70" style={{ color: TOKENS.textOff }}>
+                <button onClick={() => setStep('select')} className="text-[#8BA3B4] py-2 text-base font-medium active:opacity-70">
                     Cancelar
                 </button>
                 <div className="flex flex-col items-center">
-                    <span className="font-bold tracking-tight" style={{ color: TOKENS.textPrimary }}>Estúdio</span>
+                    <span className="font-bold text-[#FCF7F0] tracking-tight">Estúdio</span>
                 </div>
                 <button 
                     onClick={handleCrop} 
                     disabled={isProcessing}
-                    className="py-2 text-base font-bold active:opacity-70 disabled:opacity-50"
-                    style={{ color: TOKENS.goldDark }}
+                    className="text-[#CA9A43] py-2 text-base font-bold active:opacity-70 disabled:opacity-50"
                 >
                     {isProcessing ? 'Cortando...' : 'Salvar'}
                 </button>
             </div>
 
             {/* Hint */}
-            <p className="text-center text-[13px] mt-2 mb-4 z-50 flex-shrink-0 relative pointer-events-none" style={{ color: TOKENS.textOff }}>
+            <p className="text-center text-[13px] text-[#8BA3B4] mt-2 mb-4 z-50 flex-shrink-0 relative pointer-events-none">
                 Movimente para centrar e aplique zoom
             </p>
 
@@ -282,15 +286,15 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
 
                 {/* Máscara Circular Cinematográfica (Pointer Events None) */}
                 <div 
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 pointer-events-none z-10"
-                    style={{ width: maskSize, height: maskSize, borderColor: TOKENS.goldDark, boxShadow: `0 0 0 9999px ${TOKENS.bgPrimary}D9` }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_9999px_rgba(3,23,38,0.85)] border-2 border-[#CA9A43] pointer-events-none z-10"
+                    style={{ width: maskSize, height: maskSize }}
                 />
             </div>
 
             {/* Slider de Zoom no Rodapé */}
-            <div className="flex flex-col items-center px-6 pb-[max(32px,env(safe-area-inset-bottom,32px))] pt-6 flex-shrink-0 z-50 bg-gradient-to-t to-transparent" style={{ '--tw-gradient-from': TOKENS.bgPrimary } as React.CSSProperties}>
+            <div className="flex flex-col items-center px-6 pb-[max(32px,env(safe-area-inset-bottom,32px))] pt-6 flex-shrink-0 z-50 bg-gradient-to-t from-[#031726] to-transparent">
                 <div className="flex items-center gap-4 w-full max-w-xs">
-                    <span className="text-xl font-light" style={{ color: TOKENS.textOff }}>−</span>
+                    <span className="text-[#8BA3B4] text-xl font-light">−</span>
                     <input 
                         type="range" 
                         min="1" 
@@ -298,10 +302,9 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
                         step="0.05" 
                         value={zoom}
                         onChange={e => setZoom(Number(e.target.value))}
-                        className="w-full flex-1 h-1 rounded-full appearance-none outline-none" 
-                        style={{ backgroundColor: TOKENS.stroke, accentColor: TOKENS.goldDark }}
+                        className="w-full flex-1 accent-[#CA9A43] h-1 bg-[#1A4A6B] rounded-full appearance-none outline-none" 
                     />
-                    <span className="text-2xl font-light" style={{ color: TOKENS.textOff }}>+</span>
+                    <span className="text-[#8BA3B4] text-2xl font-light">+</span>
                 </div>
             </div>
 
@@ -310,3 +313,4 @@ export function ProfilePhotoEditor({ currentImageUrl, onConfirm, onRemove, onClo
 }
 
 export default ProfilePhotoEditor;
+

@@ -2,7 +2,7 @@
 // Centralized authentication and user profile management
 // Single source of truth for user data from Supabase profiles table
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, startTransition } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { ProfileData, profileService } from '../services/profileService';
@@ -133,12 +133,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             logger.debug('👋 AuthContext: Logging out...');
             await supabase.auth.signOut();
-            setSession(null);
-            setUserProfile(null);
-            profileCacheRef.current = null;
-            setIsPasswordRecovery(false);
-            setIsBlocked(false);
-            setBlockedEmail(null);
+            startTransition(() => {
+                setSession(null);
+                setUserProfile(null);
+                profileCacheRef.current = null;
+                setIsPasswordRecovery(false);
+                setIsBlocked(false);
+                setBlockedEmail(null);
+            });
         } catch (error) {
             logger.error('❌ AuthContext: Error during logout:', error);
         }
@@ -269,11 +271,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 logger.debug('🔑 AuthContext: PASSWORD_RECOVERY event detected');
                 setIsPasswordRecovery(true);
             } else if (event === 'SIGNED_OUT') {
-                setUserProfile(null);
-                profileCacheRef.current = null;
-                setIsPasswordRecovery(false);
-                setIsBlocked(false);
-                setBlockedEmail(null);
+                startTransition(() => {
+                    setUserProfile(null);
+                    profileCacheRef.current = null;
+                    setIsPasswordRecovery(false);
+                    setIsBlocked(false);
+                    setBlockedEmail(null);
+                });
             }
         });
 

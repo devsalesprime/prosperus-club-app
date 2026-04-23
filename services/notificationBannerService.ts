@@ -162,7 +162,7 @@ async function getBannerMetrics(bannerId: string): Promise<BannerMetrics> {
   let ctaClicks = 0;
   let skipClicks = 0;
 
-  events?.forEach((e: any) => {
+  events?.forEach((e: { metadata?: Record<string, unknown> }) => {
       if (e.metadata?.action === 'cta_clicked') ctaClicks++;
       if (e.metadata?.action === 'skip_clicked') skipClicks++;
   });

@@ -103,7 +103,7 @@ class AdminUserService {
         const newBlockedStatus = !isCurrentlyBlocked;
 
         // Atualizar status de bloqueio
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
             is_blocked: newBlockedStatus
         };
 

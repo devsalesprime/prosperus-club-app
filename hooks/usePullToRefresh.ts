@@ -25,7 +25,7 @@ interface UsePullToRefreshReturn {
     /** Whether refresh is currently executing */
     isRefreshing: boolean;
     /** Bind props — spread on the scrollable container */
-    bind: (...args: any[]) => any;
+    bind: (...args: unknown[]) => Record<string, unknown>;
 }
 
 export function usePullToRefresh({

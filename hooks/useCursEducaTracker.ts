@@ -105,7 +105,21 @@ export function useCursEducaTracker({
     }, [userId, videoId, onComplete]);
 
     // Extract progress from various event formats
-    const extractProgress = useCallback((data: any): number | null => {
+    interface ProgressData {
+        percentage?: number;
+        progress?: number;
+        percent?: number;
+        currentTime?: number;
+        duration?: number;
+        second?: number;
+        seconds?: number;
+        data?: ProgressData;
+        type?: string;
+        event?: string;
+        action?: string;
+    }
+
+    const extractProgress = useCallback((data: ProgressData | null | undefined): number | null => {
         // Try different property names CursEduca might use
         if (typeof data?.percentage === 'number') {
             return data.percentage;
@@ -145,7 +159,7 @@ export function useCursEducaTracker({
         // }
 
         // Parse data if it's a string
-        let eventData: any = event.data;
+        let eventData = event.data as ProgressData | null | undefined;
         if (typeof event.data === 'string') {
             try {
                 eventData = JSON.parse(event.data);

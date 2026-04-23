@@ -91,7 +91,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         content,
                         created_at,
                         is_read: false
-                    } as any;
+                    } as unknown as NonNullable<ConversationWithDetails['lastMessage']>;
 
                     conversation.updated_at = created_at;
 

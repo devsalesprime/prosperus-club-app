@@ -626,7 +626,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => parseDailyActivityRow(row));
+            return (data || []).map((row: Record<string, unknown>) => parseDailyActivityRow(row));
         } catch (error) {
             if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching activity by day:', error);
@@ -648,7 +648,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => ({
+            return (data || []).map((row: Record<string, unknown>) => ({
                 date: String(row.activity_date || ''),
                 totalSessions: Number(row.total_sessions) || 0,
                 uniqueUsers: Number(row.unique_users) || 0,
@@ -678,7 +678,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => parseTopContentRow(row));
+            return (data || []).map((row: Record<string, unknown>) => parseTopContentRow(row));
         } catch (error) {
             if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching top videos:', error);
@@ -704,7 +704,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => parseTopContentRow(row));
+            return (data || []).map((row: Record<string, unknown>) => parseTopContentRow(row));
         } catch (error) {
             if (isAbortError(error)) return [];
             logger.error('[Analytics] Error fetching top articles:', error);
@@ -726,7 +726,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => ({
+            return (data || []).map((row: Record<string, unknown>) => ({
                 name: row.event_name,
                 value: Number(row.event_count) || 0
             }));
@@ -770,8 +770,8 @@ class AnalyticsService {
                 totalReferrals: Number(row.total_referrals) || 0,
                 totalDeals: Number(row.total_deals) || 0,
                 auditedDeals: Number(row.audited_deals) || 0,
-                auditedVolume: parseFloat(row.audited_volume) || 0,
-                conversionRate: parseFloat(row.conversion_rate) || 0
+                auditedVolume: parseFloat(String(row.audited_volume)) || 0,
+                conversionRate: parseFloat(String(row.conversion_rate)) || 0
             };
         } catch (error) {
             if (isAbortError(error)) return EMPTY;
@@ -794,12 +794,12 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => ({
+            return (data || []).map((row: Record<string, unknown>) => ({
                 memberId: row.member_id,
                 memberName: row.member_name || 'Desconhecido',
                 memberImage: row.member_image || null,
                 dealCount: Number(row.deal_count) || 0,
-                totalVolume: parseFloat(row.total_volume) || 0
+                totalVolume: parseFloat(String(row.total_volume)) || 0
             }));
         } catch (error) {
             if (isAbortError(error)) return [];
@@ -822,7 +822,7 @@ class AnalyticsService {
                 throw error;
             }
 
-            return (data || []).map((row: any) => ({
+            return (data || []).map((row: Record<string, unknown>) => ({
                 memberId: row.member_id,
                 memberName: row.member_name || 'Desconhecido',
                 memberEmail: row.member_email || '',
@@ -865,7 +865,7 @@ class AnalyticsService {
             return {
                 videosStarted: Number(row.videos_started) || 0,
                 videosCompleted: Number(row.videos_completed) || 0,
-                completionRate: parseFloat(row.completion_rate) || 0
+                completionRate: parseFloat(String(row.completion_rate)) || 0
             };
         } catch (error) {
             if (isAbortError(error)) return EMPTY;
@@ -901,7 +901,7 @@ class AnalyticsService {
             return {
                 totalRsvps: Number(row.total_rsvps) || 0,
                 totalCheckins: Number(row.total_checkins) || 0,
-                attendanceRate: parseFloat(row.attendance_rate) || 0,
+                attendanceRate: parseFloat(String(row.attendance_rate)) || 0,
                 noShowCount: Number(row.no_show_count) || 0
             };
         } catch (error) {

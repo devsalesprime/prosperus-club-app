@@ -76,10 +76,11 @@ export const MembersModule: React.FC = () => {
             });
             setMembers(result.data);
             setTotalMembers(result.total);
-        } catch (err: any) {
-            if (err?.message?.includes('AbortError') || err?.code === 'ABORT_ERR') return;
-            console.error('Error loading members:', err);
-            setError(err.message || 'Erro ao carregar membros');
+        } catch (err: unknown) {
+            const error = err as Error & { code?: string };
+            if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
+            console.error('Error loading members:', error);
+            setError(error.message || 'Erro ao carregar membros');
         } finally {
             setLoading(false);
         }
@@ -206,9 +207,10 @@ export const MembersModule: React.FC = () => {
             setIsEditModalOpen(false);
             setEditingMember(null);
             toast.success('Membro atualizado com sucesso!');
-        } catch (err: any) {
-            console.error('Error saving member:', err);
-            toast.error('Erro ao salvar: ' + err.message);
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error('Error saving member:', error);
+            toast.error('Erro ao salvar: ' + error.message);
         } finally {
             setSaving(false);
         }
@@ -231,10 +233,11 @@ export const MembersModule: React.FC = () => {
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
             await loadMembers();
             toast.success('Membro removido com sucesso.');
-        } catch (err: any) {
-            console.error('Error deleting member:', err);
+        } catch (err: unknown) {
+            const error = err as Error;
+            console.error('Error deleting member:', error);
             setConfirmState(prev => ({ ...prev, isOpen: false, isLoading: false }));
-            toast.error('Erro ao remover membro: ' + err.message);
+            toast.error('Erro ao remover membro: ' + error.message);
         }
     };
 
@@ -453,7 +456,7 @@ export const MembersModule: React.FC = () => {
                 </div>
                 <select
                     value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as any)}
+                    onChange={(e) => setRoleFilter(e.target.value as 'ALL' | 'ADMIN' | 'CEO' | 'MANAGER' | 'ACCOUNT_MANAGER' | 'TEAM' | 'MEMBER')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition w-full md:w-auto min-w-[140px]"
                 >
                     <option value="ALL">Todos os perfis</option>
@@ -474,7 +477,7 @@ export const MembersModule: React.FC = () => {
                 </div>
                 <select
                     value={lastAccessFilter}
-                    onChange={(e) => setLastAccessFilter(e.target.value as any)}
+                    onChange={(e) => setLastAccessFilter(e.target.value as 'ALL' | 'TODAY' | '7D' | '30D' | '60D' | '90D_PLUS')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[160px]"
                 >
                     <option value="ALL">🕐 Último Acesso</option>
@@ -486,7 +489,7 @@ export const MembersModule: React.FC = () => {
                 </select>
                 <select
                     value={activeDaysFilter}
-                    onChange={(e) => setActiveDaysFilter(e.target.value as any)}
+                    onChange={(e) => setActiveDaysFilter(e.target.value as 'ALL' | '1_PLUS' | '5_PLUS' | '10_PLUS' | '20_PLUS')}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[160px]"
                 >
                     <option value="ALL">📊 Dias Ativo</option>

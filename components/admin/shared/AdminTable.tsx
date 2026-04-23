@@ -16,7 +16,7 @@ interface Column<T> {
     render?: (item: T) => React.ReactNode;
 }
 
-interface AdminTableProps<T = any> {
+interface AdminTableProps<T = Record<string, unknown>> {
     children?: React.ReactNode;
     title?: string;
     subtitle?: string;
@@ -34,7 +34,7 @@ interface AdminTableProps<T = any> {
     emptyMessage?: string;
 }
 
-export const AdminTable = <T extends Record<string, any>>({
+export const AdminTable = <T extends Record<string, unknown>>({
     children,
     title,
     subtitle,

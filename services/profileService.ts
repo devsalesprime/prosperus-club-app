@@ -112,16 +112,19 @@ class ProfileService {
 
             // Type guard to check if result has error property
             if (result && typeof result === 'object' && 'error' in result) {
-                const { data, error } = result as { data: ProfileData | null; error: any };
+                const { data, error } = result as { data: ProfileData | null; error: unknown };
 
                 if (error) {
                     if (isAbortError(error)) throw error; // handled in outer catch
                     logger.error('❌ profileService.getProfile: Supabase error:', {
-                        code: error.code,
-                        message: error.message,
-                        details: error.details,
-                        hint: error.hint
+                        code: (error as { code?: string }).code,
+                        message: (error as Error).message,
+                        details: (error as { details?: string }).details,
+                        hint: (error as { hint?: string }).hint
                     });
+                    if ((error as { code?: string }).code === 'PGRST116') {
+                        logger.warn('profileService: Profile not found for ID:', userId, (error as Error).message);
+                    }
                     throw error;
                 }
 
@@ -136,13 +139,13 @@ class ProfileService {
             }
 
             return null;
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Silently handle AbortError — fall through to cache
             if (!isAbortError(error)) {
                 logger.error('❌ profileService.getProfile: Exception caught:', {
-                    name: error?.name,
-                    message: error?.message,
-                    code: error?.code,
+                    name: (error as Error)?.name,
+                    message: (error as Error)?.message,
+                    code: (error as { code?: string })?.code,
                     userId
                 });
             }
@@ -382,10 +385,10 @@ class ProfileService {
     async updateProfile(userId: string, updates: ProfileUpdateData): Promise<ProfileData | null> {
         try {
             // Clean up empty strings and nulls, but preserve arrays and objects
-            const cleanUpdates: any = {};
+            const cleanUpdates: Record<string, unknown> = {};
 
             Object.keys(updates).forEach(key => {
-                const value = (updates as any)[key];
+                const value = (updates as Record<string, unknown>)[key];
 
                 // Always include arrays (even empty ones - user may want to clear all tags)
                 if (Array.isArray(value)) {
@@ -413,7 +416,7 @@ class ProfileService {
 
             if (error) {
                 // If profile doesn't exist, throw a more helpful error
-                if (error.code === 'PGRST116') {
+                if ((error as { code?: string }).code === 'PGRST116') {
                     throw new Error('Profile not found. Please refresh the page to create your profile.');
                 }
                 throw error;
@@ -759,7 +762,7 @@ class ProfileService {
      */
     async updateBenefitStatus(userId: string, newStatus: 'approved' | 'rejected', rejectionReason?: string): Promise<boolean> {
         try {
-            const updatePayload: any = { 
+            const updatePayload: Record<string, unknown> = {
                 benefit_status: newStatus, 
                 updated_at: new Date().toISOString() 
             };

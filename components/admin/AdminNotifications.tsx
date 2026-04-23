@@ -125,7 +125,7 @@ export const AdminNotifications: React.FC<AdminNotificationsProps> = ({ userRole
     const loadHistory = async () => {
         try {
             setLoadingHistory(true);
-            const result = await notificationService.getNotificationHistory(1, 50);
+            const result = await notificationService.getNotificationHistory<NotificationHistory>(1, 50);
             setHistory(result.data);
         } catch (err) {
             console.error('Error loading history:', err);

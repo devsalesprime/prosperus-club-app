@@ -725,7 +725,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                         setPreviewMemberName(file.member?.name || '');
                                                         try {
                                                             let finalUrl = file.file_url;
-                                                            if ((file as any).isAutomated) {
+                                                            if ((file as Record<string, unknown>).isAutomated) {
                                                                 const signed = await reportService.getReportSignedUrl(file.file_url);
                                                                 if (!signed) throw new Error('Falha ao gerar URL de acesso');
                                                                 finalUrl = signed;
@@ -738,7 +738,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                             setPreviewUrl(URL.createObjectURL(blob));
                                                         } catch (err) {
                                                             console.error('Preview failed:', err);
-                                                            if (!(file as any).isAutomated) {
+                                                            if (!(file as Record<string, unknown>).isAutomated) {
                                                                 window.open(file.file_url, '_blank');
                                                             } else {
                                                                 toast.error('Erro ao carregar o relatório.');
@@ -753,7 +753,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                     <Eye size={18} />
                                                 </button>
                                             )}
-                                            {!(file as any).isAutomated && (
+                                            {!(file as Record<string, unknown>).isAutomated && (
                                                 <a
                                                     href={file.file_url}
                                                     target="_blank"
@@ -770,7 +770,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                     setCopyingId(file.id);
                                                     try {
                                                         let storageUrl: string;
-                                                        if ((file as any).isAutomated) {
+                                                        if ((file as Record<string, unknown>).isAutomated) {
                                                             // Relatório automático → Signed URL de 7 dias
                                                             const url = await reportService.getShareableUrl(file.file_url);
                                                             if (!url) throw new Error('Falha ao gerar link');

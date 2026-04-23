@@ -33,7 +33,7 @@ interface TimelineDay {
 interface RecentEvent {
     event_id: string;
     event_type: string;
-    metadata: Record<string, any> | null;
+    metadata: Record<string, unknown> | null;
     created_at: string;
 }
 
@@ -129,13 +129,13 @@ export const UserActivityDetail: React.FC<Props> = ({ userId, userName, userImag
                 supabase.rpc('get_user_recent_events', { p_user_id: userId, p_limit: 100 }),
             ]);
 
-            setSummary((summaryRes.data || []).map((r: any) => ({
+            setSummary((summaryRes.data || []).map((r: { event_type: string; event_count: string | number; last_at: string }) => ({
                 event_type: r.event_type,
                 event_count: Number(r.event_count),
                 last_at: r.last_at,
             })));
 
-            setTimeline((timelineRes.data || []).map((r: any) => {
+            setTimeline((timelineRes.data || []).map((r: { activity_date: string; event_count: string | number }) => {
                 const d = new Date(r.activity_date);
                 return {
                     date: r.activity_date,
@@ -144,7 +144,7 @@ export const UserActivityDetail: React.FC<Props> = ({ userId, userName, userImag
                 };
             }));
 
-            setEvents((eventsRes.data || []).map((r: any) => ({
+            setEvents((eventsRes.data || []).map((r: { event_id: string; event_type: string; metadata: Record<string, unknown> | null; created_at: string }) => ({
                 event_id: r.event_id,
                 event_type: r.event_type,
                 metadata: r.metadata,

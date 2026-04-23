@@ -414,19 +414,19 @@ class NotificationService {
         try {
             const count = await this.createNotification(title, message, segment, actionUrl);
             return { success: true, count };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error in sendNotificationWithLog:', error);
-            return { success: false, count: 0, error: error.message || 'Erro desconhecido' };
+            return { success: false, count: 0, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
     /**
      * Get notification history (admin only - from master table)
      */
-    async getNotificationHistory(
+    async getNotificationHistory<T = Record<string, unknown>>(
         page: number = 1,
         limit: number = 10
-    ): Promise<{ data: any[]; total: number; hasMore: boolean }> {
+    ): Promise<{ data: T[]; total: number; hasMore: boolean }> {
         try {
             const offset = (page - 1) * limit;
 
@@ -439,7 +439,7 @@ class NotificationService {
             if (error) throw error;
 
             return {
-                data: data || [],
+                data: (data as unknown as T[]) || [],
                 total: count || 0,
                 hasMore: offset + limit < (count || 0)
             };
@@ -488,9 +488,9 @@ class NotificationService {
 
             logger.info('✅ Push token registered successfully');
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('❌ Error in registerPushToken:', error);
-            return { success: false, error: error.message || 'Erro desconhecido' };
+            return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
 
@@ -556,9 +556,9 @@ class NotificationService {
 
             logger.info('✅ Push token removed successfully');
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             logger.error('Error removing push token:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: (error as Error).message };
         }
     }
 

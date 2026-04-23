@@ -14,6 +14,16 @@ interface MemberProfile {
     company?: string;
 }
 
+interface NotificationHistory {
+    id: string;
+    title: string;
+    message: string;
+    segment: string;
+    sent_at?: string;
+    created_at?: string;
+    target_url?: string;
+}
+
 export const AdminNotifications: React.FC = () => {
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
@@ -37,7 +47,7 @@ export const AdminNotifications: React.FC = () => {
     const [loadingScheduled, setLoadingScheduled] = useState(false);
 
     // History state
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<NotificationHistory[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [histSegFilter, setHistSegFilter] = useState<'ALL' | 'MEMBERS' | 'TEAM' | 'ADMIN'>('ALL');
     const [histPage, setHistPage] = useState(1);
@@ -173,7 +183,7 @@ export const AdminNotifications: React.FC = () => {
     const loadHistory = useCallback(async () => {
         try {
             setLoadingHistory(true);
-            const result = await notificationService.getNotificationHistory(1, 50);
+            const result = await notificationService.getNotificationHistory<NotificationHistory>(1, 50);
             setHistory(result.data);
         } catch (err) {
             console.error('Error loading history:', err);
@@ -630,7 +640,7 @@ export const AdminNotifications: React.FC = () => {
                         ) : (
                             <>
                                 <div className="space-y-3">
-                                    {paginatedHistory.map((item: any) => (
+                                    {paginatedHistory.map((item: NotificationHistory) => (
                                         <div
                                             key={item.id}
                                             className="p-3 bg-slate-900/60 rounded-lg hover:bg-slate-800 transition border border-slate-700/50"

@@ -23,7 +23,7 @@ interface UseSwipeDismissReturn {
     /** Whether user is currently dragging */
     isDragging: boolean;
     /** Bind props — spread on the drag handle element */
-    bind: (...args: any[]) => any;
+    bind: (...args: unknown[]) => Record<string, unknown>;
     /** CSS transition for the modal container */
     transition: string;
 }

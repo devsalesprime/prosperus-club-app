@@ -250,7 +250,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
                 setRsvpStatus(data?.status || 'NONE');
                 setRsvpId(data?.id || null);
                 if (data?.profile) {
-                    setMemberName((data.profile as any).name || '');
+                    setMemberName((data.profile as unknown as { name?: string })?.name || '');
                 }
 
                 const { count } = await supabase
@@ -285,7 +285,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             if (error) throw error;
             analyticsService.logEvent('event_rsvp_confirmed', { event_id: event.id }).catch(console.error);
             setRsvpToast('Sua solicitação foi enviada para análise! ⏳');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('RSVP request failed:', err);
             setRsvpStatus('NONE');
             setRsvpToast('Erro ao solicitar presença. Tente novamente.');
@@ -309,7 +309,7 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event, onC
             if (error) throw error;
             setConfirmedCount(prev => Math.max(0, prev - (prevStatus === 'CONFIRMED' ? 1 : 0)));
             setRsvpToast('Presença cancelada.');
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Cancel RSVP failed:', err);
             setRsvpStatus(prevStatus);
             setRsvpToast('Erro ao cancelar. Tente novamente.');

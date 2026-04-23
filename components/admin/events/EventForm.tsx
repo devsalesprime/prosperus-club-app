@@ -110,7 +110,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                 endDate: event.endDate ? toLocalDatetimeInput(new Date(event.endDate)) : ''
             };
             Object.keys(formattedEvent).forEach(key => {
-                setValue(key as any, (formattedEvent as any)[key]);
+                setValue(key as Parameters<typeof setValue>[0], (formattedEvent as Record<string, unknown>)[key] as string);
             });
         } else {
             setMaterials([]);
@@ -207,9 +207,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
             else if (['mp4', 'avi', 'mov', 'wmv', 'webm'].includes(ext || '')) updated[index].type = 'VIDEO';
             setMaterials(updated);
             toast.success('Arquivo enviado com sucesso!');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error uploading file:', error);
-            toast.error('Erro ao fazer upload: ' + error.message);
+            toast.error('Erro ao fazer upload: ' + ((error as Error)?.message || 'Erro desconhecido'));
         } finally {
             setUploadingIndex(null);
         }
@@ -219,7 +219,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
     // SUBMIT
     // ============================================
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: Record<string, unknown>) => {
         try {
             setSaving(true);
             const eventData = {
@@ -284,9 +284,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
             }
             toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
             onSaved();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error saving event:', err);
-            toast.error('Erro ao salvar evento: ' + (err?.message || 'Erro desconhecido'));
+            toast.error('Erro ao salvar evento: ' + ((err as Error)?.message || 'Erro desconhecido'));
         } finally {
             setSaving(false);
         }
@@ -304,7 +304,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                         <AdminFormInput
                             label="Título"
                             {...register("title")}
-                            onChange={(e: any) => setValue('title', e)}
+                            onChange={(e: string) => setValue('title', e)}
                             value={watch('title')}
                             error={errors.title?.message}
                         />
@@ -390,7 +390,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                             <button
                                 key={cat}
                                 type="button"
-                                onClick={() => setValue('category', cat as any)}
+                                onClick={() => setValue('category', cat as 'PRESENTIAL' | 'ONLINE')}
                                 className={`py-2 px-1 text-xs font-bold border transition ${category === cat ? 'bg-yellow-600 border-yellow-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500'}`}
                             >
                                 {cat === 'PRESENTIAL' ? '📍 PRESENCIAL' : '🖥️ ONLINE'}
@@ -400,29 +400,29 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <AdminFormInput label="Data/Hora de Início *" type="datetime-local" {...register("date")} onChange={(e: any) => setValue('date', e)} value={watch('date')} error={errors.date?.message} />
-                    <AdminFormInput label="Data/Hora de Término *" type="datetime-local" {...register("endDate")} onChange={(e: any) => setValue('endDate', e)} value={watch('endDate')} error={errors.endDate?.message} min={startDate} />
+                    <AdminFormInput label="Data/Hora de Início *" type="datetime-local" {...register("date")} onChange={(e: string) => setValue('date', e)} value={watch('date')} error={errors.date?.message} />
+                    <AdminFormInput label="Data/Hora de Término *" type="datetime-local" {...register("endDate")} onChange={(e: string) => setValue('endDate', e)} value={watch('endDate')} error={errors.endDate?.message} min={startDate} />
                 </div>
 
                 <div className="bg-slate-800/50 p-4 border border-slate-700 space-y-4">
-                    <AdminFormInput label="URL do Banner (Opcional)" placeholder="https://... (Imagem de destaque)" {...register("bannerUrl")} onChange={(e: any) => setValue('bannerUrl', e)} value={watch('bannerUrl')} error={errors.bannerUrl?.message} />
+                    <AdminFormInput label="URL do Banner (Opcional)" placeholder="https://... (Imagem de destaque)" {...register("bannerUrl")} onChange={(e: string) => setValue('bannerUrl', e)} value={watch('bannerUrl')} error={errors.bannerUrl?.message} />
 
                     {category === 'PRESENTIAL' && (
                         <>
-                            <AdminFormInput label="Localização / Endereço *" placeholder="Ex: Sede Prosperus, Sala 2" {...register("location")} onChange={(e: any) => setValue('location', e)} value={watch('location')} error={errors.location?.message} />
-                            <AdminFormInput label="Link do Google Maps (Opcional)" placeholder="https://maps.app.goo.gl/..." {...register("mapLink")} onChange={(e: any) => setValue('mapLink', e)} value={watch('mapLink')} error={errors.mapLink?.message} />
+                            <AdminFormInput label="Localização / Endereço *" placeholder="Ex: Sede Prosperus, Sala 2" {...register("location")} onChange={(e: string) => setValue('location', e)} value={watch('location')} error={errors.location?.message} />
+                            <AdminFormInput label="Link do Google Maps (Opcional)" placeholder="https://maps.app.goo.gl/..." {...register("mapLink")} onChange={(e: string) => setValue('mapLink', e)} value={watch('mapLink')} error={errors.mapLink?.message} />
                         </>
                     )}
 
                     {category === 'ONLINE' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <AdminFormInput label="Link da Reunião *" placeholder="https://zoom.us/..." {...register("link")} onChange={(e: any) => setValue('link', e)} value={watch('link')} error={errors.link?.message} />
-                            <AdminFormInput label="Senha/ID (Opcional)" placeholder="Ex: 123456" {...register("meetingPassword")} onChange={(e: any) => setValue('meetingPassword', e)} value={watch('meetingPassword')} />
+                            <AdminFormInput label="Link da Reunião *" placeholder="https://zoom.us/..." {...register("link")} onChange={(e: string) => setValue('link', e)} value={watch('link')} error={errors.link?.message} />
+                            <AdminFormInput label="Senha/ID (Opcional)" placeholder="Ex: 123456" {...register("meetingPassword")} onChange={(e: string) => setValue('meetingPassword', e)} value={watch('meetingPassword')} />
                         </div>
                     )}
                 </div>
 
-                <AdminFormInput label="Descrição *" textarea {...register("description")} onChange={(e: any) => setValue('description', e)} value={watch('description')} error={errors.description?.message} />
+                <AdminFormInput label="Descrição *" textarea {...register("description")} onChange={(e: string) => setValue('description', e)} value={watch('description')} error={errors.description?.message} />
 
                 {/* SESSIONS SECTION */}
                 <div className="bg-slate-800/30 p-4 border border-slate-700 rounded-lg space-y-3">
@@ -527,7 +527,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <input type="text" placeholder="Título do material" value={material.title} onChange={(e) => { const updated = [...materials]; updated[index].title = e.target.value; setMaterials(updated); }} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition" />
-                                        <select value={material.type} onChange={(e) => { const updated = [...materials]; updated[index].type = e.target.value as any; setMaterials(updated); }} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition">
+                                        <select value={material.type} onChange={(e) => { const updated = [...materials]; updated[index].type = e.target.value as 'PDF' | 'DOC' | 'VIDEO' | 'LINK'; setMaterials(updated); }} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-sm text-slate-200 outline-none focus:border-yellow-600 transition">
                                             <option value="PDF">📄 PDF</option>
                                             <option value="DOC">📝 Documento</option>
                                             <option value="VIDEO">🎥 Vídeo</option>
