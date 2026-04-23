@@ -143,7 +143,7 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 .eq('event_id', eventId)
                 .order('created_at', { ascending: true });
             if (error) throw error;
-            setRsvpList(data || []);
+            setRsvpList((data as any) || []);
         } catch (err) {
             console.error('Error fetching RSVPs:', err);
             setRsvpList([]);

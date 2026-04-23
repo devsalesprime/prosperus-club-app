@@ -50,8 +50,8 @@ export function DataTable<T extends { id: string }>({ columns, data, onEdit, onD
                     const key = keyMap[headerLower] || headerLower;
                     let val = r[key];
 
-                    if (col === 'Data' && val) val = new Date(val).toLocaleDateString();
-                    if (col === 'Título' || col === 'Nome') val = <span className="font-medium text-white">{val}</span>;
+                    if (col === 'Data' && val) val = new Date(val as string | number | Date).toLocaleDateString();
+                    if (col === 'Título' || col === 'Nome') val = <span className="font-medium text-white">{val as React.ReactNode}</span>;
                     if (col === 'Categoria' && !val && r.category) val = r.category;
 
                     if (key === 'status' && r.segment) {
@@ -63,11 +63,11 @@ export function DataTable<T extends { id: string }>({ columns, data, onEdit, onD
                     if (col === 'Categoria' && !r.segment) {
                       val = val === 'PRESENTIAL' ? <span className="text-purple-400 flex items-center gap-1"><MapPin size={12} /> Presencial</span> :
                         val === 'ONLINE' ? <span className="text-emerald-400 flex items-center gap-1"><VideoIcon size={12} /> Online</span> :
-                          val === 'RECORDED' ? <span className="text-orange-400 flex items-center gap-1"><LinkIcon size={12} /> Gravada</span> :
-                            <span className="text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full text-xs border border-slate-700">{val}</span>;
+                        val === 'RECORDED' ? <span className="text-orange-400 flex items-center gap-1"><LinkIcon size={12} /> Gravada</span> :
+                            <span className="text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full text-xs border border-slate-700">{val as React.ReactNode}</span>;
                     }
 
-                    return <td key={idx} className="px-6 py-4">{val || '-'}</td>
+                    return <td key={idx} className="px-6 py-4">{(val as React.ReactNode) || '-'}</td>
                   })}
                   {(onEdit || onDelete) && (
                     <td className="px-6 py-4 text-right space-x-2">

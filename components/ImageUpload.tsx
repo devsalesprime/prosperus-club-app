@@ -93,7 +93,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             if (uploadError) {
                 console.error('❌ ImageUpload: Storage upload error:', uploadError);
                 const errorMessage = uploadError.message?.toLowerCase() || '';
-                const errorObj = uploadError as Record<string, unknown>;
+                const errorObj = uploadError as any;
                 const statusCode = errorObj?.statusCode || errorObj?.status;
 
                 if (statusCode === 403 || errorMessage.includes('policy') || errorMessage.includes('rls')) {

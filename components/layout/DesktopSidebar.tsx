@@ -147,7 +147,7 @@ export const DesktopSidebar: React.FC = () => {
                     return (
                         <button
                             key={item.id}
-                            onClick={() => setView(item.id)}
+                            onClick={() => setView(item.id as any)}
                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${view === item.id
                                 ? 'bg-gradient-to-r from-prosperus-gold to-prosperus-gold-light text-prosperus-navy shadow-lg font-semibold'
                                 : 'text-prosperus-grey hover:bg-prosperus-navy-light hover:text-prosperus-white'

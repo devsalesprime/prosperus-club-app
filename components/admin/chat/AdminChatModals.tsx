@@ -93,12 +93,12 @@ export const BlockUserModal: React.FC<BlockUserModalProps> = ({
 export interface NewConversationModalProps {
     isOpen: boolean;
     userSearchQuery: string;
-    searchedUsers: Record<string, unknown>[];
-    selectedUser: Record<string, unknown> | null;
+    searchedUsers: any[];
+    selectedUser: any | null;
     newConversationMessage: string;
     creatingConversation: boolean;
     onSearchChange: (query: string) => void;
-    onSelectUser: (user: Record<string, unknown>) => void;
+    onSelectUser: (user: any) => void;
     onDeselectUser: () => void;
     onMessageChange: (value: string) => void;
     onCreate: () => void;

@@ -278,12 +278,12 @@ export const AdminApp = ({ currentUser, onLogout }: { currentUser: Member; onLog
       case AdminViewState.MESSAGES: return <AdminChatManager currentAdminId={currentUser.id} />;
       case AdminViewState.EVENTS: return <EventsModule />;
       case AdminViewState.BIRTHDAYS: return <AdminBirthdaysModule />;
-      case AdminViewState.VIDEOS: return <AcademyModule DataTable={DataTable} />;
+      case AdminViewState.VIDEOS: return <AcademyModule DataTable={DataTable as any} />;
       case AdminViewState.TOOLS_SOLUTIONS: return <AdminSolutions />;
       case AdminViewState.TOOLS_PROGRESS: return <AdminMemberProgress />;
       case AdminViewState.MEMBERS: return <MembersModule />;
       case AdminViewState.ARTICLES: return <ArticlesModule />;
-      case AdminViewState.GALLERY: return <GalleryModule DataTable={DataTable} />;
+      case AdminViewState.GALLERY: return <GalleryModule DataTable={DataTable as any} />;
       case AdminViewState.BANNERS: return <BannersModule />;
       case AdminViewState.NOTIFICATION_BANNERS: return <NotificationBannersModule />;
       case AdminViewState.CATEGORIES: return <CategoriesModule />;

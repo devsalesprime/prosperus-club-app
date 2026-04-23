@@ -71,7 +71,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setVideos(result.data);
             setTotalVideos(result.total);
         } catch (error: unknown) {
-            if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
+            if ((error as any)?.message?.includes('AbortError') || (error as any)?.code === 'ABORT_ERR') return;
             console.error('Error loading videos:', error);
             toast.error('Erro ao carregar vídeos. Verifique a conexão com o banco de dados.');
         }
@@ -83,7 +83,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const data = await videoService.getCategories();
             setCategories(data);
         } catch (error: unknown) {
-            if (error?.message?.includes('AbortError') || error?.code === 'ABORT_ERR') return;
+            if ((error as any)?.message?.includes('AbortError') || (error as any)?.code === 'ABORT_ERR') return;
             console.error('Error loading categories:', error);
         }
     };

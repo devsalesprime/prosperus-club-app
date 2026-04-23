@@ -219,7 +219,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
     // SUBMIT
     // ============================================
 
-    const onSubmit = async (data: Record<string, unknown>) => {
+    const onSubmit = async (data: any) => {
         try {
             setSaving(true);
             const eventData = {

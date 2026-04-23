@@ -50,7 +50,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
     // New conversation states
     const [showNewConversationModal, setShowNewConversationModal] = useState(false);
     const [userSearchQuery, setUserSearchQuery] = useState('');
-    const [searchedUsers, setSearchedUsers] = useState<Record<string, unknown>[]>([]);
+    const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
     const [selectedUser, setSelectedUser] = useState<Record<string, unknown> | null>(null);
     const [newConversationMessage, setNewConversationMessage] = useState('');
     const [creatingConversation, setCreatingConversation] = useState(false);
@@ -290,7 +290,7 @@ export const AdminChatManager: React.FC<AdminChatManagerProps> = ({ currentAdmin
         if (!selectedUser || !newConversationMessage.trim()) return;
         try {
             setCreatingConversation(true);
-            const conversationId = await conversationService.getOrCreateConversation(currentAdminId, selectedUser.id);
+            const conversationId = await conversationService.getOrCreateConversation(currentAdminId, selectedUser.id as string);
             await adminChatService.sendAdminMessage(conversationId, currentAdminId, newConversationMessage.trim());
             await loadConversations();
 

@@ -19,12 +19,12 @@ type TabType = 'contested' | 'contested-referrals' | 'audit' | 'rankings';
 export const AdminRoiManager: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabType>('contested');
     const [loading, setLoading] = useState(true);
-    const [kpis, setKpis] = useState<Record<string, unknown> | null>(null);
-    const [contestedDeals, setContestedDeals] = useState<Record<string, unknown>[]>([]);
-    const [contestedReferrals, setContestedReferrals] = useState<Record<string, unknown>[]>([]);
-    const [highValueDeals, setHighValueDeals] = useState<Record<string, unknown>[]>([]);
-    const [suspiciousDeals, setSuspiciousDeals] = useState<Record<string, unknown>[]>([]);
-    const [rankings, setRankings] = useState<Record<string, unknown>[]>([]);
+    const [kpis, setKpis] = useState<any | null>(null);
+    const [contestedDeals, setContestedDeals] = useState<any[]>([]);
+    const [contestedReferrals, setContestedReferrals] = useState<any[]>([]);
+    const [highValueDeals, setHighValueDeals] = useState<any[]>([]);
+    const [suspiciousDeals, setSuspiciousDeals] = useState<any[]>([]);
+    const [rankings, setRankings] = useState<any[]>([]);
 
     useEffect(() => {
         loadData();

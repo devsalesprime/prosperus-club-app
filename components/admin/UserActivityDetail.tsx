@@ -33,7 +33,7 @@ interface TimelineDay {
 interface RecentEvent {
     event_id: string;
     event_type: string;
-    metadata: Record<string, unknown> | null;
+    metadata: any | null;
     created_at: string;
 }
 
@@ -144,7 +144,7 @@ export const UserActivityDetail: React.FC<Props> = ({ userId, userName, userImag
                 };
             }));
 
-            setEvents((eventsRes.data || []).map((r: { event_id: string; event_type: string; metadata: Record<string, unknown> | null; created_at: string }) => ({
+            setEvents((eventsRes.data || []).map((r: { event_id: string; event_type: string; metadata: any | null; created_at: string }) => ({
                 event_id: r.event_id,
                 event_type: r.event_type,
                 metadata: r.metadata,

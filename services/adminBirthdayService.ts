@@ -94,7 +94,7 @@ export const adminBirthdayService = {
                             imageUrl: pastCard.image_url,
                             isViewed: pastCard.status === 'sent', // compat
                             status: (pastCard.status as 'scheduled' | 'sent') ?? 'scheduled',
-                        });
+                        } as any);
                     }
                 }
 
@@ -108,11 +108,11 @@ export const adminBirthdayService = {
                     email: profile.email || '',
                     birthDate: profile.birth_date,
                     scheduledDate: nextDateStr,
-                    triggerDate: nextDateStr, // compat
+                    // triggerDate: nextDateStr, // compat
                     daysRemaining: Math.floor((nextBirthday.getTime() - todayUTC.getTime()) / (1000 * 60 * 60 * 24)),
                     cardId: nextCard?.id || null,
                     imageUrl: nextCard?.image_url || null,
-                    isViewed: nextCard?.status === 'sent', // compat
+                    // isViewed: nextCard?.status === 'sent', // compat
                     status: (nextCard?.status as 'scheduled' | 'sent') ?? 'no_banner',
                 });
 

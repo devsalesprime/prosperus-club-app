@@ -292,7 +292,7 @@ export const BannersModule: React.FC = () => {
                 </select>
                 <select
                     value={bnrPlacement}
-                    onChange={e => setBnrPlacement(e.target.value as 'HOME' | 'EVENTS' | 'ACADEMY' | 'BENEFITS')}
+                    onChange={e => setBnrPlacement(e.target.value as any)}
                     className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-yellow-600/50 transition min-w-[130px]"
                 >
                     <option value="ALL">Todos locais</option>
@@ -544,7 +544,7 @@ export const BannersModule: React.FC = () => {
                                 <label className="block text-sm font-medium text-slate-300">Local</label>
                                 <select
                                     value={formData.placement}
-                                    onChange={(e) => setFormData({ ...formData, placement: e.target.value as 'HOME' | 'EVENTS' | 'ACADEMY' | 'BENEFITS' })}
+                                    onChange={(e) => setFormData({ ...formData, placement: e.target.value as any })}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-yellow-600 transition"
                                 >
                                     <option value="HOME">Home</option>

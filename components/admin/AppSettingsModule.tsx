@@ -130,7 +130,7 @@ export const AppSettingsModule: React.FC = () => {
         const emailFields = ['support_email', 'account_manager_email', 'financial_email'];
         emailFields.forEach(field => {
             const value = (formData as Record<string, unknown>)[field];
-            if (value && !settingsService.validateEmail(value)) {
+            if (value && !settingsService.validateEmail(value as string)) {
                 newErrors[field] = 'Email inválido';
             }
         });
