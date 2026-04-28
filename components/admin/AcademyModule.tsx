@@ -207,11 +207,12 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
     };
 
     const handleSortVideos = async (reorderedVideos: Video[]) => {
-        // Pega todos os order_indexes da página atual e ordena
-        const currentOrders = videos.map(v => v.order_index ?? 0).sort((a, b) => a - b);
+        // 🚨 FIX: Força índices baseados na paginação para curar dados legados (onde order_index = 0)
+        // Isso garante que o banco de dados receba valores matemáticos distintos e salve a posição.
+        const baseIndex = (currentPage - 1) * pageSize;
         
-        // Optimistic Update: atribui os order_indexes de volta na nova ordem
-        const updatedVideos = reorderedVideos.map((v, i) => ({ ...v, order_index: currentOrders[i] }));
+        // Optimistic Update: atribui os order_indexes de forma estritamente sequencial
+        const updatedVideos = reorderedVideos.map((v, i) => ({ ...v, order_index: baseIndex + i }));
         setVideos(updatedVideos);
 
         try {
