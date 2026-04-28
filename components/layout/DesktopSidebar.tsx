@@ -71,8 +71,8 @@ export const DesktopSidebar: React.FC = () => {
     ];
 
     return (
-        <div className="hidden md:flex w-64 flex-col border-r border-prosperus-navy-light bg-prosperus-navy">
-            <div className="p-6 border-b border-prosperus-navy-light">
+        <div className="hidden md:flex w-64 flex-col border-r border-white/5 bg-white/[0.02] backdrop-blur-md">
+            <div className="p-6 border-b border-white/5">
                 <div className="flex items-center justify-between gap-3">
                     <button
                         onClick={() => setView(ViewState.DASHBOARD)}
@@ -112,7 +112,7 @@ export const DesktopSidebar: React.FC = () => {
                                             setView(item.view as ViewState);
                                         }
                                     }}
-                                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors text-prosperus-grey hover:bg-prosperus-navy-light hover:text-prosperus-white"
+                                    className="w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors text-prosperus-grey hover:bg-white/[0.02] backdrop-blur-md-light hover:text-prosperus-white"
                                 >
                                     <div className="flex items-center space-x-3">
                                         {item.icon}
@@ -131,7 +131,7 @@ export const DesktopSidebar: React.FC = () => {
                                                 onClick={() => setView(child.id)}
                                                 className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors text-sm ${view === child.id
                                                     ? 'bg-gradient-to-r from-prosperus-gold to-prosperus-gold-light text-prosperus-navy shadow-lg font-semibold'
-                                                    : 'text-prosperus-grey hover:bg-prosperus-navy-light/50 hover:text-prosperus-white'
+                                                    : 'text-prosperus-grey hover:bg-white/[0.02] backdrop-blur-md-light/50 hover:text-prosperus-white'
                                                     }`}
                                             >
                                                 {child.icon}
@@ -150,7 +150,7 @@ export const DesktopSidebar: React.FC = () => {
                             onClick={() => setView(item.id as any)}
                             className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${view === item.id
                                 ? 'bg-gradient-to-r from-prosperus-gold to-prosperus-gold-light text-prosperus-navy shadow-lg font-semibold'
-                                : 'text-prosperus-grey hover:bg-prosperus-navy-light hover:text-prosperus-white'
+                                : 'text-prosperus-grey hover:bg-white/[0.02] backdrop-blur-md-light hover:text-prosperus-white'
                                 }`}
                         >
                             {item.icon}
@@ -160,8 +160,8 @@ export const DesktopSidebar: React.FC = () => {
                 })}
             </nav>
             {currentUser && (
-                <div className="p-4 border-t border-prosperus-navy-light">
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-prosperus-navy-light/50">
+                <div className="p-4 border-t border-white/5">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02] backdrop-blur-md-light/50">
                         <img src={currentUser.image || `${import.meta.env.BASE_URL}default-avatar.svg`} alt={currentUser.name} className="w-8 h-8 rounded-full border border-prosperus-gold-dark object-cover" />
                         <div className="overflow-hidden">
                             <p className="text-sm font-bold text-prosperus-white truncate">{currentUser.name}</p>

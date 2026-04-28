@@ -725,6 +725,26 @@ export const videoService = {
         if (res1.error) { logger.error('\u274c updateVideoOrder (idToMove) error:', res1.error); throw res1.error; }
         if (res2.error) { logger.error('\u274c updateVideoOrder (idToSwap) error:', res2.error); throw res2.error; }
     },
+
+    /**
+     * Atualiza a ordem de múltiplos vídeos em lote (Bulk Update para Drag & Drop)
+     */
+    async updateVideoOrderBatch(updates: { id: string, order_index: number }[]): Promise<void> {
+        try {
+            const promises = updates.map(update => 
+                supabase.from('videos').update({ order_index: update.order_index }).eq('id', update.id)
+            );
+            const results = await Promise.all(promises);
+            const errors = results.filter(r => r.error);
+            if (errors.length > 0) {
+                logger.error('\u274c updateVideoOrderBatch errors:', errors);
+                throw new Error('Falha ao atualizar a ordem de alguns vídeos em lote.');
+            }
+        } catch (error) {
+            logger.error('\u274c updateVideoOrderBatch exception:', error);
+            throw error;
+        }
+    },
 };
 
 interface DBVideoRow {

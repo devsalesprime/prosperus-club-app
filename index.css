@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-prosperus-navy:       #031A2B;   /* fundo base de todas as telas */
+  --color-prosperus-navy:       #010a12;   /* fundo base de todas as telas */
   --color-prosperus-box:        #031726;   /* cards, inputs, header, modais */
   --color-prosperus-card:       #031726;   /* alias de box — atualizado DS Abr/26 */
   --color-prosperus-border:     #052B48;   /* alias de stroke — atualizado DS Abr/26 */

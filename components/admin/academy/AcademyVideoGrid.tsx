@@ -12,8 +12,7 @@ import {
     Clock,
     Pin,
     PinOff,
-    ChevronUp,
-    ChevronDown,
+    GripVertical,
     ChevronLeft,
     ChevronRight,
 } from 'lucide-react';
@@ -29,7 +28,7 @@ export interface AcademyVideoGridProps {
     onEdit: (video: Video) => void;
     onDelete: (id: string) => void;
     onTogglePin: (video: Video) => void;
-    onMoveVideo: (index: number, direction: 'up' | 'down') => void;
+    onSortVideos: (reorderedVideos: Video[]) => void;
     getCategoryName: (video: Video) => string;
 }
 
@@ -41,10 +40,33 @@ export const AcademyVideoGrid: React.FC<AcademyVideoGridProps> = ({
     onEdit,
     onDelete,
     onTogglePin,
-    onMoveVideo,
+    onSortVideos,
     getCategoryName,
 }) => {
     const safeCurrentPage = Math.min(currentPage, totalPages);
+
+    const pinnedVideos = videos.filter(v => v.is_pinned);
+    const unpinnedVideos = videos.filter(v => !v.is_pinned);
+
+    const dragItem = React.useRef<number | null>(null);
+    const dragOverItem = React.useRef<number | null>(null);
+    const [isDraggingIndex, setIsDraggingIndex] = React.useState<number | null>(null);
+
+    const handleSort = () => {
+        if (dragItem.current === null || dragOverItem.current === null) return;
+        
+        const newUnpinned = [...unpinnedVideos];
+        const draggedItemContent = newUnpinned[dragItem.current];
+        
+        newUnpinned.splice(dragItem.current, 1);
+        newUnpinned.splice(dragOverItem.current, 0, draggedItemContent);
+        
+        dragItem.current = null;
+        dragOverItem.current = null;
+        setIsDraggingIndex(null);
+        
+        onSortVideos([...pinnedVideos, ...newUnpinned]);
+    };
 
     return (
         <>
@@ -63,14 +85,12 @@ export const AcademyVideoGrid: React.FC<AcademyVideoGridProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-prosperus-stroke/50">
-                            {videos.map((v, idx) => (
-                                <tr key={v.id} className={`group hover:bg-prosperus-muted-bg/40 transition-colors ${v.is_pinned ? 'bg-prosperus-gold-dark/5' : ''}`}>
-                                    {/* Thumbnail + Título */}
+                            {/* PINNED VIDEOS (Imóveis) */}
+                            {pinnedVideos.map((v) => (
+                                <tr key={v.id} className="group hover:bg-prosperus-muted-bg/40 transition-colors bg-prosperus-gold-dark/5">
                                     <td className="px-4 py-3 max-w-[260px]">
                                         <div className="flex items-center gap-3">
-                                            {v.is_pinned && (
-                                                <Pin size={12} className="text-prosperus-gold-light fill-current flex-shrink-0" />
-                                            )}
+                                            <Pin size={12} className="text-prosperus-gold-light fill-current flex-shrink-0" />
                                             {v.thumbnail ? (
                                                 <img src={v.thumbnail} alt={v.title} className="w-12 aspect-video object-cover rounded-lg flex-shrink-0" />
                                             ) : (
@@ -83,59 +103,80 @@ export const AcademyVideoGrid: React.FC<AcademyVideoGridProps> = ({
                                     </td>
                                     <td className="px-4 py-3 text-slate-400 truncate max-w-[140px]">{getCategoryName(v)}</td>
                                     <td className="px-4 py-3 text-slate-400">{v.duration}</td>
-                                    {/* Pin Button */}
                                     <td className="px-4 py-3 text-center">
                                         <button
                                             onClick={() => onTogglePin(v)}
-                                            title={v.is_pinned ? 'Desafixar' : 'Fixar no topo'}
-                                            className={`w-9 h-9 mx-auto flex items-center justify-center rounded-lg border transition-all active:scale-95 ${
-                                                v.is_pinned
-                                                    ? 'bg-prosperus-gold-dark/20 border-prosperus-gold-dark text-prosperus-gold-light'
-                                                    : 'bg-prosperus-navy border-prosperus-stroke text-slate-500 hover:text-white hover:border-slate-500'
-                                            }`}
+                                            title="Desafixar"
+                                            className="w-9 h-9 mx-auto flex items-center justify-center rounded-lg border transition-all active:scale-95 bg-prosperus-gold-dark/20 border-prosperus-gold-dark text-prosperus-gold-light"
                                         >
-                                            {v.is_pinned
-                                                ? <Pin size={15} className="fill-current" />
-                                                : <PinOff size={15} />
-                                            }
+                                            <Pin size={15} className="fill-current" />
                                         </button>
                                     </td>
-                                    {/* Up / Down Buttons */}
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="flex items-center justify-center">
+                                            <Pin size={18} className="text-slate-600" />
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-3">
-                                        <div className="flex items-center justify-center gap-1">
-                                            <button
-                                                onClick={() => onMoveVideo(idx, 'up')}
-                                                disabled={idx === 0}
-                                                title="Subir"
-                                                className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
-                                            >
-                                                <ChevronUp size={16} />
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button onClick={() => onEdit(v)} title="Editar" className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg hover:bg-prosperus-muted-bg active:scale-95 transition-all">
+                                                <Pencil size={14} className="text-yellow-500" />
                                             </button>
-                                            <button
-                                                onClick={() => onMoveVideo(idx, 'down')}
-                                                disabled={idx === videos.length - 1}
-                                                title="Descer"
-                                                className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 hover:text-white hover:border-slate-500 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
-                                            >
-                                                <ChevronDown size={16} />
+                                            <button onClick={() => onDelete(v.id)} title="Excluir" className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-red-500/20 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all">
+                                                <Trash2 size={14} className="text-red-400" />
                                             </button>
                                         </div>
                                     </td>
-                                    {/* Edit / Delete */}
+                                </tr>
+                            ))}
+                            {/* UNPINNED VIDEOS (Draggable) */}
+                            {unpinnedVideos.map((v, idx) => (
+                                <tr 
+                                    key={v.id} 
+                                    className={`group hover:bg-prosperus-muted-bg/40 transition-colors ${isDraggingIndex === idx ? 'opacity-50 bg-white/5 border-dashed border-[#CA9A43]' : ''}`}
+                                    draggable={true}
+                                    onDragStart={() => {
+                                        dragItem.current = idx;
+                                        setIsDraggingIndex(idx);
+                                    }}
+                                    onDragEnter={() => (dragOverItem.current = idx)}
+                                    onDragEnd={handleSort}
+                                    onDragOver={(e) => e.preventDefault()}
+                                >
+                                    <td className="px-4 py-3 max-w-[260px]">
+                                        <div className="flex items-center gap-3">
+                                            {v.thumbnail ? (
+                                                <img src={v.thumbnail} alt={v.title} className="w-12 aspect-video object-cover rounded-lg flex-shrink-0" />
+                                            ) : (
+                                                <div className="w-12 aspect-video rounded-lg bg-prosperus-muted-bg flex items-center justify-center flex-shrink-0">
+                                                    <VideoIcon size={12} className="text-slate-600" />
+                                                </div>
+                                            )}
+                                            <span className="text-white font-medium truncate min-w-0">{v.title}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-400 truncate max-w-[140px]">{getCategoryName(v)}</td>
+                                    <td className="px-4 py-3 text-slate-400">{v.duration}</td>
+                                    <td className="px-4 py-3 text-center">
+                                        <button
+                                            onClick={() => onTogglePin(v)}
+                                            title="Fixar no topo"
+                                            className="w-9 h-9 mx-auto flex items-center justify-center rounded-lg border transition-all active:scale-95 bg-prosperus-navy border-prosperus-stroke text-slate-500 hover:text-white hover:border-slate-500"
+                                        >
+                                            <PinOff size={15} />
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="flex items-center justify-center">
+                                            <GripVertical size={18} className="text-[#95A4B4] cursor-grab active:cursor-grabbing hover:text-[#CA9A43] transition-colors" />
+                                        </div>
+                                    </td>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center justify-center gap-2">
-                                            <button
-                                                onClick={() => onEdit(v)}
-                                                title="Editar"
-                                                className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg hover:bg-prosperus-muted-bg active:scale-95 transition-all"
-                                            >
+                                            <button onClick={() => onEdit(v)} title="Editar" className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg hover:bg-prosperus-muted-bg active:scale-95 transition-all">
                                                 <Pencil size={14} className="text-yellow-500" />
                                             </button>
-                                            <button
-                                                onClick={() => onDelete(v.id)}
-                                                title="Excluir"
-                                                className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-red-500/20 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all"
-                                            >
+                                            <button onClick={() => onDelete(v.id)} title="Excluir" className="w-9 h-9 flex items-center justify-center bg-prosperus-navy border border-red-500/20 rounded-lg hover:bg-red-500/10 active:scale-95 transition-all">
                                                 <Trash2 size={14} className="text-red-400" />
                                             </button>
                                         </div>
@@ -197,26 +238,15 @@ export const AcademyVideoGrid: React.FC<AcademyVideoGridProps> = ({
                             {/* Divider */}
                             <div className="h-px bg-prosperus-stroke" />
 
-                            {/* Actions row: Pin + Up + Down + Edit + Delete */}
+                            {/* Actions row: Pin + Edit + Delete */}
                             <div className="flex items-center justify-between gap-2">
-                                {/* Ordenação */}
+                                {/* Ordenação Drag & Drop Mobile e Pin */}
                                 <div className="flex items-center gap-1.5">
-                                    <button
-                                        onClick={() => onMoveVideo(videos.indexOf(v), 'up')}
-                                        disabled={videos.indexOf(v) === 0}
-                                        title="Subir"
-                                        className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
-                                    >
-                                        <ChevronUp size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => onMoveVideo(videos.indexOf(v), 'down')}
-                                        disabled={videos.indexOf(v) === videos.length - 1}
-                                        title="Descer"
-                                        className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
-                                    >
-                                        <ChevronDown size={18} />
-                                    </button>
+                                    {!v.is_pinned && (
+                                        <div className="w-10 h-10 flex items-center justify-center bg-prosperus-navy border border-prosperus-stroke rounded-lg text-slate-400 active:scale-95 transition-all">
+                                            <GripVertical size={18} />
+                                        </div>
+                                    )}
                                     {/* Pin */}
                                     <button
                                         onClick={() => onTogglePin(v)}

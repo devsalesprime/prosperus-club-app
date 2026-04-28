@@ -206,32 +206,19 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
         }
     };
 
-    const handleMoveVideo = async (index: number, direction: 'up' | 'down') => {
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= paginatedVideos.length) return;
-
-        const videoA = paginatedVideos[index];
-        const videoB = paginatedVideos[targetIndex];
-        const orderA = videoA.order_index ?? index;
-        const orderB = videoB.order_index ?? targetIndex;
-
-        setVideos(prev => {
-            const next = [...prev];
-            const idxA = next.findIndex(v => v.id === videoA.id);
-            const idxB = next.findIndex(v => v.id === videoB.id);
-            if (idxA === -1 || idxB === -1) return prev;
-            next[idxA] = { ...videoA, order_index: orderB };
-            next[idxB] = { ...videoB, order_index: orderA };
-            return [...next].sort((a, b) => {
-                if ((b.is_pinned ? 1 : 0) !== (a.is_pinned ? 1 : 0)) return (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0);
-                return (a.order_index ?? 0) - (b.order_index ?? 0);
-            });
-        });
+    const handleSortVideos = async (reorderedVideos: Video[]) => {
+        // Pega todos os order_indexes da página atual e ordena
+        const currentOrders = videos.map(v => v.order_index ?? 0).sort((a, b) => a - b);
+        
+        // Optimistic Update: atribui os order_indexes de volta na nova ordem
+        const updatedVideos = reorderedVideos.map((v, i) => ({ ...v, order_index: currentOrders[i] }));
+        setVideos(updatedVideos);
 
         try {
             const { videoService } = await import('../../services/videoService');
-            await videoService.updateVideoOrder(videoA.id, orderB, videoB.id, orderA);
-            toast.success(direction === 'up' ? '↑ Vídeo movido para cima' : '↓ Vídeo movido para baixo');
+            const updates = updatedVideos.map(v => ({ id: v.id, order_index: v.order_index }));
+            await videoService.updateVideoOrderBatch(updates);
+            toast.success('Ordem atualizada com sucesso!');
         } catch (error) {
             await loadVideos();
             toast.error('Erro ao reordenar. A ordem foi restaurada.');
@@ -449,7 +436,7 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                         onEdit={openVideoModal}
                         onDelete={requestDeleteVideo}
                         onTogglePin={handleTogglePin}
-                        onMoveVideo={handleMoveVideo}
+                        onSortVideos={handleSortVideos}
                         getCategoryName={getCategoryName}
                     />
 
