@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AlertCircle, CheckCircle, Mail, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, CheckCircle, Mail, Eye, EyeOff, MailCheck } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -251,13 +251,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         e.preventDefault();
         setLoading(true);
         setError(null);
-        const result = await resetPassword(email);
+        
+        // Chamada nativa e imaculada ao Supabase Auth
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { 
+            redirectTo: `${window.location.origin}/update-password` 
+        });
+        
         setLoading(false);
-        if (result.success) {
+        if (!resetError) {
             setResetEmailSent(true);
-            setSuccessMsg('Link enviado! Verifique sua caixa de entrada e spam.');
+            setSuccessMsg(null); // Omitir sucesso em toast, usar a tela state vazia
         } else {
-            setError(result.error || 'Erro ao enviar email.');
+            setError(resetError.message || 'Erro ao enviar email.');
         }
     };
 
@@ -320,36 +325,46 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                     <form onSubmit={handleForgotPassword} className="space-y-4 animate-in fade-in duration-200">
                         {!resetEmailSent ? (
                             <>
-                                <div>
+                                <div className="relative">
                                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Email</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-600/50 focus:ring-1 focus:ring-yellow-600/30 transition-all"
-                                        placeholder="seu@email.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Mail size={18} className="text-slate-500" />
+                                        </div>
+                                        <input
+                                            type="email"
+                                            required
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3.5 text-white placeholder-slate-600 focus:outline-none focus:border-[#CA9A43]/50 focus:ring-1 focus:ring-[#CA9A43]/30 transition-all"
+                                            placeholder="seu@email.com"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
                                 <Button
                                     type="submit"
                                     variant="primary"
                                     size="lg"
                                     isLoading={loading}
-                                    className="w-full rounded-xl py-3.5"
+                                    className="w-full rounded-xl py-3.5 bg-[#CA9A43] hover:bg-[#b08538] border-none text-white font-semibold transition-all"
                                 >
-                                    {loading ? 'Enviando...' : 'Enviar link de recuperação'}
+                                    {loading ? 'Enviando...' : 'Enviar Instruções'}
                                 </Button>
                             </>
                         ) : (
-                            <div className="text-center py-4">
-                                <Mail size={40} className="mx-auto text-yellow-500 mb-3" />
-                                <p className="text-slate-300 text-sm">
-                                    Verifique o email <span className="font-bold text-white">{email}</span>
+                            <div className="text-center py-6 animate-in zoom-in-95 duration-300">
+                                <MailCheck className="text-[#CA9A43] w-16 h-16 mx-auto mb-4 animate-bounce" />
+                                <h3 className="text-white font-bold text-xl mb-2">Instruções Enviadas</h3>
+                                <p className="text-[#95A4B4] text-sm mt-2 mb-6 leading-relaxed">
+                                    Verifique a caixa de entrada (e o spam) de <span className="font-semibold text-white">{email}</span> para redefinir seu acesso ao clube. Remetente oficial: noreply@prosperusclub.com
                                 </p>
-                                <p className="text-slate-500 text-xs mt-2">
-                                    Não recebeu? Cheque a pasta de spam ou tente novamente.
-                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => { setStep('password'); setResetEmailSent(false); }}
+                                    className="text-white/50 hover:text-white transition-colors text-sm font-medium"
+                                >
+                                    Voltar ao Login
+                                </button>
                             </div>
                         )}
                     </form>
