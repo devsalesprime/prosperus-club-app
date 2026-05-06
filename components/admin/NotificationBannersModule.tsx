@@ -514,7 +514,7 @@ export const NotificationBannersModule: React.FC = () => {
                                           value={formData.image_url}
                                           onUploaded={(url) => setFormData({ ...formData, image_url: url })}
                                           onClear={() => setFormData({ ...formData, image_url: '' })}
-                                          hint="Recomendado: 1080x1920 portrait. JPG, PNG ou WebP."
+                                          hint="Recomendado: 1080x1920 portrait. JPG, PNG, WebP ou GIF."
                                           customUploader={async (file, onProgress) => {
                                               try {
                                                   // Usando bucket "avatars" como base já existente e público!
