@@ -254,7 +254,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         
         // Chamada nativa e imaculada ao Supabase Auth
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { 
-            redirectTo: `${window.location.origin}/update-password` 
+            redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` 
         });
         
         setLoading(false);

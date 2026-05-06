@@ -151,7 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             logger.debug('🔑 AuthContext: Sending password reset email to:', email);
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/update-password`,
+                redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
             });
 
             if (error) {
