@@ -14,12 +14,12 @@ interface AdminEmptyStateProps {
 }
 
 export const AdminEmptyState: React.FC<AdminEmptyStateProps> = ({ icon, message, description, action }) => (
-    <div className="flex flex-col items-center justify-center p-8 text-center gap-3">
-        <div className="text-slate-600">
+    <div className="font-sans flex flex-col items-center justify-center p-8 text-center gap-3">
+        <div className="text-prosperus-text-off opacity-60">
             {icon || <Inbox size={48} />}
         </div>
-        <p className="text-slate-400 font-medium">{message}</p>
-        {description && <p className="text-sm text-slate-500 max-w-md">{description}</p>}
+        <p className="text-prosperus-text-off font-medium">{message}</p>
+        {description && <p className="text-sm text-prosperus-text-off opacity-80 max-w-md">{description}</p>}
         {action}
     </div>
 );

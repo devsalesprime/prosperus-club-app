@@ -14,8 +14,8 @@ interface AdminPageHeaderProps {
 export const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({ title, subtitle, action }) => (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-            <h2 className="text-2xl font-bold text-white">{title}</h2>
-            {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
+            <h2 className="text-2xl font-bold text-prosperus-text">{title}</h2>
+            {subtitle && <p className="font-sans text-sm text-prosperus-text-off">{subtitle}</p>}
         </div>
         {action}
     </div>

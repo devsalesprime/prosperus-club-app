@@ -11,8 +11,8 @@ interface AdminLoadingStateProps {
 }
 
 export const AdminLoadingState: React.FC<AdminLoadingStateProps> = ({ message = 'Carregando...' }) => (
-    <div className="flex flex-col items-center justify-center p-12 gap-3">
-        <RefreshCw size={32} className="text-yellow-500 animate-spin" />
-        <p className="text-sm text-slate-400">{message}</p>
+    <div className="font-sans flex flex-col items-center justify-center p-12 gap-3">
+        <RefreshCw size={32} className="text-prosperus-ouro-vivo animate-spin" />
+        <p className="text-sm text-prosperus-text-off">{message}</p>
     </div>
 );

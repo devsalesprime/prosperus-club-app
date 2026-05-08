@@ -24,14 +24,14 @@ const maxWidthMap = {
 };
 
 export const AdminModal: React.FC<AdminModalProps> = ({ title, onClose, children, maxWidth = '2xl' }) => (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-prosperus-preto-absoluto/70 flex items-center justify-center z-[9999] p-4" onClick={onClose}>
         <div
-            className={`bg-slate-900 rounded-xl border border-slate-800 w-full ${maxWidthMap[maxWidth]} max-h-[90vh] overflow-y-auto`}
+            className={`bg-prosperus-bg-box rounded-xl border border-prosperus-stroke w-full ${maxWidthMap[maxWidth]} max-h-[90vh] overflow-y-auto`}
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="flex items-center justify-between p-4 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
-                <h3 className="text-lg font-bold text-white">{title}</h3>
-                <button onClick={onClose} className="text-slate-400 hover:text-white transition p-1 rounded-lg hover:bg-slate-800">
+            <div className="flex items-center justify-between p-4 border-b border-prosperus-stroke sticky top-0 bg-prosperus-bg-box z-10">
+                <h3 className="text-lg font-bold text-prosperus-text">{title}</h3>
+                <button onClick={onClose} className="text-prosperus-text-off hover:text-prosperus-text transition p-1 rounded-lg hover:bg-prosperus-bg-primary">
                     <X size={20} />
                 </button>
             </div>

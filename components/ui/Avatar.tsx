@@ -53,7 +53,7 @@ export const Avatar: React.FC<AvatarProps> = ({
         setIsLoaded(true);
     };
 
-    const baseClasses = `${sizeClasses[size]} rounded-full object-cover border border-slate-700 bg-slate-800`;
+    const baseClasses = `${sizeClasses[size]} rounded-full object-cover border border-prosperus-stroke bg-prosperus-bg-box`;
     const interactiveClasses = onClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : '';
 
     return (
@@ -96,7 +96,7 @@ export const AvatarEditable: React.FC<AvatarEditableProps> = ({
         ? DEFAULT_AVATAR
         : src;
 
-    const baseClasses = `${sizeClasses[size]} rounded-full object-cover border-2 border-slate-700 bg-slate-800`;
+    const baseClasses = `${sizeClasses[size]} rounded-full object-cover border-2 border-prosperus-stroke bg-prosperus-bg-box`;
 
     return (
         <img

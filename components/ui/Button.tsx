@@ -23,12 +23,14 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 // STYLE MAPS
 // ============================================
 
+// Brand-aligned (gradient gold = CTA primário, conforme brand guide pág. 18).
+// Variant `danger` mantém vermelho — convenção UX universal para destrutivo.
 const variantStyles: Record<ButtonVariant, string> = {
-    primary: 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg shadow-yellow-900/20',
-    secondary: 'bg-slate-800 hover:bg-slate-700 text-white',
-    outline: 'border border-slate-700 text-slate-300 hover:border-yellow-600 hover:text-yellow-500 bg-transparent',
-    ghost: 'hover:bg-slate-800 text-slate-400 hover:text-slate-200 bg-transparent',
-    danger: 'bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white',
+    primary: 'bg-gradient-to-br from-prosperus-ouro-vivo to-prosperus-ouro-nobre text-prosperus-bg-primary shadow-lg shadow-prosperus-ouro-nobre/20 hover:opacity-90',
+    secondary: 'bg-prosperus-bg-box hover:bg-prosperus-azul-lideranca text-prosperus-text',
+    outline: 'border border-prosperus-stroke text-prosperus-text-off hover:border-prosperus-ouro-vivo hover:text-prosperus-ouro-vivo bg-transparent',
+    ghost: 'hover:bg-prosperus-bg-box text-prosperus-text-off hover:text-prosperus-text bg-transparent',
+    danger: 'bg-red-600/10 text-red-400 hover:bg-red-600 hover:text-prosperus-text',
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -57,14 +59,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ) => {
         const isDisabled = disabled || isLoading;
 
-        // Base styles
+        // Base styles — usa font-sans (Manrope) explicitamente em botões
         const baseStyles = `
-            inline-flex items-center justify-center
+            font-sans inline-flex items-center justify-center
             font-bold rounded-lg
             transition-all duration-200
             focus-visible:outline-none
-            focus-visible:ring-2 focus-visible:ring-yellow-500
-            focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950
+            focus-visible:ring-2 focus-visible:ring-prosperus-ouro-vivo
+            focus-visible:ring-offset-2 focus-visible:ring-offset-prosperus-bg-primary
             disabled:opacity-50 disabled:cursor-not-allowed
         `;
 

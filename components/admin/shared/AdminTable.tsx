@@ -49,16 +49,16 @@ export const AdminTable = <T extends Record<string, unknown>>({
     const isStructured = columns && data;
 
     return (
-        <div className="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+        <div className="bg-prosperus-bg-box/50 rounded-xl border border-prosperus-stroke overflow-hidden">
             {/* Optional header row */}
             {(title || headerAction) && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4 border-b border-slate-800">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4 border-b border-prosperus-stroke">
                     <div>
                         {title && (
-                            <h3 className="text-sm font-semibold text-white">{title}</h3>
+                            <h3 className="text-sm font-semibold text-prosperus-text">{title}</h3>
                         )}
                         {subtitle && (
-                            <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+                            <p className="font-sans text-xs text-prosperus-text-off mt-0.5">{subtitle}</p>
                         )}
                     </div>
                     {headerAction && (
@@ -71,39 +71,39 @@ export const AdminTable = <T extends Record<string, unknown>>({
             {isStructured ? (
                 <>
                     {data.length === 0 ? (
-                        <div className="px-5 py-12 text-center text-sm text-slate-500">
+                        <div className="font-sans px-5 py-12 text-center text-sm text-prosperus-text-off">
                             {emptyMessage}
                         </div>
                     ) : (
                         <>
                             {/* Desktop: standard table */}
                             <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="font-sans w-full text-sm">
                                     <thead>
-                                        <tr className="border-b border-slate-800">
+                                        <tr className="border-b border-prosperus-stroke">
                                             {columns.map(col => (
                                                 <th
                                                     key={col.key}
-                                                    className="px-5 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider"
+                                                    className="px-5 py-3 text-left text-xs font-medium text-prosperus-text-off uppercase tracking-wider"
                                                 >
                                                     {col.label}
                                                 </th>
                                             ))}
                                             {renderActions && (
-                                                <th className="px-5 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
+                                                <th className="px-5 py-3 text-right text-xs font-medium text-prosperus-text-off uppercase tracking-wider">
                                                     Ações
                                                 </th>
                                             )}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-800/50">
+                                    <tbody className="divide-y divide-prosperus-stroke/50">
                                         {data.map((item, idx) => (
                                             <tr
                                                 key={keyExtractor ? keyExtractor(item) : idx}
-                                                className="hover:bg-slate-800/30 transition-colors"
+                                                className="hover:bg-prosperus-stroke/30 transition-colors"
                                             >
                                                 {columns.map(col => (
-                                                    <td key={col.key} className="px-5 py-3.5 text-slate-300 whitespace-nowrap">
+                                                    <td key={col.key} className="px-5 py-3.5 text-prosperus-text whitespace-nowrap">
                                                         {col.render ? col.render(item) : String(item[col.key] ?? '')}
                                                     </td>
                                                 ))}
@@ -119,7 +119,7 @@ export const AdminTable = <T extends Record<string, unknown>>({
                             </div>
 
                             {/* Mobile: stacked cards */}
-                            <div className="md:hidden divide-y divide-slate-800/50">
+                            <div className="font-sans md:hidden divide-y divide-prosperus-stroke/50">
                                 {data.map((item, idx) => (
                                     <div key={keyExtractor ? keyExtractor(item) : idx}>
                                         {renderMobileCard ? (
@@ -131,16 +131,16 @@ export const AdminTable = <T extends Record<string, unknown>>({
                                                     .filter(col => !col.hideOnMobile)
                                                     .map(col => (
                                                         <div key={col.key} className="flex items-start justify-between gap-3">
-                                                            <span className="text-xs text-slate-500 font-medium shrink-0">
+                                                            <span className="text-xs text-prosperus-text-off font-medium shrink-0">
                                                                 {col.label}
                                                             </span>
-                                                            <span className="text-sm text-slate-300 text-right">
+                                                            <span className="text-sm text-prosperus-text text-right">
                                                                 {col.render ? col.render(item) : String(item[col.key] ?? '—')}
                                                             </span>
                                                         </div>
                                                     ))}
                                                 {renderActions && (
-                                                    <div className="flex justify-end pt-2 border-t border-slate-800/30">
+                                                    <div className="flex justify-end pt-2 border-t border-prosperus-stroke/30">
                                                         {renderActions(item)}
                                                     </div>
                                                 )}

@@ -18,9 +18,9 @@ interface AdminActionButtonProps {
 }
 
 const variantStyles: Record<string, string> = {
-    primary: 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10',
+    primary: 'text-prosperus-ouro-vivo hover:text-prosperus-ouro-claro hover:bg-prosperus-ouro-vivo/10',
     danger: 'text-red-400 hover:text-red-300 hover:bg-red-500/10',
-    ghost: 'text-slate-400 hover:text-white hover:bg-slate-700/50',
+    ghost: 'text-prosperus-text-off hover:text-prosperus-text hover:bg-prosperus-stroke/50',
 };
 
 export const AdminActionButton: React.FC<AdminActionButtonProps> = ({

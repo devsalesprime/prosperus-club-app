@@ -19,12 +19,12 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
     actions
 }) => {
     return (
-        <div className="border-b border-slate-800 flex items-center justify-between">
+        <div className="border-b border-prosperus-stroke flex items-center justify-between">
             {title && (
                 <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-white">{title}</h2>
+                    <h2 className="text-2xl font-bold text-prosperus-text">{title}</h2>
                     {subtitle && (
-                        <p className="text-sm text-slate-400 mt-1">
+                        <p className="font-sans text-sm text-prosperus-text-off mt-1">
                             {subtitle}
                         </p>
                     )}
@@ -38,7 +38,7 @@ export const ModalHeader: React.FC<ModalHeaderProps> = ({
                 {/* Close button - always last and aligned */}
                 <button
                     onClick={onClose}
-                    className="btn-sm p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white flex-shrink-0"
+                    className="btn-sm p-2 hover:bg-prosperus-bg-box rounded-lg transition text-prosperus-text-off hover:text-prosperus-text flex-shrink-0"
                     title="Fechar"
                 >
                     <X size={24} />
@@ -66,7 +66,7 @@ export const ModalHeaderIconButton: React.FC<IconButtonProps> = ({
         <button
             type="button"
             onClick={onClick}
-            className={`btn-sm p-2 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-yellow-500 flex-shrink-0 ${className}`}
+            className={`btn-sm p-2 hover:bg-prosperus-bg-box rounded-lg transition text-prosperus-text-off hover:text-prosperus-ouro-vivo flex-shrink-0 ${className}`}
             title={title}
         >
             <Icon size={20} />
