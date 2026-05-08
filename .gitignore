@@ -117,6 +117,7 @@ docs/*
 !docs/MIGRATIONS_HISTORY.md
 !docs/EDGE_FUNCTIONS_AUDIT.md
 !docs/INTEGRATIONS_SETUP.md
+!docs/EXECUTION_PLAN.md
 
 # Archive (histórico): pasta inteira versionada
 !docs/archive/
