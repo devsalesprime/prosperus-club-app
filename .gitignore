@@ -105,7 +105,27 @@ setup-auth.bat
 test-gallery.html
 
 # ─── Documentação interna (não necessária para deploy) ────────────
-docs/
+# IMPORTANTE: usamos `docs/*` em vez de `docs/` para permitir whitelist
+# de arquivos canônicos abaixo. `docs/` excluiria o diretório todo e o
+# git não permite re-incluir filhos de um diretório excluído.
+docs/*
+
+# Whitelist seletiva: docs canônicos com valor permanente entram no repo
+!docs/SESSAO_*.md
+!docs/DESIGN_SYSTEM.md
+!docs/BRAND_MIGRATION_GUIDE.md
+!docs/MIGRATIONS_HISTORY.md
+!docs/EDGE_FUNCTIONS_AUDIT.md
+!docs/INTEGRATIONS_SETUP.md
+
+# Archive (histórico): pasta inteira versionada
+!docs/archive/
+
+# HubSpot: pasta versionada mas conteúdo quase todo ignorado
+!docs/hubspot/
+docs/hubspot/*
+!docs/hubspot/SCHEMA_REFERENCE.md
+
 PRD - App para sócios Prosperus.pdf
 PRD_Complementar_Prosperus_v2.1.docx
 PROSPERUS_MASTER_PROMPT.md
