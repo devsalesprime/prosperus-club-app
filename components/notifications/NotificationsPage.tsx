@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Trash2, CheckCheck, Check, ExternalLink, Loader2, ChevronDown, Inbox } from 'lucide-react';
 import { notificationService, UserNotification } from '../../services/notificationService';
 import { useUnreadCount } from '../../contexts/UnreadCountContext';
+import { useOnNewNotification } from '../../contexts/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { COPY } from '../../utils/copy';
@@ -91,18 +92,15 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
 
     useEffect(() => {
         loadNotifications();
-
-        // Subscribe to new notifications
-        const unsubscribe = notificationService.subscribeToNotifications(
-            currentUserId,
-            (newNotification) => {
-                setNotifications(prev => [newNotification, ...prev]);
-                setTotal(prev => prev + 1);
-            }
-        );
-
-        return () => unsubscribe();
     }, [currentUserId, loadNotifications]);
+
+    // ADR-012: consome o canal singleton via DOM event do NotificationsProvider.
+    // Sem subscription direta no componente.
+    const handleNewNotification = useCallback((newNotification: UserNotification) => {
+        setNotifications(prev => [newNotification, ...prev]);
+        setTotal(prev => prev + 1);
+    }, []);
+    useOnNewNotification(handleNewNotification);
 
     const handleMarkAsRead = async (notification: UserNotification) => {
         if (notification.is_read) return;

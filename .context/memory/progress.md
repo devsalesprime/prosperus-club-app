@@ -76,6 +76,19 @@ Deletados com 0 importações confirmadas:
 - P2 futuro: rodar `npx ts-prune` ou `knip` para confirmar 0 órfãos no TS/TSX
 - P2 futuro: adicionar CI check de colisão de prefixo de migration (script em `MIGRATIONS_HISTORY.md`)
 
+## NotificationsProvider — fechamento P1 #1 (2026-05-08)
+
+ADR-012 criada (IMUTÁVEL). Arquitetura paralela ao ADR-002 (messages):
+
+- **NOVO:** `hooks/useNotificationsSubscription.ts` — singleton com canal determinístico `notifications-${userId}`, dispatch DOM event `prosperus:new-notification`, reconnect logic + online listener (espelho de useUnreadMessageCount).
+- **NOVO:** `contexts/NotificationsContext.tsx` — Provider expondo `useNotifications()` (count, refresh, markAllRead) + helper `useOnNewNotification(handler)` para componentes que mantêm listas próprias.
+- **NOVO:** `<NotificationsProvider>` wrappado em `App.tsx` em ambos branches (admin + member), aninhado dentro de `<UnreadCountProvider>`.
+- **MIGRADO:** `NotificationCenter.tsx` e `NotificationsPage.tsx` — removidas chamadas diretas a `subscribeToNotifications`, agora usam `useOnNewNotification`.
+- **REMOVIDO:** `notificationService.subscribeToNotifications` (anti-pattern com `Math.random()` no nome do channel — último Math.random remanescente no codebase).
+- **REGRA R2 estendida:** rules.md agora menciona ADR-012 explicitamente.
+
+Critério de aceite atendido: zero `supabase.channel/from` para user_notifications fora do hook singleton (exceto `UnreadCountContext.unread-notif-*` que era fora de escopo, ADR-002 imutável). Validação tripla: `tsc --noEmit` exit 0, build local OK, browser test pendente do usuário.
+
 ## Pendentes (próxima sprint)
 
 ```

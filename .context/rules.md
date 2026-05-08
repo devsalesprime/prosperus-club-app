@@ -10,14 +10,25 @@ import { supabase } from '../lib/supabase'  // sempre assim
 // NUNCA: const client = createClient() em outro arquivo
 ```
 
-### R2 — Canal único para messages
+### R2 — Canal único para messages e user_notifications
 ```typescript
+// MESSAGES (ADR-002):
 // ÚNICO channel para messages: hooks/useUnreadMessageCount.ts
 // Instanciado APENAS em: contexts/UnreadCountContext.tsx
 // Componentes escutam via DOM events:
 window.addEventListener('prosperus:new-message', handler)
 window.addEventListener('prosperus:message-updated', handler)
 // NUNCA: supabase.channel('messages:...') em componente direto
+
+// USER_NOTIFICATIONS (ADR-012):
+// ÚNICO channel para user_notifications: hooks/useNotificationsSubscription.ts
+// Instanciado APENAS em: contexts/NotificationsContext.tsx
+// Componentes consomem via:
+useOnNewNotification((notification) => { ... })  // helper tipado
+window.addEventListener('prosperus:new-notification', handler)  // DOM raw
+const { unreadNotifications, markAllNotificationsRead } = useNotifications()
+// NUNCA: supabase.channel(...) com filter user_notifications em componente
+// NUNCA: notificationService.subscribeToNotifications (foi REMOVIDO em 2026-05-08)
 ```
 
 ### R3 — Guard do PushAutoSubscriber

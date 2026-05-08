@@ -22,6 +22,7 @@ import { InstallPrompt } from './components/push/InstallPrompt';
 import { PushPermissionPrompt } from './components/push/PushPermissionPrompt';
 import { PushAutoSubscriber } from './components/push/PushAutoSubscriber';
 import { UnreadCountProvider } from './contexts/UnreadCountContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
 import { SupportDocsProvider } from './components/support/SupportDocsSheet';
 import { ProspToaster } from './utils/toast';
 import { NotificationBannerInterstitial } from './components/banners/NotificationBannerInterstitial';
@@ -230,20 +231,22 @@ const AppShell: React.FC = () => {
     if (isAdmin) {
         return (
             <UnreadCountProvider userId={currentUser.id}>
-                <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
-                    <AdminApp
-                        currentUser={currentUser}
-                        onLogout={() => { setIsAdmin(false); setSession(null); }}
-                    />
-                    {/* Admins also need to auto-subscribe and sync their push token */}
-                    <PushAutoSubscriber userId={currentUser.id} />
-                    {showPushPrompt && (
-                        <PushPermissionPrompt
-                            userId={currentUser.id}
-                            onDismiss={() => setShowPushPrompt(false)}
+                <NotificationsProvider userId={currentUser.id}>
+                    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><PremiumLoader /></div>}>
+                        <AdminApp
+                            currentUser={currentUser}
+                            onLogout={() => { setIsAdmin(false); setSession(null); }}
                         />
-                    )}
-                </Suspense>
+                        {/* Admins also need to auto-subscribe and sync their push token */}
+                        <PushAutoSubscriber userId={currentUser.id} />
+                        {showPushPrompt && (
+                            <PushPermissionPrompt
+                                userId={currentUser.id}
+                                onDismiss={() => setShowPushPrompt(false)}
+                            />
+                        )}
+                    </Suspense>
+                </NotificationsProvider>
             </UnreadCountProvider>
         );
     }
@@ -273,30 +276,32 @@ const AppShell: React.FC = () => {
     // ─── Main App ────────────────────────────────────
     return (
         <UnreadCountProvider userId={session?.user?.id}>
-            {activeBanner && (
-              <NotificationBannerInterstitial
-                banner={activeBanner}
-                onSkip={(deepLink) => {
-                  dismissBanner(deepLink, false); // false = clicou CTA = Exclusão Permanente
-                  if (deepLink) resolveDeepLink(deepLink);
-                }}
-                onDismiss={() => dismissBanner(undefined, true)} // true = pulou = Cache de 24h
-              />
-            )}
-            <AppLayout>
-                <Suspense fallback={<PremiumLoader />}>
-                    <ViewSwitcher />
-                </Suspense>
-                {/* Always mounted — silently saves push subscription */}
-                {currentUser && <PushAutoSubscriber userId={currentUser.id} />}
-                {/* Permission prompt — only when permission is 'default' */}
-                {showPushPrompt && currentUser && (
-                    <PushPermissionPrompt
-                        userId={currentUser.id}
-                        onDismiss={() => setShowPushPrompt(false)}
-                    />
+            <NotificationsProvider userId={session?.user?.id}>
+                {activeBanner && (
+                  <NotificationBannerInterstitial
+                    banner={activeBanner}
+                    onSkip={(deepLink) => {
+                      dismissBanner(deepLink, false); // false = clicou CTA = Exclusão Permanente
+                      if (deepLink) resolveDeepLink(deepLink);
+                    }}
+                    onDismiss={() => dismissBanner(undefined, true)} // true = pulou = Cache de 24h
+                  />
                 )}
-            </AppLayout>
+                <AppLayout>
+                    <Suspense fallback={<PremiumLoader />}>
+                        <ViewSwitcher />
+                    </Suspense>
+                    {/* Always mounted — silently saves push subscription */}
+                    {currentUser && <PushAutoSubscriber userId={currentUser.id} />}
+                    {/* Permission prompt — only when permission is 'default' */}
+                    {showPushPrompt && currentUser && (
+                        <PushPermissionPrompt
+                            userId={currentUser.id}
+                            onDismiss={() => setShowPushPrompt(false)}
+                        />
+                    )}
+                </AppLayout>
+            </NotificationsProvider>
         </UnreadCountProvider>
     );
 };

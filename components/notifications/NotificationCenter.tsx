@@ -1,9 +1,10 @@
 // NotificationCenter.tsx
 // Dropdown notification center component
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, X, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
 import { notificationService, UserNotification } from '../../services/notificationService';
+import { useOnNewNotification } from '../../contexts/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
@@ -41,24 +42,19 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     useEffect(() => {
         loadNotifications();
         loadUnreadCount();
-
-        // Subscribe to new notifications
-        const unsubscribe = notificationService.subscribeToNotifications(
-            currentUserId,
-            (newNotification) => {
-                logger.debug('🔔 New notification received:', newNotification);
-                setNotifications(prev => [newNotification, ...prev]);
-                setUnreadCount(prev => prev + 1);
-                // Trigger shake animation
-                setIsShaking(true);
-                setTimeout(() => setIsShaking(false), 600);
-            }
-        );
-
-        return () => {
-            unsubscribe();
-        };
     }, [currentUserId]);
+
+    // ADR-012: consome o canal singleton via DOM event do NotificationsProvider.
+    // Sem subscription direta no componente.
+    const handleNewNotification = useCallback((newNotification: UserNotification) => {
+        logger.debug('🔔 New notification received:', newNotification);
+        setNotifications(prev => [newNotification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+        // Trigger shake animation
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 600);
+    }, []);
+    useOnNewNotification(handleNewNotification);
 
     // Close dropdown when clicking outside
     useEffect(() => {

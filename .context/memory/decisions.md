@@ -74,3 +74,15 @@
 **Contexto:** Falha de notificação nunca deve interromper o fluxo principal (salvar deal, criar evento etc.).
 **Consequência:** `try { ... } catch(e) { console.error(e) }` — sem `throw`.
 **Status:** IMUTÁVEL
+
+## ADR-012 · Canal único Realtime para user_notifications
+**Decisão:** `useNotificationsSubscription.ts` é o único canal Realtime para a tabela `user_notifications`. Instanciado APENAS dentro de `NotificationsContext` (Provider). Componentes consomem via `useNotifications()` ou `window.addEventListener('prosperus:new-notification')`.
+**Contexto:** Antes de 2026-05-08, `notificationService.subscribeToNotifications` era chamado diretamente por `NotificationsPage` e `NotificationCenter`, criando N canais com `Math.random()` no nome — replicando o anti-pattern que ADR-002 corrigiu para `messages`. Risco: `mismatch between server and client bindings`, subscription leak no StrictMode, custo Realtime desnecessário.
+**Consequência:**
+- Channel name determinístico: `` `notifications-${userId}` ``
+- Único `event: 'INSERT'` com filter `user_id=eq.${userId}` (RLS de `user_notifications` permite porque usa subquery direta — sem `SECURITY DEFINER`, ver ADR-005)
+- Hook dispara DOM event `prosperus:new-notification` com payload tipado (`UserNotification`)
+- `NotificationCenter` e `NotificationsPage` consomem via `useOnNewNotification(handler)` helper exportado do context
+- `notificationService.subscribeToNotifications` foi REMOVIDO do código
+- `UnreadCountContext` mantém seu próprio canal `unread-notif-${userId}` (count + badge) por ora — coexistência aceita; unificação fica para PR futuro
+**Status:** IMUTÁVEL
