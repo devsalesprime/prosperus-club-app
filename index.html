@@ -57,6 +57,8 @@
   <link rel="dns-prefetch" href="https://ptvsctwwonvirdwprugv.supabase.co">
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://use.typekit.net" crossorigin>
+  <link rel="preconnect" href="https://p.typekit.net" crossorigin>
 
   <style>
     /* Prevent white flash during JS bundle parsing */
@@ -67,7 +69,11 @@
     }
   </style>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Brand fonts (brand guide pág. 20):
+       Títulos / destaques: Adobe Garamond Pro via Adobe Fonts (Typekit kit avz7ism)
+       Corpo / texto:       Manrope via Google Fonts -->
+  <link href="https://use.typekit.net/avz7ism.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/react-big-calendar@1.8.5/lib/css/react-big-calendar.css" rel="stylesheet">
   <style>
     /* ===== PROSPERUS BRAND DESIGN SYSTEM ===== */
@@ -135,7 +141,8 @@
     }
 
     body {
-      font-family: 'Inter', sans-serif;
+      /* Brand fonts: Manrope (corpo) é o default; EB Garamond aplicado via classe .font-display em títulos */
+      font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
       background-color: var(--prosperus-navy);
       color: var(--prosperus-white);
       /* Font smoothing for crisp text on dark backgrounds */

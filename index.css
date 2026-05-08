@@ -1,28 +1,77 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — Prosperus Club
+ * Fonte da verdade: este bloco @theme (Tailwind v4). Mantenha sincronizado com utils/designTokens.ts.
+ * Documentação semântica: docs/DESIGN_SYSTEM.md.
+ * Brand guide oficial: "Narrativa, Posicionamento e Marca - Prosperus Club.pdf" (paleta na página 18,
+ * tipografia na página 20). Os valores abaixo refletem a paleta primária/secundária/complementar oficial.
+ *
+ * Convenção de nomes:
+ *   - Tokens semânticos seguem o Design System (bg-primary, text-primary, etc.).
+ *   - Tokens com nomes da brand guide (azul-profundo, ouro-nobre, ouro-vivo, etc.) também são expostos.
+ *   - Tokens legados (navy, box, white, grey, muted-*) permanecem como aliases.
+ */
 @theme {
-  --color-prosperus-navy:       #010a12;   /* fundo base de todas as telas */
-  --color-prosperus-box:        #031726;   /* cards, inputs, header, modais */
-  --color-prosperus-card:       #031726;   /* alias de box — atualizado DS Abr/26 */
-  --color-prosperus-border:     #052B48;   /* alias de stroke — atualizado DS Abr/26 */
-  --color-prosperus-stroke:     #052B48;   /* bordas, separadores */
-  --color-prosperus-gold:       #FFDA71;   /* CTA principal, item ativo nav */
-  --color-prosperus-gold-light: #FFDA71;   /* igual gold (alias) */
-  --color-prosperus-gold-dark:  #CA9A43;   /* botões pequenos, ícones, badges */
-  --color-prosperus-white:      #FCF7F0;   /* texto principal */
-  --color-prosperus-grey:       #95A4B4;   /* atualizado DS Abr/26 (era #95A4B4) */
-  --color-prosperus-muted-bg:   #152938;   /* botões/opções não selecionadas */
-  --color-prosperus-muted-text: #95A4B4;   /* texto inativo, ícones off, placeholders */
-  --color-prosperus-dark-start: #042034;   /* gradiente Agenda/Tools/Galeria */
-  --color-prosperus-dark-end:   #04253E;   /* gradiente Agenda/Tools/Galeria */
+  /* ── Fontes (brand guide pág. 20) ──────────────────────────────────────────── */
+  /* Adobe Garamond Pro carregado via Adobe Fonts (Typekit kit avz7ism em index.html).
+     Family name 'adobe-garamond-pro' segue a convenção Typekit (lowercase, hyphenado). */
+  --font-display: 'adobe-garamond-pro', 'Adobe Garamond Pro', 'EB Garamond', Garamond, Georgia, serif;
+  --font-body:    'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans:    var(--font-body); /* default Tailwind sans → Manrope */
+
+  /* ── Paleta PRIMÁRIA (brand guide pág. 18) ─────────────────────────────────── */
+  --color-prosperus-azul-profundo: #031A2B;  /* 80% — fundo base oficial */
+  --color-prosperus-ouro-nobre:    #CA9A43;  /* 20% — ícones, badges, traços de autoridade */
+
+  /* ── Paleta SECUNDÁRIA (brand guide pág. 18) ───────────────────────────────── */
+  --color-prosperus-ouro-vivo:        #FFDA71;  /* 25% — CTA principal, item ativo */
+  --color-prosperus-azul-lideranca:   #123F5B;  /* 60% — superfícies elevadas, headers de seção */
+  --color-prosperus-ouro-claro:       #FFE39B;  /* 10% — highlight, hover de gold */
+  --color-prosperus-branco-visionario:#EDF4F7;  /* 5%  — texto sobre fundo claro, contraste alto */
+
+  /* ── Paleta COMPLEMENTAR (brand guide pág. 18) ─────────────────────────────── */
+  --color-prosperus-branco-essencia:  #FCF7F0;  /* texto principal sobre fundo escuro */
+  --color-prosperus-preto-absoluto:   #080808;  /* sombras profundas, overlays modais */
+
+  /* ── Tokens semânticos (mapeamento DS → brand) ─────────────────────────────── */
+  --color-prosperus-bg-primary: #031A2B;   /* bgPrimary = Azul Profundo */
+  --color-prosperus-bg-box:     #031726;   /* bgBox — derivado, ligeiramente mais escuro que bg-primary */
+  --color-prosperus-stroke:     #052B48;   /* stroke — derivado entre bg-primary e azul-lideranca */
+  --color-prosperus-gold:       #FFDA71;   /* gold = Ouro Vivo */
+  --color-prosperus-gold-dark:  #CA9A43;   /* goldDark = Ouro Nobre */
+  --color-prosperus-text:       #FCF7F0;   /* textPrimary = Branco Essência */
+  --color-prosperus-text-off:   #95A4B4;   /* textOff — neutro derivado */
+  --color-prosperus-inactive:   #152938;   /* inactive — fundo de não selecionados */
+  --color-prosperus-dark-start: #042034;   /* gradiente Agenda/Tools/Galeria — início */
+  --color-prosperus-dark-end:   #04253E;   /* gradiente Agenda/Tools/Galeria — fim */
+
+  /* ── Aliases legados (em uso em ~246 lugares — manter até migração) ─────────── */
+  --color-prosperus-navy:       #031A2B;   /* corrigido p/ Azul Profundo oficial (era #010a12 — drift) */
+  --color-prosperus-box:        #031726;   /* alias de bg-box */
+  --color-prosperus-card:       #031726;   /* alias de bg-box */
+  --color-prosperus-border:     #052B48;   /* alias de stroke */
+  --color-prosperus-gold-light: #FFE39B;   /* alias de ouro-claro */
+  --color-prosperus-white:      #FCF7F0;   /* alias de text / branco-essencia */
+  --color-prosperus-grey:       #95A4B4;   /* alias de text-off */
+  --color-prosperus-muted-bg:   #152938;   /* alias de inactive */
+  --color-prosperus-muted-text: #95A4B4;   /* alias de text-off */
 }
 
 @layer base {
   body {
     background-color: var(--color-prosperus-navy);
     color: var(--color-prosperus-white);
+    font-family: var(--font-body);
     max-width: 100vw;
     overflow-x: hidden;
+  }
+
+  /* Brand guide pág. 20: títulos usam EB Garamond (alt. Adobe Garamond Pro).
+   * Aplicado em todas as headings nativas — componentes que precisam sans-serif
+   * em headings devem usar `font-sans` explicitamente. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
   }
 }
 

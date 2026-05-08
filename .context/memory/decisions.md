@@ -38,11 +38,18 @@
 **Consequência:** Todos os campos são enviados no payload do evento Realtime.
 **Status:** IMUTÁVEL
 
-## ADR-007 · Inline styles + designTokens (sem Tailwind)
-**Decisão:** Inline styles com tokens centralizados em `utils/designTokens.ts`.
-**Contexto:** Tailwind não tem acesso ao compilador no ambiente de produção do clube.
-**Consequência:** Cores SEMPRE via `TOKENS.bgPrimary` etc., nunca hardcoded.
-**Status:** ATIVO
+## ADR-007 · Tailwind v4 + @theme como camada de estilo oficial
+**Decisão:** Tailwind v4 (via `@tailwindcss/vite`) é a camada de estilo oficial. Os design tokens vivem em `index.css` no bloco `@theme` (equivalente v4 do antigo `tailwind.config.ts`). `utils/designTokens.ts` permanece como fonte para casos não-Tailwind (gradientes inline, manifest PWA, valores CSS-puros). As duas fontes devem manter os mesmos valores.
+**Contexto:** ADR-007 original previa "inline styles + designTokens (sem Tailwind)" porque o setup PostCSS+JIT v3 era frágil. Tailwind v4 resolveu isso (plugin Vite + `@theme` em CSS) e o codebase migrou de fato — 2.765+ usos de `className=` em 100+ arquivos, 246 usos de `prosperus-*` tokens. Manter o ADR antigo deixava a documentação contradizendo o código.
+**Consequência:**
+- Componentes podem usar classes Tailwind. Quando referenciarem cores do clube, devem usar tokens `prosperus-*` definidos em `@theme`, nunca hex hardcoded nem cores default do Tailwind (`bg-emerald-400` etc.).
+- `utils/designTokens.ts` é mantido sincronizado com os valores do `@theme`.
+- ESLint deve ser configurado para bloquear hex literal em `className` (próxima sprint).
+**Status:** ATIVO (substituído em 2026-05-08 — versão original arquivada abaixo)
+
+### ADR-007 (versão original, arquivada)
+> Decisão: Inline styles com tokens centralizados em `utils/designTokens.ts`. Sem Tailwind.
+> Motivo da revogação: a justificativa técnica (compilador Tailwind indisponível) deixou de existir com Tailwind v4. O codebase nunca seguiu a regra na prática.
 
 ## ADR-008 · HubSpot dropdowns (ALLOWED values)
 **Decisão:** Sempre validar valores antes de enviar para propriedades dropdown do HubSpot.
