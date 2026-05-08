@@ -41,9 +41,11 @@ export const useUnreadMessageCount = (userId: string | null) => {
             }
             if (isCleanedUp) return;
 
-            // CRÍTICO: Canal único por instância do hook para evitar "mismatch between server and client bindings"
-            // Se AppHeader e ChatIcon usarem o mesmo nome, eles duplicam bindings no mesmo canal!
-            const channelName = `unread-msgs-${userId}-${Math.random().toString(36).slice(2, 8)}`;
+            // ADR-004 (IMUTÁVEL): nomes de channel são determinísticos.
+            // Singleton garantido por ADR-002: este hook só roda dentro de UnreadCountContext.
+            // Se algum componente montar este hook fora do Provider, o "mismatch between
+            // server and client bindings" deve falhar barulhento — é o comportamento desejado.
+            const channelName = `unread-msgs-${userId}`;
 
             channel = supabase
                 .channel(channelName)

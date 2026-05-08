@@ -45,14 +45,14 @@
 **Sintoma:** FCP 7.7s · TBT 3.170ms · Performance 29
 **Causa:** Bundle único sem code splitting.
 **Workaround:** Nenhum — app funciona mas lento em 4G.
-**Solução planejada:** PROMPT_PERFORMANCE_SPRINT.md (React.lazy + manualChunks + resource hints)
-**Status:** ⏳ PENDENTE
+**Solução parcial:** `vite.config.ts` já tem `manualChunks` (admin-bundle, vendor-supabase, vendor-query, vendor-ui) e `index.html` tem resource hints (`preconnect` Supabase + Google Fonts + Typekit). Falta validar se Lighthouse melhorou e fazer React.lazy nas rotas pesadas.
+**Status:** ⏳ PENDENTE — re-medir Lighthouse
 
-### Issue-008 · 183 instâncias :any
-**Sintoma:** TypeScript fraco em 183 pontos do codebase.
+### Issue-008 · 81 instâncias :any (era 183 — re-medido 2026-05-08)
+**Sintoma:** TypeScript fraco em 81 pontos do codebase.
 **Causa:** Histórico de desenvolvimento rápido.
 **Workaround:** App funciona, mas tipos não protegem esses pontos.
-**Solução planejada:** Sprint de tipagem — remediação incremental.
+**Solução planejada:** Sprint de tipagem — remediação incremental. Começar pelos 4 `as any` em `contexts/UnreadCountContext.tsx`.
 **Status:** ⏳ BACKLOG
 
 ### Issue-009 · Carrossel Academy desktop

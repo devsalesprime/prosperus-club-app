@@ -109,24 +109,22 @@ export const ROIAdminModule: React.FC = () => {
 
     const handleConfirmarCobranca = async () => {
         setCobrancaLoading(true);
-        try {
-            if (cobrancaTarget === 'all') {
-                await notificationTriggers.notifyColetaFaturamento();
-            } else {
-                await notificationTriggers.notifyColetaFaturamento(cobrancaTarget);
-            }
+        const result = cobrancaTarget === 'all'
+            ? await notificationTriggers.notifyColetaFaturamento()
+            : await notificationTriggers.notifyColetaFaturamento(cobrancaTarget);
+
+        if (result.ok) {
             setCobrancaFeedback('success');
             setTimeout(() => {
                 setShowCobrancaModal(false);
                 setCobrancaFeedback(null);
                 loadSocios();
             }, 2000);
-        } catch (err) {
-            console.error('[ROI Admin] erro ao cobrar:', err);
+        } else {
+            console.error('[ROI Admin] erro ao cobrar:', result.error);
             setCobrancaFeedback('error');
-        } finally {
-            setCobrancaLoading(false);
         }
+        setCobrancaLoading(false);
     };
 
     const handleOpenEdit = async (socio: RoiSocio) => {

@@ -25,15 +25,15 @@
 | Admin Panel (13 módulos) | 10/10 | Mar/2026 |
 | Banco + RLS + Realtime | 10/10 | Mar/2026 |
 
-## Métricas do codebase
+## Métricas do codebase (re-medido 2026-05-08)
 
 ```
-Arquivos TS/TSX:     276 (após limpeza de 6 arquivos mortos)
-Migrations:          91 (001 → 080 + 20260331_*)
-Edge Functions:      12 deployadas
-Linhas de código:    ~59.945
+Arquivos TS/TSX:     275
+Migrations:          92 (001 → 080 + 20260331_* + 20260429_*)
+Edge Functions:      13 (10 deploy + auxiliares)
+Linhas de código:    ~60k
 console.log prod:    0
-:any remanescentes:  183 (backlog técnico)
+:any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
 ## Limpeza executada (Abr/2026)
@@ -58,10 +58,10 @@ ALTA:
 □ Fix carrossel Academy + sidebar vídeo (PROMPT_FIX_CAROUSEL_VIDEO_SCROLL.md)
 
 MÉDIA:
-□ notifyNewSolution (PROMPT_NOTIFY_NEW_SOLUTION.md pronto)
-□ notifyNewArticle + notifyEventUpdated
+✅ notifyNewSolution / notifyNewArticle / notifyEventUpdated — entregues e fire-and-forget
+✅ notifyNewVideo / notifyNewGallery / notifyNewEvent — implementados (eram stubs)
 □ 4 plugs de analytics
-□ Remediação dos 183 :any
+□ Remediação dos 81 :any (era 183 — re-medido 2026-05-08)
 
 NEGÓCIO:
 □ App Stores: Apple US$99/ano + Google US$25 (burocracia pendente)
