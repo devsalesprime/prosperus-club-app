@@ -70,8 +70,14 @@ export const DesktopSidebar: React.FC = () => {
         { id: ViewState.PROFILE, label: 'Perfil', icon: <User size={20} /> },
     ];
 
+    // NÃO usar `backdrop-blur-*` no root abaixo — `backdrop-filter` cria um
+    // stacking context CSS isolado que prende elementos `absolute` filhos
+    // (ex: dropdown do NotificationCenter) dentro do sidebar, escondendo-os
+    // atrás do conteúdo principal. Se for preciso reintroduzir glass effect,
+    // aplicar via Portal no NotificationCenter ou mover o blur para um
+    // wrapper interno que NÃO contenha o sino.
     return (
-        <div className="hidden md:flex w-64 flex-col border-r border-white/5 bg-white/[0.02] backdrop-blur-md">
+        <div className="hidden md:flex w-64 flex-col border-r border-white/5 bg-white/[0.02]">
             <div className="p-6 border-b border-white/5">
                 <div className="flex items-center justify-between gap-3">
                     <button
