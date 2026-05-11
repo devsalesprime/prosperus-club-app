@@ -39,6 +39,19 @@
 **Solução:** Separar em dois calls — Contato + Empresa (crm.objects.companies.write).
 **Status:** ✅ RESOLVIDO Abr/2026
 
+### Issue-011 · Badge não decrementava após markAsRead/delete
+**Sintoma:** Após marcar notification como lida ou deletar, badge "1" persistia no sininho do header E no app icon nativo (Badging API).
+**Causa raiz tripla — fix em 3 frentes:**
+1. **Arquitetural client-side:** `NotificationCenter` mantinha `unreadCount` em state LOCAL, desconectado do `NotificationsContext`. `NotificationsPage` mutava só seu array local de notifications sem chamar `refreshNotifications()` do context.
+2. **Realtime UPDATE silenciosamente dropado:** `user_notifications` estava com REPLICA IDENTITY DEFAULT (só PK = id). Filter `user_id=eq.X` em UPDATE events falhava porque o server precisa do user_id no payload para avaliar. Mesmo padrão que ADR-006 resolveu para `messages`.
+3. **Side-effect do (2):** `UnreadCountContext.refreshUnreadCount()` nunca era chamado após markAsRead → app icon badge (Badging API) ficava congelado.
+**Solução (2026-05-11):**
+- `NotificationCenter` consome `useNotifications().unreadNotifications` (commit `df7171e`)
+- `NotificationsPage` chama `refreshNotifications()` em todos os handlers (commit `df7171e`)
+- Migration `20260511_user_notifications_replica_full.sql` aplicada via MCP: `ALTER TABLE user_notifications REPLICA IDENTITY FULL`
+**Validação:** INSERT manual + markAsRead pelo usuário confirmou badge zerando imediatamente.
+**Status:** ✅ RESOLVIDO 2026-05-11
+
 ### Issue-010 · Web Push nativo não disparando (OS-level)
 **Sintoma:** Notificações in-app (Realtime) chegavam, mas push nativo no iPhone/Android/Desktop não aparecia. 101 push_subscriptions ativas mas zero entregues.
 **Causa raiz dupla:**
