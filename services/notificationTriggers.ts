@@ -9,6 +9,7 @@
 
 import { supabase } from '../lib/supabase'
 import { notificationService } from './notificationService'
+import { addBreadcrumb } from '../lib/sentry'
 
 export interface NotifyResult {
     ok: boolean;
@@ -25,6 +26,7 @@ class NotificationTriggers {
      * no UI. Por isso retorna { ok, count, error? } em vez de seguir fire-and-forget puro.
      */
     async notifyColetaFaturamento(targetSocioId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyColetaFaturamento started', { target: targetSocioId ?? 'all' });
         try {
             let query = supabase
                 .from('profiles')
@@ -68,6 +70,7 @@ class NotificationTriggers {
     }
 
     async notifyNewArticle(articleTitle: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewArticle started');
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -91,6 +94,7 @@ class NotificationTriggers {
     }
 
     async notifyNewSolution(providerName: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewSolution started');
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -114,6 +118,7 @@ class NotificationTriggers {
     }
 
     async notifyEventUpdated(eventName: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyEventUpdated started');
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -137,6 +142,7 @@ class NotificationTriggers {
     }
 
     async notifyNewVideo(title: string, _url?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewVideo started');
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -160,6 +166,7 @@ class NotificationTriggers {
     }
 
     async notifyNewGallery(title: string, albumId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewGallery started', { albumId: albumId ?? null });
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -184,6 +191,7 @@ class NotificationTriggers {
     }
 
     async notifyNewEvent(_id: string, title: string, date: string, _authorId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewEvent started');
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {

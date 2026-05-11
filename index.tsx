@@ -4,7 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext';
+import { initSentry } from './lib/sentry';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import './index.css';
+
+// ADR-014: inicializar Sentry ANTES do ReactDOM.createRoot para capturar
+// erros no setup inicial (rendering errors, lazy imports, etc.).
+// initSentry é no-op em dev ou sem VITE_SENTRY_DSN — zero overhead local.
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,13 +33,18 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-      {import.meta.env.DEV && (
-        <ReactQueryDevtools initialIsOpen={false} position="bottom" />
-      )}
-    </QueryClientProvider>
+    {/* ErrorBoundary externo captura erros de render em qualquer nível do app.
+        Mantém auto-reload de ChunkLoadError (deploy stale) e envia ao Sentry
+        via Sentry.captureException no componentDidCatch (ADR-014). */}
+    <ErrorBoundary moduleName="aplicativo">
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+        {import.meta.env.DEV && (
+          <ReactQueryDevtools initialIsOpen={false} position="bottom" />
+        )}
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );

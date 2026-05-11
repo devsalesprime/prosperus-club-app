@@ -2,6 +2,7 @@
 
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { addBreadcrumb } from '../lib/sentry';
 
 export interface UserNotification {
     id: string;
@@ -444,13 +445,16 @@ class NotificationService {
 
             if (error) {
                 logger.error('❌ Error registering push token:', error);
+                addBreadcrumb('push', 'registerPushToken failed', { error: error.message.slice(0, 200), platform: this.detectPlatform() }, 'error');
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Push token registered successfully');
+            addBreadcrumb('push', 'subscription registered', { platform: this.detectPlatform() });
             return { success: true };
         } catch (error: unknown) {
             logger.error('❌ Error in registerPushToken:', error);
+            addBreadcrumb('push', 'registerPushToken threw', { error: String((error as Error).message ?? error).slice(0, 200) }, 'error');
             return { success: false, error: (error as Error).message || 'Erro desconhecido' };
         }
     }
@@ -512,13 +516,16 @@ class NotificationService {
                 .eq('endpoint', endpoint);
 
             if (error) {
+                addBreadcrumb('push', 'removePushToken failed', { error: error.message.slice(0, 200) }, 'error');
                 return { success: false, error: error.message };
             }
 
             logger.info('✅ Push token removed successfully');
+            addBreadcrumb('push', 'subscription removed');
             return { success: true };
         } catch (error: unknown) {
             logger.error('Error removing push token:', error);
+            addBreadcrumb('push', 'removePushToken threw', { error: String((error as Error).message ?? error).slice(0, 200) }, 'error');
             return { success: false, error: (error as Error).message };
         }
     }

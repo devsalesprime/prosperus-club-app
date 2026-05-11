@@ -76,6 +76,71 @@ Deletados com 0 importações confirmadas:
 - P2 futuro: rodar `npx ts-prune` ou `knip` para confirmar 0 órfãos no TS/TSX
 - P2 futuro: adicionar CI check de colisão de prefixo de migration (script em `MIGRATIONS_HISTORY.md`)
 
+## Sentry — camada de observabilidade (2026-05-11)
+
+ADR-014 criada (ATIVO). Setup completo do `@sentry/react` para captura de
+erros em produção, espelhando os modos de falha vistos em Issue-010
+(trigger broken) e Issue-011 (race condition silenciosa).
+
+### Frontend SDK
+- `lib/sentry.ts` — `initSentry()` + helper `addBreadcrumb()` tipado por
+  categoria (`auth/push/notification/realtime/hubspot`). `enabled:
+  import.meta.env.PROD` (dev fica off, zero overhead).
+- `vite.config.ts` — `@sentry/vite-plugin` ativo apenas quando
+  `SENTRY_AUTH_TOKEN` presente. `build.sourcemap: 'hidden'` — source maps
+  geradas mas não referenciadas no bundle público. Release injetado em
+  build-time via `define: { __APP_VERSION__: '${version}-${git sha}' }`.
+
+### Integração
+- `index.tsx` — `initSentry()` antes do `ReactDOM.createRoot`. `<App />`
+  envolto por `<ErrorBoundary>` (próprio, não Sentry.ErrorBoundary).
+- `components/ui/ErrorBoundary.tsx` — mantido (ChunkLoadError
+  auto-reload preservado). `componentDidCatch` agora chama
+  `Sentry.captureException` com `tags`, `level` e `componentStack`. UI
+  refatorada com tokens `prosperus-*` (R9): fundo
+  `bg-prosperus-azul-profundo`, título `font-display`, CTA gradient gold.
+- `contexts/AuthContext.tsx` — `useEffect` que reage a `userProfile` chama
+  `Sentry.setUser({ id, email, role })`. `Sentry.setUser(null)` no
+  `logout()` e no listener `SIGNED_OUT`. Sem mudar shape do
+  `AuthContextType`.
+
+### Breadcrumbs em 6 arquivos críticos
+- `hooks/useUnreadMessageCount.ts` — ADR-002 IMUTÁVEL preservada;
+  `addBreadcrumb('realtime', ...)` apenas ao lado dos `logger.debug/error`
+  no callback `.subscribe()` (SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT)
+- `hooks/useNotificationsSubscription.ts` — categoria `realtime` no
+  callback `.subscribe()`
+- `services/notificationTriggers.ts` — categoria `notification` no início
+  de cada notify*
+- `hooks/useProfileForm.ts` — categoria `hubspot` antes/depois de
+  `invoke('sync-hubspot')` e `invoke('update-hubspot-contact')`
+- `services/adminBirthdayService.ts` — categoria `hubspot` em
+  `invoke('sync-hubspot-birthdays')`
+- `services/notificationService.ts` — categoria `push` em
+  `registerPushToken` e `removePushToken`
+
+### Filtros (beforeSend)
+4 ruídos conhecidos descartados antes do envio ao Sentry:
+1. `AbortError` com mensagem `aborted/signal is aborted` (StrictMode)
+2. HTTP `410 Gone` (push stale, auto-cleanup esperado per ADR-013)
+3. `ResizeObserver loop` (browser noise)
+4. `Non-Error promise rejection captured` sem stack útil
+
+### Documentação
+- `docs/OBSERVABILITY.md` — guia completo (acesso, env vars, decisões de
+  design, tags por role, template de breadcrumb, smoke test em prod build,
+  política de retenção, pendências externas operacionais)
+- `.env.example` — 4 novas variáveis (`VITE_SENTRY_DSN`,
+  `VITE_SENTRY_ORG`, `VITE_SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`)
+
+### TODO operacional (não-dev — Fábio)
+- [ ] Criar projeto `prosperus-club-app` em sentry.io e obter DSN
+- [ ] Gerar `SENTRY_AUTH_TOKEN` com scopes `project:read`, `project:releases`, `org:read`
+- [ ] Adicionar variáveis ao host de produção (Vercel/Netlify/etc.)
+- [ ] Adicionar `SENTRY_AUTH_TOKEN` como secret no GitHub Actions
+- [ ] Atualizar `.github/workflows/main.yml` (já tem `npm run build`) para passar as 4 vars do Sentry no env do step
+- [ ] Smoke test: build local + preview + `throw new Error('sentry-smoke-test')` no console
+
 ## Edge Functions cleanup — sync-hubspot-amounts e sync-shadow-profiles (2026-05-11)
 
 Auditoria operacional confirmou zero invocações em 30 dias para 2 das 3 functions marcadas como "CONFIRMAR" na sessão 2026-05-08:

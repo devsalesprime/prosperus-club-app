@@ -75,6 +75,20 @@
 **Consequência:** `try { ... } catch(e) { console.error(e) }` — sem `throw`.
 **Status:** IMUTÁVEL
 
+## ADR-014 · Sentry como camada de observabilidade do frontend
+**Decisão:** Adotar `@sentry/react` + `@sentry/vite-plugin` para captura de erros, performance traces (sample 10%) e session replay on-error (100%). Source maps geradas como `'hidden'` no build e uploadadas via plugin em build-time (`SENTRY_AUTH_TOKEN`). Identidade do usuário injetada via `Sentry.setUser({ id, email, role })` no `AuthContext` quando `userProfile` muda; limpa em logout. Breadcrumbs categorizados (`auth`, `push`, `notification`, `realtime`, `hubspot`) em 6 zonas críticas. `beforeSend` descarta 4 ruídos conhecidos.
+**Contexto:** Regressões silenciosas em produção (Issue-010, Issue-011) eram detectadas apenas via reclamação de sócio — tempo de resposta lento e sem stack trace. Sentry tier Free cobre ~5k eventos/mês, suficiente para o volume atual. Custo: zero financeiro, ~5 min de overhead de setup por novo membro.
+**Consequência:**
+- `lib/sentry.ts` centraliza init + helper `addBreadcrumb()` tipado (`BreadcrumbCategory`)
+- `enabled: import.meta.env.PROD` — dev fica off (zero overhead), sem ruído de StrictMode/HMR
+- ErrorBoundary próprio (`components/ui/ErrorBoundary.tsx`) **mantido** por causa do auto-reload de `ChunkLoadError`; integra Sentry via `captureException` manual. Decisão explicitada no header do arquivo.
+- Release format: `${package.json#version}-${git short sha}` injetado em build-time via `define: { __APP_VERSION__ }`. Falha gracefully para `'unknown'` em ambientes sem git.
+- 4 filtros no `beforeSend`: `AbortError aborted`, `HTTP 410 Gone` (push stale, ADR-013), `ResizeObserver loop`, `Non-Error promise rejection captured`
+- Tags por role permitem priorização (erro de `ADMIN` > `MEMBER`) no Dashboard
+- Source maps NÃO referenciadas no bundle público (sem `//# sourceMappingURL=`), apenas uploadadas → stack trace legível no Sentry, sem expor TS source ao usuário final
+**Documentação completa:** `docs/OBSERVABILITY.md`
+**Status:** ATIVO
+
 ## ADR-013 · DB trigger de push usa pg_net + vault, nunca Database Webhooks UI
 **Decisão:** Triggers de banco que invocam Edge Functions DEVEM usar `net.http_post()` (extensão pg_net) com `Authorization: Bearer <service_role_key>` lido de `vault.decrypted_secrets`. Body construído via `jsonb_build_object()` com `NEW.*`. Toda função trigger envolve a chamada em `EXCEPTION WHEN OTHERS THEN RAISE WARNING` para não bloquear o INSERT.
 **Contexto:** Antes de 2026-05-11, a trigger `send-push-on-new-notification` em `user_notifications` foi criada via Dashboard → Database Webhooks UI. Essa UI gera `supabase_functions.http_request` SEM Authorization (mesmo quando a função alvo tem `--verify-jwt`) e SEM uso de `NEW` (body literal `'{}'`). Resultado: 401 silencioso, zero pushes entregues. Migration 051 (chat) já usava o padrão correto.

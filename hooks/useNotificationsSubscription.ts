@@ -11,6 +11,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { addBreadcrumb } from '../lib/sentry';
 import type { UserNotification } from '../services/notificationService';
 
 export const useNotificationsSubscription = (userId: string | null): void => {
@@ -96,8 +97,10 @@ export const useNotificationsSubscription = (userId: string | null): void => {
                 .subscribe((status, err) => {
                     if (status === 'SUBSCRIBED') {
                         logger.debug('[Notifications Realtime] ✅ Conectado');
+                        addBreadcrumb('realtime', 'notifications channel SUBSCRIBED');
                     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                         logger.error('[Notifications Realtime] ❌', status, err);
+                        addBreadcrumb('realtime', `notifications ${status}`, { error: err?.message ?? null }, 'error');
                         // Auto-reconnect com backoff de 5s
                         if (!isCleanedUp && !reconnectTimer) {
                             reconnectTimer = setTimeout(() => {

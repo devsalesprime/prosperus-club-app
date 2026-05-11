@@ -7,6 +7,7 @@ import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { ProfileData, profileService } from '../services/profileService';
 import { logger } from '../utils/logger';
+import { Sentry, addBreadcrumb } from '../lib/sentry';
 
 interface AuthContextType {
     session: Session | null;
@@ -132,7 +133,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const logout = async () => {
         try {
             logger.debug('👋 AuthContext: Logging out...');
+            addBreadcrumb('auth', 'logout requested');
             await supabase.auth.signOut();
+            // Sentry user é limpo também no listener SIGNED_OUT (defesa em camadas)
+            Sentry.setUser(null);
             startTransition(() => {
                 setSession(null);
                 setUserProfile(null);
@@ -271,6 +275,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 logger.debug('🔑 AuthContext: PASSWORD_RECOVERY event detected');
                 setIsPasswordRecovery(true);
             } else if (event === 'SIGNED_OUT') {
+                addBreadcrumb('auth', 'SIGNED_OUT');
+                Sentry.setUser(null);
                 startTransition(() => {
                     setUserProfile(null);
                     profileCacheRef.current = null;
@@ -288,6 +294,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             subscription.unsubscribe();
         };
     }, []);
+
+    // ADR-014: sincronizar identidade no Sentry com userProfile.
+    // Reage tanto a SIGNED_IN (userProfile carregado por fetchProfile) quanto
+    // a updates de profile (ex: role mudou). Tags por role permitem priorização
+    // (erro de ADM > MEMBER) no Dashboard.
+    useEffect(() => {
+        if (userProfile?.id) {
+            Sentry.setUser({
+                id: userProfile.id,
+                email: userProfile.email,
+                role: userProfile.role,
+            });
+            addBreadcrumb('auth', 'user identified', { role: userProfile.role });
+        }
+        // Limpeza acontece em logout() e no listener SIGNED_OUT — não fazer
+        // setUser(null) aqui no return do effect porque dispararia em todo
+        // re-render que altere userProfile (ex: refresh do profile).
+    }, [userProfile]);
 
     const value: AuthContextType = {
         session,

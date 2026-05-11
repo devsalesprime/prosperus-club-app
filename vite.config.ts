@@ -1,10 +1,32 @@
 /// <reference types="vitest" />
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'node:child_process';
 import { defineConfig, loadEnv, Plugin, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+
+/**
+ * Build-time release version para o Sentry.
+ * Formato: ${package.json#version}-${git short sha}
+ * Falha graciosa para 'unknown' em ambientes sem git (ex: Docker build).
+ */
+function getReleaseVersion(): string {
+    try {
+        const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8')) as { version?: string };
+        const version = pkg.version || '0.0.0';
+        let sha = 'unknown';
+        try {
+            sha = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+                .toString().trim();
+        } catch { /* sem git, mantém 'unknown' */ }
+        return `${version}-${sha}`;
+    } catch {
+        return 'unknown';
+    }
+}
 
 /**
  * Vite plugin that stamps __BUILD_TIMESTAMP__ into sw.js during build.
@@ -30,6 +52,10 @@ function swVersionStamp(): Plugin {
 
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const releaseVersion = getReleaseVersion();
+  // Sentry plugin só ativa quando SENTRY_AUTH_TOKEN está presente
+  // (ex: CI/build deploy). Em dev local ou builds sem token, fica off.
+  const sentryEnabled = Boolean(env.SENTRY_AUTH_TOKEN);
 
   // basicSsl apenas para dev local (HTTPS necessário para câmera no celular)
   const devPlugins: Plugin[] = [];
@@ -287,11 +313,27 @@ export default defineConfig(async ({ mode }) => {
         }
       }),
       // Stamps build timestamp into sw.js for automatic cache versioning
-      swVersionStamp()
-    ],
+      swVersionStamp(),
+      // Sentry source map upload — só ativa quando SENTRY_AUTH_TOKEN está
+      // definido (ex: CI ou build de deploy). Em dev/local fica off.
+      // ADR-014: source maps geradas como 'hidden' (não referenciadas no
+      // bundle público); Sentry consome via upload aqui.
+      sentryEnabled && sentryVitePlugin({
+        org: env.VITE_SENTRY_ORG,
+        project: env.VITE_SENTRY_PROJECT,
+        authToken: env.SENTRY_AUTH_TOKEN,
+        release: { name: releaseVersion },
+        sourcemaps: { assets: ['./dist/**'] },
+        disable: !sentryEnabled,
+      })
+    ].filter(Boolean) as Plugin[],
     // SECURITY: Gemini API Key removed from client bundle (was exposed in define block)
-    // If Gemini calls are needed, use a Supabase Edge Function instead
-    define: {},
+    // If Gemini calls are needed, use a Supabase Edge Function instead.
+    // __APP_VERSION__ é injetado em build-time para o Sentry usar como release.
+    // Lido em lib/sentry.ts via `declare const __APP_VERSION__: string`.
+    define: {
+      __APP_VERSION__: JSON.stringify(releaseVersion),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
@@ -299,6 +341,12 @@ export default defineConfig(async ({ mode }) => {
     },
     build: {
       chunkSizeWarningLimit: 1000,
+      // Source maps geradas mas NÃO referenciadas no bundle público
+      // (sem comentário `//# sourceMappingURL=` nos JS finais).
+      // Sentry consome via @sentry/vite-plugin que faz upload do dist/.
+      // Resultado: erros no Sentry mostram stack TS legível, sem expor
+      // source maps em produção.
+      sourcemap: 'hidden',
       rollupOptions: {
         output: {
           manualChunks: (id) => {

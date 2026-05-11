@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { logger } from '../utils/logger';
 import { notify } from '../utils/toast';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { addBreadcrumb } from '../lib/sentry';
 
 interface UseProfileFormParams {
     currentUser: ProfileData;
@@ -187,22 +188,26 @@ export function useProfileForm({ currentUser, supabase, isMockMode, onSave }: Us
                 await refreshProfile();
 
                 // 🔄 Sync to HubSpot CRM (fire-and-forget, completely non-blocking)
+                addBreadcrumb('hubspot', 'invoke sync-hubspot');
                 supabase.functions.invoke('sync-hubspot', {
                     body: { profile: updatedProfile }
                 }).then(({ error: syncError }) => {
                     if (syncError) {
                         console.warn('⚠️ HubSpot sync failed (non-blocking):', syncError);
+                        addBreadcrumb('hubspot', 'sync-hubspot failed', { error: syncError.message ?? null }, 'warning');
                     } else {
                         logger.debug('✅ Profile synced to HubSpot');
                     }
                 }).catch(syncErr => {
                     console.warn('⚠️ HubSpot sync error (non-blocking):', syncErr);
+                    addBreadcrumb('hubspot', 'sync-hubspot threw', { error: String(syncErr).slice(0, 200) }, 'error');
                 });
 
                 // 🎂 PUSH birth_date → HubSpot (fire-and-forget, non-blocking)
                 // Só dispara se a data mudou em relação ao valor original do perfil
                 const birthDateChanged = formData.birth_date && formData.birth_date !== currentUser.birth_date;
                 if (birthDateChanged && updatedProfile.email && formData.birth_date) {
+                    addBreadcrumb('hubspot', 'invoke update-hubspot-contact (birth_date)');
                     supabase.functions.invoke('update-hubspot-contact', {
                         body: { email: updatedProfile.email, birth_date: formData.birth_date }
                     }).then(({ error: pushErr }) => {

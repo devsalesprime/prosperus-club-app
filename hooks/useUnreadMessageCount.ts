@@ -1,10 +1,15 @@
 // Hook to track unread message count with realtime updates
 // Includes: status handler, auto-reconnect, online listener, badge sync
+//
+// ADR-002 IMUTÁVEL — não modificar arquitetura deste hook.
+// ADR-014: adicionado APENAS Sentry.addBreadcrumb ao lado dos logger.debug
+// já existentes para dar visibilidade ao Sentry sem mudar comportamento.
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { unreadMessageService } from '../services/unreadMessageService';
 import { badgeService } from '../services/badgeService';
 import { logger } from '../utils/logger';
+import { addBreadcrumb } from '../lib/sentry';
 
 export const useUnreadMessageCount = (userId: string | null) => {
     const [unreadCount, setUnreadCount] = useState(0);
@@ -100,15 +105,18 @@ export const useUnreadMessageCount = (userId: string | null) => {
                 .subscribe((status, err) => {
                     if (status === 'SUBSCRIBED') {
                         logger.debug('[Unread Realtime] ✅ Conectado');
+                        addBreadcrumb('realtime', 'messages channel SUBSCRIBED');
                     }
                     if (status === 'CHANNEL_ERROR') {
                         logger.error('[Unread Realtime] ❌ Erro:', err);
+                        addBreadcrumb('realtime', 'messages CHANNEL_ERROR', { error: err?.message ?? null }, 'error');
                         if (!isCleanedUp) {
                             reconnectTimer = setTimeout(setupChannel, 3000);
                         }
                     }
                     if (status === 'TIMED_OUT') {
                         logger.warn('[Unread Realtime] ⏱️ Timeout — reconectando...');
+                        addBreadcrumb('realtime', 'messages TIMED_OUT — reconectando', undefined, 'warning');
                         if (!isCleanedUp) {
                             reconnectTimer = setTimeout(setupChannel, 2000);
                         }

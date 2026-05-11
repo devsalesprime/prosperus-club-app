@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import { addBreadcrumb } from '../lib/sentry';
 
 export interface BirthdayBanner {
     userId: string;
@@ -132,6 +133,7 @@ export const adminBirthdayService = {
      * Retorna estatísticas da operação.
      */
     async syncFromHubSpot(): Promise<{ success: boolean; stats?: Record<string, number>; error?: string }> {
+        addBreadcrumb('hubspot', 'invoke sync-hubspot-birthdays');
         try {
             const { data, error } = await supabase.functions.invoke('sync-hubspot-birthdays', {
                 body: {},
@@ -142,6 +144,7 @@ export const adminBirthdayService = {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro desconhecido';
             logger.error('Error syncing from HubSpot:', error);
+            addBreadcrumb('hubspot', 'sync-hubspot-birthdays failed', { error: message.slice(0, 200) }, 'error');
             return { success: false, error: message };
         }
     },
