@@ -22,6 +22,14 @@ entrypoint = "./functions/roi-coleta-cron/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/roi-coleta-cron/*.html" ]
 
+
+[functions.hubspot-retry-failures]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/hubspot-retry-failures/index.ts"
+# Schedule: pg_cron em supabase/migrations/20260511_hubspot_retry_cron.sql
+# (a cada 6h, padrão oficial ADR-015 — NUNCA via Supabase Dashboard cron UI).
+
 # sync-hubspot-amounts e sync-shadow-profiles foram removidas em 2026-05-11
 # (zero invocações em 30 dias confirmado via Dashboard logs).
 # Histórico: docs/EDGE_FUNCTIONS_AUDIT.md + .context/memory/progress.md
