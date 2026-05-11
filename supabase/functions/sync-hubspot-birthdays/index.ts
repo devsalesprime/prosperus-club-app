@@ -4,288 +4,247 @@
 // PULL: HubSpot → App
 // Busca contatos do HubSpot onde 'banner_de_aniversario' está preenchido,
 // cruza com os perfis no Supabase pelo e-mail e faz UPSERT em birthday_cards.
-// Deployment: supabase functions deploy sync-hubspot-birthdays
+//
+// ADR-015: chamadas HubSpot via hubspotFetch (retry/backoff). Falha catastrófica
+// (search inteiro) enfileira em hubspot_failed_calls com payload vazio — cron
+// reprocessa rodando a função de novo (idempotente).
+// Falhas per-contact em getHubSpotFileUrl são tratadas localmente (stats.skipped).
+// Fetches para AWS S3 (signed URL download) NÃO são wrappadas — não são HubSpot.
 
-import { createClient } from 'jsr:@supabase/supabase-js@2'
-
-const HUBSPOT_API_KEY = Deno.env.get('HUBSPOT_ACCESS_TOKEN') || Deno.env.get('HUBSPOT_API_KEY')
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import {
+    hubspotFetch,
+    withFailureQueue,
+} from '../_shared/hubspot-client.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+};
 
-/**
- * Calcula a data de trigger do aniversário para o ano corrente (ou próximo).
- * Usa UTC para evitar bug de day-shift no fuso de Brasília.
- */
 function calcScheduledDate(birthDateStr: string): string {
-    // birthDateStr é YYYY-MM-DD (vem do Supabase)
-    const [, monthStr, dayStr] = birthDateStr.split('-')
-    const month = parseInt(monthStr, 10) - 1 // 0-indexed
-    const day = parseInt(dayStr, 10)
+    const [, monthStr, dayStr] = birthDateStr.split('-');
+    const month = parseInt(monthStr, 10) - 1;
+    const day = parseInt(dayStr, 10);
 
-    const now = new Date()
-    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const now = new Date();
+    const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-    let scheduled = new Date(Date.UTC(todayUTC.getUTCFullYear(), month, day))
+    let scheduled = new Date(Date.UTC(todayUTC.getUTCFullYear(), month, day));
     if (scheduled < todayUTC) {
-        // Aniversário já passou este ano → agenda para o próximo
-        scheduled = new Date(Date.UTC(todayUTC.getUTCFullYear() + 1, month, day))
+        scheduled = new Date(Date.UTC(todayUTC.getUTCFullYear() + 1, month, day));
     }
-
-    return scheduled.toISOString().split('T')[0] // YYYY-MM-DD
+    return scheduled.toISOString().split('T')[0];
 }
 
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
-    }
-
-    if (!HUBSPOT_API_KEY) {
-        return new Response(
-            JSON.stringify({ error: 'HUBSPOT_ACCESS_TOKEN not configured' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        return new Response('ok', { headers: corsHeaders });
     }
 
     const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    );
 
-    const stats = { found: 0, synced: 0, skipped: 0, errors: 0 }
+    const stats = { found: 0, synced: 0, skipped: 0, errors: 0 };
 
-    try {
-        // ── STEP 1: Buscar contatos com banner_de_aniversario preenchido ──
-        console.log('🔍 Buscando contatos HubSpot com banner_de_aniversario...')
+    const outcome = await withFailureQueue(
+        { functionName: 'sync-hubspot-birthdays', payload: {} },
+        async () => {
+            console.log('🔍 Buscando contatos HubSpot com banner_de_aniversario...');
 
-        let allContacts: Array<{ id: string; properties: Record<string, string> }> = []
-        let after: string | undefined = undefined
+            let allContacts: Array<{ id: string; properties: Record<string, string> }> = [];
+            let after: string | undefined = undefined;
 
-        // Paginação via cursor
-        do {
-            const body: Record<string, unknown> = {
-                filterGroups: [
-                    {
-                        filters: [
-                            {
-                                propertyName: 'banner_de_aniversario',
-                                operator: 'HAS_PROPERTY',
-                            },
-                        ],
-                    },
-                ],
-                properties: ['email', 'banner_de_aniversario', 'data_de_nascimento_'],
-                limit: 100,
-            }
-            if (after) body.after = after
+            // Paginação via cursor — search é o ponto mais exposto a 429
+            do {
+                const body: Record<string, unknown> = {
+                    filterGroups: [
+                        { filters: [{ propertyName: 'banner_de_aniversario', operator: 'HAS_PROPERTY' }] },
+                    ],
+                    properties: ['email', 'banner_de_aniversario', 'data_de_nascimento_'],
+                    limit: 100,
+                };
+                if (after) body.after = after;
 
-            const res = await fetch('https://api.hubapi.com/crm/v3/objects/contacts/search', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body),
-            })
-
-            if (!res.ok) {
-                const err = await res.text()
-                console.error('❌ HubSpot search error:', res.status, err)
-                throw new Error(`HubSpot search failed: ${res.status}`)
-            }
-
-            const data = await res.json()
-            allContacts = allContacts.concat(data.results || [])
-            after = data.paging?.next?.after
-        } while (after)
-
-        stats.found = allContacts.length
-        console.log(`📋 ${allContacts.length} contatos com banner encontrados`)
-
-        // ── HELPERS: Função para resolver File ID em URL pública ──
-        const getHubSpotFileUrl = async (fileOrUrl: string, email: string): Promise<string | null> => {
-            let fileId = fileOrUrl;
-
-            // Se for uma URL interna do HubSpot (signed-url-redirect), extrair o File ID
-            const hubspotInternalMatch = fileOrUrl.match(/files\/(\d+)/);
-            if (hubspotInternalMatch && hubspotInternalMatch[1]) {
-                fileId = hubspotInternalMatch[1];
-            } else if (fileOrUrl.startsWith('http') && !fileOrUrl.includes('crm-properties-file-values')) {
-                return fileOrUrl; // É uma URL pública / externa (sem bloqueio)
-            }
-
-            try {
-                // 1. Geração de Signed URL da API (Bypass de Cookie)
-                // A URL gerada aponta diretamente para o S3 com os parâmetros de assinatura válidos
-                const resSigned = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}/signed-url`, {
-                    headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
+                const res = await hubspotFetch('https://api.hubapi.com/crm/v3/objects/contacts/search', {
+                    method: 'POST',
+                    body: JSON.stringify(body),
                 });
 
-                if (!resSigned.ok) {
-                    console.error(`❌ Erro ao gerar Signed URL do HubSpot ${fileId}: ${resSigned.status}`);
-                    
-                    // Fallback: Tenta pegar a URL de fallback se for público (defaultHostingUrl)
-                    const resMeta = await fetch(`https://api.hubapi.com/files/v3/files/${fileId}`, {
-                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
-                    });
-                    if (!resMeta.ok) return null;
-                    const metaData = await resMeta.json();
-                    if (!metaData.defaultHostingUrl) return null;
-                    
-                    const fRes = await fetch(metaData.defaultHostingUrl);
-                    if (!fRes.ok) return null;
-                    
-                    const { error: fUploadError } = await supabase.storage.from('birthday-cards').upload(
-                        `${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`, 
-                        await fRes.arrayBuffer(), 
-                        { contentType: 'image/jpeg', upsert: true }
-                    );
-                    if (fUploadError) return null;
-                    return supabase.storage.from('birthday-cards').getPublicUrl(`${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`).data.publicUrl;
+                if (!res.ok) {
+                    const err = await res.text();
+                    throw new Error(`HubSpot search ${res.status}: ${err.slice(0, 300)}`);
                 }
 
-                const signedData = await resSigned.json();
-                const directAwsUrl = signedData.url;
+                const data = await res.json();
+                allContacts = allContacts.concat(data.results || []);
+                after = data.paging?.next?.after;
+            } while (after);
 
-                if (!directAwsUrl) throw new Error('Signed URL vazia retornada pela API.');
+            stats.found = allContacts.length;
+            console.log(`📋 ${allContacts.length} contatos com banner encontrados`);
 
-                // 2. Fetch no link puro do AWS CDN
-                const imgRes = await fetch(directAwsUrl);
-                if (!imgRes.ok) throw new Error(`Falha no download da imagem física S3 via API: ${imgRes.status}`);
-                
-                const arrayBuffer = await imgRes.arrayBuffer();
-                let contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-                
-                // 3. Upload permanente para o Supabase Storage
-                const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
-                const fileExt = signedData.extension || 'jpg';
-                const filename = `${safeEmail}-${fileId}.${fileExt}`;
+            // Helper: HubSpot File ID → URL pública (com upload p/ Storage)
+            // Erros aqui ficam locais (per-contact) — não propagam pra withFailureQueue
+            const getHubSpotFileUrl = async (fileOrUrl: string, email: string): Promise<string | null> => {
+                let fileId = fileOrUrl;
+                const hubspotInternalMatch = fileOrUrl.match(/files\/(\d+)/);
+                if (hubspotInternalMatch && hubspotInternalMatch[1]) {
+                    fileId = hubspotInternalMatch[1];
+                } else if (fileOrUrl.startsWith('http') && !fileOrUrl.includes('crm-properties-file-values')) {
+                    return fileOrUrl;
+                }
 
-                const { error: uploadError } = await supabase.storage
-                    .from('birthday-cards')
-                    .upload(filename, arrayBuffer, {
-                        contentType,
-                        upsert: true
-                    });
+                try {
+                    // Signed URL — HubSpot Files API
+                    const resSigned = await hubspotFetch(`https://api.hubapi.com/files/v3/files/${fileId}/signed-url`);
 
-                if (uploadError) {
-                    console.error('❌ Erro no upload Supabase Storage:', uploadError);
+                    if (!resSigned.ok) {
+                        console.error(`❌ Signed URL HubSpot ${fileId}: ${resSigned.status}`);
+                        // Fallback: defaultHostingUrl via meta
+                        const resMeta = await hubspotFetch(`https://api.hubapi.com/files/v3/files/${fileId}`);
+                        if (!resMeta.ok) return null;
+                        const metaData = await resMeta.json();
+                        if (!metaData.defaultHostingUrl) return null;
+
+                        // Download direto (não é HubSpot API)
+                        const fRes = await fetch(metaData.defaultHostingUrl);
+                        if (!fRes.ok) return null;
+
+                        const { error: fUploadError } = await supabase.storage.from('birthday-cards').upload(
+                            `${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`,
+                            await fRes.arrayBuffer(),
+                            { contentType: 'image/jpeg', upsert: true }
+                        );
+                        if (fUploadError) return null;
+                        return supabase.storage.from('birthday-cards').getPublicUrl(`${email.replace(/[^a-zA-Z0-9]/g, '_')}-${fileId}.jpg`).data.publicUrl;
+                    }
+
+                    const signedData = await resSigned.json();
+                    const directAwsUrl = signedData.url;
+                    if (!directAwsUrl) throw new Error('Signed URL vazia retornada pela API.');
+
+                    // Download AWS S3 — não wrappar (não é HubSpot)
+                    const imgRes = await fetch(directAwsUrl);
+                    if (!imgRes.ok) throw new Error(`Download S3 falhou: ${imgRes.status}`);
+
+                    const arrayBuffer = await imgRes.arrayBuffer();
+                    const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+
+                    const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
+                    const fileExt = signedData.extension || 'jpg';
+                    const filename = `${safeEmail}-${fileId}.${fileExt}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('birthday-cards')
+                        .upload(filename, arrayBuffer, { contentType, upsert: true });
+
+                    if (uploadError) {
+                        console.error('❌ Upload Storage:', uploadError);
+                        return null;
+                    }
+                    return supabase.storage.from('birthday-cards').getPublicUrl(filename).data.publicUrl;
+                } catch (e) {
+                    console.error(`❌ getHubSpotFileUrl ${fileId}:`, e);
                     return null;
                 }
+            };
 
-                // URL pública e perpétua para o App
-                return supabase.storage.from('birthday-cards').getPublicUrl(filename).data.publicUrl;
-            } catch (e) {
-                console.error(`❌ Exception proxying HubSpot ${fileId}:`, e);
-                return null;
-            }
-        };
+            for (const contact of allContacts) {
+                const email = (contact.properties.email || '').toLowerCase().trim();
+                const bannerIdOrUrl = contact.properties.banner_de_aniversario?.trim();
+                const rawHubspotDate = contact.properties.data_de_nascimento_;
 
-        // ── STEP 2: Para cada contato, cruzar com Supabase e fazer UPSERT ──
-        for (const contact of allContacts) {
-            const email = (contact.properties.email || '').toLowerCase().trim()
-            const bannerIdOrUrl = contact.properties.banner_de_aniversario?.trim()
-            const rawHubspotDate = contact.properties.data_de_nascimento_
-
-            if (!email || !bannerIdOrUrl) {
-                stats.skipped++
-                continue
-            }
-
-            // Converter Date do HubSpot (timestamp unix em ms ou formato string YYYY-MM-DD)
-            let hubspotBirthDateStr: string | null = null
-            if (rawHubspotDate) {
-                if (!isNaN(Number(rawHubspotDate))) {
-                    // É um timestamp (ex: 260928000000)
-                    hubspotBirthDateStr = new Date(Number(rawHubspotDate)).toISOString().split('T')[0]
-                } else if (typeof rawHubspotDate === 'string' && rawHubspotDate.match(/^\d{4}-\d{2}-\d{2}/)) {
-                    // Já é YYYY-MM-DD
-                    hubspotBirthDateStr = rawHubspotDate.substring(0, 10)
+                if (!email || !bannerIdOrUrl) {
+                    stats.skipped++;
+                    continue;
                 }
-            }
 
-            // Buscar profile pelo e-mail
-            const { data: profile, error: profileError } = await supabase
-                .from('profiles')
-                .select('id, birth_date')
-                .eq('email', email)
-                .maybeSingle()
+                let hubspotBirthDateStr: string | null = null;
+                if (rawHubspotDate) {
+                    if (!isNaN(Number(rawHubspotDate))) {
+                        hubspotBirthDateStr = new Date(Number(rawHubspotDate)).toISOString().split('T')[0];
+                    } else if (typeof rawHubspotDate === 'string' && rawHubspotDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+                        hubspotBirthDateStr = rawHubspotDate.substring(0, 10);
+                    }
+                }
 
-            if (profileError || !profile) {
-                console.warn(`⚠️ Perfil não encontrado para: ${email}`)
-                stats.skipped++
-                continue
-            }
-
-            // 🔄 TWO-WAY SYNC: Atualizar a data no App se o HubSpot estiver diferente
-            let profileBirthDate = profile.birth_date
-            if (hubspotBirthDateStr && profileBirthDate !== hubspotBirthDateStr) {
-                console.log(`🔄 Sincronizando nova data do HubSpot para o app: ${email} -> ${hubspotBirthDateStr}`)
-                const { error: updateProfileErr } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .update({ birth_date: hubspotBirthDateStr, updated_at: new Date().toISOString() })
-                    .eq('id', profile.id)
-                
-                if (!updateProfileErr) {
-                    profileBirthDate = hubspotBirthDateStr // Usa a data nova para o agendamento
+                    .select('id, birth_date')
+                    .eq('email', email)
+                    .maybeSingle();
+
+                if (profileError || !profile) {
+                    console.warn(`⚠️ Perfil não encontrado: ${email}`);
+                    stats.skipped++;
+                    continue;
+                }
+
+                let profileBirthDate = profile.birth_date;
+                if (hubspotBirthDateStr && profileBirthDate !== hubspotBirthDateStr) {
+                    console.log(`🔄 Sync date HubSpot→App: ${email} -> ${hubspotBirthDateStr}`);
+                    const { error: updateProfileErr } = await supabase
+                        .from('profiles')
+                        .update({ birth_date: hubspotBirthDateStr, updated_at: new Date().toISOString() })
+                        .eq('id', profile.id);
+
+                    if (!updateProfileErr) profileBirthDate = hubspotBirthDateStr;
+                }
+
+                if (!profileBirthDate) {
+                    console.warn(`⚠️ Sócio sem birth_date: ${email}`);
+                    stats.skipped++;
+                    continue;
+                }
+
+                const bannerUrl = await getHubSpotFileUrl(bannerIdOrUrl, email);
+                if (!bannerUrl) {
+                    console.warn(`⚠️ Banner URL inválida: ${email}`);
+                    stats.skipped++;
+                    continue;
+                }
+
+                const scheduledDate = calcScheduledDate(profileBirthDate);
+                console.log(`📅 ${email} → ${scheduledDate}`);
+
+                const { error: upsertError } = await supabase
+                    .from('birthday_cards')
+                    .upsert(
+                        {
+                            user_id: profile.id,
+                            image_url: bannerUrl,
+                            trigger_date: scheduledDate,
+                            is_viewed: false,
+                            status: 'scheduled',
+                        },
+                        { onConflict: 'user_id, trigger_date' }
+                    );
+
+                if (upsertError) {
+                    console.error(`❌ UPSERT ${email}:`, upsertError);
+                    stats.errors++;
+                } else {
+                    stats.synced++;
                 }
             }
 
-            if (!profileBirthDate) {
-                console.warn(`⚠️ Sócio sem birth_date (nem no App, nem no HubSpot validado): ${email}`)
-                stats.skipped++
-                continue
-            }
-
-            // Converter ID do arquivo HubSpot em URL pública real salvando no Supabase Storage
-            const bannerUrl = await getHubSpotFileUrl(bannerIdOrUrl, email);
-            if (!bannerUrl) {
-                console.warn(`⚠️ Imagem do banner não retornou URL válida para: ${email} (Valor: ${bannerIdOrUrl})`);
-                stats.skipped++;
-                continue;
-            }
-
-            const scheduledDate = calcScheduledDate(profileBirthDate)
-
-            console.log(`📅 Agendando para ${email} → ${scheduledDate} | banner: ${bannerUrl.substring(0, 60)}...`)
-
-            // UPSERT: se já existe para este usuário+data, atualiza URL e reseta status
-            const { error: upsertError } = await supabase
-                .from('birthday_cards')
-                .upsert(
-                    {
-                        user_id: profile.id,
-                        image_url: bannerUrl,
-                        trigger_date: scheduledDate,
-                        is_viewed: false,
-                        status: 'scheduled',
-                    },
-                    { onConflict: 'user_id, trigger_date' }
-                )
-
-            if (upsertError) {
-                console.error(`❌ UPSERT error for ${email}:`, upsertError)
-                stats.errors++
-            } else {
-                stats.synced++
-            }
+            console.log('✅ Sync completo:', stats);
+            return stats;
         }
+    );
 
-        console.log('✅ Sync completo:', stats)
-
+    if (outcome.ok) {
         return new Response(
-            JSON.stringify({ success: true, stats }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-    } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
-        console.error('💥 sync-hubspot-birthdays fatal error:', message)
-        return new Response(
-            JSON.stringify({ error: message, stats }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+            JSON.stringify({ synced: true, queued: false, stats: outcome.result }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
     }
-})
+    return new Response(
+        JSON.stringify({ synced: false, queued: !!outcome.queueId, queueId: outcome.queueId, error: outcome.error, stats }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+});

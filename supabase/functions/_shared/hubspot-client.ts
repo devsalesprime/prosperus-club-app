@@ -1,3 +1,5 @@
+/// <reference path="../deno.d.ts" />
+
 // ============================================================
 // HubSpot Client — retry/backoff wrapper + failure queue
 // ============================================================
@@ -19,7 +21,7 @@
 // Authorization é injetada automaticamente a partir de HUBSPOT_ACCESS_TOKEN
 // (fallback: HUBSPOT_API_KEY). Caller não precisa setar header.
 
-import { createClient, SupabaseClient } from 'supabase';
+import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 // ============================================================
 // CONFIG
@@ -129,7 +131,11 @@ export async function hubspotFetch(
     if (!headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${HUBSPOT_TOKEN}`);
     }
-    if (init.body && !headers.has('Content-Type')) {
+    // Content-Type: setar default JSON apenas se body for string/buffer.
+    // Para FormData, o runtime gera multipart boundary automaticamente — forçar
+    // application/json quebra o upload.
+    const bodyIsFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+    if (init.body && !bodyIsFormData && !headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json');
     }
 

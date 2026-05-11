@@ -2,23 +2,30 @@
 
 /**
  * Supabase Edge Function: hubspot-webhook
- * 
+ *
  * Purpose: Receive webhooks from HubSpot when contacts/deals are created, updated, or deleted
  * Direction: HubSpot → App (inbound)
- * 
+ *
  * Security:
  * - HMAC-SHA256 signature validation (v3)
  * - Anti-replay: reject timestamps > 5min
  * - Service Role key for Supabase operations
- * 
- * Events handled:
- * - contact.creation → Create Supabase Auth user + profile
- * - contact.propertyChange → Update profile fields, lifecycle determines is_active
- * - contact.deletion → Soft-delete: is_active = false
- * - deal.propertyChange → When situacao_do_negocio changes, update associated contacts' is_active
+ *
+ * ADR-015 (HubSpot rate limit handling) — escopo aplicado AQUI:
+ * - hubspotFetch (retry/backoff) usado nos 3 GET de contact dentro de LOOPS
+ *   em handleDealPropertyChange (rajada quando deal tem N participantes).
+ * - GETs one-off (fetch único de contact/deal/associations) NÃO foram wrappados
+ *   — risco de 429 baixo em single-shot. TODO: revisar se Sentry mostrar 429
+ *   aqui em produção.
+ * - withFailureQueue NÃO é aplicado no webhook: queueing exigiria re-invocação
+ *   pelo cron, mas hubspot-webhook valida HMAC e o cron não consegue assinar
+ *   payloads como HubSpot. Falhas catastróficas retornam status no array
+ *   `results` e HubSpot faz seu próprio retry no non-2xx do response global.
+ * - Response global mantém 200 sempre (HubSpot retry triggered by non-2xx).
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { hubspotFetch } from '../_shared/hubspot-client.ts'
 
 const HUBSPOT_CLIENT_SECRET = Deno.env.get('HUBSPOT_CLIENT_SECRET')!
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -491,9 +498,9 @@ async function handleDealPropertyChange(eventData: any) {
 
         for (const contactId of contactIds) {
             try {
-                const contactRes = await fetch(
-                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
-                    { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
+                // ADR-015: fetch dentro de loop → wrap em hubspotFetch (retry/backoff)
+                const contactRes = await hubspotFetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`
                 )
 
                 if (!contactRes.ok) {
@@ -552,9 +559,9 @@ async function handleDealPropertyChange(eventData: any) {
 
         for (const contactId of contactIds) {
             try {
-                const contactRes = await fetch(
-                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
-                    { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
+                // ADR-015: fetch dentro de loop → wrap em hubspotFetch
+                const contactRes = await hubspotFetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`
                 )
 
                 if (!contactRes.ok) continue
@@ -615,11 +622,9 @@ async function handleDealPropertyChange(eventData: any) {
 
         for (const contactId of contactIds) {
             try {
-                const contactRes = await fetch(
-                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`,
-                    {
-                        headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` }
-                    }
+                // ADR-015: fetch dentro de loop → wrap em hubspotFetch
+                const contactRes = await hubspotFetch(
+                    `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email`
                 )
 
                 if (!contactRes.ok) {
