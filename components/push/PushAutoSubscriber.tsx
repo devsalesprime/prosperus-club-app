@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
+import { addBreadcrumb } from '../../lib/sentry';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
@@ -137,6 +138,30 @@ export function PushAutoSubscriber({ userId }: Props) {
                     return;
                 }
 
+                // ─── 5.1 Guard de sessão (Issue: 403 RLS new row violates) ─
+                // A INSERT policy de push_subscriptions exige `auth.uid() = user_id`.
+                // Se a sessão expirou silenciosamente OU o `userId` prop está stale
+                // em relação ao auth atual, o upsert falha com 403 e polui o log.
+                // Aqui validamos ANTES e fazemos early return com breadcrumb — sem
+                // tentar o upsert (que produziria o erro RLS).
+                const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+                if (sessionErr || !session?.user?.id) {
+                    addBreadcrumb('push', 'subscription skipped: no active session', {
+                        hasSession: !!session,
+                        sessionErr: sessionErr?.message ?? null,
+                    }, 'warning');
+                    logger.warn('[PushAuto] Sessão ausente/expirada — skip upsert');
+                    return;
+                }
+                if (session.user.id !== userId) {
+                    addBreadcrumb('push', 'subscription skipped: userId mismatch', {
+                        propUserId: userId,
+                        sessionUserId: session.user.id,
+                    }, 'error');
+                    logger.warn(`[PushAuto] Mismatch: prop userId=${userId} vs session.user.id=${session.user.id} — skip upsert`);
+                    return;
+                }
+
                 const { error } = await supabase
                     .from('push_subscriptions')
                     .upsert(
@@ -156,6 +181,10 @@ export function PushAutoSubscriber({ userId }: Props) {
                     );
 
                 if (error) {
+                    addBreadcrumb('push', 'upsert failed despite session match', {
+                        errCode: (error as { code?: string }).code ?? null,
+                        errMessage: error.message.slice(0, 200),
+                    }, 'error');
                     logger.error('[PushAuto] Erro ao salvar no banco:', error.message);
                     return;
                 }
