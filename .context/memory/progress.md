@@ -122,6 +122,26 @@ deployada mas não estava. Investigação encontrou um problema **maior**:
 - Diagnóstico do PushAutoSubscriber (47 subs acumuladas, 403 RLS). Patch
   defensivo já no commit `2756905`. Reproduzir no desktop pós-deploy.
 
+### Fechamento final do gap (mesma sessão, ~14:40 UTC)
+
+Após `git push origin main` (7 commits) e Fábio rodar deploy no VPS, status atualizado:
+
+| Function | Versão | ezbr_sha256 | ADR-015 |
+|---|---|---|---|
+| `sync-hubspot` | v39 | `51ad528e...` | ✅ refactor live |
+| `update-hubspot-contact` | v8 | `6940889d...` | ✅ refactor live |
+| `sync-hubspot-birthdays` | v14 | `9502ce04...` | ✅ refactor live |
+| `hubspot-webhook` | v24 | `608d8dd3...` | ✅ refactor live (loops wrappados) |
+| `hubspot-retry-failures` | v1 | `f90e3827...` | ✅ deploy MCP |
+
+Validação via `mcp__Supabase__get_edge_function sync-hubspot`: bundle contém
+`import {...} from '../_shared/hubspot-client.ts'`, `withFailureQueue`, response
+200 uniforme. **ADR-015 oficialmente end-to-end em produção.**
+
+Cron job `hubspot-retry-failures-6h` ativo (jobid=2, schedule `0 */6 * * *`).
+Próximo firing: 00:00 UTC do dia seguinte (já em horário ativo, pode disparar
+nas próximas horas se passar de uma marca de 6h).
+
 ## Limpeza executada (Abr/2026)
 
 Deletados com 0 importações confirmadas:
