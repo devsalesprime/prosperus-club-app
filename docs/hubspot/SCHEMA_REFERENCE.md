@@ -33,6 +33,22 @@ docs/hubspot/
 └── archive/                 # Exports antigos (CSVs sem properties.yaml)
 ```
 
+## Tabela Supabase auxiliar (ADR-015)
+
+| Tabela Supabase | Propósito | Acesso |
+|------------------|-----------|--------|
+| `public.hubspot_failed_calls` | Fila persistente de chamadas HubSpot que falharam após 4 attempts do wrapper `hubspotFetch`. Reprocessada pelo cron `hubspot-retry-failures` a cada 6h. | SELECT: ADMIN/TEAM via RLS. INSERT/UPDATE/DELETE: service_role apenas. |
+
+Esquema (migration `supabase/migrations/20260511_hubspot_failed_calls.sql`):
+- `id uuid PK`, `function_name text`, `payload jsonb`
+- `request_method text`, `request_url text`
+- `error_status int`, `error_message text`, `attempts int default 4`
+- `status text CHECK ('pending'|'reprocessed'|'failed_permanent')`
+- `reprocess_attempts int default 0`, `last_reprocessed_at timestamptz`
+- `created_at`, `updated_at` (trigger BEFORE UPDATE)
+
+Indexes: `(status, created_at) WHERE status='pending'`, `(function_name)`.
+
 ## Propriedades CUSTOM Prosperus (não-`hs_*`)
 
 As propriedades começando com `hs_` são padrão do HubSpot. Abaixo, apenas as **customizadas pelo time Prosperus** agrupadas por domínio.

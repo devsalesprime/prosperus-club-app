@@ -3,6 +3,18 @@
 
 ## RESOLVIDOS
 
+### Issue-012 · HubSpot 429/5xx eram perdidos silenciosamente (retroativa)
+**Sintoma:** Sócios reportavam que mudanças no perfil ocasionalmente não apareciam no HubSpot CRM. Sem rastreamento — `sync-hubspot` era fire-and-forget e o erro era apenas `console.error` no log da Edge Function.
+**Causa raiz:** As 4 Edge Functions HubSpot (`sync-hubspot`, `update-hubspot-contact`, `sync-hubspot-birthdays`, `hubspot-webhook`) faziam `fetch()` direto sem tratar 429 (rate limit) nem 5xx. Em rajadas — especialmente `sync-hubspot-birthdays` processando 280 contatos com 4 fetches cada — o HubSpot retornava 429 com `Retry-After`, mas o código tratava como erro fatal e abortava o lote.
+**Solução (2026-05-11):**
+- `supabase/functions/_shared/hubspot-client.ts`: wrapper `hubspotFetch()` com retry exponencial (4 tentativas, jitter ±25%, max 30s, respeitando `Retry-After`)
+- `public.hubspot_failed_calls` (migration `20260511_hubspot_failed_calls.sql`): fila persistente para chamadas que esgotaram retry
+- `hubspot-retry-failures` Edge Function + `pg_cron` job `'0 */6 * * *'` (migration `20260511_hubspot_retry_cron.sql`): reprocessa pending a cada 6h
+- 4 Edge Functions refatoradas para usar `hubspotFetch` + `withFailureQueue` (webhook tem refactor parcial — só loops wrappados; sem queue por arquitetura HMAC)
+- Response uniforme 200 sempre `{ synced, queued, queueId?, error? }` — callers fire-and-forget inalterados
+**ADR:** ADR-015
+**Status:** ✅ RESOLVIDO 2026-05-11
+
 ### Issue-001 · WebSocket mismatch
 **Sintoma:** `mismatch between server and client bindings for postgres changes`
 **Causa:** Múltiplos channels para `messages` com configurações diferentes.

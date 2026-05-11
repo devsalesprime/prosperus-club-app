@@ -29,12 +29,35 @@
 
 ```
 Arquivos TS/TSX:     275
-Migrations:          92 (001 → 080 + 20260331_* + 20260429_*)
-Edge Functions:      13 (10 deploy + auxiliares)
+Migrations:          95 (001 → 080 + 20260331_* + 20260429_* + 20260511_* x4)
+Edge Functions:      11 deploy + 1 lib interna (_shared/hubspot-client.ts)
 Linhas de código:    ~60k
 console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
+
+## Sprint 2026-05-11 — HubSpot rate limit handling (ADR-015)
+
+Resolução de Issue-012 retroativa (perda silenciosa de chamadas HubSpot em 429/5xx).
+
+**Entregue:**
+- `supabase/functions/_shared/hubspot-client.ts` — `hubspotFetch` (retry/backoff) + `withFailureQueue`
+- Migration `20260511_hubspot_failed_calls.sql` — fila persistente
+- Refactor das 4 Edge Functions HubSpot (sync-hubspot, update-hubspot-contact, sync-hubspot-birthdays full; hubspot-webhook parcial por design)
+- `hubspot-retry-failures` Edge Function + migration `20260511_hubspot_retry_cron.sql` (pg_cron `0 */6 * * *`)
+- ADR-015 documentado em `decisions.md`
+- Issue-012 marcada resolvida em `issues.md`
+
+**Validações:**
+- Migration aplicada via MCP `apply_migration` — tabela criada com 13 colunas + 2 indexes + RLS policy
+- pg_cron 1.6.4 habilitada; job `hubspot-retry-failures-6h` ativo (jobid=1)
+- Vault secrets `supabase_url` e `service_role_key` confirmados (reuso ADR-013)
+- `tsc --noEmit` clean
+- Callers TS (fire-and-forget) inalterados
+
+**TODO operacional (fora desta sprint):**
+- Deploy das 5 Edge Functions atualizadas via CLI (`supabase functions deploy <name>`)
+- UI admin para inspecionar a fila (SELECT policy já permite ADMIN/TEAM)
 
 ## Limpeza executada (Abr/2026)
 
