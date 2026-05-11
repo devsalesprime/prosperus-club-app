@@ -6,7 +6,6 @@ import { defineConfig, loadEnv, Plugin, UserConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
-import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 /**
  * Build-time release version para o Sentry.
@@ -65,6 +64,29 @@ export default defineConfig(async ({ mode }) => {
       const { default: basicSsl } = await import('@vitejs/plugin-basic-ssl');
       devPlugins.push(basicSsl());
     } catch { /* Ignora se não estiver instalado */ }
+  }
+
+  // Sentry source map upload plugin (ADR-014).
+  // Carregamento dinâmico com try/catch (mesmo padrão do basicSsl acima):
+  // build não quebra se '@sentry/vite-plugin' faltar no node_modules
+  // (ex: deploy esqueceu `npm ci` antes do build). Sem o plugin, source
+  // maps não são uploadadas — produção fica funcional mas stack traces
+  // chegam minificados no Sentry.
+  let sentryPlugin: Plugin | null = null;
+  if (sentryEnabled) {
+    try {
+      const { sentryVitePlugin } = await import('@sentry/vite-plugin');
+      sentryPlugin = sentryVitePlugin({
+        org: env.VITE_SENTRY_ORG,
+        project: env.VITE_SENTRY_PROJECT,
+        authToken: env.SENTRY_AUTH_TOKEN,
+        release: { name: releaseVersion },
+        sourcemaps: { assets: ['./dist/**'] },
+        disable: !sentryEnabled,
+      }) as unknown as Plugin;
+    } catch {
+      console.warn('[vite.config] @sentry/vite-plugin não disponível — source maps não serão uploadadas. Rode `npm ci` para instalar.');
+    }
   }
 
   const config: UserConfig = {
@@ -314,18 +336,10 @@ export default defineConfig(async ({ mode }) => {
       }),
       // Stamps build timestamp into sw.js for automatic cache versioning
       swVersionStamp(),
-      // Sentry source map upload — só ativa quando SENTRY_AUTH_TOKEN está
-      // definido (ex: CI ou build de deploy). Em dev/local fica off.
-      // ADR-014: source maps geradas como 'hidden' (não referenciadas no
-      // bundle público); Sentry consome via upload aqui.
-      sentryEnabled && sentryVitePlugin({
-        org: env.VITE_SENTRY_ORG,
-        project: env.VITE_SENTRY_PROJECT,
-        authToken: env.SENTRY_AUTH_TOKEN,
-        release: { name: releaseVersion },
-        sourcemaps: { assets: ['./dist/**'] },
-        disable: !sentryEnabled,
-      })
+      // Sentry source map upload — carregado dinamicamente acima
+      // (sentryPlugin é null quando SENTRY_AUTH_TOKEN ausente OU quando
+      // @sentry/vite-plugin não está instalado). ADR-014.
+      sentryPlugin
     ].filter(Boolean) as Plugin[],
     // SECURITY: Gemini API Key removed from client bundle (was exposed in define block)
     // If Gemini calls are needed, use a Supabase Edge Function instead.
