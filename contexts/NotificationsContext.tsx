@@ -78,7 +78,15 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ us
         const handleNew = (_e: Event) => {
             setUnreadNotifications((prev) => prev + 1);
         };
+        // UPDATE (mark as read / unread) e DELETE → recarrega count do banco
+        // (ADR-006: REPLICA IDENTITY FULL em user_notifications garante que
+        //  o filter user_id=eq.X funcione no Realtime UPDATE/DELETE)
+        const handleSync = (_e: Event) => {
+            refreshNotifications();
+        };
         window.addEventListener('prosperus:new-notification', handleNew);
+        window.addEventListener('prosperus:notification-updated', handleSync);
+        window.addEventListener('prosperus:notification-deleted', handleSync);
 
         // Refresh on visibility change (volta de background com count atualizado)
         const handleVisibility = () => {
@@ -88,6 +96,8 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ us
 
         return () => {
             window.removeEventListener('prosperus:new-notification', handleNew);
+            window.removeEventListener('prosperus:notification-updated', handleSync);
+            window.removeEventListener('prosperus:notification-deleted', handleSync);
             document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, [userId, refreshNotifications]);

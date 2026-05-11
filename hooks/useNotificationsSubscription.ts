@@ -54,6 +54,45 @@ export const useNotificationsSubscription = (userId: string | null): void => {
                         );
                     }
                 )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'user_notifications',
+                        filter: `user_id=eq.${userId}`,
+                    },
+                    (payload) => {
+                        // ADR-006 requer REPLICA IDENTITY FULL em user_notifications para
+                        // que este filter funcione — migration 20260511 aplicou.
+                        const notification = payload.new as UserNotification;
+                        logger.debug('[Notifications Realtime] ✏️ Updated:', notification.id, 'is_read=', notification.is_read);
+                        // Broadcast: consumidores devem refresh count (ex: NotificationsContext)
+                        window.dispatchEvent(
+                            new CustomEvent<UserNotification>('prosperus:notification-updated', {
+                                detail: notification,
+                            })
+                        );
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'DELETE',
+                        schema: 'public',
+                        table: 'user_notifications',
+                        filter: `user_id=eq.${userId}`,
+                    },
+                    (payload) => {
+                        const notification = payload.old as UserNotification;
+                        logger.debug('[Notifications Realtime] 🗑️ Deleted:', notification?.id);
+                        window.dispatchEvent(
+                            new CustomEvent<UserNotification>('prosperus:notification-deleted', {
+                                detail: notification,
+                            })
+                        );
+                    }
+                )
                 .subscribe((status, err) => {
                     if (status === 'SUBSCRIBED') {
                         logger.debug('[Notifications Realtime] ✅ Conectado');

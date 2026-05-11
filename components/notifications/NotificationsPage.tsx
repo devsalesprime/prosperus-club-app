@@ -65,10 +65,16 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     const { markAllRead } = useUnreadCount();
     const { refreshNotifications } = useNotifications();
 
-    // Mark all as read when page opens (clears badge)
+    // Mark all as read when page opens (clears badge).
+    // Crítico: AWAIT markAllRead antes do refreshNotifications para evitar
+    // race condition (SELECT count rodando antes do UPDATE completar).
     useEffect(() => {
-        markAllRead();
-        refreshNotifications();
+        let cancelled = false;
+        (async () => {
+            await markAllRead();
+            if (!cancelled) await refreshNotifications();
+        })();
+        return () => { cancelled = true; };
     }, [markAllRead, refreshNotifications]);
 
     const loadNotifications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
