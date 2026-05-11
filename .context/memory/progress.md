@@ -76,6 +76,11 @@ Deletados com 0 importações confirmadas:
 - P2 futuro: rodar `npx ts-prune` ou `knip` para confirmar 0 órfãos no TS/TSX
 - P2 futuro: adicionar CI check de colisão de prefixo de migration (script em `MIGRATIONS_HISTORY.md`)
 
+## Relatórios completos da sessão 2026-05-11 (cross-reference)
+
+- `docs/SESSAO_11_MAI_2026_PUSH_BADGE.md` — primeira parte: push web nativo + badge realtime sync
+- `docs/SESSAO_11_MAI_2026_CLEANUP_SENTRY.md` — segunda parte: Edge Functions cleanup + Sentry setup + 2 hotfixes
+
 ## Sentry — camada de observabilidade (2026-05-11)
 
 ADR-014 criada (ATIVO). Setup completo do `@sentry/react` para captura de

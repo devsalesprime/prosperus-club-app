@@ -84,14 +84,14 @@ Onboarding tem 7 steps. Sem instrumentação de qual step os usuários abandonam
 
 ### 🔴 Tier 1 — Esta/próxima semana (sem dependências externas)
 
-| # | Item | Esforço | Por quê primeiro |
+| # | Item | Esforço | Status |
 |---|---|---|---|
-| 1 | **Validar 3 Edge Functions suspeitas no Dashboard** (receive-report, sync-hubspot-amounts, sync-shadow-profiles) | 30min | Operacional puro. Decide se deletamos código morto. Detalhes em `EDGE_FUNCTIONS_AUDIT.md`. |
-| 2 | **NotificationsProvider** (P1 #1 da sessão anterior) | 3-4h | Fecha o último `Math.random()` em channel name. Espelha ADR-002 ao domínio de notifications. Risco baixo, ganho arquitetural. |
-| 3 | **Confirmar Supabase PITR + RPO/RTO** | 30min | Se descobrirmos que não tem backup, é emergência absoluta. Resposta provável: "tem". Mas precisa confirmar. |
-| 4 | **Sentry setup completo** (incluindo source maps + alerting + 1 semana de filtragem de ruído) | 2-3h ativo + 1 semana de monitoramento | Sem isso, vocês estão cegos pra regressões em produção. Já vale por si. |
+| 1 | **Validar 3 Edge Functions suspeitas no Dashboard** (receive-report, sync-hubspot-amounts, sync-shadow-profiles) | 30min | ✅ **Concluído 2026-05-11** — 2 removidas (commit `3eab0f7`); `receive-report` mantida com TODO 30% 404. Detalhes em [`SESSAO_11_MAI_2026_CLEANUP_SENTRY.md`](./SESSAO_11_MAI_2026_CLEANUP_SENTRY.md) |
+| 2 | **NotificationsProvider** (P1 #1 da sessão anterior) | 3-4h | ✅ **Concluído 2026-05-11** — singleton + ADR-012 + REPLICA IDENTITY FULL. Detalhes em [`SESSAO_11_MAI_2026_PUSH_BADGE.md`](./SESSAO_11_MAI_2026_PUSH_BADGE.md) |
+| 3 | **Confirmar Supabase PITR + RPO/RTO** | 30min | ⏳ **Pendente** — aguarda decisão financeira de upgrade do plano Supabase |
+| 4 | **Sentry setup completo** (incluindo source maps + alerting + 1 semana de filtragem de ruído) | 2-3h ativo + 1 semana de monitoramento | ✅ **Concluído 2026-05-11** — ADR-014 ATIVO; commits `0bed419` + `fa1eb3f` + hotfix `234916d`. Smoke test em prod pendente do Fábio. Detalhes em [`SESSAO_11_MAI_2026_CLEANUP_SENTRY.md`](./SESSAO_11_MAI_2026_CLEANUP_SENTRY.md) |
 
-**Tempo total ativo: ~6-8h. Cabe em uma sessão+meia minha.**
+**Tier 1: 3/4 concluídos.** Resta PITR aguardando upgrade financeiro.
 
 ### 🟠 Tier 2 — Próximas 2 semanas
 
