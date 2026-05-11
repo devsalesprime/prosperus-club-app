@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, Trash2, CheckCheck, Check, ExternalLink, Loader2, ChevronDown, Inbox } from 'lucide-react';
 import { notificationService, UserNotification } from '../../services/notificationService';
 import { useUnreadCount } from '../../contexts/UnreadCountContext';
-import { useOnNewNotification } from '../../contexts/NotificationsContext';
+import { useOnNewNotification, useNotifications } from '../../contexts/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { COPY } from '../../utils/copy';
@@ -63,9 +63,13 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
     const [undoTimer, setUndoTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
     const { markAllRead } = useUnreadCount();
+    const { refreshNotifications } = useNotifications();
 
     // Mark all as read when page opens (clears badge)
-    useEffect(() => { markAllRead(); }, [markAllRead]);
+    useEffect(() => {
+        markAllRead();
+        refreshNotifications();
+    }, [markAllRead, refreshNotifications]);
 
     const loadNotifications = useCallback(async (pageNum: number = 1, append: boolean = false) => {
         try {
@@ -111,6 +115,8 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             setNotifications(prev =>
                 prev.map(n => (n.id === notification.id ? { ...n, is_read: true } : n))
             );
+            // Sync badge global (ADR-012 + UnreadCountContext)
+            refreshNotifications();
         } catch (error) {
             console.error('Error marking notification as read:', error);
         } finally {
@@ -126,6 +132,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
         try {
             await notificationService.markAllAsRead(currentUserId);
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            refreshNotifications();
         } catch (error) {
             console.error('Error marking all as read:', error);
         }
@@ -137,6 +144,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             await notificationService.deleteNotification(notification.id);
             setNotifications(prev => prev.filter(n => n.id !== notification.id));
             setTotal(prev => Math.max(0, prev - 1));
+            refreshNotifications();
         } catch (error) {
             console.error('Error deleting notification:', error);
         } finally {
@@ -162,6 +170,7 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             );
             setNotifications(prev => prev.filter(n => !n.is_read));
             setTotal(prev => Math.max(0, prev - readNotifications.length));
+            refreshNotifications();
         } catch (error) {
             console.error('Error deleting read notifications:', error);
         } finally {
@@ -222,10 +231,11 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
         // Actually delete after 3s
         const timer = setTimeout(async () => {
             await notificationService.deleteNotification(notification.id);
+            refreshNotifications();
             setUndoData(null);
         }, 3000);
         setUndoTimer(timer);
-    }, []);
+    }, [refreshNotifications]);
 
     const handleUndoDismiss = useCallback(() => {
         if (!undoData) return;
@@ -236,9 +246,12 @@ export const NotificationsPage: React.FC<NotificationsPageProps> = ({
             )
         );
         setTotal(prev => prev + 1);
+        // Notification não foi deletada do banco ainda (timer cancelado),
+        // mas refresh garante sync do badge se outras coisas mudaram
+        refreshNotifications();
         setUndoData(null);
         setUndoTimer(null);
-    }, [undoData, undoTimer]);
+    }, [undoData, undoTimer, refreshNotifications]);
 
     // Filter notifications based on active tab
     const filteredNotifications = notifications.filter(n => {

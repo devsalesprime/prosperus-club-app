@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, X, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
 import { notificationService, UserNotification } from '../../services/notificationService';
-import { useOnNewNotification } from '../../contexts/NotificationsContext';
+import { useOnNewNotification, useNotifications } from '../../contexts/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
@@ -34,14 +34,16 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<UserNotification[]>([]);
-    const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [isShaking, setIsShaking] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
+    // ADR-012: badge consome o count global do NotificationsContext.
+    // Nada de state local — ele defasava quando outras telas marcavam como lidas.
+    const { unreadNotifications: unreadCount, refreshNotifications } = useNotifications();
+
     useEffect(() => {
         loadNotifications();
-        loadUnreadCount();
     }, [currentUserId]);
 
     // ADR-012: consome o canal singleton via DOM event do NotificationsProvider.
@@ -49,7 +51,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     const handleNewNotification = useCallback((newNotification: UserNotification) => {
         logger.debug('🔔 New notification received:', newNotification);
         setNotifications(prev => [newNotification, ...prev]);
-        setUnreadCount(prev => prev + 1);
         // Trigger shake animation
         setIsShaking(true);
         setTimeout(() => setIsShaking(false), 600);
@@ -68,7 +69,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             document.addEventListener('mousedown', handleClickOutside);
             // Refresh data every time dropdown opens
             loadNotifications();
-            loadUnreadCount();
+            refreshNotifications();
             // Clear OS-level push notifications for admin/notification type
             clearAllPushNotifications();
         }
@@ -76,7 +77,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen]);
+    }, [isOpen, refreshNotifications]);
 
     const loadNotifications = async () => {
         try {
@@ -87,15 +88,6 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             console.error('Error loading notifications:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const loadUnreadCount = async () => {
-        try {
-            const count = await notificationService.getUnreadCount(currentUserId);
-            setUnreadCount(count);
-        } catch (error) {
-            console.error('Error loading unread count:', error);
         }
     };
 
@@ -114,7 +106,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             // Then mark as read and update UI (fire-and-forget)
             if (!notification.is_read) {
                 await notificationService.markAsRead(notification.id);
-                setUnreadCount(prev => Math.max(0, prev - 1));
+                refreshNotifications();
             }
             // Remove from the dropdown list so it disappears immediately
             setNotifications(prev => prev.filter(n => n.id !== notification.id));
@@ -127,7 +119,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         try {
             await notificationService.markAllAsRead(currentUserId);
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            setUnreadCount(0);
+            refreshNotifications();
             clearAllPushNotifications();
         } catch (error) {
             console.error('Error marking all as read:', error);
