@@ -75,6 +75,16 @@
 **Consequência:** `try { ... } catch(e) { console.error(e) }` — sem `throw`.
 **Status:** IMUTÁVEL
 
+## ADR-013 · DB trigger de push usa pg_net + vault, nunca Database Webhooks UI
+**Decisão:** Triggers de banco que invocam Edge Functions DEVEM usar `net.http_post()` (extensão pg_net) com `Authorization: Bearer <service_role_key>` lido de `vault.decrypted_secrets`. Body construído via `jsonb_build_object()` com `NEW.*`. Toda função trigger envolve a chamada em `EXCEPTION WHEN OTHERS THEN RAISE WARNING` para não bloquear o INSERT.
+**Contexto:** Antes de 2026-05-11, a trigger `send-push-on-new-notification` em `user_notifications` foi criada via Dashboard → Database Webhooks UI. Essa UI gera `supabase_functions.http_request` SEM Authorization (mesmo quando a função alvo tem `--verify-jwt`) e SEM uso de `NEW` (body literal `'{}'`). Resultado: 401 silencioso, zero pushes entregues. Migration 051 (chat) já usava o padrão correto.
+**Consequência:**
+- Vault DEVE ter os secrets `supabase_url` e `service_role_key` criados via `vault.create_secret()` (executado uma vez no Dashboard)
+- Toda nova trigger que invocar Edge Function: replicar o template da migration `20260511_fix_user_notification_push.sql` ou da 051
+- Funções trigger usam `SECURITY DEFINER` (server-side, NÃO contexto Realtime — ADR-005 só restringe DEFINER em funções chamadas pelo Realtime client)
+- Database Webhooks UI do Supabase Dashboard: **proibido para Edge Functions com `--verify-jwt`**. Pode ser usado apenas para funções com `--no-verify-jwt` se algum dia houver caso disso.
+**Status:** IMUTÁVEL
+
 ## ADR-012 · Canal único Realtime para user_notifications
 **Decisão:** `useNotificationsSubscription.ts` é o único canal Realtime para a tabela `user_notifications`. Instanciado APENAS dentro de `NotificationsContext` (Provider). Componentes consomem via `useNotifications()` ou `window.addEventListener('prosperus:new-notification')`.
 **Contexto:** Antes de 2026-05-08, `notificationService.subscribeToNotifications` era chamado diretamente por `NotificationsPage` e `NotificationCenter`, criando N canais com `Math.random()` no nome — replicando o anti-pattern que ADR-002 corrigiu para `messages`. Risco: `mismatch between server and client bindings`, subscription leak no StrictMode, custo Realtime desnecessário.

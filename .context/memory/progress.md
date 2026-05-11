@@ -76,6 +76,25 @@ Deletados com 0 importações confirmadas:
 - P2 futuro: rodar `npx ts-prune` ou `knip` para confirmar 0 órfãos no TS/TSX
 - P2 futuro: adicionar CI check de colisão de prefixo de migration (script em `MIGRATIONS_HISTORY.md`)
 
+## Push web nativo desbloqueado (2026-05-11)
+
+Issue-010 resolvido. Diagnóstico via MCP do Supabase:
+- Vault estava sem `supabase_url` e `service_role_key` — migration 051 (chat) também afetada silenciosamente
+- Trigger `send-push-on-new-notification` em `user_notifications` foi criada via Dashboard Webhooks UI sem auth + body vazio → 401 silencioso
+
+Solução em 2 etapas:
+1. Usuário criou os 2 vault secrets via Dashboard SQL Editor (`SELECT vault.create_secret(...)`)
+2. Migration `20260511_fix_user_notification_push.sql` aplicada via MCP (`apply_migration`):
+   - DROP trigger antigo `send-push-on-new-notification`
+   - Nova função `notify_new_user_notification_push()` no padrão da migration 051 (pg_net + vault + exception handler + NEW.* no body)
+   - Novo trigger `on_new_user_notification_push` em `user_notifications`
+
+Validação: INSERT de teste no `user_notifications` (user_id do Fábio) → send-push respondeu 200 → 8 pushes entregues + 8 marcadas como inactive (HTTP 410 stale subs, auto-cleanup interno do send-push).
+
+Bonus: Issue-010 também desbloqueia push de chat (migration 051) que estava silenciosamente quebrada pelo mesmo motivo (vault vazio).
+
+ADR-013 criado (IMUTÁVEL): "DB trigger de push usa pg_net + vault, nunca Database Webhooks UI".
+
 ## NotificationsProvider — fechamento P1 #1 (2026-05-08)
 
 ADR-012 criada (IMUTÁVEL). Arquitetura paralela ao ADR-002 (messages):

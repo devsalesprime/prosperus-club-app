@@ -39,6 +39,18 @@
 **Solução:** Separar em dois calls — Contato + Empresa (crm.objects.companies.write).
 **Status:** ✅ RESOLVIDO Abr/2026
 
+### Issue-010 · Web Push nativo não disparando (OS-level)
+**Sintoma:** Notificações in-app (Realtime) chegavam, mas push nativo no iPhone/Android/Desktop não aparecia. 101 push_subscriptions ativas mas zero entregues.
+**Causa raiz dupla:**
+1. Vault sem secrets `supabase_url` e `service_role_key` — migration 051 (chat) também afetada silenciosamente (exception handler engolia)
+2. Trigger `send-push-on-new-notification` (criada via Dashboard Webhooks UI) chamava `supabase_functions.http_request` SEM Authorization header e com body literal `'{}'`. send-push tem `--verify-jwt` → respondia 401
+**Diagnóstico:** logs do edge-function mostraram 401 isolado no send-push; `_http_response` do pg_net e information_schema.triggers confirmaram config quebrada.
+**Solução (2026-05-11):**
+1. Usuário criou os 2 vault secrets via Dashboard
+2. Migration `20260511_fix_user_notification_push.sql` substituiu trigger pelo padrão espelho à 051: pg_net + vault + exception handler + body com NEW.* + Authorization Bearer
+3. INSERT de teste: send-push retornou 200, enviou 8/16 (8 falharam 410 — subs antigas, auto-desativadas pelo cleanup interno)
+**Status:** ✅ RESOLVIDO 2026-05-11
+
 ## ATIVOS (backlog)
 
 ### Issue-007 · Performance Lighthouse 29
