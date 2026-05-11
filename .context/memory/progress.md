@@ -59,6 +59,69 @@ Resolução de Issue-012 retroativa (perda silenciosa de chamadas HubSpot em 429
 - Deploy das 5 Edge Functions atualizadas via CLI (`supabase functions deploy <name>`)
 - UI admin para inspecionar a fila (SELECT policy já permite ADMIN/TEAM)
 
+## Sprint 2026-05-11 (tarde) — Recovery do deploy ADR-015
+
+Auditoria do briefing original revelou que `hubspot-retry-failures` deveria estar
+deployada mas não estava. Investigação encontrou um problema **maior**:
+
+### Achados
+1. **6 commits locais não pushados para `origin/main`** desde `909468b` (manhã):
+   ```
+   2756905 fix(push): guard de sessao antes do upsert
+   633f255 docs(hubspot): ADR-015 + audit + schema reference
+   aef3c4e feat(hubspot): cron job to retry queued failures every 6h
+   46707dd refactor(hubspot): edge functions use retry wrapper + queue
+   a975419 feat(hubspot): persistence layer for failed call queue
+   909468b feat(hubspot): retry/backoff wrapper with failure queue support
+   ```
+2. **VPS (`/var/www/prosperus-club-app/`) não tem nenhum desses 6 commits** —
+   `supabase functions deploy hubspot-retry-failures` falhou com "no such file
+   or directory".
+3. **Functions HubSpot deployadas (v38/v23/v13/v7) AINDA RODAM O CÓDIGO ANTIGO**
+   pré-ADR-015. Validado via `mcp__Supabase__get_edge_function sync-hubspot`:
+   - Faz `fetch()` raw (sem retry/backoff)
+   - Retorna status 400 em erro (não 200 uniforme)
+   - Não importa de `_shared/hubspot-client.ts`
+   - Não usa `withFailureQueue`
+4. Como consequência: a fila `hubspot_failed_calls` nunca recebe inserts em
+   produção — toda a ADR-015 está deployada **pela metade**.
+5. Cron job `hubspot-retry-failures-6h` original (jobid=1) tinha sido
+   completamente removido (não só pausado) — recriado como jobid=2 com mesmo schedule.
+
+### Ações executadas via MCP (não dependem do VPS)
+- `mcp__Supabase__deploy_edge_function` para `hubspot-retry-failures` →
+  function ACTIVE (v1) em produção, independente do estado do VPS.
+- Workaround no JSDoc do arquivo local: a sequência `*/` em comentário
+  multiline JSDoc quebra o parser Deno Edge Runtime. Trocado para `//`
+  comentários de linha.
+- `cron.schedule` recriado para `hubspot-retry-failures-6h` cron `0 */6 * * *`
+  active=true (jobid=2).
+- Teste manual via `net.http_post`: status_code=200, response
+  `{"ok":true,"stats":{"picked":0,...}}` confirma function viva.
+- Limpeza de `.git/refs/desktop.ini` (junk file Windows) que envenenava
+  comandos `git log --all`/`--grep` no repo local.
+
+### TODOs operacionais que sobraram (precisa do Fábio)
+**Críticos:**
+1. `git push origin main` do meu local (eu não pushei automaticamente — ação
+   visível precisa autorização). Vai subir os 6 commits para o repo remoto.
+2. No VPS: `cd /var/www/prosperus-club-app && git pull origin main`
+3. No VPS: redeploy das 4 Edge Functions HubSpot para puxar o refactor real:
+   ```bash
+   supabase functions deploy sync-hubspot
+   supabase functions deploy update-hubspot-contact
+   supabase functions deploy sync-hubspot-birthdays
+   supabase functions deploy hubspot-webhook
+   ```
+   Sem isso, a queue continua vazia em produção.
+4. Opcional: `supabase functions deploy hubspot-retry-failures` no VPS para
+   alinhar a versão deployada (atualmente é a MCP-deployed v1, que é
+   funcionalmente igual mas estilisticamente diferente do que está no disco).
+
+**Não-crítico:**
+- Diagnóstico do PushAutoSubscriber (47 subs acumuladas, 403 RLS). Patch
+  defensivo já no commit `2756905`. Reproduzir no desktop pós-deploy.
+
 ## Limpeza executada (Abr/2026)
 
 Deletados com 0 importações confirmadas:

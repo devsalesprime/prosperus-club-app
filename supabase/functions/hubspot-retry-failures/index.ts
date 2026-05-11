@@ -1,25 +1,26 @@
 /// <reference path="../deno.d.ts" />
 
-/**
- * Supabase Edge Function: hubspot-retry-failures
- *
- * Reprocessa entradas pending de hubspot_failed_calls (ADR-015).
- *
- * Disparado por pg_cron a cada 6h (cron expression "0 *\/6 * * *").
- * Migration de schedule: 20260511_hubspot_retry_cron.sql
- *
- * Critérios de pickup:
- *   - status = 'pending'
- *   - created_at <= now() - interval '5 minutes' (evita corrida com inserts recentes)
- *   - LIMIT 50 por execução (cap para não estourar timeout do Edge)
- *
- * Política:
- *   - Re-invoca a Edge Function original via supabase.functions.invoke()
- *     com o payload original.
- *   - Sucesso (synced=true) → status = 'reprocessed', last_reprocessed_at = now()
- *   - Falha (queued=true ou error) → reprocess_attempts++; se >= 4 →
- *     status = 'failed_permanent'
- */
+// Supabase Edge Function: hubspot-retry-failures
+//
+// Reprocessa entradas pending de hubspot_failed_calls (ADR-015).
+//
+// Disparado por pg_cron a cada 6h (cron expression: 0 [asterisk]/6 * * *).
+// Migration de schedule: 20260511_hubspot_retry_cron.sql
+// (NOTA: comentário usa "[asterisk]" no lugar de * porque a sequência */
+// dentro de comentários JSDoc quebra o parser Deno no bundle do Supabase
+// Edge Runtime.)
+//
+// Critérios de pickup:
+//   - status = 'pending'
+//   - created_at <= now() - interval '5 minutes' (evita corrida com inserts recentes)
+//   - LIMIT 50 por execução (cap para não estourar timeout do Edge)
+//
+// Política:
+//   - Re-invoca a Edge Function original via supabase.functions.invoke()
+//     com o payload original.
+//   - Sucesso (synced=true) → status = 'reprocessed', last_reprocessed_at = now()
+//   - Falha (queued=true ou error) → reprocess_attempts++; se >= 4 →
+//     status = 'failed_permanent'
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
