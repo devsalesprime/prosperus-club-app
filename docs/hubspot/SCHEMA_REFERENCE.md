@@ -154,10 +154,9 @@ Propriedades dropdown identificáveis pelo nome (suspeitas — confirmar no HubS
 - `services/profileService.ts` — leitura/escrita de contacts via Edge Function `update-hubspot-contact`
 - `services/hubspotService.ts` (se existir) — wrapper genérico
 - `supabase/functions/sync-hubspot/index.ts` — sync bidirecional contacts + companies
-- `supabase/functions/sync-hubspot-amounts/index.ts` — sync amounts em deals
 - `supabase/functions/sync-hubspot-birthdays/index.ts` — sync de aniversários
 - `supabase/functions/hubspot-webhook/index.ts` — webhook recebendo updates
-- `supabase/functions/sync-shadow-profiles/index.ts` — backfill de shadow profiles via `hubspot_directory`
+- ~~`sync-hubspot-amounts`~~ e ~~`sync-shadow-profiles`~~ — removidas 2026-05-11 (zero invocações em 30 dias, ver `docs/EDGE_FUNCTIONS_AUDIT.md`)
 - `services/adminBirthdayService.ts:136` — invoke `sync-hubspot-birthdays`
 - `hooks/useProfileForm.ts:190,206` — invoke `sync-hubspot` e `update-hubspot-contact`
 

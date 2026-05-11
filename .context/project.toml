@@ -61,8 +61,10 @@ any_instances    = 183  # backlog — não aumentar
 
 [edge_functions]
 # Funções com --no-verify-jwt (acesso externo)
-no_verify = ["hubspot-webhook", "sync-hubspot", "sync-hubspot-amounts",
-             "sync-hubspot-birthdays", "sync-shadow-profiles",
+# sync-hubspot-amounts e sync-shadow-profiles removidas 2026-05-11 (zero
+# invocações em 30 dias). Ver docs/EDGE_FUNCTIONS_AUDIT.md.
+no_verify = ["hubspot-webhook", "sync-hubspot",
+             "sync-hubspot-birthdays",
              "update-hubspot-contact", "login-socio", "roi-coleta-cron",
              "send-birthday-pushes"]
 with_verify = ["send-push", "check-email-exists", "receive-report"]

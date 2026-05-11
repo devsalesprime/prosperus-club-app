@@ -170,9 +170,9 @@ const supabase = createClient(
 O projeto já tem 5 Edge Functions com HubSpot:
 - `sync-hubspot` — atualiza contato a partir do profile
 - `update-hubspot-contact` — update granular
-- `sync-hubspot-amounts` — sync de deal amounts
+- ~~`sync-hubspot-amounts`~~ — removida 2026-05-11 (zero invocações em 30 dias)
 - `sync-hubspot-birthdays` — sync de aniversários
-- `sync-shadow-profiles` — backfill
+- ~~`sync-shadow-profiles`~~ — removida 2026-05-11 (zero invocações em 30 dias)
 - `hubspot-webhook` — recebe webhooks externos
 
 Eu posso invocar qualquer uma via:

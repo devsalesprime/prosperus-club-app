@@ -76,6 +76,44 @@ Deletados com 0 importações confirmadas:
 - P2 futuro: rodar `npx ts-prune` ou `knip` para confirmar 0 órfãos no TS/TSX
 - P2 futuro: adicionar CI check de colisão de prefixo de migration (script em `MIGRATIONS_HISTORY.md`)
 
+## Edge Functions cleanup — sync-hubspot-amounts e sync-shadow-profiles (2026-05-11)
+
+Auditoria operacional confirmou zero invocações em 30 dias para 2 das 3 functions marcadas como "CONFIRMAR" na sessão 2026-05-08:
+- `sync-hubspot-amounts`
+- `sync-shadow-profiles`
+
+`receive-report` permanece ATIVA (caller externo confirmado) mas com ~30% taxa de 404 — TODO operacional (não-dev) registrado em `docs/EDGE_FUNCTIONS_AUDIT.md` para investigar caller.
+
+### Ações executadas no repositório
+- `rm -rf supabase/functions/{sync-hubspot-amounts,sync-shadow-profiles}`
+- `supabase/config.toml`: removidos blocos `[functions.sync-hubspot-amounts]` e `[functions.sync-shadow-profiles]`
+- `.context/project.toml`: removidas das listas `edge_functions.no_verify`
+- `README.md`: removido comando `deploy sync-shadow-profiles` + tree
+- `docs/EDGE_FUNCTIONS_AUDIT.md`: reescrita com sessão "Functions removidas" + TODO `receive-report`
+- `docs/INTEGRATIONS_SETUP.md`, `docs/hubspot/SCHEMA_REFERENCE.md`: referências marcadas como removidas
+
+### ⏳ TODO operacional do Fábio (não-dev, não bloqueia commits)
+
+Acessar Supabase Dashboard e deletar as 2 functions remotamente — o `rm` no repo NÃO undeploya:
+
+```
+Dashboard → https://supabase.com/dashboard/project/ptvsctwwonvirdwprugv/functions
+  → Sync Hubspot Amounts   → Settings → Delete function
+  → Sync Shadow Profiles   → Settings → Delete function
+```
+
+Alternativa via CLI (se logado):
+```bash
+supabase functions delete sync-hubspot-amounts --project-ref ptvsctwwonvirdwprugv
+supabase functions delete sync-shadow-profiles --project-ref ptvsctwwonvirdwprugv
+```
+
+Validar undeploy:
+```bash
+curl https://ptvsctwwonvirdwprugv.supabase.co/functions/v1/sync-hubspot-amounts
+# Esperado: HTTP 404 (em vez do 401 atual)
+```
+
 ## Push web nativo desbloqueado (2026-05-11)
 
 Issue-010 resolvido. Diagnóstico via MCP do Supabase:

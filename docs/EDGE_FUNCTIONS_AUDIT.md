@@ -1,14 +1,14 @@
 # Edge Functions Audit — Prosperus Club
 
-**Data:** 2026-05-08
-**Escopo:** 12 Edge Functions em `supabase/functions/`
+**Última atualização:** 2026-05-11
+**Escopo atual:** 11 Edge Functions em `supabase/functions/` (era 13 antes de 2026-05-11)
 
 ## Status geral
 
-| Function | Tipo | Caller(s) confirmados no código | Status |
-|----------|------|--------------------------------|--------|
+| Function | Tipo | Caller(s) confirmados | Status |
+|----------|------|----------------------|--------|
 | `check-email-exists` | client-invoke | `components/auth/LoginModal.tsx` | ✅ Ativa |
-| `send-push` | client + cron + DB trigger | `notificationService`, `businessService`, `adminBusinessService`, `send-birthday-pushes`, `roi-coleta-cron`, trigger SQL `051_push_on_new_message` | ✅ Ativa (caminho central) |
+| `send-push` | client + cron + DB trigger | `notificationService`, `businessService`, `adminBusinessService`, `send-birthday-pushes`, `roi-coleta-cron`, trigger SQL `051_push_on_new_message`, trigger `on_new_user_notification_push` | ✅ Ativa (caminho central) |
 | `login-socio` | client-invoke | `components/auth/LoginModal.tsx` | ✅ Ativa |
 | `sync-hubspot` | client-invoke | `hooks/useProfileForm.ts`, `services/profileService.ts` | ✅ Ativa |
 | `update-hubspot-contact` | client + script externo | `hooks/useProfileForm.ts`, `scripts/migrations/sync_hubspot.mjs` | ✅ Ativa |
@@ -16,72 +16,77 @@
 | `hubspot-webhook` | webhook externo (HubSpot) | — (chamado externamente) | ✅ Ativa |
 | `roi-coleta-cron` | cron (config.toml `enabled=true`) | Schedule do Supabase | ✅ Ativa |
 | `send-birthday-pushes` | cron (config.toml `enabled=true`) | Schedule do Supabase | ✅ Ativa |
-| **`receive-report`** | client-invoke? | ❌ **Zero callers no código TS** (só docs) | ⚠️ **CONFIRMAR** |
-| **`sync-hubspot-amounts`** | webhook? cron? | ❌ **Zero callers no código TS** (config.toml registra) | ⚠️ **CONFIRMAR** |
-| **`sync-shadow-profiles`** | utilitário backfill | ❌ **Zero callers no código TS** (config.toml registra) | ⚠️ **CONFIRMAR** |
+| `receive-report` | webhook externo (admin tool não-Prosperus) | — (POST externo) | ⚠️ Ativa com ~30% 404 — TODO investigar caller |
+| ~~`sync-hubspot-amounts`~~ | — | — | 🗑️ **REMOVIDA 2026-05-11** |
+| ~~`sync-shadow-profiles`~~ | — | — | 🗑️ **REMOVIDA 2026-05-11** |
 
-## ⚠️ Não deletar antes de validar
+## 🗑️ Functions removidas em 2026-05-11
 
-As 3 functions marcadas como "CONFIRMAR" não têm caller direto no código TS, mas isso **não significa que estão obsoletas**. Possíveis cenários:
-- Disparadas por **cron schedule no Supabase Dashboard** (não visível no código)
-- Disparadas por **webhook externo** apontando para a URL pública
-- Disparadas **manualmente** por admin (curl/Postman)
+### Razão da remoção
 
-## TODO — Validar com logs do Supabase Dashboard
+Validação operacional via Supabase Dashboard → Functions → Logs (últimos 30 dias):
+- `sync-hubspot-amounts`: **ZERO invocações** em 30 dias
+- `sync-shadow-profiles`: **ZERO invocações** em 30 dias
 
-Antes de qualquer ação de deprecação, conferir nos últimos 30 dias em:
+Sem caller TS confirmado (validado via grep em sessões 2026-05-08 e 2026-05-11), sem caller externo (Dashboard logs vazios). Ambas eram utilitários históricos (backfill ou sync pontual) que cumpriram seu propósito ou nunca foram integradas. Manter código zombie só polui o repositório e a superfície de ataque.
+
+### Ações executadas no repositório
+
+1. `rm -rf supabase/functions/sync-hubspot-amounts`
+2. `rm -rf supabase/functions/sync-shadow-profiles`
+3. Removidos blocos `[functions.sync-hubspot-amounts]` e `[functions.sync-shadow-profiles]` de `supabase/config.toml`
+4. Removidas das listas em `.context/project.toml#edge_functions.no_verify`
+5. Atualizada referência em `README.md`, `docs/INTEGRATIONS_SETUP.md`, `docs/PROSPERUS_10_10.md`, `docs/hubspot/SCHEMA_REFERENCE.md`
+
+### ⏳ Pendente — operacional (precisa do Fábio no Dashboard)
 
 ```
-https://supabase.com/dashboard/project/ptvsctwwonvirdwprugv/functions
+Supabase Dashboard → Functions → Delete:
+  a) sync-hubspot-amounts
+  b) sync-shadow-profiles
 ```
 
-Para cada function suspeita, abrir → Logs → filtrar últimos 30 dias:
+O `rm` no repo + commit não remove a function do projeto Supabase em produção. Ela continua "deployada" até alguém clicar Delete no Dashboard ou rodar `supabase functions delete <name>` via CLI. Sem este passo, alguém poderia ainda invocá-la via URL pública.
 
-### `receive-report`
-- [ ] Verificar invocações nos últimos 30 dias
-- [ ] Se zero: depreciar (undeploy + remover pasta + atualizar README e docs)
-- [ ] Se > zero: rastrear o caller real (provavelmente é uma admin tool externa que faz POST direto pra `/functions/v1/receive-report`)
+## ⚠️ receive-report — 30% taxa de 404
 
-### `sync-hubspot-amounts`
-- [ ] Verificar invocações nos últimos 30 dias
-- [ ] Confirmar se é disparada pelo `hubspot-webhook` internamente
-- [ ] Confirmar se está agendada via cron no Dashboard
+Function ativa mas com taxa de 404 anormalmente alta (~30% dos requests retornam 404). Hipóteses:
 
-### `sync-shadow-profiles`
-- [ ] Verificar invocações nos últimos 30 dias
-- [ ] Confirmar se ainda é necessária (era backfill — pode ter cumprido propósito)
-- [ ] Se obsoleta: depreciar com cuidado (verifique se algum sistema externo invoca)
+- Caller externo (admin tool não-Prosperus) usa URL antiga com path errado
+- Algum query parameter obrigatório ausente em 30% dos calls
+- Browser cache servindo URL deprecada
 
-## Como executar a validação
+**TODO operacional (não-dev):**
+- [ ] Identificar quem é o caller externo (curl/Postman/admin tool externa)
+- [ ] Validar com esse caller se a URL/payload está correto
+- [ ] Se for legado: redirecionar/atualizar caller
+- [ ] Se for ataque: documentar e mitigar com rate-limit ou IP allow-list
 
-Sem MCP do Supabase configurado, o caminho atual é manual:
+Não tocado nesta sessão — fora de escopo.
 
-```sql
--- Caso o admin queira ver invocações via SQL no Dashboard SQL Editor:
--- (não funciona — logs de Edge Functions ficam no edge_logs do projeto, não exposto via SQL nativo)
-```
+## Checklist de deprecação (para futuras removals)
 
-**Caminho oficial:** Dashboard → Edge Functions → `<function_name>` → aba **Logs** → range "Last 30 days".
-
-Se a aba Logs estiver vazia ou só mostrar invocações de teste manual antigas, a function é candidata a deprecação.
-
-## Checklist de deprecação (quando confirmar zero uso)
+Quando confirmar zero uso em 30 dias via Dashboard logs:
 
 ```bash
-# No Supabase Dashboard:
-# 1. Functions → função → Settings → Disable / Pause
-# 2. Aguardar 7 dias para confirmar que ninguém reclamou
-# 3. Functions → função → Delete
-
-# No repositório (este projeto):
-git rm -r supabase/functions/<nome-da-function>
+# 1. No repositório (PR review):
+rm -rf supabase/functions/<nome-da-function>
 # Atualizar:
-#   - README.md (lista de Edge Functions)
-#   - .context/project.toml ([edge_functions] no_verify e with_verify)
-#   - docs/PROSPERUS_10_10.md (se aplicável)
 #   - supabase/config.toml (entries [functions.<nome>])
+#   - .context/project.toml ([edge_functions] no_verify e with_verify)
+#   - README.md (lista de Edge Functions)
+#   - docs/PROSPERUS_10_10.md, INTEGRATIONS_SETUP.md, SCHEMA_REFERENCE.md
+#   - Este arquivo (mover linha pra "Functions removidas")
+
+# 2. No Supabase Dashboard (manual):
+#    Functions → função → Settings → Delete
+#    (alternativa CLI: supabase functions delete <name> --project-ref <ref>)
+
+# 3. Confirmar undeploy
+#    curl https://<ref>.supabase.co/functions/v1/<name> → deve retornar 404
 ```
 
 ## Histórico
 
-- 2026-05-08: auditoria inicial — 3 functions identificadas como "sem caller TS confirmado"
+- **2026-05-08:** Auditoria inicial — 3 functions identificadas como "sem caller TS confirmado" (`receive-report`, `sync-hubspot-amounts`, `sync-shadow-profiles`)
+- **2026-05-11:** Validação Dashboard 30 dias + remoção de 2 functions zeroed (`sync-hubspot-amounts`, `sync-shadow-profiles`). `receive-report` mantida (caller externo ativo) com TODO para investigar 30% 404.

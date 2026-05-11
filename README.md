@@ -34,7 +34,6 @@ npx tsc --noEmit
 npx supabase functions deploy send-push
 npx supabase functions deploy sync-hubspot --no-verify-jwt
 npx supabase functions deploy hubspot-webhook --no-verify-jwt
-npx supabase functions deploy sync-shadow-profiles --no-verify-jwt
 ```
 
 ---
@@ -100,16 +99,14 @@ HUBSPOT_ACCESS_TOKEN=[HUBSPOT_TOKEN]
 │   └── supabase.ts             → ÚNICO createClient()
 │
 └── supabase/
-    ├── functions/              → 12 Edge Functions (Deno)
+    ├── functions/              → Edge Functions (Deno)
     │   ├── send-push/          → Web Push + VAPID
     │   ├── hubspot-webhook/    → CRM webhook (Amount sync)
     │   ├── sync-hubspot/       → Perfil → HubSpot (Contato + Empresa)
-    │   ├── sync-shadow-profiles/ → Backfill Shadow Profiles
-    │   ├── sync-hubspot-amounts/ → Sync amounts negócios
     │   ├── sync-hubspot-birthdays/ → Sync aniversários
     │   ├── check-email-exists/ → Smart Login
     │   ├── login-socio/        → Login via HubSpot
-    │   ├── receive-report/     → Relatórios de membros
+    │   ├── receive-report/     → Relatórios de membros (caller externo)
     │   ├── roi-coleta-cron/    → Cron job ROI
     │   ├── send-birthday-pushes/ → Push aniversário automático
     │   └── update-hubspot-contact/ → Update contato individual
