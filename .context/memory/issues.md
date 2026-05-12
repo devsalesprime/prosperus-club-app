@@ -11,7 +11,12 @@
 - **Guilherme Cruz:** `c_e_mail` armazenado com **espaço no final** (`guilhermecruz@me.com `). Webhook código já tem `trim()` (linha 488), bug era só na minha query manual de auditoria.
 - **Débora De Landa:** dois profiles duplicados (`joiaskether@gmail.com` antigo com 2 ROI records + `deboradelanda07@gmail.com` novo, com email do HubSpot). Merge: registros_faturamento/analytics/profile_history/user_notifications/member_reports do source movidos para target; source desativado com nome "Débora (conta antiga — usar deboradelanda07@gmail.com)".
 **Solução (2026-05-12):**
-- Backfill manual via MCP `execute_sql`: 10 UPDATEs cirúrgicos com `hubspot_contact_id`, `hubspot_deal_id`, `valor_pago_mentoria`, `data_entrada_clube` extraídos do HubSpot via MCP `search_crm_objects`. Total recuperado: R$ 2.052.000 em ROI.
+- Backfill manual via MCP `execute_sql`, em **2 rodadas**:
+  - **Rodada 1** (LIMIT 10 inicial, filtro `hubspot_contact_id IS NULL AND valor_pago_mentoria IS NULL`): 10 UPDATEs cirúrgicos. Total recuperado: R$ 2.052.000.
+  - **Rodada 2** (re-auditoria depois de feedback "faltaram Davyd, Leomarcos, Nayara"): query original era muito restrita — escapavam profiles com `valor_pago` preenchido mas `hubspot_contact_id` NULL, profiles com `hubspot_contact_id` preenchido mas `valor_pago` NULL, e os que caíram fora do LIMIT 10. Re-auditoria sem LIMIT revelou ~80 profiles com algum gap HubSpot. Backfill cirúrgico dos 13 críticos pro painel ROI (gap em `valor_pago` OU `contact_id`): + R$ 785.000.
+  - Total final: **23 sócios, R$ 2.837.000** restaurados no painel Crescimento.
+- Os ~60 profiles restantes têm gap **só de `hubspot_deal_id` + `data_entrada_clube`** — não afetam o ROI Admin (que usa só `valor_pago_mentoria`). Ficam como TODO de baixa prioridade.
+- **Lição estrutural:** filtro de auditoria com `AND ... IS NULL AND ... IS NULL` perde casos onde só uma coluna está NULL. Próxima auditoria estrutural usar `OR` ou `COALESCE` ou um SELECT por coluna individual.
 - Refator `provisionProfileByEmail` em `supabase/functions/hubspot-webhook/index.ts`:
   - Nova interface `DealContext { dealId, amount, closedate }`
   - Lookup do `hubspot_contact_id` via `hubspotFetch` (search-by-email) — 1 chamada extra com retry/backoff ADR-015
