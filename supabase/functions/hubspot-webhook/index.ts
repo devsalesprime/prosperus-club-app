@@ -296,9 +296,22 @@ async function handleContactCreatedOrUpdated(eventData: any) {
 // Creates Auth user + profile (if new & active), updates is_active (if existing),
 // or deactivates (if inactive). Sends magic link on first creation.
 
+interface DealContext {
+    dealId?: string;
+    amount?: number | null;
+    closedate?: string | null;
+}
+
+// Issue-013 (2026-05-12): historicamente provisionProfileByEmail só setava
+// is_active. 10 sócios ficaram com hubspot_contact_id/deal_id/valor_pago_mentoria
+// NULL (Amanda Vilas Calheiros + 9 outros). Backfill manual via MCP.
+// Agora a função aceita dealContext opcional e busca o hubspot_contact_id via
+// search-by-email (1 chamada extra HubSpot por participant — passa por
+// hubspotFetch que tem retry/backoff ADR-015).
 async function provisionProfileByEmail(
     email: string,
-    isActive: boolean
+    isActive: boolean,
+    dealContext: DealContext = {}
 ): Promise<{ email: string; action: string }> {
     const normalEmail = email.trim().toLowerCase()
 
@@ -306,24 +319,71 @@ async function provisionProfileByEmail(
         return { email, action: 'invalid_email' }
     }
 
+    // Lookup do hubspot_contact_id por email (1 chamada inline ao HubSpot)
+    let lookupContactId: string | null = null
+    try {
+        const searchRes = await hubspotFetch(
+            'https://api.hubapi.com/crm/v3/objects/contacts/search',
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    filterGroups: [{ filters: [{ propertyName: 'email', operator: 'EQ', value: normalEmail }] }],
+                    properties: ['email'],
+                    limit: 1,
+                }),
+            }
+        )
+        if (searchRes.ok) {
+            const data = await searchRes.json()
+            if (data.total > 0 && data.results?.[0]?.id) {
+                lookupContactId = String(data.results[0].id)
+            }
+        }
+    } catch (err) {
+        console.warn(`⚠️ HubSpot contact lookup failed for ${normalEmail}:`, err)
+    }
+
+    // Normalizar closedate (HubSpot pode mandar ISO ou ms epoch) → YYYY-MM-DD
+    let dataEntradaIso: string | null = null
+    if (dealContext.closedate) {
+        const d = new Date(dealContext.closedate)
+        if (!isNaN(d.getTime())) {
+            dataEntradaIso = d.toISOString().substring(0, 10)
+        }
+    }
+
     // 1. Check if profile already exists
     const { data: existing } = await supabase
         .from('profiles')
-        .select('id, email, is_active')
+        .select('id, email, is_active, hubspot_contact_id')
         .eq('email', normalEmail)
         .maybeSingle()
 
     if (existing) {
+        const updatePayload: Record<string, unknown> = {
+            is_active: isActive,
+            updated_at: new Date().toISOString(),
+        }
+        // Só seta hubspot_contact_id se profile ainda não tem (respeita unique constraint)
+        if (lookupContactId && !existing.hubspot_contact_id) {
+            updatePayload.hubspot_contact_id = lookupContactId
+        }
+        if (dealContext.dealId) updatePayload.hubspot_deal_id = dealContext.dealId
+        if (dealContext.amount !== null && dealContext.amount !== undefined) {
+            updatePayload.valor_pago_mentoria = dealContext.amount
+        }
+        if (dataEntradaIso) updatePayload.data_entrada_clube = dataEntradaIso
+
         const { error: updateError } = await supabase
             .from('profiles')
-            .update({ is_active: isActive, updated_at: new Date().toISOString() })
+            .update(updatePayload)
             .eq('id', existing.id)
 
         if (updateError) {
             console.error(`❌ Participant update error (${normalEmail}):`, updateError)
             return { email: normalEmail, action: `error: ${updateError.message}` }
         }
-        console.log(`✅ Participant updated: ${normalEmail} → is_active: ${isActive}`)
+        console.log(`✅ Participant updated: ${normalEmail} → is_active: ${isActive}, hubspot=${lookupContactId ?? existing.hubspot_contact_id ?? 'null'}, amount=${dealContext.amount ?? 'unchanged'}`)
         return { email: normalEmail, action: 'updated' }
     }
 
@@ -332,6 +392,21 @@ async function provisionProfileByEmail(
         console.log(`⏭️ Skipping inactive new participant: ${normalEmail}`)
         return { email: normalEmail, action: 'skipped_inactive' }
     }
+
+    // Payload base usado em todos os caminhos de create/upsert
+    const createPayloadBase: Record<string, unknown> = {
+        email: normalEmail,
+        name: 'Novo Membro',
+        role: 'MEMBER',
+        is_active: true,
+        has_completed_onboarding: false,
+    }
+    if (lookupContactId) createPayloadBase.hubspot_contact_id = lookupContactId
+    if (dealContext.dealId) createPayloadBase.hubspot_deal_id = dealContext.dealId
+    if (dealContext.amount !== null && dealContext.amount !== undefined) {
+        createPayloadBase.valor_pago_mentoria = dealContext.amount
+    }
+    if (dataEntradaIso) createPayloadBase.data_entrada_clube = dataEntradaIso
 
     // 3. Create Auth user
     const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
@@ -346,14 +421,7 @@ async function provisionProfileByEmail(
             const { data: { users } } = await supabase.auth.admin.listUsers()
             const authUser = users?.find((u: { email?: string }) => u.email === normalEmail)
             if (authUser) {
-                await supabase.from('profiles').upsert({
-                    id: authUser.id,
-                    email: normalEmail,
-                    name: 'Novo Membro',
-                    role: 'MEMBER',
-                    is_active: true,
-                    has_completed_onboarding: false,
-                })
+                await supabase.from('profiles').upsert({ ...createPayloadBase, id: authUser.id })
                 return { email: normalEmail, action: 'profile_upserted' }
             }
         }
@@ -362,14 +430,8 @@ async function provisionProfileByEmail(
     }
 
     // 4. Create profile record
-    const { error: profileError } = await supabase.from('profiles').upsert({
-        id: newUser.user.id,
-        email: normalEmail,
-        name: 'Novo Membro',
-        role: 'MEMBER',
-        is_active: true,
-        has_completed_onboarding: false,
-    })
+    const { error: profileError } = await supabase.from('profiles')
+        .upsert({ ...createPayloadBase, id: newUser.user.id })
 
     if (profileError) {
         console.error(`❌ Profile creation error for ${normalEmail}:`, profileError)
@@ -468,8 +530,8 @@ async function handleDealPropertyChange(eventData: any) {
         const isActive = ACTIVE_BUSINESS_STATUSES.includes(propertyValue.toLowerCase())
         console.log(`📋 Deal ${dealId}: situacao_do_negocio = '${propertyValue}' → is_active: ${isActive}`)
 
-        // ── 1. Fetch deal properties to collect participant emails and amount ──
-        const dealPropsQuery = ['amount', ...DEAL_PARTICIPANT_EMAIL_PROPS].join(',')
+        // ── 1. Fetch deal properties to collect participant emails, amount and closedate ──
+        const dealPropsQuery = ['amount', 'closedate', ...DEAL_PARTICIPANT_EMAIL_PROPS].join(',')
         const dealRes = await fetch(
             `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=${dealPropsQuery}`,
             { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
@@ -477,18 +539,20 @@ async function handleDealPropertyChange(eventData: any) {
 
         const participantEmails: string[] = []
         let amountValue: number | null = null
+        let closedateValue: string | null = null
 
         if (dealRes.ok) {
             const dealData = await dealRes.json()
             const dp = dealData.properties || {}
-            
+
             if (dp['amount']) amountValue = parseFloat(dp['amount'])
+            if (dp['closedate']) closedateValue = dp['closedate']
 
             for (const prop of DEAL_PARTICIPANT_EMAIL_PROPS) {
                 const email = (dp[prop] || '').trim()
                 if (email && email.includes('@')) participantEmails.push(email.toLowerCase())
             }
-            console.log(`📧 Deal ${dealId} participant emails: ${participantEmails.join(', ') || 'none'}, Amount: ${amountValue}`)
+            console.log(`📧 Deal ${dealId} participants: ${participantEmails.join(', ') || 'none'}, Amount: ${amountValue}, Closedate: ${closedateValue}`)
         } else {
             console.warn(`⚠️ Could not fetch deal properties for ${dealId}`)
         }
@@ -533,9 +597,10 @@ async function handleDealPropertyChange(eventData: any) {
             }
         }
 
-        // ── 3. Provision deal participant emails (new feature) ──
+        // ── 3. Provision deal participant emails (Issue-013: agora passa dealContext) ──
+        const dealContext: DealContext = { dealId, amount: amountValue, closedate: closedateValue }
         const participantResults = await Promise.all(
-            participantEmails.map(email => provisionProfileByEmail(email, isActive))
+            participantEmails.map(email => provisionProfileByEmail(email, isActive, dealContext))
         )
         const provisionedEmails = participantResults.map(r => `${r.email}(${r.action})`)
 
@@ -672,23 +737,29 @@ async function handleDealPropertyChange(eventData: any) {
             return { success: true, action: 'participant_email_empty', dealId, propertyName }
         }
 
-        // Fetch current deal status to know if we should activate
+        // Fetch current deal status + amount + closedate (Issue-013: passar dealContext)
         const dealStatusRes = await fetch(
-            `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio`,
+            `https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=situacao_do_negocio,amount,closedate`,
             { headers: { 'Authorization': `Bearer ${HUBSPOT_API_KEY}` } }
         )
 
         let isActive = false
+        let amountValue: number | null = null
+        let closedateValue: string | null = null
         if (dealStatusRes.ok) {
             const dealData = await dealStatusRes.json()
-            const situacao = (dealData.properties?.situacao_do_negocio || '').toLowerCase()
+            const dp = dealData.properties || {}
+            const situacao = (dp.situacao_do_negocio || '').toLowerCase()
             isActive = ACTIVE_BUSINESS_STATUSES.includes(situacao)
+            if (dp.amount) amountValue = parseFloat(dp.amount)
+            if (dp.closedate) closedateValue = dp.closedate
         } else {
             console.warn(`⚠️ Could not fetch deal status for ${dealId} — defaulting isActive: false`)
         }
 
-        console.log(`📧 Participant email changed on deal ${dealId}: ${newEmail} | deal isActive: ${isActive}`)
-        const result = await provisionProfileByEmail(newEmail, isActive)
+        console.log(`📧 Participant email changed on deal ${dealId}: ${newEmail} | deal isActive: ${isActive}, amount=${amountValue}`)
+        const dealContext: DealContext = { dealId, amount: amountValue, closedate: closedateValue }
+        const result = await provisionProfileByEmail(newEmail, isActive, dealContext)
 
         return {
             success: true,

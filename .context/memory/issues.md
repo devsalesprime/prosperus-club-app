@@ -3,6 +3,24 @@
 
 ## RESOLVIDOS
 
+### Issue-013 · provisionProfileByEmail perdia dados do deal (hubspot_contact_id, amount, closedate)
+**Sintoma:** sócios cujo email de signup do app difere do email principal do HubSpot contact (entram via `c_e_mail`/`e_mail___participante_vinculado_*` no deal) ficavam com `hubspot_contact_id`, `hubspot_deal_id`, `valor_pago_mentoria` e `data_entrada_clube` NULL. Painel admin ROI ("Crescimento") mostrava investimento vazio mesmo com `amount` setado no HubSpot. 10 sócios afetados (Amanda Vilas Calheiros + 9).
+**Causa raiz:** `hubspot-webhook::provisionProfileByEmail(email, isActive)` aceitava apenas 2 parâmetros e atualizava só `is_active`. O loop dos CRM-associated contacts propagava `valor_pago_mentoria`, mas o branch de participants via `c_e_mail` não. Sem `hubspot_contact_id` populado, sync futuro também não sabia ligar.
+**Casos especiais descobertos:**
+- **Thais Miraldo:** `c_e_mail` do deal = email corporativo (`thais@singularmedicamentos.com.br`), profile no app = email pessoal (`tmiralldo@gmail.com`). Nunca bate via `c_e_mail` — só via CRM association.
+- **Guilherme Cruz:** `c_e_mail` armazenado com **espaço no final** (`guilhermecruz@me.com `). Webhook código já tem `trim()` (linha 488), bug era só na minha query manual de auditoria.
+- **Débora De Landa:** dois profiles duplicados (`joiaskether@gmail.com` antigo com 2 ROI records + `deboradelanda07@gmail.com` novo, com email do HubSpot). Merge: registros_faturamento/analytics/profile_history/user_notifications/member_reports do source movidos para target; source desativado com nome "Débora (conta antiga — usar deboradelanda07@gmail.com)".
+**Solução (2026-05-12):**
+- Backfill manual via MCP `execute_sql`: 10 UPDATEs cirúrgicos com `hubspot_contact_id`, `hubspot_deal_id`, `valor_pago_mentoria`, `data_entrada_clube` extraídos do HubSpot via MCP `search_crm_objects`. Total recuperado: R$ 2.052.000 em ROI.
+- Refator `provisionProfileByEmail` em `supabase/functions/hubspot-webhook/index.ts`:
+  - Nova interface `DealContext { dealId, amount, closedate }`
+  - Lookup do `hubspot_contact_id` via `hubspotFetch` (search-by-email) — 1 chamada extra com retry/backoff ADR-015
+  - Só sobrescreve `hubspot_contact_id` no profile se atualmente NULL (respeita unique constraint)
+  - Update/create propaga `hubspot_deal_id`, `valor_pago_mentoria`, `data_entrada_clube` (do closedate normalizado pra YYYY-MM-DD)
+- Ambas as call sites (`situacao_do_negocio` change + DEAL_PARTICIPANT_EMAIL_PROPS individual change) agora passam `dealContext` com amount + closedate buscados do deal.
+**ADR:** ADR-015 (wrapper reusado)
+**Status:** ✅ RESOLVIDO 2026-05-12
+
 ### Issue-012 · HubSpot 429/5xx eram perdidos silenciosamente (retroativa)
 **Sintoma:** Sócios reportavam que mudanças no perfil ocasionalmente não apareciam no HubSpot CRM. Sem rastreamento — `sync-hubspot` era fire-and-forget e o erro era apenas `console.error` no log da Edge Function.
 **Causa raiz:** As 4 Edge Functions HubSpot (`sync-hubspot`, `update-hubspot-contact`, `sync-hubspot-birthdays`, `hubspot-webhook`) faziam `fetch()` direto sem tratar 429 (rate limit) nem 5xx. Em rajadas — especialmente `sync-hubspot-birthdays` processando 280 contatos com 4 fetches cada — o HubSpot retornava 429 com `Retry-After`, mas o código tratava como erro fatal e abortava o lote.
