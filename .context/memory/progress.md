@@ -122,6 +122,44 @@ deployada mas não estava. Investigação encontrou um problema **maior**:
 - Diagnóstico do PushAutoSubscriber (47 subs acumuladas, 403 RLS). Patch
   defensivo já no commit `2756905`. Reproduzir no desktop pós-deploy.
 
+### Checkpoint consolidado — 2026-05-12
+
+**Tier 1 quase 100%:**
+
+| Item | Status |
+|---|---|
+| Push web nativo (iOS/Android/Desktop) | ✅ Issue-010 |
+| Badge realtime sync | ✅ Issue-011 |
+| NotificationsProvider singleton | ✅ ADR-012 |
+| Edge Functions cleanup (2 zombies removidas) | ✅ |
+| Sentry observability live (release `0.1.0-<sha>`) | ✅ ADR-014 |
+| PushAutoSubscriber 403 RLS | ✅ commit `2756905` |
+| HubSpot rate limit + fila + cron | ✅ ADR-015 end-to-end |
+| Supabase PITR | ⏳ aguardando decisão financeira |
+| Push subscription cleanup cron | ⏳ próxima sessão |
+
+**Janela de observação 24-48h (2026-05-12 a 2026-05-14):** sem código novo.
+Hábito diário sugerido: checar `cron.job_run_details` (jobid=2), contar status
+em `hubspot_failed_calls`, contar `push_subscriptions` por `is_active`, e
+Issues novas no Sentry filtradas por `level:error` e `tags:role`.
+
+**TODOs de baixa prioridade (não-bloqueantes):**
+
+1. **Dupla SUBSCRIBED de `notifications channel`** — Sentry breadcrumb em
+   2026-05-12 17:06:37 + 17:06:38 mostra 2 `SUBSCRIBED` consecutivos após
+   um `CHANNEL_ERROR` transient. Pode ser apenas ruído de log do cliente
+   Supabase ou um leak menor em `useNotificationsSubscription.ts`. Não é
+   regressão visível (badge funciona, push chega). Investigar só quando
+   outro fluxo tocar o hook — abrir caixa preta sem motivo seria desperdício.
+2. **47 subs acumuladas em `push_subscriptions`** de 1 user específico
+   (`bdab9235-4de2-4e05-bd77-83261b989082`) — endpoints rotacionando.
+   Cleanup cron é a próxima sprint de Tier 1.
+3. **UI admin para inspecionar `hubspot_failed_calls`** — RLS SELECT já
+   permite ADMIN/TEAM. Espera primeira entrada real na fila antes de
+   priorizar.
+4. **`package.json#version`** bumped 0.0.0 → 0.1.0 no commit deste checkpoint.
+   Próximo build inclui Sentry release `0.1.0-<sha>` corretamente.
+
 ### Fechamento final do gap (mesma sessão, ~14:40 UTC)
 
 Após `git push origin main` (7 commits) e Fábio rodar deploy no VPS, status atualizado:
