@@ -36,6 +36,39 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Sessão 1 do ADR-017 — 2026-05-13 (noite-2) — EXECUÇÃO STRICT MODE
+
+ADR-017 (TypeScript strict mode) aprovada pelo tech lead. Sessão 1 executa **Pre-step + α.0 + α.1** direto em main, 5 commits independentes:
+
+| Commit | Sub-fase | Resultado |
+|---|---|---|
+| `abbfbb7` | Cherry-pick da auditoria | Traz ADR-017 (PROPOSTO), relatório, padrões do `audit/strict-mode` para main |
+| `3b282d1` | Pre-step | `@types/react-big-calendar@1.8` instalado (alinhado com lib 1.8.5). Remove cascade de 13 erros do compilador tratar lib como `any`. |
+| `d4eea98` | α.0 | 3 flags cost-free: `noImplicitThis` + `alwaysStrict` + `strictBindCallApply`. **Ajuste do plano original:** `strictPropertyInitialization` exige `strictNullChecks` explícito (TS5052), movida para α.3. Substituída por `strictBindCallApply` (também 0 erros). |
+| `1e20981` | α.1 | `strictFunctionTypes` ativa + fix em `TermsStep.tsx`: tipo do callback `onOpenDoc` mudou de `string` para `DocType` importado de `support/SupportDocsSheet`. Antes a bivariância mascarava o contrato — agora honest. |
+| _(este commit)_ | docs | ADR-017 promovida PROPOSTO → **ATIVO** em `decisions.md`. `AUDITORIA_STRICT_MODE_2026_05_13.md` atualizada com histórico. Refs futuras a "ADR-017" em ADR-016 ajustadas (eram para outro tema). |
+
+**Estado do `tsconfig.json` (4 flags strict ativas):**
+- `noImplicitThis: true`
+- `alwaysStrict: true`
+- `strictBindCallApply: true`
+- `strictFunctionTypes: true`
+
+**Pendente — Sessão 2 (próxima):**
+- α.2: `noImplicitAny` + ~4 fixes (cascade de `react-big-calendar` já resolvido pelo Pre-step)
+- α.3: `strictNullChecks` + `strictPropertyInitialization` (dependente) + 7 fixes — inclui **3 bugs latentes do Cluster 4** (MemberBook indexação 'NONE', OnboardingWizard callback contract, adminChatService null em array tipado)
+- Final: consolidar 7 flags em `"strict": true` único
+
+**Validações triplas (cada commit):**
+- `tsc --noEmit` exit 0 ✅
+- `npm run build` passa ✅
+- Zero alteração em arquivos PROIBIDOS (ADR-001/002/003) ✅
+- 5 commits direto em main, rollback granular preservado
+
+**TODO operacional:** `git push origin main` quando os 5 commits estiverem prontos.
+
+---
+
 ## Fase α da Auditoria R6 — 2026-05-13 (noite) — DIAGNÓSTICO STRICT MODE
 
 Auditoria diagnóstica do `tsconfig.json` strict mode. **Zero código de produção tocado.**

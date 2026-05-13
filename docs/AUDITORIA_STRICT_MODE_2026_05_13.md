@@ -1,9 +1,23 @@
 # Auditoria — TypeScript strict mode
 
-**Data:** 2026-05-13
+**Data inicial:** 2026-05-13 (diagnóstico)
+**Última atualização:** 2026-05-13 (Sessão 1 executada — Pre-step + α.0 + α.1)
 **Auditor:** Claude (Principal Engineer / Tech Lead)
-**Branch:** `audit/strict-mode` (esta auditoria — tsconfig.json **revertido** ao final, sem mudança em código de produção)
-**Baseline confirmado:** `tsc --noEmit` exit 0 antes e depois da auditoria.
+**Status:** ADR-017 **ATIVO**. 4 das 7 flags strict já ligadas em main.
+
+### Histórico de execução
+
+| Sub-fase | Commit | Status |
+|---|---|---|
+| Auditoria diagnóstica | `8bbb2e7` (branch `audit/strict-mode`) → cherry-pick `abbfbb7` | ✅ |
+| Pre-step (`@types/react-big-calendar`) | `3b282d1` | ✅ |
+| α.0 (`noImplicitThis` + `alwaysStrict` + `strictBindCallApply`) | `d4eea98` | ✅ |
+| α.1 (`strictFunctionTypes` + fix `TermsStep.onOpenDoc`) | `1e20981` | ✅ |
+| α.2 (`noImplicitAny` + ~4 fixes) | — | ⏳ Sessão 2 |
+| α.3 (`strictNullChecks` + `strictPropertyInitialization` + 7 fixes inc. Cluster 4) | — | ⏳ Sessão 2 |
+| Final (consolidar para `"strict": true`) | — | ⏳ Sessão 2 |
+
+**Estado atual `tsc --noEmit`:** exit 0 em todas as sub-fases.
 
 ---
 

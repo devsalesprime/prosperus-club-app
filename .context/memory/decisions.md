@@ -114,9 +114,25 @@
 
 ## ADR-017 · TypeScript strict mode
 
-**Status:** **PROPOSTO** (não ativo — aguarda decisão estratégica do tech lead)
+**Status:** **ATIVO** (aprovado pelo tech lead em 2026-05-13; Sessão 1 executada e em produção)
 **Data:** 2026-05-13
-**Branch da auditoria:** `audit/strict-mode` (commit único; tsconfig.json não modificado)
+**Branch da auditoria diagnóstica:** `audit/strict-mode` (commit `8bbb2e7`, cherry-picked para main como `abbfbb7`)
+
+### Execução até o momento (Sessão 1, 2026-05-13)
+
+| Sub-fase | Commit | Resultado |
+|---|---|---|
+| Pre-step | `3b282d1` | `@types/react-big-calendar@1.8` instalado |
+| α.0 | `d4eea98` | `noImplicitThis` + `alwaysStrict` + `strictBindCallApply` (3 flags cost-free) |
+| α.1 | `1e20981` | `strictFunctionTypes` + fix `TermsStep.onOpenDoc` (`string` → `DocType`) |
+
+**Estado atual do `tsconfig.json`:** 4 flags strict ativas, `tsc --noEmit` exit 0, `npm run build` passa.
+
+### Pendente — Sessão 2 (próxima)
+
+- α.2: `noImplicitAny` + ~4 fixes (cascade de `react-big-calendar` já resolvido pelo Pre-step)
+- α.3: `strictNullChecks` + `strictPropertyInitialization` (dependente) + 7 fixes — inclui **3 bugs latentes do Cluster 4** (`MemberBook.tsx:477` indexa `MatchType['NONE']` ausente do mapa; `OnboardingWizard.tsx:726` mismatch de callback contract; `adminChatService.ts:136` null em array tipado)
+- Final: consolidar 7 flags em `"strict": true` único
 
 **Contexto:** auditoria de 2026-05-13 (`docs/AUDITORIA_ANY_2026_05_13.md`, commit `99670c7`) revelou que `tsconfig.json` não tem `"strict": true` nem `"noImplicitAny": true`. Os 29 `:any` explícitos remanescentes eram apenas a superfície visível — auditoria honesta de R6 (Zero Any) exigia ligar strict e medir o iceberg completo.
 
@@ -154,7 +170,7 @@
 **Decisão:** Edge Function `cleanup-push-subscriptions` em `supabase/functions/cleanup-push-subscriptions/index.ts` roda via pg_cron diário às **03:00 UTC** (job `push-cleanup-daily`, migration `20260513_push_cleanup_cron.sql`). Deleta `push_subscriptions` em 2 regras:
 - **Regra A:** `is_active=false AND created_at < NOW() - INTERVAL '30 days'`
 - **Regra C:** `user_id NOT IN (SELECT id FROM profiles)` (defensiva para órfãs)
-- **Regra B (SKIPPED):** o briefing original previa "is_active=true mas com `last_failed_at` antigo". Coluna `last_failed_at` não existe; candidatas (`last_used_at`, `error_count`) existem mas nunca são populadas por `send-push` em produção (validado via MCP em 2026-05-13: 0/107 rows com `last_used_at` preenchido, 0/107 com `error_count > 0`). Implementar B viraria dead-code. Fica para futuro ADR-017 quando `send-push` for ajustado para popular essas colunas em catches de 410/4xx.
+- **Regra B (SKIPPED):** o briefing original previa "is_active=true mas com `last_failed_at` antigo". Coluna `last_failed_at` não existe; candidatas (`last_used_at`, `error_count`) existem mas nunca são populadas por `send-push` em produção (validado via MCP em 2026-05-13: 0/107 rows com `last_used_at` preenchido, 0/107 com `error_count > 0`). Implementar B viraria dead-code. Fica para futuro ADR (provavelmente ADR-018+) quando `send-push` for ajustado para popular essas colunas em catches de 410/4xx.
 
 HARD_LIMIT 500 deletes totais por run. Response 200 sempre com payload estruturado `{ ok, stats, timestamp, errors[] }`. Erros vão em `errors[]`, sem 500 silencioso.
 **Contexto:** Em 2026-05-13 a tabela `push_subscriptions` tinha 107 linhas (59 ativas + 48 zombies acumulados desde 2026-03-03). `send-push` já marca `is_active=false` em 410 Gone mas nunca deleta — sem cleanup automático, a tabela cresce indefinidamente, impactando custo Realtime e tempo de auditoria. Este é o **segundo cron seguindo o padrão pg_cron + vault** (precedente: ADR-015 hubspot-retry-failures); padrão consolidado como template oficial daqui em diante.
@@ -164,7 +180,7 @@ HARD_LIMIT 500 deletes totais por run. Response 200 sempre com payload estrutura
 - TODO operacional para Fábio: `supabase functions deploy cleanup-push-subscriptions` no VPS (function vive em disco/origin mas precisa subir no Supabase)
 - TODO operacional para Fábio: smoke test manual via `net.http_post` no SQL Editor antes do primeiro firing automático (validar response 200 + `deleted_inactive_old > 0`)
 - Coexiste com `hubspot-retry-failures-6h` (jobid=2) sem colisão. `push-cleanup-daily` é jobid=3.
-- Próximo passo de melhoria (ADR-017 futuro): popular `last_used_at`/`error_count` em `send-push` para habilitar Regra B (marcar ativas que silenciosamente pararam de entregar há tempo)
+- Próximo passo de melhoria (ADR futuro — ADR-017 já está alocado para strict mode): popular `last_used_at`/`error_count` em `send-push` para habilitar Regra B (marcar ativas que silenciosamente pararam de entregar há tempo)
 **Status:** ATIVO
 
 ## ADR-012 · Canal único Realtime para user_notifications
