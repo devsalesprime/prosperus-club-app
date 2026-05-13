@@ -40,8 +40,13 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
         try {
             const { galleryService } = await import('../../services/galleryService');
             setAlbums(await galleryService.getAllAlbums());
-        } catch (error: any) {
-            if ((error as any)?.message?.includes('AbortError') || (error as any)?.code === 'ABORT_ERR') return;
+        } catch (error: unknown) {
+            const errObj: Record<string, unknown> = (typeof error === 'object' && error !== null)
+                ? error as Record<string, unknown>
+                : {};
+            const errMessage = typeof errObj.message === 'string' ? errObj.message : '';
+            const errCode = typeof errObj.code === 'string' ? errObj.code : '';
+            if (errMessage.includes('AbortError') || errCode === 'ABORT_ERR') return;
             console.error('Error loading albums:', error);
             toast.error('Erro ao carregar galerias.');
         } finally {
@@ -80,7 +85,7 @@ export const GalleryModule: React.FC<GalleryModuleProps> = ({ DataTable }) => {
             setEditingAlbum({});
             await loadAlbums();
             toast.success('Galeria salva com sucesso!');
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error loading gallery data:', error);
             toast.error('Erro ao salvar galeria.');
         } finally {

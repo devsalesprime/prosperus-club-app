@@ -1,16 +1,18 @@
 # Auditoria de instâncias `:any` — 2026-05-13
 
 **Auditor:** Claude (Principal Engineer / Tech Lead)
-**Escopo:** apenas diagnóstico. Zero alteração em código de produção.
+**Escopo:** diagnóstico inicial + execução faseada.
 **Regra de referência:** R6 (Zero Any) — `.context/rules.md`
+
+**Status atual:** Fase 2 (TRIVIAL) ✅ CONCLUÍDA em 2026-05-13. Restam **29 instâncias** distribuídas em MEDIO_SUPABASE, MEDIO_DOMINIO e DIFICIL.
 
 ---
 
 ## Sumário executivo
 
-- **Total bruto detectado:** 38 instâncias de `:any` em 12 arquivos
-- **Falsos positivos filtrados:** 0 (nenhum comentário, string ou mock)
-- **Total real classificado:** 38
+- **Total bruto inicial:** 38 instâncias de `:any` em 12 arquivos
+- **Falsos positivos filtrados:** 0
+- **Após Fase 2:** **29 instâncias** (38 − 9 TRIVIAL corrigidas)
 - **Reportado anteriormente em `progress.md`:** 81 → redução de **53%** desde a última auditoria, atribuída às refatorações de Edge Functions (ADR-015) e limpezas de Tier 1.
 
 ### Achado adicional crítico — `tsconfig.json` sem `"strict"`
@@ -21,15 +23,15 @@
 
 ### Distribuição por categoria
 
-| Categoria | Count | Estimativa de esforço |
-|---|---|---|
-| TRIVIAL | 9 | ~1h |
-| MEDIO_SUPABASE | 12 | ~2-3h |
-| MEDIO_DOMINIO | 7 | ~2-3h |
-| DIFICIL | 10 | ~3-4h |
-| SUSPEITO | 0 | n/a (no inventário `:any` puro) |
-| PROIBIDO_TOCAR | 0 | n/a |
-| **TOTAL** | **38** | **~8-11h** distribuídas em 3 fases |
+| Categoria | Count inicial | Status | Esforço |
+|---|---|---|---|
+| TRIVIAL | 9 | ✅ **CONCLUÍDA 2026-05-13** | (real: <1h) |
+| MEDIO_SUPABASE | 12 | ⏳ pendente | ~2-3h |
+| MEDIO_DOMINIO | 7 | ⏳ pendente | ~2-3h |
+| DIFICIL | 10 | ⏳ pendente | ~3-4h |
+| SUSPEITO | 0 | — | n/a |
+| PROIBIDO_TOCAR | 0 | — | n/a |
+| **Restante** | **29** | em backlog | **~7-10h** em 2 fases |
 
 ### Sub-escopo: frontend vs Edge Functions
 
@@ -62,23 +64,28 @@
 
 ## Inventário detalhado
 
-### TRIVIAL — Fase 2 (~1h)
+### TRIVIAL — Fase 2 ✅ **CONCLUÍDA 2026-05-13**
 
 Tipo óbvio do contexto. Catch handlers (TS 4.4+ aceita `unknown`) e acumuladores locais.
 
-| Arquivo:linha | Trecho | Tipo proposto |
+| Arquivo:linha | Trecho original | Tipo aplicado |
 |---|---|---|
-| `contexts/AuthContext.tsx:72` | `} catch (error: any) {` | `unknown` |
-| `components/admin/GalleryModule.tsx:43` | `} catch (error: any) {` | `unknown` |
-| `components/admin/GalleryModule.tsx:83` | `} catch (error: any) {` | `unknown` |
-| `supabase/scripts/seed-admin.ts:100` | `} catch (error: any) {` | `unknown` |
+| `contexts/AuthContext.tsx:72` | `} catch (error: any) {` | `unknown` + narrowing via `Record<string, unknown>` (acesso a `.code` exigia preservar PostgrestError) |
+| `components/admin/GalleryModule.tsx:43` | `} catch (error: any) {` + 2× `as any` adjacentes | `unknown` + narrowing limpo (`as any` adjacentes também removidos) |
+| `components/admin/GalleryModule.tsx:83` | `} catch (error: any) {` | `unknown` (passa direto pra `console.error`, aceita) |
+| `supabase/scripts/seed-admin.ts:100` | `} catch (error: any) {` | `unknown` + `error instanceof Error ? error.message : String(error)` |
 | `supabase/functions/sync-hubspot/index.ts:191` | `const cleanProps: any = {};` | `Record<string, string>` |
 | `supabase/functions/sync-hubspot/index.ts:216` | `const cleanProps: any = {};` | `Record<string, string>` |
-| `supabase/functions/hubspot-webhook/index.ts:579` | `const payload: any = { is_active: isActive, updated_at: new Date().toISOString() }` | Interface ProfileUpdatePayload (4 campos) ou `Record<string, unknown>` |
-| `supabase/functions/send-push/index.ts:95` | `} catch (err: any) {` | `unknown` |
-| `supabase/functions/send-push/index.ts:122` | `} catch (err: any) {` | `unknown` |
+| `supabase/functions/hubspot-webhook/index.ts:579` | `const payload: any = { is_active, updated_at }` | `Record<string, unknown>` (boolean+string+number heterogêneos) |
+| `supabase/functions/send-push/index.ts:95` | `} catch (err: any) {` | `unknown` + narrowing pra `WebPushError.statusCode` via `Record<string, unknown>` (preserva 410/404 handling) |
+| `supabase/functions/send-push/index.ts:122` | `} catch (err: any) {` | `unknown` + `err instanceof Error ? err.message : String(err)` |
 
-**Risco:** baixo. Trocas mecânicas. Para `catch (error: unknown)`, adicionar narrowing `if (error instanceof Error)` nos sites que acessam `.message`.
+**Validações da execução:**
+- `tsc --noEmit` exit 0 ✅
+- `npm run build` passa ✅ (Sentry source maps uploadadas)
+- Zero `as any` introduzido como narrowing (todos os narrowings via `Record<string, unknown>` + checagem de tipo runtime)
+- Zero `as Error` usado
+- `git diff --stat`: 5 arquivos `.ts/.tsx` modificados (exatamente os listados) + 2 docs
 
 ---
 
@@ -248,4 +255,34 @@ Antes de iniciar Fase 2, considerar adicionar `"strict": true` ao `tsconfig.json
 1. ✅ Listei apenas `:any` explícito (escopo do briefing). `as any` mapeado no Apêndice A.
 2. ✅ Não classifiquei nenhum `:any` como SUSPEITO porque todos têm justificativa clara — os SUSPEITOS reais estão em `as any` (A.1).
 3. ✅ `PROIBIDO_TOCAR` ficou vazio para `:any` puro. As 3 zonas com `as any` listadas em A.2 são informativas.
-4. ✅ Não toquei em nenhum arquivo `.ts`/`.tsx` de produção. Esta auditoria é só este arquivo + entrada em `progress.md`.
+4. ✅ Auditoria original (commit `99670c7`) não tocou em código de produção.
+
+---
+
+## Histórico de execução
+
+| Fase | Quando | Commit | Resultado |
+|---|---|---|---|
+| Auditoria inicial | 2026-05-13 manhã | `99670c7` | 38 instâncias classificadas em 5 categorias + Apêndice A |
+| **Fase 2 TRIVIAL** | **2026-05-13 tarde** | _(este commit)_ | **-9 instâncias (38 → 29). Padrão estabelecido: narrowing via `Record<string, unknown>` + checagem runtime, sem `as Error` nem `as any`.** |
+| Fase α (recomendada antes de 3+) | TBD | — | ADR-017 com `"strict": true` faseado |
+| Fase 3a MEDIO_SUPABASE | TBD | — | 12 instâncias (Session/User/Profile types do Database) |
+| Fase 3b MEDIO_DOMINIO | TBD | — | 7 instâncias (NavItem, AnalyticsEvent metadata, etc) |
+| Fase 4 DIFICIL | TBD | — | 10 instâncias (criar `_shared/hubspot-types.ts`) |
+| Fase 5 Apêndice A.1 | TBD | — | SUSPEITOS de bug latente (drift DB vs tipo TS) |
+
+**Padrão de narrowing consolidado em Fase 2** (referência para Fases 3+):
+
+```ts
+// Para erros desconhecidos com shape pseudo-estruturado:
+const errObj: Record<string, unknown> = (typeof error === 'object' && error !== null)
+    ? error as Record<string, unknown>
+    : {};
+const errMessage = typeof errObj.message === 'string' ? errObj.message : '';
+const errCode = typeof errObj.code === 'string' ? errObj.code : undefined;
+
+// Para erros simples onde só precisa de .message:
+const message = error instanceof Error ? error.message : String(error);
+```
+
+`as Record<string, unknown>` é narrowing honest (não cast cego — TS ainda obriga a checar cada propriedade antes de usar), diferente de `as Error` que é equivalente a `as any`.

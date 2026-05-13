@@ -92,14 +92,22 @@ serve(async (req) => {
                 )
                 sent++
                 console.log('✅ Enviado:', sub.id)
-            } catch (err: any) {
+            } catch (err: unknown) {
                 failed++
-                const msg = `${sub.id}: HTTP ${err.statusCode} ${err.message}`
+                // web-push lança WebPushError com .statusCode (não-padrão de Error).
+                // Narrowing via Record<string, unknown> + checagem de tipo runtime
+                // preserva acesso a statusCode sem :any.
+                const errObj: Record<string, unknown> = (typeof err === 'object' && err !== null)
+                    ? err as Record<string, unknown>
+                    : {}
+                const statusCode = typeof errObj.statusCode === 'number' ? errObj.statusCode : undefined
+                const errMessage = typeof errObj.message === 'string' ? errObj.message : String(err)
+                const msg = `${sub.id}: HTTP ${statusCode ?? 'unknown'} ${errMessage}`
                 console.error('❌', msg)
                 errors.push(msg)
 
                 // 410/404 = subscription expirada → desativar
-                if (err.statusCode === 410 || err.statusCode === 404) {
+                if (statusCode === 410 || statusCode === 404) {
                     await supabase
                         .from('push_subscriptions')
                         .update({ is_active: false })
@@ -119,10 +127,11 @@ serve(async (req) => {
             { headers: corsHeaders }
         )
 
-    } catch (err: any) {
-        console.error('❌ send-push fatal:', err.message)
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.error('❌ send-push fatal:', message)
         return new Response(
-            JSON.stringify({ error: err.message }),
+            JSON.stringify({ error: message }),
             { status: 500, headers: corsHeaders }
         )
     }

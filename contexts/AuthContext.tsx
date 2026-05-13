@@ -69,13 +69,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     setUserProfile(null);
                 }
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (!mountedRef.current) return;
 
+            // Narrowing seguro: Supabase pode lançar PostgrestError (com .code) ou
+            // Error normal (com .name/.message). Trata ambos sem :any.
+            const errObj: Record<string, unknown> = (typeof error === 'object' && error !== null)
+                ? error as Record<string, unknown>
+                : {};
+            const errName = typeof errObj.name === 'string' ? errObj.name : '';
+            const errMessage = typeof errObj.message === 'string' ? errObj.message : '';
+            const errCode = typeof errObj.code === 'string' ? errObj.code : undefined;
+
             // AbortError happens during Supabase token refresh — silently use cache
-            const isAbortError = error?.message?.includes('AbortError') ||
-                error?.message?.includes('signal is aborted') ||
-                error?.name === 'AbortError';
+            const isAbortError =
+                errMessage.includes('AbortError') ||
+                errMessage.includes('signal is aborted') ||
+                errName === 'AbortError';
             if (isAbortError) {
                 logger.debug('🔄 AuthContext: Request aborted (token refresh) — using cached profile');
                 if (profileCacheRef.current) {
@@ -85,9 +95,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
 
             logger.error('❌ AuthContext: Error fetching profile:', {
-                name: error?.name,
-                message: error?.message,
-                code: error?.code,
+                name: errName,
+                message: errMessage,
+                code: errCode,
                 userId
             });
 

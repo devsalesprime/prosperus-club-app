@@ -97,8 +97,9 @@ async function seedAdminUser() {
         console.log('   Password:', ADMIN_PASSWORD);
         console.log('   Role: ADMIN\n');
 
-    } catch (error: any) {
-        console.error('❌ Error seeding admin user:', error.message);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error('❌ Error seeding admin user:', message);
         process.exit(1);
     }
 }

@@ -576,7 +576,7 @@ async function handleDealPropertyChange(eventData: any) {
                 const email = contact.properties?.email
                 if (!email) continue
 
-                const payload: any = { is_active: isActive, updated_at: new Date().toISOString() }
+                const payload: Record<string, unknown> = { is_active: isActive, updated_at: new Date().toISOString() }
                 if (amountValue !== null) {
                     payload.valor_pago_mentoria = amountValue
                 }

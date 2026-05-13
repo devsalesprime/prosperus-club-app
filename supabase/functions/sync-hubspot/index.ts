@@ -188,7 +188,7 @@ async function getAssociatedCompany(contactId: string): Promise<string | null> {
 
 async function createHubSpotCompany(properties: any, associatedContactId: string): Promise<string | void> {
     if (!properties.name && !properties.nome_fantasia) return;
-    const cleanProps: any = {};
+    const cleanProps: Record<string, string> = {};
     for (const k in properties) {
         if (properties[k]) cleanProps[k] = properties[k];
     }
@@ -213,7 +213,7 @@ async function createHubSpotCompany(properties: any, associatedContactId: string
 }
 
 async function updateHubSpotCompany(companyId: string, properties: any): Promise<void> {
-    const cleanProps: any = {};
+    const cleanProps: Record<string, string> = {};
     for (const k in properties) {
         if (properties[k]) cleanProps[k] = properties[k];
     }

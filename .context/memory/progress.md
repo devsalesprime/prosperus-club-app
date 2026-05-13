@@ -36,6 +36,42 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase 2 da Auditoria R6 — 2026-05-13 (tarde-2)
+
+Execução da Fase 2 (TRIVIAL) da auditoria de `:any`.
+
+**Entregue:**
+- 9 instâncias TRIVIAL corrigidas (38 → 29)
+- Padrão de narrowing consolidado: `Record<string, unknown>` + checagem runtime, sem `as Error` ou `as any`
+- WebPushError em `send-push:95` mantém acesso a `.statusCode` (não-padrão de Error) via narrowing limpo
+- 2 `as any` adjacentes em `GalleryModule.tsx:43-44` também removidos no mesmo escopo
+- Validação: `tsc --noEmit` exit 0, `npm run build` passa
+
+**Arquivos tocados (5 .ts/.tsx + 2 docs):**
+- `contexts/AuthContext.tsx`
+- `components/admin/GalleryModule.tsx`
+- `supabase/scripts/seed-admin.ts`
+- `supabase/functions/sync-hubspot/index.ts`
+- `supabase/functions/hubspot-webhook/index.ts`
+- `supabase/functions/send-push/index.ts`
+- `docs/AUDITORIA_ANY_2026_05_13.md` (status + histórico)
+- `.context/memory/progress.md` (esta entrada)
+
+**TODO operacional (Fábio):** deploy via CLI das 3 Edge Functions tocadas para sincronizar com produção:
+```bash
+cd /var/www/prosperus-club-app && git pull origin main
+supabase functions deploy sync-hubspot
+supabase functions deploy hubspot-webhook
+supabase functions deploy send-push
+```
+
+**Próximas fases (backlog):**
+- Fase α (recomendada): ADR-017 com `"strict": true` faseado
+- Fase 3a: MEDIO_SUPABASE (12) — gerar `Database` types
+- Fase 3b: MEDIO_DOMINIO (7) — interfaces de domínio
+- Fase 4: DIFICIL (10) — criar `_shared/hubspot-types.ts`
+- Fase 5: SUSPEITOS Apêndice A.1 (caso a caso, podem virar Issues)
+
 ## Auditoria 2026-05-13 (tarde) — Inventário de `:any` (R6)
 
 Auditoria diagnóstica das instâncias `:any` no codebase. Zero alteração em
