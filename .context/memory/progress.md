@@ -36,6 +36,40 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Auditoria 2026-05-13 (tarde) — Inventário de `:any` (R6)
+
+Auditoria diagnóstica das instâncias `:any` no codebase. Zero alteração em
+código de produção.
+
+**Achados:**
+- **38 instâncias** explícitas em 12 arquivos (não 81 como reportado antes —
+  redução de 53% atribuída às refatorações Edge Functions ADR-015 + cleanup Tier 1)
+- 20 instâncias no frontend (`tsc` vê) + 18 em `supabase/` (Deno runtime)
+- **Achado crítico:** `tsconfig.json` não tem `"strict"` nem `"noImplicitAny"`.
+  Há `any` IMPLÍCITOS no codebase não capturados por essa auditoria.
+- Apêndice A: ~30 `as any` separados (incluindo SUSPEITOS de bug latente
+  como `(profile as any).banner_url` indicando drift entre DB e tipo TS)
+
+**Distribuição:**
+| Categoria | Count | Esforço |
+|---|---|---|
+| TRIVIAL | 9 | ~1h |
+| MEDIO_SUPABASE | 12 | ~2-3h |
+| MEDIO_DOMINIO | 7 | ~2-3h |
+| DIFICIL | 10 | ~3-4h |
+| SUSPEITO (em `:any`) | 0 | — |
+| PROIBIDO_TOCAR | 0 | — |
+| **Total** | **38** | **~8-11h** em 3 fases |
+
+**Relatório completo:** `docs/AUDITORIA_ANY_2026_05_13.md`
+
+**Próximas fases recomendadas:**
+- Fase 2 (TRIVIAL ~1h) — catch handlers + acumuladores
+- Fase 3 (MEDIO_SUPABASE + MEDIO_DOMINIO ~3-5h) — gerar `Database` types + interfaces
+- Fase 4 (DIFICIL ~3-4h) — criar `_shared/hubspot-types.ts` consolidando shapes da API HubSpot
+- Fase 5 paralela — investigar `as any` SUSPEITOS (drift DB/tipo)
+- Pré-requisito recomendado antes de Fase 2: ADR-017 com `"strict": true` faseado
+
 ## Sprint 2026-05-13 — Push subscription cleanup automatizado (ADR-016)
 
 Resolução de Issue-014 (48 zombies em `push_subscriptions` acumulados desde 2026-03-03).

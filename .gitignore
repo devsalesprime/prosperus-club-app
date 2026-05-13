@@ -112,6 +112,7 @@ docs/*
 
 # Whitelist seletiva: docs canônicos com valor permanente entram no repo
 !docs/SESSAO_*.md
+!docs/AUDITORIA_*.md
 !docs/DESIGN_SYSTEM.md
 !docs/BRAND_MIGRATION_GUIDE.md
 !docs/MIGRATIONS_HISTORY.md
