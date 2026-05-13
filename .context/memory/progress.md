@@ -36,6 +36,55 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Sprint 2026-05-13 — Push subscription cleanup automatizado (ADR-016)
+
+Resolução de Issue-014 (48 zombies em `push_subscriptions` acumulados desde 2026-03-03).
+
+**Entregue:**
+- `supabase/functions/cleanup-push-subscriptions/index.ts` — Edge Function de manutenção (Regra A: delete inativas >30d; Regra C: delete órfãs; Regra B skipped por colunas não-populadas — ver ADR-016)
+- Migration `20260513_push_cleanup_cron.sql` — pg_cron `push-cleanup-daily` cron `0 3 * * *` aplicada via MCP (jobid=3, active=true)
+- ADR-016 documentado em `decisions.md`
+- Issue-014 marcada resolvida em `issues.md`
+- `docs/EDGE_FUNCTIONS_AUDIT.md` atualizado: 13 Edge Functions agora
+
+**Validações:**
+- Estado real validado via MCP antes de codar (107 linhas, 33 deletáveis na primeira run)
+- `tsc --noEmit` clean
+- Migration aplicada via MCP `apply_migration`
+- `cron.job` confirma `push-cleanup-daily` jobid=3 active=true coexistindo com `hubspot-retry-failures-6h` jobid=2
+- Refutação aceita: Regra B cancelada nesta versão (colunas necessárias não populadas em produção)
+
+**TODOs operacionais (Fábio executa no VPS):**
+1. **Deploy via CLI:**
+   ```bash
+   cd /var/www/prosperus-club-app
+   git pull origin main
+   supabase functions deploy cleanup-push-subscriptions
+   ```
+2. **Smoke test manual** (antes do primeiro firing automático às 03:00 UTC):
+   ```sql
+   -- Dashboard SQL Editor
+   SELECT net.http_post(
+     url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1)
+            || '/functions/v1/cleanup-push-subscriptions',
+     headers := jsonb_build_object(
+       'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1),
+       'Content-Type', 'application/json'
+     ),
+     body := '{}'::jsonb
+   );
+
+   -- Aguarda 5-10s, depois:
+   SELECT status_code, content::text FROM net._http_response
+   ORDER BY created DESC LIMIT 1;
+   ```
+   Esperado: `status_code=200` + payload com `deleted_inactive_old` ≈ 33 (estado em 2026-05-13).
+3. Após smoke test OK, deixar o cron rodar diariamente.
+
+**Padrão consolidado:** este é o **segundo cron seguindo pg_cron + vault + Edge Function** (precedente: ADR-015 hubspot-retry-failures). Daqui em diante, todo cron novo segue exatamente este template — NUNCA via Dashboard cron UI.
+
+**TODO futuro (ADR-017):** popular `last_used_at`/`error_count` em `send-push` para habilitar Regra B (ativas que silenciosamente pararam de entregar há >90 dias).
+
 ## Sprint 2026-05-11 — HubSpot rate limit handling (ADR-015)
 
 Resolução de Issue-012 retroativa (perda silenciosa de chamadas HubSpot em 429/5xx).

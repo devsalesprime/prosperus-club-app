@@ -112,6 +112,23 @@
 - TODO retroativo: criar UI admin para inspecionar a fila (`SELECT` policy já permite). Fica para PR separado.
 **Status:** ATIVO
 
+## ADR-016 · Push subscription cleanup automatizado
+**Decisão:** Edge Function `cleanup-push-subscriptions` em `supabase/functions/cleanup-push-subscriptions/index.ts` roda via pg_cron diário às **03:00 UTC** (job `push-cleanup-daily`, migration `20260513_push_cleanup_cron.sql`). Deleta `push_subscriptions` em 2 regras:
+- **Regra A:** `is_active=false AND created_at < NOW() - INTERVAL '30 days'`
+- **Regra C:** `user_id NOT IN (SELECT id FROM profiles)` (defensiva para órfãs)
+- **Regra B (SKIPPED):** o briefing original previa "is_active=true mas com `last_failed_at` antigo". Coluna `last_failed_at` não existe; candidatas (`last_used_at`, `error_count`) existem mas nunca são populadas por `send-push` em produção (validado via MCP em 2026-05-13: 0/107 rows com `last_used_at` preenchido, 0/107 com `error_count > 0`). Implementar B viraria dead-code. Fica para futuro ADR-017 quando `send-push` for ajustado para popular essas colunas em catches de 410/4xx.
+
+HARD_LIMIT 500 deletes totais por run. Response 200 sempre com payload estruturado `{ ok, stats, timestamp, errors[] }`. Erros vão em `errors[]`, sem 500 silencioso.
+**Contexto:** Em 2026-05-13 a tabela `push_subscriptions` tinha 107 linhas (59 ativas + 48 zombies acumulados desde 2026-03-03). `send-push` já marca `is_active=false` em 410 Gone mas nunca deleta — sem cleanup automático, a tabela cresce indefinidamente, impactando custo Realtime e tempo de auditoria. Este é o **segundo cron seguindo o padrão pg_cron + vault** (precedente: ADR-015 hubspot-retry-failures); padrão consolidado como template oficial daqui em diante.
+**Consequência:**
+- Tabela `push_subscriptions` estável em médio prazo (zombies > 30d removidos diariamente)
+- Padrão `pg_cron + Edge Function + vault` consolidado como template — replicar para qualquer cron novo, NUNCA via Dashboard cron UI
+- TODO operacional para Fábio: `supabase functions deploy cleanup-push-subscriptions` no VPS (function vive em disco/origin mas precisa subir no Supabase)
+- TODO operacional para Fábio: smoke test manual via `net.http_post` no SQL Editor antes do primeiro firing automático (validar response 200 + `deleted_inactive_old > 0`)
+- Coexiste com `hubspot-retry-failures-6h` (jobid=2) sem colisão. `push-cleanup-daily` é jobid=3.
+- Próximo passo de melhoria (ADR-017 futuro): popular `last_used_at`/`error_count` em `send-push` para habilitar Regra B (marcar ativas que silenciosamente pararam de entregar há tempo)
+**Status:** ATIVO
+
 ## ADR-012 · Canal único Realtime para user_notifications
 **Decisão:** `useNotificationsSubscription.ts` é o único canal Realtime para a tabela `user_notifications`. Instanciado APENAS dentro de `NotificationsContext` (Provider). Componentes consomem via `useNotifications()` ou `window.addEventListener('prosperus:new-notification')`.
 **Contexto:** Antes de 2026-05-08, `notificationService.subscribeToNotifications` era chamado diretamente por `NotificationsPage` e `NotificationCenter`, criando N canais com `Math.random()` no nome — replicando o anti-pattern que ADR-002 corrigiu para `messages`. Risco: `mismatch between server and client bindings`, subscription leak no StrictMode, custo Realtime desnecessário.

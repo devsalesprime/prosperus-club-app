@@ -1,7 +1,7 @@
 # Edge Functions Audit — Prosperus Club
 
-**Última atualização:** 2026-05-11 (ADR-015 retry/backoff + queue)
-**Escopo atual:** 12 Edge Functions em `supabase/functions/` (11 deploy + `_shared` lib não-deployável)
+**Última atualização:** 2026-05-13 (ADR-016 push cleanup cron)
+**Escopo atual:** 13 Edge Functions em `supabase/functions/` (12 deploy + `_shared` lib não-deployável)
 
 ## Status geral
 
@@ -14,7 +14,8 @@
 | `update-hubspot-contact` | client + script externo | `hooks/useProfileForm.ts`, `scripts/migrations/sync_hubspot.mjs` | ✅ Ativa — **ADR-015 (retry + queue)** |
 | `sync-hubspot-birthdays` | client-invoke | `services/adminBirthdayService.ts:136` | ✅ Ativa — **ADR-015 (retry + queue, payload `{}`)** |
 | `hubspot-webhook` | webhook externo (HubSpot) | — (chamado externamente) | ✅ Ativa — **ADR-015 parcial: só loops wrappados, sem queue por design** |
-| `hubspot-retry-failures` | cron pg_cron (a cada 6h) | `cron.job 'hubspot-retry-failures-6h'` via pg_net | ✅ Ativa — **NOVA em 2026-05-11 (ADR-015)** |
+| `hubspot-retry-failures` | cron pg_cron (a cada 6h) | `cron.job 'hubspot-retry-failures-6h'` (jobid=2) via pg_net | ✅ Ativa — **NOVA em 2026-05-11 (ADR-015)** |
+| `cleanup-push-subscriptions` | cron pg_cron (diário 03h UTC) | `cron.job 'push-cleanup-daily'` (jobid=3) via pg_net | ✅ Ativa — **NOVA em 2026-05-13 (ADR-016)** |
 | `roi-coleta-cron` | cron | Schedule externo (Dashboard) | ✅ Ativa |
 | `send-birthday-pushes` | cron | Schedule externo (Dashboard) | ✅ Ativa |
 | `receive-report` | webhook externo (admin tool não-Prosperus) | — (POST externo) | ⚠️ Ativa com ~30% 404 — TODO investigar caller |

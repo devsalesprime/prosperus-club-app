@@ -3,6 +3,14 @@
 
 ## RESOLVIDOS
 
+### Issue-014 · push_subscriptions acumulando zombies (resolvida via cron)
+**Sintoma:** Em 2026-05-13 a tabela tinha 107 linhas: 59 active + 48 inactive. Dos 48 inativos, 33 já tinham > 30 dias (alguns acumulados desde 2026-03-03). `send-push` corretamente marca `is_active=false` em 410 Gone mas nunca deleta — sem cleanup automático, a tabela crescia indefinidamente.
+**Causa raiz:** ausência de processo de manutenção. Não era bug do `send-push` (que faz a parte certa de marcação) — era falta de uma rotina de garbage collection downstream.
+**Solução (2026-05-13):** ADR-016. Edge Function `cleanup-push-subscriptions` + pg_cron `push-cleanup-daily` (diário 03h UTC). Deleta inativas > 30 dias (Regra A) e órfãs (Regra C). Regra B do briefing original (stale ativas) ficou SKIPPED porque colunas necessárias (`last_failed_at` não existe; `last_used_at` e `error_count` existem mas nunca são populadas em produção). Aguarda ADR-017 futuro com fix em `send-push` para reintroduzir B.
+**ADR:** ADR-016
+**Status:** ✅ RESOLVIDO 2026-05-13
+
+
 ### Issue-013 · provisionProfileByEmail perdia dados do deal (hubspot_contact_id, amount, closedate)
 **Sintoma:** sócios cujo email de signup do app difere do email principal do HubSpot contact (entram via `c_e_mail`/`e_mail___participante_vinculado_*` no deal) ficavam com `hubspot_contact_id`, `hubspot_deal_id`, `valor_pago_mentoria` e `data_entrada_clube` NULL. Painel admin ROI ("Crescimento") mostrava investimento vazio mesmo com `amount` setado no HubSpot. 10 sócios afetados (Amanda Vilas Calheiros + 9).
 **Causa raiz:** `hubspot-webhook::provisionProfileByEmail(email, isActive)` aceitava apenas 2 parâmetros e atualizava só `is_active`. O loop dos CRM-associated contacts propagava `valor_pago_mentoria`, mas o branch de participants via `c_e_mail` não. Sem `hubspot_contact_id` populado, sync futuro também não sabia ligar.
