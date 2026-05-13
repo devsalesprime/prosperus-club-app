@@ -112,6 +112,44 @@
 - TODO retroativo: criar UI admin para inspecionar a fila (`SELECT` policy já permite). Fica para PR separado.
 **Status:** ATIVO
 
+## ADR-017 · TypeScript strict mode
+
+**Status:** **PROPOSTO** (não ativo — aguarda decisão estratégica do tech lead)
+**Data:** 2026-05-13
+**Branch da auditoria:** `audit/strict-mode` (commit único; tsconfig.json não modificado)
+
+**Contexto:** auditoria de 2026-05-13 (`docs/AUDITORIA_ANY_2026_05_13.md`, commit `99670c7`) revelou que `tsconfig.json` não tem `"strict": true` nem `"noImplicitAny": true`. Os 29 `:any` explícitos remanescentes eram apenas a superfície visível — auditoria honesta de R6 (Zero Any) exigia ligar strict e medir o iceberg completo.
+
+**Resultado da medição** (`docs/AUDITORIA_STRICT_MODE_2026_05_13.md`):
+- `"strict": true` total: **23 erros**, não centenas como temido
+- **13 dos 23 (57%) são cascade de 1 problema só:** `react-big-calendar` está em `package.json` (1.8.5) mas sem `@types/react-big-calendar` instalado. Resolver isso baixa para **10 erros reais**.
+- 3 flags são "grátis" (0 erros isolados): `noImplicitThis`, `alwaysStrict`, `strictPropertyInitialization`
+- `strictFunctionTypes` tem 1 erro
+- `noImplicitAny` ~4 erros reais pós-pre-step
+- `strictNullChecks` ~7 erros, dos quais **3 são bugs latentes** (Cluster 4 do relatório: `MemberBook.tsx:477` indexa `MatchType` com `'NONE'` ausente do mapa; `OnboardingWizard.tsx:726` mismatch de signature de callback; `adminChatService.ts:136` array com possíveis nulls).
+- 4 subpastas inteiras (`hooks/`, `lib/`, `contexts/`, `tests/`) já passam **clean** com strict total.
+
+**Decisão proposta:** Adotar TypeScript strict mode via **Estratégia D — Híbrida + Pre-step**. Plano em 5 sub-fases incrementais, cada uma com PR pequena e validação tripla entre passos:
+
+| Sub-fase | Escopo | Esforço |
+|---|---|---|
+| Pre-step | Instalar `@types/react-big-calendar` ou stub mínimo | 15min |
+| α.0 | Ligar `noImplicitThis` + `alwaysStrict` + `strictPropertyInitialization` (0 erros) | 15min |
+| α.1 | `strictFunctionTypes` + fix OnboardingWizard callback | 1h |
+| α.2 | `noImplicitAny` + fix 3-4 erros | 1-2h |
+| α.3 | `strictNullChecks` + fix 7 erros + resolver Cluster 4 (3 bugs latentes) | 2-3h |
+| Final | Consolidar para `"strict": true` único | 5min |
+
+**Custo total estimado:** **~4-6h** distribuídos em 5 sub-fases (não 20-40h como temido).
+
+**Consequência se aprovado:** Compilador captura `:any` implícitos e bugs `null/undefined` em compile-time. Adoção plena de R6 (Zero Any). Bugs latentes do Cluster 4 saem do código por compilação obrigatória, não por boa intenção.
+
+**Consequência se rejeitado:** Continuamos com `noImplicitAny` implícito permitido. Os 3 bugs latentes do Cluster 4 permanecem visíveis apenas para quem ler o relatório — sem garantia de fix.
+
+**Próximo passo:** decisão estratégica. Se aprovado, sessão futura executa Pre-step e Fase α.0 juntos (30min de quick win com PR enxuta).
+
+**Referência:** `docs/AUDITORIA_STRICT_MODE_2026_05_13.md`
+
 ## ADR-016 · Push subscription cleanup automatizado
 **Decisão:** Edge Function `cleanup-push-subscriptions` em `supabase/functions/cleanup-push-subscriptions/index.ts` roda via pg_cron diário às **03:00 UTC** (job `push-cleanup-daily`, migration `20260513_push_cleanup_cron.sql`). Deleta `push_subscriptions` em 2 regras:
 - **Regra A:** `is_active=false AND created_at < NOW() - INTERVAL '30 days'`

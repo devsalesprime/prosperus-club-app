@@ -17,9 +17,11 @@
 
 ### Achado adicional crítico — `tsconfig.json` sem `"strict"`
 
-`tsconfig.json` **não tem** `"strict": true` nem `"noImplicitAny": true`. Os 38 explícitos são apenas a superfície — **parâmetros sem anotação ficam `any` implícitos sem o compilador reclamar.** Auditoria honesta de R6 exigiria habilitar `noImplicitAny` e contar os erros que surgirem; estima-se centenas a milhares.
+`tsconfig.json` **não tem** `"strict": true` nem `"noImplicitAny": true`. Os 38 explícitos são apenas a superfície — **parâmetros sem anotação ficam `any` implícitos sem o compilador reclamar.**
 
-**Recomendação:** após zerar os 38 explícitos, criar ADR-017 com plano gradual de adoção de `"strict": true` (provavelmente faseado por subpasta).
+**Auditoria diagnóstica feita em 2026-05-13 (noite) revelou apenas 23 erros com strict total** (não centenas como temido), e **13 deles são cascade de 1 só problema** (falta `@types/react-big-calendar`). Detalhes completos em `docs/AUDITORIA_STRICT_MODE_2026_05_13.md` (branch `audit/strict-mode`).
+
+**ADR-017 PROPOSTO** em `.context/memory/decisions.md` com plano Estratégia D híbrida em 5 sub-fases (~4-6h total).
 
 ### Distribuição por categoria
 

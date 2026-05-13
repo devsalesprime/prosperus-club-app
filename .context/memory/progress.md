@@ -36,6 +36,39 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase α da Auditoria R6 — 2026-05-13 (noite) — DIAGNÓSTICO STRICT MODE
+
+Auditoria diagnóstica do `tsconfig.json` strict mode. **Zero código de produção tocado.**
+Branch: `audit/strict-mode` (NÃO mergeada — apenas docs são candidatas a cherry-pick para main).
+
+**Achados:**
+- `"strict": true` total revela **23 erros** (não centenas como temido)
+- **13 dos 23 (57%) são cascade de 1 problema:** falta `@types/react-big-calendar`
+- Resolver isso baixa para **10 erros reais**
+- 4 subpastas inteiras já passam clean: `hooks/`, `lib/`, `contexts/`, `tests/`
+- 3 flags "grátis" (0 erros isolados): `noImplicitThis`, `alwaysStrict`, `strictPropertyInitialization`
+- 3 bugs latentes descobertos (Cluster 4 do relatório):
+  - `MemberBook.tsx:477` — `MATCH_STYLES['NONE']` indexa propriedade inexistente
+  - `OnboardingWizard.tsx:726` — mismatch de signature em callback (DocType vs string)
+  - `services/adminChatService.ts:136` — array com null sendo atribuído a type sem null
+
+**Entregue:**
+- `docs/AUDITORIA_STRICT_MODE_2026_05_13.md` — relatório completo com 5 sub-fases
+- `docs/PATTERNS_TYPESCRIPT.md` — padrões consolidados (narrowing honest, acumuladores, catch shorthand)
+- ADR-017 PROPOSTO em `decisions.md` (estratégia D híbrida + pre-step, ~4-6h em 5 sub-fases)
+- `.gitignore` atualizado: whitelist `PATTERNS_*.md`, blocklist `STRICT_AUDIT_RAW.log`
+- cross-ref em `AUDITORIA_ANY_2026_05_13.md` apontando para esta auditoria
+
+**Validação:**
+- `tsconfig.json` REVERTIDO ao baseline ao final (`git diff tsconfig.json` vazio)
+- `tsc --noEmit` exit 0 antes e depois da auditoria
+- Zero `.ts/.tsx` de produção modificado
+- Commit único na branch `audit/strict-mode`
+
+**Decisão pendente:** tech lead aprova ou rejeita ADR-017?
+- Se aprovado, próxima sessão começa pelo Pre-step (~15min): `npm i --save-dev @types/react-big-calendar`.
+- Se rejeitado, manter `tsconfig.json` como está e atacar Fase β (Apêndice A.1 SUSPEITOS) ou Fase 3 (MEDIO_*) sem strict mode.
+
 ## Fase 2 da Auditoria R6 — 2026-05-13 (tarde-2)
 
 Execução da Fase 2 (TRIVIAL) da auditoria de `:any`.
