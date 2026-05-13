@@ -1,12 +1,13 @@
 // TermsStep — Step 5 (Operação Estilhaço)
 import React from 'react';
+import type { DocType } from '../../support/SupportDocsSheet';
 
 export interface TermsStepProps {
     acceptedTerms: boolean;
     acceptedPrivacy: boolean;
     onAcceptTermsChange: (checked: boolean) => void;
     onAcceptPrivacyChange: (checked: boolean) => void;
-    onOpenDoc: (docType: string) => void;
+    onOpenDoc: (docType: DocType) => void;
 }
 
 export const TermsStep: React.FC<TermsStepProps> = ({

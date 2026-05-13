@@ -28,7 +28,8 @@
     "noEmit": true,
     "noImplicitThis": true,
     "alwaysStrict": true,
-    "strictBindCallApply": true
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true
   },
   "exclude": [
     "supabase"
