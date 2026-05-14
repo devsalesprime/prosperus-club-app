@@ -131,6 +131,11 @@ export const adminBirthdayService = {
      * Dispara a Edge Function de sincronização HubSpot → App.
      * Busca contatos com banner_de_aniversario preenchido e faz UPSERT.
      * Retorna estatísticas da operação.
+     *
+     * NOTA: a Edge Function foi refatorada na ADR-015 e agora retorna o
+     * contrato uniforme `{ synced, queued, queueId?, error?, stats }` em
+     * vez do antigo `{ success, stats }`. Este service traduz a resposta
+     * no boundary para manter o contrato com o caller estável.
      */
     async syncFromHubSpot(): Promise<{ success: boolean; stats?: Record<string, number>; error?: string }> {
         addBreadcrumb('hubspot', 'invoke sync-hubspot-birthdays');
@@ -140,7 +145,20 @@ export const adminBirthdayService = {
             });
 
             if (error) throw error;
-            return data as { success: boolean; stats: Record<string, number> };
+
+            const payload = (data ?? {}) as {
+                synced?: boolean;
+                queued?: boolean;
+                queueId?: string;
+                error?: string;
+                stats?: Record<string, number>;
+            };
+
+            return {
+                success: payload.synced === true,
+                stats: payload.stats,
+                error: payload.error,
+            };
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Erro desconhecido';
             logger.error('Error syncing from HubSpot:', error);
