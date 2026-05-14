@@ -114,25 +114,36 @@
 
 ## ADR-017 · TypeScript strict mode
 
-**Status:** **ATIVO** (aprovado pelo tech lead em 2026-05-13; Sessão 1 executada e em produção)
-**Data:** 2026-05-13
-**Branch da auditoria diagnóstica:** `audit/strict-mode` (commit `8bbb2e7`, cherry-picked para main como `abbfbb7`)
+**Status:** **ATIVO E CONCLUÍDO** (aprovado em 2026-05-13; Sessão 1 + Sessão 2 executadas em produção. `tsconfig.json` agora com `"strict": true` único)
+**Data inicial:** 2026-05-13
+**Data conclusão:** 2026-05-14
+**Branch da auditoria diagnóstica:** `audit/strict-mode` (commit `8bbb2e7`, cherry-picked como `abbfbb7`)
 
-### Execução até o momento (Sessão 1, 2026-05-13)
+### Execução completa
 
 | Sub-fase | Commit | Resultado |
 |---|---|---|
 | Pre-step | `3b282d1` | `@types/react-big-calendar@1.8` instalado |
 | α.0 | `d4eea98` | `noImplicitThis` + `alwaysStrict` + `strictBindCallApply` (3 flags cost-free) |
 | α.1 | `1e20981` | `strictFunctionTypes` + fix `TermsStep.onOpenDoc` (`string` → `DocType`) |
+| α.2a | `1601191` | `noImplicitAny` + 3 fixes triviais (AdminArticleEditor, AppContext, PushAutoSubscriber) |
+| α.2b | `1166a76` | MemberBook `'NONE'` tipado (Issue-015, comportamento preservado) |
+| α.3a | `e57a4d1` | `strictNullChecks` + `strictPropertyInitialization` + 6 fixes triviais |
+| α.3b | `675dd31` | adminChatService null array tipado (Issue-016, comportamento preservado) |
+| Final | `64fbb7b` | Consolidou 7 flags individuais em `"strict": true` único |
 
-**Estado atual do `tsconfig.json`:** 4 flags strict ativas, `tsc --noEmit` exit 0, `npm run build` passa.
+**Estado final do `tsconfig.json`:** `"strict": true` (inclui automaticamente as 7 flags + `useUnknownInCatchVariables` que é bonus do TS 4.4+). `tsc --noEmit` exit 0, `npm run build` passa.
 
-### Pendente — Sessão 2 (próxima)
+**Conclusão (2026-05-14):** ADR-017 totalmente executada em duas sessões. **R6 (Zero Any) validada por compilador.** 2 bugs latentes documentados como Issues-015 e Issues-016 para investigação futura (OnboardingWizard que estava na previsão original do Cluster 4 foi resolvido em α.1 — fix tipado mudou o callback contract para honest).
 
-- α.2: `noImplicitAny` + ~4 fixes (cascade de `react-big-calendar` já resolvido pelo Pre-step)
-- α.3: `strictNullChecks` + `strictPropertyInitialization` (dependente) + 7 fixes — inclui **3 bugs latentes do Cluster 4** (`MemberBook.tsx:477` indexa `MatchType['NONE']` ausente do mapa; `OnboardingWizard.tsx:726` mismatch de callback contract; `adminChatService.ts:136` null em array tipado)
-- Final: consolidar 7 flags em `"strict": true` único
+### Exceção autorizada à zona ADR-003 (precedente registrado)
+
+Durante α.2a, `noImplicitAny` exigiu return type annotation em `components/push/PushAutoSubscriber.tsx:47` (TS7010). PushAutoSubscriber está em **zona ADR-003 IMUTÁVEL**, mas tech lead autorizou exceção em 2026-05-14 por ser **anotação compile-time PURA** (zero impacto runtime, `sessionStorage` guard intocado).
+
+**Precedente para futuras exceções a ADRs IMUTÁVEIS:**
+- ✅ Mudanças **INERTES** (compile-time only): annotation de tipo de retorno, parâmetros, generics → permitidas se autorizadas explicitamente pelo tech lead caso a caso
+- ❌ Mudanças **COMPORTAMENTAIS** (runtime): alterar valores de chave/valor de storage, adicionar/remover useEffect/useRef/useState, modificar fluxo subscribe/unsubscribe, mudar ordem de operações → continuam **proibidas** sem revisar a ADR
+- Pergunta-chave antes de cada exceção: *"Isso muda algo que rodaria diferente em runtime?"* Se sim → refutar. Se não → seguir.
 
 **Contexto:** auditoria de 2026-05-13 (`docs/AUDITORIA_ANY_2026_05_13.md`, commit `99670c7`) revelou que `tsconfig.json` não tem `"strict": true` nem `"noImplicitAny": true`. Os 29 `:any` explícitos remanescentes eram apenas a superfície visível — auditoria honesta de R6 (Zero Any) exigia ligar strict e medir o iceberg completo.
 

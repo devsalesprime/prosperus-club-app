@@ -1,6 +1,46 @@
 # .context/memory/issues.md — Bugs Conhecidos e Workarounds
 # Prosperus Club App · Abril 2026
 
+## ABERTOS — Bugs latentes do Cluster 4 (ADR-017 Sessão 2)
+
+### Issue-015 — MemberBook 'NONE' string mágica fora do mapa
+**Descoberto:** ADR-017 Sessão 2, 2026-05-14 (commit `1166a76`)
+**Tipo:** Bug latente / decisão de design pendente
+**Status:** Aberto — tipagem honest aplicada, lógica preservada
+**Arquivo:** `components/MemberBook.tsx:39` e :477
+
+**Sintoma:** `MatchType = 'STRONG' | 'COMMON' | 'POTENTIAL' | 'NONE'` mas o `MATCH_CONFIG` só tem 3 das 4 chaves (faltam o `NONE`). Em runtime funciona porque `MemberBook.tsx:154` faz `.filter(r => r.matchType !== 'NONE')` ANTES do uso em :477, mas o filter não é narrowing válido em TypeScript sem type predicate explícito.
+
+**Comportamento atual:** preservado nesta sessão (tipagem mudou para `Partial<Record<MatchType, MatchConfigEntry>>` refletindo a realidade do mapa parcial; downstream já lida com `undefined` via ternário L489).
+
+**Risco:** se alguém adicionar lógica de "render para `'NONE'`" sem se lembrar do filter upstream, vai indexar `undefined` silenciosamente. Mais sutil: se o filter for removido por engano, tipagem aceita.
+
+**Próximo passo:** decisão de produto — qual delas?
+1. Incluir `NONE` no MATCH_CONFIG com um label/className "neutral"
+2. Trocar `MatchType` para `'STRONG' | 'COMMON' | 'POTENTIAL'` e usar `null` em vez de `'NONE'` nas funções que geram match
+3. Manter como está, adicionando type predicate no filter (`(r): r is MatchResult & { matchType: Exclude<MatchType, 'NONE'> } => ...`)
+
+Sessão futura.
+
+### Issue-016 — adminChatService.getAllConversations() mapping com null silencioso
+**Descoberto:** ADR-017 Sessão 2, 2026-05-14 (commit `675dd31`)
+**Tipo:** Bug latente / decisão arquitetural pendente
+**Status:** Aberto — tipagem honest aplicada, lógica preservada
+**Arquivo:** `services/adminChatService.ts:136` (callback do `.map`)
+
+**Sintoma:** O callback do `Promise.all((conversations || []).map(async (conv) => { ... }))` retorna `null` quando o `search` não match (L188: `if (!matchesSearch) return null;`) ou um objeto `ConversationWithParticipants` (L196). O array real é `(ConversationWithParticipants | null)[]`, mas o programador anotou como `ConversationWithParticipants[]` (sem null) e depois fez `filter(Boolean) as ConversationWithParticipants[]` na L203 para "limpar".
+
+**Comportamento atual:** preservado nesta sessão (tipagem mudou para `Array<ConversationWithParticipants | null>` refletindo o que o `Promise.all` de fato retorna). O `filter(Boolean)` downstream continua funcionando.
+
+**Risco:** o pattern "map retornando null + filter post-hoc" é frágil. Quem leu L188 sem entender L203 pode pensar que `null` é resultado legítimo da API. Em refator futuro, alguém pode esquecer o filter e propagar `null` pra fora.
+
+**Próximo passo:** decisão arquitetural — qual delas?
+1. **Filtrar ANTES do map:** `(conversations || []).filter(conv => matchesSearchOnConv(conv)).map(...)`. Limpo, mas precisa de função `matchesSearchOnConv` que faz lookup dos participants (que é justamente o que o map carrega).
+2. **Mover o filter de search para SQL** (`ilike` em joined `profiles.name`/`email`). Mais correto, mas refator de query.
+3. **Usar tipo `Optional<T>` ou `Result<T>`** consistentemente nesse service.
+
+Sessão futura.
+
 ## RESOLVIDOS
 
 ### Issue-014 · push_subscriptions acumulando zombies (resolvida via cron)

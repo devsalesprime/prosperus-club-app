@@ -36,6 +36,42 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Sessão 2 do ADR-017 — 2026-05-14 — STRICT MODE CONCLUÍDO
+
+ADR-017 totalmente executada. `tsconfig.json` agora com `"strict": true`. R6 (Zero Any) enforced em compile-time.
+
+**6 commits direto em main:**
+
+| Commit | Sub-fase | Resultado |
+|---|---|---|
+| `1601191` | α.2a | `noImplicitAny` + 3 fixes triviais (AdminArticleEditor `quillModules`, AppContext `useMemo<unknown[]>`, PushAutoSubscriber `: null` return type) |
+| `1166a76` | α.2b | MemberBook `'NONE'` tipado via `Partial<Record<MatchType, ...>>` (Issue-015) |
+| `e57a4d1` | α.3a | `strictNullChecks` + `strictPropertyInitialization` + 6 trivial guards (AdminMemberProgress `return;` esquecido, EventList `?? undefined/''`, EventScanner IIFE, ConversationList `?? 0`, AdminNotifications `\|\| Date.now()`) |
+| `675dd31` | α.3b | adminChatService array null tipado (Issue-016) |
+| `64fbb7b` | final | Consolidou 7 flags em `"strict": true` único |
+| _(este commit)_ | docs | ADR-017 concluída + Issues-015/016 + patterns |
+
+**Exceção autorizada à ADR-003:** PushAutoSubscriber recebeu return type annotation (`: null`). Tech lead autorizou exceção por ser INERTE (compile-time only, sem mudança runtime). Precedente registrado em ADR-017 para futuras exceções (regra INERTE vs COMPORTAMENTAL).
+
+**2 Issues criadas:**
+- Issue-015: MemberBook `'NONE'` fora do MATCH_CONFIG (filter upstream protege, mas tipagem agora reflete realidade)
+- Issue-016: adminChatService.getAllConversations mapping com null silencioso (filter post-hoc na L203)
+
+Ambos os bugs latentes ficaram com **comportamento preservado 100%** — apenas tipagem mudou. Decisão de produto/arquitetura fica para sessão futura.
+
+**Validação:**
+- `tsc --noEmit` exit 0 em CADA commit ✅
+- `npm run build` passa ✅ (PWA, 62 entries precache, dist gerado)
+- ZERO `as any`/`as Error`/`@ts-ignore` introduzido como narrowing
+- Zonas IMUTÁVEIS preservadas (exceto exceção INERTE em PushAutoSubscriber, autorizada explicitamente)
+- 2 bugs latentes do Cluster 4 documentados, comportamento preservado
+
+**Próximas fases (backlog atualizado):**
+- Investigar Issues-015/016 (decisão de produto/arquitetura)
+- Fase β — Apêndice A.1 SUSPEITOS em `docs/AUDITORIA_ANY_2026_05_13.md` (drift DB vs tipo TS — `(profile as any).banner_url`, etc)
+- Fase 3a/3b/4 da auditoria `:any` — 29 instâncias explícitas restantes ainda como backlog
+  (R6 agora bloqueia `any` IMPLÍCITO, mas explícito ainda passa enquanto não removido)
+
 ## Manutenção 2026-05-14 — 3 fixes pontuais
 
 Sessão de pequenos fixes em produção, todos com tsc verde e isolados.

@@ -1,9 +1,9 @@
 # Auditoria — TypeScript strict mode
 
 **Data inicial:** 2026-05-13 (diagnóstico)
-**Última atualização:** 2026-05-13 (Sessão 1 executada — Pre-step + α.0 + α.1)
+**Conclusão:** 2026-05-14 (Sessão 2 executada — α.2 + α.3 + consolidação final)
 **Auditor:** Claude (Principal Engineer / Tech Lead)
-**Status:** ADR-017 **ATIVO**. 4 das 7 flags strict já ligadas em main.
+**Status:** ADR-017 **ATIVO E CONCLUÍDO**. `tsconfig.json` com `"strict": true` em produção.
 
 ### Histórico de execução
 
@@ -13,11 +13,20 @@
 | Pre-step (`@types/react-big-calendar`) | `3b282d1` | ✅ |
 | α.0 (`noImplicitThis` + `alwaysStrict` + `strictBindCallApply`) | `d4eea98` | ✅ |
 | α.1 (`strictFunctionTypes` + fix `TermsStep.onOpenDoc`) | `1e20981` | ✅ |
-| α.2 (`noImplicitAny` + ~4 fixes) | — | ⏳ Sessão 2 |
-| α.3 (`strictNullChecks` + `strictPropertyInitialization` + 7 fixes inc. Cluster 4) | — | ⏳ Sessão 2 |
-| Final (consolidar para `"strict": true`) | — | ⏳ Sessão 2 |
+| α.2a (`noImplicitAny` + 3 fixes triviais) | `1601191` | ✅ |
+| α.2b (MemberBook 'NONE' tipado — Issue-015) | `1166a76` | ✅ |
+| α.3a (`strictNullChecks` + `strictPropertyInitialization` + 6 trivial guards) | `e57a4d1` | ✅ |
+| α.3b (adminChatService null array — Issue-016) | `675dd31` | ✅ |
+| Final (consolidar para `"strict": true`) | `64fbb7b` | ✅ |
 
-**Estado atual `tsc --noEmit`:** exit 0 em todas as sub-fases.
+**Estado final `tsc --noEmit`:** exit 0. `"strict": true` em produção. R6 (Zero Any) enforced em compile-time.
+
+### Diferenças do plano original
+
+- α.2 era previsto com 4 fixes — apareceram **4 erros reais** (cascade do react-big-calendar já resolvido pelo Pre-step). Bate.
+- α.3 era previsto com 7 fixes — apareceram **8 erros reais** (EventList contou em coluna diferente, total 1 extra). Resolvido como Tipo A.
+- Cluster 4 previa 3 bugs latentes; apenas **2 viraram Issues** (Issue-015 MemberBook, Issue-016 adminChatService). O 3º (OnboardingWizard `onOpenDoc`) foi tratado como fix tipado normal em α.1 (commit `1e20981`) porque a correção (mudar contract de `string` para `DocType`) era pura tipagem honest, sem mudança de comportamento.
+- Exceção autorizada em ADR-003: PushAutoSubscriber recebeu return type annotation (`: null`) em α.2a. Aprovado pelo tech lead por ser INERTE (compile-time only).
 
 ---
 

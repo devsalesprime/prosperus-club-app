@@ -4,7 +4,10 @@
 **Escopo:** diagnóstico inicial + execução faseada.
 **Regra de referência:** R6 (Zero Any) — `.context/rules.md`
 
-**Status atual:** Fase 2 (TRIVIAL) ✅ CONCLUÍDA em 2026-05-13. Restam **29 instâncias** distribuídas em MEDIO_SUPABASE, MEDIO_DOMINIO e DIFICIL.
+**Status atual:**
+- Fase 2 (TRIVIAL) ✅ CONCLUÍDA em 2026-05-13 (commit `5bddae8`)
+- ADR-017 ✅ CONCLUÍDA em 2026-05-14 → `"strict": true` enforced. **R6 agora valida `:any` IMPLÍCITO em compile-time.**
+- **29 instâncias `:any` EXPLÍCITO** restantes ainda como backlog (Fases 3+). Strict mode bloqueia novos `any` implícitos, mas os explícitos antigos passam até serem removidos manualmente.
 
 ---
 

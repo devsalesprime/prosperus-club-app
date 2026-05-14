@@ -136,6 +136,62 @@ Se o caller diferencia comportamento por **tipo** de erro (ex: AbortError vs net
 
 ---
 
+## Padrão 4: Null/undefined explícito no tipo
+
+**Origem:** ADR-017 Sessão 2 (commits `e57a4d1`, `675dd31`, `1166a76`, 2026-05-14).
+
+Com `strictNullChecks` ligado, declare `null`/`undefined` no tipo **quando é parte real do valor possível**. Não esconda via cast ou anotação otimista.
+
+### Errado
+
+```ts
+// ❌ Anotação otimista que mente sobre o conteúdo
+const items: Item[] = response.data;  // response.data pode ser null
+
+// ❌ Cast cego que perde o narrowing
+const safeList = response.data as Item[];
+
+// ❌ Ignorar com !
+const id = profile.id!;  // se profile for null, runtime explode silencioso
+```
+
+### Certo
+
+```ts
+// ✅ Anotação honest + guard explícito
+const items: Item[] | null = response.data;
+if (!items) return;
+// Daqui pra frente TS sabe que items é Item[]
+
+// ✅ Default explícito com ??
+const count = conv.unreadCount ?? 0;
+
+// ✅ Partial<Record> quando mapa tem chaves parciais
+const CONFIG: Partial<Record<EnumType, ConfigEntry>> = {
+    A: { ... },
+    B: { ... },
+    // C ausente — typings refletem
+};
+const entry = CONFIG[key]; // entry: ConfigEntry | undefined
+```
+
+### Quando o tipo HONEST revela um bug latente
+
+Se ao tipar honestly você descobre que o código depende de string mágica (`'NONE'`) ou null implícito que talvez não devesse, **NÃO corrija a lógica junto com a tipagem.** Em vez disso:
+1. Tipar refletindo o que o código FAZ hoje (incluindo o estranho)
+2. Adicionar comentário `// TODO(Issue-XXX): descrição do estranho`
+3. Abrir Issue em `.context/memory/issues.md`
+4. Sessão futura: decisão de produto/arquitetura
+
+### Referências
+
+- `components/MemberBook.tsx:39` — `Partial<Record<MatchType, MatchConfigEntry>>` (Issue-015)
+- `services/adminChatService.ts:136` — `Array<ConversationWithParticipants | null>` (Issue-016)
+- `components/chat/ConversationList.tsx:137` — `(conv.unreadCount ?? 0) > 0`
+- `components/notifications/AdminNotifications.tsx:651` — `new Date(... || Date.now())`
+
+---
+
 ## Quando criar novos padrões aqui
 
 - Padrão emergiu em ≥2 commits diferentes resolvendo o mesmo tipo de problema
@@ -144,3 +200,4 @@ Se o caller diferencia comportamento por **tipo** de erro (ex: AbortError vs net
 
 Histórico:
 - 2026-05-13 — Padrões 1, 2, 3 criados a partir da Fase 2 da auditoria R6 (commit `5bddae8`)
+- 2026-05-14 — Padrão 4 criado a partir da Sessão 2 do ADR-017 (commits `e57a4d1`, `675dd31`, `1166a76`)
