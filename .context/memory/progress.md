@@ -36,6 +36,50 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Manutenção 2026-05-14 — 3 fixes pontuais
+
+Sessão de pequenos fixes em produção, todos com tsc verde e isolados.
+
+### Fix 1 — AdminBenefitsApproval mostrava descrição truncada (`e39e46c`)
+
+`components/admin/AdminBenefitsApproval.tsx:170` usava `line-clamp-2` na coluna "Descrição", truncando em 2 linhas. Trocado por `whitespace-pre-line break-words` — descrição completa, preservando `\n` que o sócio escreveu, quebrando palavras longas sem estourar o grid. Só CSS, zero impacto em schema/serviço.
+
+### Fix 2 — Sync de banner de aniversário aparentava ter parado (`723ff4a`)
+
+**Sintoma:** admin > Homenagens de Aniversário mostrava toast de erro ao Sincronizar HubSpot, mesmo a sincronização funcionando (14 cards entrando em `birthday_cards`).
+
+**Causa raiz:** dupla de boundaries desalinhados após ADR-015:
+- Edge Function `sync-hubspot-birthdays` (refatorada no commit `46707dd`) retorna `{ synced, queued, queueId?, error?, stats }` (contrato uniforme).
+- `services/adminBirthdayService.syncFromHubSpot()` fazia `data as { success, stats }` — cast cego sobre o shape antigo.
+- `AdminBirthdaysModule:84` testava `result.success` → sempre `undefined` → toast de erro.
+
+**Fix:** adapter no service traduz o novo contrato (`payload.synced === true → success`) para manter o componente intacto. Narrowing honest com shape literal explícito (alinha com `docs/PATTERNS_TYPESCRIPT.md`).
+
+**Lição estrutural:** quando uma Edge Function muda contract via ADR, fazer grep dos callers TS e auditar adapters do service. ADR-015 (Edge Functions HubSpot uniformes) deveria ter quebrado o tsc — mas como o service fazia `as` cego, passou silenciosamente em compile-time e só apareceu em runtime.
+
+### Fix 3 — Banner do Adriano não vinha (HubSpot ↔ Supabase email mismatch)
+
+Sócio `adriano5f@hotmail.com` (Adriano Domacir De Freitas, profile `9af56350...`) tinha banner setado no HubSpot mas o sync ignorava. Diagnóstico via MCP:
+
+- HubSpot contact `213238444657`: email = `aadriano5f@hotmail.com` (**2 'a' no início — typo**)
+- Supabase profile: email = `adriano5f@hotmail.com` (correto)
+- Edge Function busca profile via `.eq('email', email_do_hubspot)` → não bate → `stats.skipped++`
+
+**Fix operacional:** email corrigido no HubSpot via MCP (`manage_crm_objects`) de `aadriano5f` → `adriano5f`. Próximo sync no admin deve gerar o card normalmente. **Sem mudança de código.**
+
+**Armadilha conhecida para o futuro:** sempre que um banner não aparecer após sync, primeira hipótese é mismatch de email entre HubSpot (fonte do sync) e Supabase (alvo). Validação rápida via MCP:
+```sql
+-- HubSpot via MCP
+get_crm_objects contacts [id] → confere `email`
+
+-- Supabase
+SELECT email FROM profiles WHERE hubspot_contact_id = '<id>'
+```
+
+Se divergir: corrigir no HubSpot (fonte canônica) e sincronizar.
+
+**TODO de longo prazo (não acionado nesta sessão):** robustecer `sync-hubspot-birthdays` com fallback por `hubspot_contact_id` quando o email não bater. Resolveria toda essa categoria de casos. Fica para sprint dedicada.
+
 ## Sessão 1 do ADR-017 — 2026-05-13 (noite-2) — EXECUÇÃO STRICT MODE
 
 ADR-017 (TypeScript strict mode) aprovada pelo tech lead. Sessão 1 executa **Pre-step + α.0 + α.1** direto em main, 5 commits independentes:
