@@ -30,13 +30,24 @@ import { profileService, ProfileData } from '../services/profileService';
 import { FavoriteButton } from './FavoriteButton';
 import { favoriteService } from '../services/favoriteService';
 import { useAuth } from '../contexts/AuthContext';
-import { calculateMatch, MatchResult } from '../utils/matchEngine';
+import { calculateMatch, MatchResult, MatchType } from '../utils/matchEngine';
 import { COPY } from '../utils/copy';
 import { CardSkeleton } from './ui/CardSkeleton';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 // ─── Match Badge Config ───────────────────────────────────────────
-const MATCH_CONFIG = {
+// TODO(Issue-015): MatchType inclui 'NONE' mas MATCH_CONFIG só tem 3 das 4
+// chaves. Em runtime funciona porque o filter da L154 (`!== 'NONE'`) elimina
+// esse caso antes de indexar. Tipagem `Partial<Record>` reflete a realidade
+// (indexação pode retornar undefined) sem mudar comportamento. Decisão de
+// design pendente: incluir 'NONE' no mapa OU usar enum sem fallback string.
+// Ver .context/memory/issues.md
+interface MatchConfigEntry {
+    label: string;
+    className: string;
+    borderClass: string;
+}
+const MATCH_CONFIG: Partial<Record<MatchType, MatchConfigEntry>> = {
     STRONG: {
         label: '🔥 Alta Conexão',
         className: 'bg-yellow-600/15 border-yellow-600/30 text-yellow-400',
@@ -52,7 +63,7 @@ const MATCH_CONFIG = {
         className: 'bg-slate-700/50 border-slate-600/30 text-slate-400',
         borderClass: 'border-slate-700',
     },
-} as const;
+};
 
 // Popular tags for quick filtering
 const POPULAR_TAGS = [
