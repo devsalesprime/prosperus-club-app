@@ -482,7 +482,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // ─── Nav Items ───────────────────────────────────
     // Import icons inline to avoid circular dependencies
-    const navItems = useMemo(() => {
+    const navItems = useMemo<unknown[]>(() => {
         // These are defined in the provider to avoid import issues
         // Icons are passed as JSX from the consuming components
         return []; // Will be populated by AppLayout which has access to icons

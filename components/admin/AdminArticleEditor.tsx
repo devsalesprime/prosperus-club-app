@@ -32,7 +32,7 @@ const CATEGORIES = [
 ];
 
 // Quill modules configuration
-const quillModules = {
+const quillModules: { toolbar: unknown[] } = {
     toolbar: [
         [{ 'header': [1, 2, 3, false] }],
         ['bold', 'italic', 'underline', 'strike'],

@@ -44,7 +44,7 @@ interface Props { userId: string }
  * 5. Salva subscription no banco (upsert por endpoint)
  * 6. Re-verifica ao retornar ao foreground (visibilitychange)
  */
-export function PushAutoSubscriber({ userId }: Props) {
+export function PushAutoSubscriber({ userId }: Props): null {
     useEffect(() => {
         if (!userId) return;
 
