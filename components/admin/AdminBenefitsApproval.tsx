@@ -167,7 +167,7 @@ export const AdminBenefitsApproval: React.FC = () => {
 
                             {/* Descrição */}
                             <div className="col-span-4">
-                                <p className="text-sm text-slate-400 line-clamp-2">
+                                <p className="text-sm text-slate-400 whitespace-pre-line break-words">
                                     {profile.exclusive_benefit?.description || '—'}
                                 </p>
                                 {profile.exclusive_benefit?.code && (
