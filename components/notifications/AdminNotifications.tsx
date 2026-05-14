@@ -648,7 +648,7 @@ export const AdminNotifications: React.FC = () => {
                                             <div className="flex items-start justify-between gap-2 mb-1">
                                                 <h4 className="font-medium text-sm text-white truncate">{item.title}</h4>
                                                 <span className="text-xs text-slate-500 shrink-0">
-                                                    {new Date(item.sent_at || item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(item.sent_at || item.created_at || Date.now()).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                             <p className="text-xs text-slate-400 truncate mb-1">{item.message}</p>

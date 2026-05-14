@@ -443,7 +443,7 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                                                                     {/* Avatar */}
                                                                     <div className="w-9 h-9 rounded-full bg-slate-700 overflow-hidden shrink-0">
                                                                         {profile?.image_url ? (
-                                                                            <img src={profile.image_url} alt={profile.name} className="w-full h-full object-cover" />
+                                                                            <img src={profile.image_url ?? undefined} alt={profile.name ?? ''} className="w-full h-full object-cover" />
                                                                         ) : (
                                                                             <div className="w-full h-full flex items-center justify-center text-slate-400">
                                                                                 <User size={16} />

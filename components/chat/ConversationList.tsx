@@ -134,7 +134,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     useEffect(() => {
         if (selectedConversationId) {
             setConversations(prev => prev.map(conv => {
-                if (conv.id === selectedConversationId && conv.unreadCount > 0) {
+                if (conv.id === selectedConversationId && (conv.unreadCount ?? 0) > 0) {
                     return { ...conv, unreadCount: 0 };
                 }
                 return conv;

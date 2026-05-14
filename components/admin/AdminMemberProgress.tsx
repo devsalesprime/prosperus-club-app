@@ -135,6 +135,7 @@ export const AdminMemberProgress: React.FC = () => {
         e.preventDefault();
         if (!selectedMemberId || !fileTitle || !selectedFile) {
             toast.error('Preencha todos os campos');
+            return;
         }
 
         setUploading(true);

@@ -164,26 +164,31 @@ export const EventScanner: React.FC<EventScannerProps> = ({ isOpen, onClose }) =
                             <div className="p-6 flex flex-col gap-4">
                                 
                                 {/* Avatar + Name */}
+                                {(() => {
+                                    const profile = getProfile();
+                                    return (
                                 <div className="flex items-center gap-4">
                                     <div className="w-16 h-16 rounded-full bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center border-2 border-slate-700">
-                                        {getProfile()?.image_url ? (
-                                            <img src={getProfile().image_url} alt="Avatar" className="w-full h-full object-cover" />
+                                        {profile?.image_url ? (
+                                            <img src={profile.image_url} alt="Avatar" className="w-full h-full object-cover" />
                                         ) : (
                                             <User size={28} className="text-slate-500" />
                                         )}
                                     </div>
                                     <div className="flex-1 overflow-hidden">
                                         <p className="text-white font-bold text-xl truncate">
-                                            {validationResult.ticket.owner_name || getProfile()?.name || 'Sem nome'}
+                                            {validationResult.ticket.owner_name || profile?.name || 'Sem nome'}
                                         </p>
-                                        {getProfile()?.company && (
-                                            <p className="text-slate-400 text-sm truncate">{getProfile().company}</p>
+                                        {profile?.company && (
+                                            <p className="text-slate-400 text-sm truncate">{profile.company}</p>
                                         )}
-                                        {getProfile()?.job_title && (
-                                            <p className="text-slate-500 text-xs truncate">{getProfile().job_title}</p>
+                                        {profile?.job_title && (
+                                            <p className="text-slate-500 text-xs truncate">{profile.job_title}</p>
                                         )}
                                     </div>
                                 </div>
+                                    );
+                                })()}
 
                                 {/* Metadata Badges */}
                                 <div className="flex flex-wrap gap-2">
