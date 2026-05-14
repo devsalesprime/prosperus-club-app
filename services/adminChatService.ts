@@ -133,7 +133,12 @@ class AdminChatService {
             }
 
             // Para cada conversa, buscar participantes e última mensagem
-            const enrichedConversations: ConversationWithParticipants[] = await Promise.all(
+            // TODO(Issue-016): a callback do .map retorna `null` quando a conversa
+            // é filtrada pelo `search` (L188 abaixo) — então o array resultante é
+            // `(ConversationWithParticipants | null)[]` e o filter(Boolean) downstream
+            // (L203) limpa. Tipagem agora reflete a realidade.
+            // Ver .context/memory/issues.md
+            const enrichedConversations: Array<ConversationWithParticipants | null> = await Promise.all(
                 (conversations || []).map(async (conv) => {
                     // Buscar participantes com profiles
                     const { data: participants } = await supabase
