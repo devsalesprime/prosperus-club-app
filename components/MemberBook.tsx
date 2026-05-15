@@ -503,7 +503,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
                                     {/* Banner Header */}
                                     <div className="relative h-24 w-full">
                                         <img
-                                            src={getOptimizedImageUrl((member as any).banner_url as string | null | undefined, 800) || `${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
+                                            src={`${import.meta.env.BASE_URL}fundo-prosperus-app.webp`}
                                             alt=""
                                             loading="lazy"
                                             decoding="async"
