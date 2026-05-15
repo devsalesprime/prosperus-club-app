@@ -192,6 +192,61 @@ Se ao tipar honestly você descobre que o código depende de string mágica (`'N
 
 ---
 
+## Padrão 5: Investigar antes de `as any` — drift Database↔TS
+
+**Origem:** Fase β SUSPEITOS (commits `1b1bbd2`, `229fd81`, `3cc691c`, 2026-05-15).
+
+### Regra
+
+Encontrou `(obj as any).campo` ou `(data as any)` no codebase? **NÃO tipar cegamente.** Primeiro investigar:
+
+1. **Validar via MCP / SQL que o campo existe no schema do banco:**
+   ```sql
+   SELECT column_name FROM information_schema.columns
+   WHERE table_name = '<tabela>' AND column_name = '<campo>';
+   ```
+
+2. **Decisão:**
+   - **NÃO existe no banco:** código residual (feature descontinuada) OU flag UI client-side.
+     - Se feature descontinuada: remover código residual + fallback (verificar com tech lead)
+     - Se flag UI: criar tipo local `EnrichedX = X & { flag?: boolean }`
+   - **EXISTE no banco:** `types.ts` está desatualizado. Gerar `Database` type via `supabase gen types typescript` e atualizar.
+   - **EXISTE mas vem com shape diferente** (ex: JOIN do Supabase JS retorna array em vez de objeto): tipar honest refletindo a realidade do retorno, ajustar use sites.
+
+### O que NÃO fazer
+
+```ts
+// ❌ Cast cego — esconde bug em runtime
+const items = (data as any) || [];
+
+// ❌ Cast otimista — perde validação
+const profile = response.data as Profile;
+```
+
+### Por que importa
+
+Em runtime, `(obj as any).campoFantasma` retorna `undefined` silenciosamente. UI mostra dados vazios, CSV exporta linhas em branco, lógica condicional sempre cai no branch falso — e ninguém percebe até a feature falhar visivelmente em produção.
+
+Casos reais encontrados na Fase β:
+- **Issue-019:** `(profile as any).banner_url` em ProfilePreview e MemberBook — coluna não existia, `<img src>` sempre caía no fallback. Removido.
+- **Issue-020:** `(file as any).isAutomated` em AdminMemberProgress — flag UI client-side adicionada no merge `mappedReports`. Tipada honest via type local.
+- **Issue-017 (standby):** `(data as any)` em EventList RSVP — query retorna `profiles` como array, tipo declarava objeto. **Bug latente real:** CSV de presença saindo vazio.
+
+### Exceção legítima — limitações de lib externa
+
+Há casos em que `as any` é justificado porque a lib não fornece tipos completos:
+- `(navigator as any).setAppBadge(...)` — Badging API experimental ainda não está em `lib.dom.d.ts` padrão. Documentado em `contexts/UnreadCountContext.tsx` (ADR-002 IMUTÁVEL).
+- `manifest: ... as any` em `vite.config.ts` — `vite-plugin-pwa` types não cobrem `display_override`, `categories`, `screenshots`, `shortcuts`, `launch_handler`, `share_target`, `edge_side_panel`.
+
+Nestes casos, **documentar como exceção** com comentário explicando a limitação e revisitar quando a lib atualizar.
+
+### Referência
+
+- Commits: `1b1bbd2` (Bucket D), `229fd81` (banner_url), `3cc691c` (isAutomated)
+- Issues registradas: 017, 018, 019, 020
+
+---
+
 ## Quando criar novos padrões aqui
 
 - Padrão emergiu em ≥2 commits diferentes resolvendo o mesmo tipo de problema
@@ -201,3 +256,4 @@ Se ao tipar honestly você descobre que o código depende de string mágica (`'N
 Histórico:
 - 2026-05-13 — Padrões 1, 2, 3 criados a partir da Fase 2 da auditoria R6 (commit `5bddae8`)
 - 2026-05-14 — Padrão 4 criado a partir da Sessão 2 do ADR-017 (commits `e57a4d1`, `675dd31`, `1166a76`)
+- 2026-05-15 — Padrão 5 criado a partir da Fase β SUSPEITOS (commits `1b1bbd2`, `229fd81`, `3cc691c`)

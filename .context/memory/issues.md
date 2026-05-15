@@ -1,6 +1,78 @@
 # .context/memory/issues.md — Bugs Conhecidos e Workarounds
 # Prosperus Club App · Abril 2026
 
+## ABERTOS — Fase β SUSPEITOS
+
+### Issue-017 — RSVP profiles tipado como objeto, Supabase retorna array (STANDBY)
+**Descoberto:** Fase β, 2026-05-15 (durante tentativa de fix Bucket B)
+**Tipo:** Bug latente provável / drift TS↔Supabase JOIN shape
+**Status:** **STANDBY** — aguardando runtime check do tech lead antes de aplicar fix
+**Arquivo:** `components/admin/events/EventList.tsx:70-83, 140-146, 183-188, 440-451`
+
+**Sintoma:** A query `.select('..., profiles:user_id(id, name, company, job_title, image_url, email)')` faz JOIN com `profiles` via FK `event_rsvps.user_id → profiles.id`. O tipo `RsvpItem.profiles` declarado é objeto único `{ id, name, ... } | null`, mas TypeScript com strict mode infere o retorno como **array** `Array<{...}>`. O cast `(data as any)` (L146) escondia o mismatch.
+
+**Impacto provável (não confirmado em runtime):**
+- L186-187: `const p = r.profiles; ... p?.name` → se `p` é array, `p?.name` retorna `undefined` → **CSV de presença exporta linhas vazias** `,,,`
+- L440-451: lista UI dos sócios confirmados mostraria avatares default e nomes vazios
+
+**Diagnóstico TS revelou (ao remover o cast):**
+```
+Types of property 'profiles' are incompatible.
+  Type '{ id: any; name: any; ... }[]'
+    is missing the following properties from type
+    '{ id: string; name: string | null; ... }': id, name, company, ...
+```
+
+**Próximo passo:** tech lead vai capturar o Response real da requisição no Network tab (filtro `event_rsvps`) para confirmar se `profiles` vem como `{...}` ou `[{...}]`. Depois aplicar uma destas opções:
+1. **Fix completo:** tipar como array + ajustar L186 e L440 para `profiles?.[0]?.name`. Conserta CSV/UI.
+2. **Tipagem honest + Issue:** tipar array mas manter use sites com fallback undefined explícito (preserva bug, fica visível).
+3. **Skip:** reverter o cast e deixar pra sprint futura com fix de query (`.select` com hint de 1-to-1 ou processar response no boundary).
+
+**Comportamento atual:** rollback aplicado (commit-less, working tree limpo) — `(data as any) || []` continua mascarando o drift.
+
+## RESOLVIDOS — Fase β SUSPEITOS
+
+### Issue-018 — `(error as any)` narrowing cego em 4 sites (resolvido)
+**Descoberto:** Fase β, 2026-05-15
+**Tipo:** Drift TS / narrowing cego
+**Status:** ✅ RESOLVIDO via commit `1b1bbd2`
+**Arquivos:**
+- `components/admin/AcademyModule.tsx:74,86`
+- `components/ImageUpload.tsx:96`
+- `components/admin/NotificationBannersModule.tsx:540`
+
+**Sintoma:** 4 sites de catch de erro acessavam `.message`, `.code`, `.statusCode` via `(error as any).property` — cast cego que perdia o type checking de TypeScript.
+
+**Solução:** Substituídos pelo padrão honest (`docs/PATTERNS_TYPESCRIPT.md` Padrão 1) — narrowing via `Record<string, unknown>` + checagem `typeof === 'string'/'number'`. Em sites que só precisavam de `.message`, usado shorthand `error instanceof Error ? error.message : '...fallback...'`.
+
+**Comportamento runtime preservado 100%** — só tipagem mudou.
+
+### Issue-019 — `banner_url` em profile (campo fantasma, removido)
+**Descoberto:** Fase β, 2026-05-15
+**Tipo:** Drift DB↔TS — código residual de feature descontinuada
+**Status:** ✅ RESOLVIDO via commit `229fd81`
+**Arquivos:**
+- `components/ProfilePreview.tsx:194`
+- `components/MemberBook.tsx:506`
+
+**Sintoma:** Os 2 sites usavam `<img src={(profile as any).banner_url ?? fallback}>`. Validação MCP confirmou que `profiles.banner_url` **não existe** no schema. Em runtime, o `??` sempre caía no fallback porque o cast retornava `undefined`.
+
+**Solução:** Removido o cast residual, mantido apenas o fallback (que era o caminho ativo). Sem mudança visual — sócios já viam o `fundo-prosperus-app.webp` há tempo, agora a tipagem reflete a realidade.
+
+**Atenção:** `banner_url` EXISTE legitimamente em outras tabelas (`events`, `solutions`, `member_progress_tools`). Esses usos foram **preservados** — schema real tem o campo.
+
+### Issue-020 — `isAutomated` flag UI tipada honest
+**Descoberto:** Fase β, 2026-05-15
+**Tipo:** Flag client-side UI (Caso A — não persiste no banco, computada no merge)
+**Status:** ✅ RESOLVIDO via commit `3cc691c`
+**Arquivo:** `components/admin/AdminMemberProgress.tsx:267,299,729,742,757,774`
+
+**Sintoma:** 4 condicionais usavam `(file as any).isAutomated` para diferenciar relatórios automatizados (signed URL privada) de uploads manuais (URL pública). Validação MCP confirmou que `isAutomated` **não existe em nenhuma coluna** do banco. Investigação revelou que é flag **client-side** adicionada na L299 (`isAutomated: true, // Internal flag`) quando `mappedReports` mergeia `reports` (M2M automatizado) com `files` (uploads).
+
+**Solução:** Criado type local `EnrichedMemberProgressFile = MemberProgressFile & { isAutomated?: boolean }` com comentário explicando que a flag é client-side. State `allFiles` tipado com o novo type. 4 `(file as any).isAutomated` substituídos por `file.isAutomated` direto.
+
+**Comportamento runtime preservado 100%** — só tipagem reflete a realidade da flag.
+
 ## ABERTOS — Bugs latentes do Cluster 4 (ADR-017 Sessão 2)
 
 ### Issue-015 — MemberBook 'NONE' string mágica fora do mapa

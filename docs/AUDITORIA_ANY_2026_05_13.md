@@ -7,6 +7,7 @@
 **Status atual:**
 - Fase 2 (TRIVIAL) ✅ CONCLUÍDA em 2026-05-13 (commit `5bddae8`)
 - ADR-017 ✅ CONCLUÍDA em 2026-05-14 → `"strict": true` enforced. **R6 agora valida `:any` IMPLÍCITO em compile-time.**
+- **Fase β SUSPEITOS** (Apêndice A.1 + A.4) ✅ PARCIALMENTE CONCLUÍDA em 2026-05-15. 3 buckets fechados (commits `1b1bbd2`, `229fd81`, `3cc691c`). 1 bucket em STANDBY (Issue-017 RSVP drift), 1 bucket documentado como exceção (UnreadCountContext ADR-002 + vite.config PWA), 1 bucket novo identificado como backlog Fase γ (5 ocorrências de cast em props/enum/deprecated).
 - **29 instâncias `:any` EXPLÍCITO** restantes ainda como backlog (Fases 3+). Strict mode bloqueia novos `any` implícitos, mas os explícitos antigos passam até serem removidos manualmente.
 
 ---

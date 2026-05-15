@@ -36,6 +36,61 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase β SUSPEITOS — 2026-05-15 — `as any` drift parcial fechado
+
+Fase β do backlog R6 (Apêndice A.1 da auditoria `:any`). Investigação MCP-validada antes de cada fix.
+
+**Inventário inicial:** 27 ocorrências de `as any` no codebase, categorizadas em 5 buckets.
+
+**3 buckets fechados nesta sessão (3 commits):**
+
+| Commit | Bucket | O que mudou |
+|---|---|---|
+| `1b1bbd2` | D — narrowing de erro | 4 sites em 3 arquivos (`AcademyModule`, `ImageUpload`, `NotificationBannersModule`) refeitos com padrão honest |
+| `229fd81` | A — banner_url profile | 2 sites (`ProfilePreview`, `MemberBook`) — coluna não existe no schema, código residual de feature descontinuada removido |
+| `3cc691c` | A — isAutomated UI flag | 4 sites em `AdminMemberProgress` tipados via `EnrichedMemberProgressFile = MemberProgressFile & { isAutomated?: boolean }` (Caso A — flag client-side) |
+
+**1 bucket em STANDBY:**
+
+| Bucket | Arquivo | Razão |
+|---|---|---|
+| B — `setRsvpList` cast | `components/admin/events/EventList.tsx:146` | Bug latente provável: query do Supabase retorna `profiles` como array, mas tipo declara objeto. Pode estar causando **CSV de presença vazio** e nomes faltando na lista UI. Rollback aplicado (working tree limpo, `(data as any)` voltou). Issue-017 criada com diagnóstico completo. Aguarda runtime check do tech lead (Network tab capturar Response real de `/event_rsvps`) antes de aplicar fix. |
+
+**1 bucket NÃO TOCADO (zonas + lib limitations) — documentado como exceção:**
+
+| Bucket | Arquivos | Razão |
+|---|---|---|
+| C — DOM/lib | `contexts/UnreadCountContext.tsx` (3× Badging API), `vite.config.ts` (8× PWA manifest) | UnreadCountContext: ADR-002 IMUTÁVEL. vite.config: tipos do `vite-plugin-pwa` incompletos para `display_override`, `categories`, `screenshots`, `shortcuts`, `launch_handler`, `share_target`, `edge_side_panel`. Cast pragmático até a lib atualizar. |
+
+**1 bucket NOVO descoberto (Bucket E — backlog Fase γ):**
+
+| Arquivo:linha | Caso |
+|---|---|
+| `AdminApp.tsx:281,286` | `DataTable as any` em props genéricas |
+| `BannersModule.tsx:295,547` | `e.target.value as any` em onChange de enum/select |
+| `DesktopSidebar.tsx:156` | `setView(item.id as any)` (string vs enum union) |
+| `services/adminBirthdayService.ts:98` | `} as any` em função `@deprecated` (a remover quando função for purgada) |
+
+5 ocorrências, ~1-2h de trabalho. **Não cria Issue agora** — todos são pequenos, registro como backlog.
+
+**Issues criadas:**
+- Issue-017: RSVP profiles drift (STANDBY)
+- Issue-018: 4 sites de error narrowing cego (RESOLVIDO via `1b1bbd2`)
+- Issue-019: banner_url residual (RESOLVIDO via `229fd81`)
+- Issue-020: isAutomated UI flag tipada (RESOLVIDO via `3cc691c`)
+
+**Validação tripla:**
+- `tsc --noEmit` exit 0 em cada commit
+- `npm run build` testado (não foi rodado a cada commit, mas a base passa)
+- Zero `as any` introduzido como narrowing
+- Zonas IMUTÁVEIS preservadas
+- 0 modificações em runtime — tudo é tipagem
+
+**TODO operacional (Fábio):**
+- Capturar Response do Network tab de `/rest/v1/event_rsvps?...` para Issue-017
+- Sem necessidade de redeploy de Edge Functions (Fase β só toca frontend)
+- Apenas rebuild do frontend (`npm run build`) quando puxar os commits
+
 ## Sessão 2 do ADR-017 — 2026-05-14 — STRICT MODE CONCLUÍDO
 
 ADR-017 totalmente executada. `tsconfig.json` agora com `"strict": true`. R6 (Zero Any) enforced em compile-time.
