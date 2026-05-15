@@ -168,6 +168,60 @@ A Fase 1 ficou arquiteturalmente **incompleta**. Investigação revelou que o ap
 
 Fix futuro (Fase 2c): mapping PT→EN no handler OU alinhar triggers para usar paths EN. Por ora só **vídeo** (`/app/academy`) e **agenda** (`/app/agenda`) funcionam end-to-end.
 
+### Revisão 2026-05-15 — Fase 2c + Fase 3 (Padrão 7 replicado em 5 módulos)
+
+Sessão única com 8 commits direto em `main`. Pré-investigação read-only (relatório consolidado no início da sessão) revelou 3 requisitos pré-Fase 3 que viraram os Commits 1-3.
+
+**Commit 1 — `92f8621`** — `feat(notifications): PT→EN ViewState alias for legacy URLs`
+Lookup table `VIEW_ALIASES` em [contexts/AppContext.tsx:327](contexts/AppContext.tsx#L327) (acima de `handleNotificationNavigate`):
+```ts
+const VIEW_ALIASES: Record<string, ViewState> = {
+    'NOTICIAS': ViewState.NEWS,
+    'GALERIA': ViewState.GALLERY,
+    'SOLUCOES': ViewState.SOLUTIONS,
+    'TOOLS': ViewState.SOLUTIONS,  // caso especial: /app/tools/solucoes captura 'TOOLS'
+};
+```
+Handler tenta match direto contra ViewState (EN) primeiro; se falhar, tenta alias PT→EN. Retrocompat com `user_notifications.action_url` antigas e zero impacto em triggers existentes.
+
+`ROI_CRESCIMENTO` (de `notifyColetaFaturamento` → `/app/roi-crescimento`) **removido do alias** — `ViewState.PROGRESS` é sobre arquivos de progresso do sócio (uploads admin), não sobre ROI/faturamento. Match não-óbvio; mantido como fallback `window.open` (comportamento atual preservado).
+
+**Commit 2 — `04be3d0`** — `fix(events): remove duplicate notifyNewEvent dispatch in EventForm`
+Bloco redundante em [components/admin/events/EventForm.tsx:274-283](components/admin/events/EventForm.tsx#L274-L283) (`if (shouldNotify)` envolvendo dynamic import de `notifyNewEvent`) removido. `services/eventService.ts:161` já dispara com `data.id` real do INSERT. Bloco antigo enviava 2º push com `eventData.id || 'new'` (ID lixo) — duplicava badge in-app e geraria URL quebrada `/app/agenda?evento=new` no Padrão 7.
+
+**Commit 3 — `c75d8e5`** — `feat(notifications): notifyEventUpdated propagates eventId for deep-link`
+Método interno em [notificationTriggers.ts:120](services/notificationTriggers.ts#L120) aceita `eventId?: string`; export `:251` propaga `payload.eventId`. EventForm.tsx:258 já passava `eventId` no payload — apenas não chegava ao service.
+
+**Commit 4 — `e895242`** — `feat(news): notifyNewArticle + NewsList deep-link via ?artigo=<id>`
+**Commit 5 — `6d9445a`** — `feat(solutions): notifyNewSolution + SolutionsListPage deep-link via ?solucao=<id>`
+**Commit 6 — `bb5a4f5`** — `feat(events): notifyNewEvent + EventDetailsModal deep-link via ?evento=<id>`
+**Commit 7 — `d403578`** — `feat(gallery): Gallery deep-link via ?album=<id>` *(trigger já construía a URL desde Fase 1; só faltava a tela ler)*
+
+Cada um replica o pattern 3-camadas: caller (já passava ID em todos os módulos), trigger (constrói URL com query param + fallback genérico) e tela (useEffect + useRef guard + find + abrir recurso + `history.replaceState`).
+
+**EventDetailsModal é global** (renderiza em qualquer view via `selectedEvent` — ViewSwitcher:360-366), então o `useEffect` de evento vive no AppContext, não em uma tela específica. Sócio cai na view atual + modal sobrepõe.
+
+**Caminhos de abertura padronizados:**
+
+| Módulo | Caminho | Componente |
+|---|---|---|
+| Academy (vídeo) | Modal interno | `VideoPlayerModal` |
+| News (artigo) | Tela interna | `ArticleReader` (substitui NewsList em ViewSwitcher) |
+| Events (criar + update) | Modal interno global | `EventDetailsModal` |
+| Solutions | `window.open(external_url)` | — externo, galeria-style |
+| Gallery | `window.open(embedUrl)` | — externo, galeria-style |
+
+**Status final dos 2 caminhos de notificação (PT/EN agora resolvido):**
+
+| Caminho | Status pós-Fase 3 |
+|---|---|
+| **A — In-app** (sino + lista) | ✅ **5 módulos** (Academy, News, Solutions, Events, Gallery) |
+| **B — Push externo** (SO + app fechado) | ⏳ **Fase 2b ainda pendente** — sem listener `popstate` em AppProvider OU `BroadcastChannel` em sw.js, `client.navigate()` do SW não dispara React re-render |
+
+**Não-escopo de Fase 3:** notificações antigas em `user_notifications.action_url` sem ID (gravadas antes do deploy) continuam abrindo tela genérica. Comportamento idêntico ao anterior, sem regressão.
+
+**Validação tripla por commit:** `tsc --noEmit` exit 0 + `npm run build` passou + zero alteração em ZONAS PROIBIDAS (lib/supabase.ts, useUnreadMessageCount.ts, UnreadCountContext.tsx, PushAutoSubscriber.tsx, supabase/migrations/*, public/sw.js).
+
 ## ADR-017 · TypeScript strict mode
 
 **Status:** **ATIVO E CONCLUÍDO** (aprovado em 2026-05-13; Sessão 1 + Sessão 2 executadas em produção. `tsconfig.json` agora com `"strict": true` único)

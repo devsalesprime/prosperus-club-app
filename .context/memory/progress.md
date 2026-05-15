@@ -36,6 +36,44 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase 2c + Fase 3 Deep-link — 2026-05-15 — Padrão 7 replicado em 5 módulos
+
+Sessão única com 8 commits direto em `main`. Pré-investigação read-only (relatório consolidado) revelou 3 requisitos pré-Fase 3 que viraram Commits 1-3, depois 4 commits replicam Padrão 7 nos módulos restantes, +1 commit de documentação.
+
+**Commits da sessão (em ordem):**
+
+| Commit | O que mudou |
+|---|---|
+| `92f8621` | `feat(notifications): PT→EN ViewState alias for legacy URLs` — `VIEW_ALIASES` em AppContext.tsx mapeia NOTICIAS→NEWS, GALERIA→GALLERY, SOLUCOES→SOLUTIONS, TOOLS→SOLUTIONS |
+| `04be3d0` | `fix(events): remove duplicate notifyNewEvent dispatch in EventForm` — bloco redundante (ID lixo `'new'`) removido. Caminho oficial fica em `eventService.createEvent` |
+| `c75d8e5` | `feat(notifications): notifyEventUpdated propagates eventId for deep-link` |
+| `e895242` | `feat(news): notifyNewArticle + NewsList deep-link via ?artigo=<id>` |
+| `6d9445a` | `feat(solutions): notifyNewSolution + SolutionsListPage deep-link via ?solucao=<id>` |
+| `bb5a4f5` | `feat(events): notifyNewEvent + EventDetailsModal deep-link via ?evento=<id>` |
+| `d403578` | `feat(gallery): Gallery deep-link via ?album=<id>` (trigger já estava OK desde Fase 1) |
+| _(este commit)_ | `docs(deep-link): ADR-018 revisada + Fase 3 concluída` |
+
+**Padrão 7 ativo em 5 módulos:** Academy, News, Solutions, Events, Gallery — cobrindo todas as 6 funções `notify*` que tinham buracos (notifyNewVideo já estava OK desde Fase 1).
+
+**Validação tripla em cada commit:**
+- `tsc --noEmit` exit 0
+- `npm run build` passa
+- Zero alteração em ZONAS PROIBIDAS (`lib/supabase.ts`, `useUnreadMessageCount.ts`, `UnreadCountContext.tsx`, `PushAutoSubscriber.tsx`, `supabase/migrations/*`, `public/sw.js`)
+
+**Bug latente fechado nesta sessão:** Issue do duplo disparo de `notifyNewEvent` (EventForm.tsx enviava 2º push com ID lixo `'new'`). Bug existia desde sempre; impacto era duplicação silenciosa, mas com Padrão 7 geraria URL quebrada. Resolvido via Commit 2.
+
+**TODOs restantes:**
+- **Fase 2b** (push externo do SO com app fechado): React não escuta `client.navigate()` do SW. Decisão pendente: listener `popstate` em AppProvider OU `BroadcastChannel` em sw.js (zona PROIBIDA — exige autorização explícita).
+- **Notificações antigas no banco:** `user_notifications.action_url` gravadas antes do deploy continuam sem ID — abrem tela genérica (sem regressão, comportamento idêntico ao anterior).
+
+**TODO operacional (Fábio):**
+- Smoke test em produção para cada um dos 5 módulos:
+  - Admin cria artigo → push deve chegar → clicar pelo sino → NEWS abre → ArticleReader aparece com artigo correto
+  - Admin cria solução → push → clicar sino → SolutionsListPage abre → `window.open(external_url)` em nova aba
+  - Admin cria evento → push → clicar sino → modal de evento sobrepõe view atual
+  - Admin edita evento (data/local/link mudou) → push de update → clicar → modal abre
+  - Admin cria álbum → push → clicar sino → Gallery abre → `window.open(embedUrl)` em nova aba
+
 ## Fase 2a Deep-link — 2026-05-15 — fix regex `handleNotificationNavigate`
 
 Investigação pós-deploy da Fase 1 revelou que o fix arquitetural estava **incompleto**:

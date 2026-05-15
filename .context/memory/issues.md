@@ -56,6 +56,26 @@ _(nenhuma issue aberta nesta categoria após Issue-017 ser fechada como falso po
 
 **Atenção:** `banner_url` EXISTE legitimamente em outras tabelas (`events`, `solutions`, `member_progress_tools`). Esses usos foram **preservados** — schema real tem o campo.
 
+### Issue-021 — `notifyNewEvent` disparado em duplicata (EventForm + eventService)
+**Descoberto:** Pré-investigação Fase 3 (ADR-018), 2026-05-15
+**Tipo:** Bug latente / duplicação silenciosa
+**Status:** ✅ RESOLVIDO via commit `04be3d0`
+**Arquivos:**
+- `components/admin/events/EventForm.tsx:274-283` (bloco redundante removido)
+- `services/eventService.ts:161` (caminho oficial preservado)
+
+**Sintoma:** Ao criar evento via admin UI, 2 pushes simultâneos eram enviados para cada sócio:
+- `services/eventService.ts:161` dispara `notifyNewEvent(data.id, ...)` com ID real retornado do INSERT
+- `components/admin/events/EventForm.tsx:275-282` disparava NOVAMENTE com `eventData.id || 'new'` — `eventData` vem do form, sempre cai no fallback `'new'` (ID lixo)
+
+**Impacto pré-Fase 3:** apenas duplicação silenciosa do badge in-app e 2 push notifications redundantes (URL hardcoded `/app/agenda` igual nos dois). Bug não-disruptivo, escondido por anos.
+
+**Impacto se Fase 3 fosse implementada sem fix:** segunda notificação geraria URL quebrada `/app/agenda?evento=new` — ao clicar, useEffect não acharia evento com id `'new'` em `clubEvents`, falha silenciosa.
+
+**Solução:** removido o bloco `if (shouldNotify) { ... }` do path de criação em EventForm.tsx:271-284. Caminho oficial fica em `eventService.createEvent` (dispatch fire-and-forget interno com ID correto). `shouldNotify` no else já era ilusório: admin nunca tinha controle real porque o service sempre notificava.
+
+**Comportamento runtime preservado 90%** — antes: 2 pushes por evento; depois: 1 push por evento. Notificações continuam chegando ao mesmo destino, com mesmo conteúdo. Único impacto visível: sócios não recebem mais o push duplicado.
+
 ### Issue-020 — `isAutomated` flag UI tipada honest
 **Descoberto:** Fase β, 2026-05-15
 **Tipo:** Flag client-side UI (Caso A — não persiste no banco, computada no merge)

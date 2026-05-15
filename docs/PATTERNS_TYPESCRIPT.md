@@ -396,11 +396,64 @@ useEffect(() => {
 | Hot reload com URL antiga | `useRef` impede re-disparo |
 | Data refresh fecha modal manualmente | `useRef` impede re-abertura |
 
+### Variantes de Camada 3 (descobertas na Fase 3, 2026-05-15)
+
+**Variante A — Modal interno (state-driven):**
+A tela seta state em um contexto/AppContext que controla o modal. Usado quando o app tem componente dedicado de visualização.
+- Academy → `setSelectedVideo` → `VideoPlayerModal`
+- News → `onArticleSelect` (prop que chama `setSelectedArticle` no AppContext) → `ArticleReader`
+- Events → `setSelectedEvent` (AppContext) → `EventDetailsModal` *(global — renderiza em qualquer view, então o useEffect vive no AppContext, não em uma tela específica)*
+
+**Variante B — `window.open` externo (galeria-style):**
+A tela abre URL externa em nova aba via `window.open(url, '_blank', 'noopener,noreferrer')`. Usado quando o recurso é externo (link de parceiro, álbum hospedado fora).
+- Solutions → `window.open(solution.external_url)`
+- Gallery → `window.open(album.embedUrl)`
+
+A diferença está só no que substitui `handleItemAction(item)` na Camada 3 — o esqueleto do useEffect (guard `useRef`, find, `history.replaceState`) é idêntico.
+
+### Fallback para data fetching paginado
+
+Quando a tela usa paginação (ex: NewsList com React Query), o item pode não estar no array carregado. Fallback via service:
+
+```ts
+const local = allItems.find(i => i.id === idFromUrl);
+if (local) {
+    handleItemAction(local);
+} else {
+    itemService.getById(idFromUrl)
+        .then(fetched => { if (fetched) handleItemAction(fetched); })
+        .catch(() => {});
+}
+```
+
+Implementado em `NewsList.tsx` usando `articleService.getArticleById`.
+
+### PT→EN alias (Fase 2c, 2026-05-15)
+
+Quando os triggers usam URLs em português (`/app/noticias`, `/app/galeria`, `/app/tools/solucoes`) mas `ViewState` é em inglês (`NEWS`, `GALLERY`, `SOLUTIONS`), o handler de URL→ViewState (em AppContext.tsx) precisa de uma lookup table:
+
+```ts
+const VIEW_ALIASES: Record<string, ViewState> = {
+    'NOTICIAS': ViewState.NEWS,
+    'GALERIA': ViewState.GALLERY,
+    'SOLUCOES': ViewState.SOLUTIONS,
+    'TOOLS': ViewState.SOLUTIONS,  // /app/tools/solucoes captura 'TOOLS' (primeiro segment)
+};
+```
+
+Tenta match direto contra `ViewState` (EN) primeiro; só consulta o alias se falhar. Retrocompat com URLs antigas em `user_notifications.action_url`.
+
 ### Referência
 
-- Trigger: `services/notificationTriggers.ts:144` (`notifyNewVideo`)
-- Caller: `components/admin/AcademyModule.tsx:156`
-- Tela: `components/academy/Academy.tsx` (deep-link useEffect)
+- Trigger: `services/notificationTriggers.ts` (todas as `notifyNew*`)
+- Camada A (URL→ViewState): `contexts/AppContext.tsx` (`handleNotificationNavigate` + `VIEW_ALIASES`)
+- Variante A — modal interno:
+  - `components/academy/Academy.tsx` (deep-link `?video=`)
+  - `components/academy/NewsList.tsx` (deep-link `?artigo=` com fallback `getArticleById`)
+  - `contexts/AppContext.tsx` (deep-link `?evento=` — modal global)
+- Variante B — `window.open` externo:
+  - `pages/SolutionsListPage.tsx` (deep-link `?solucao=`)
+  - `components/gallery/Gallery.tsx` (deep-link `?album=`)
 
 ---
 
@@ -416,3 +469,4 @@ Histórico:
 - 2026-05-15 — Padrão 5 criado a partir da Fase β SUSPEITOS (commits `1b1bbd2`, `229fd81`, `3cc691c`)
 - 2026-05-15 — Padrão 6 criado a partir da resolução de Issue-017 como falso positivo (limitação supabase-js type generator)
 - 2026-05-15 — Padrão 7 criado a partir da Fase 1 de Deep-link (ADR-018, commits `2d01088`, `d91eee4`, `04e40eb`)
+- 2026-05-15 — Padrão 7 expandido com Variantes A/B + PT→EN alias + fallback paginado a partir da Fase 2c + Fase 3 (ADR-018, commits `92f8621` → `d403578`)
