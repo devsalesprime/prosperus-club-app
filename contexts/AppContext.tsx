@@ -214,6 +214,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [userProfile?.id]);
 
+    // ============================================
+    // DEEP-LINK HANDLER — Event (ADR-018 Fase 3)
+    // ============================================
+    // Notificacao push de novo/atualizado evento navega para
+    // `/app/agenda?evento=<id>`. EventDetailsModal e GLOBAL (renderiza em
+    // qualquer view via selectedEvent — ViewSwitcher:360-366), entao o
+    // useEffect vive aqui no AppContext (escopo certo) e nao em uma tela
+    // especifica. Sócio cai na view atual + modal sobrepoe.
+    //
+    // Guard via ref: deep-link so dispara uma vez por sessao.
+    const deepLinkEventProcessedRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkEventProcessedRef.current) return;
+        if (clubEvents.length === 0) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const eventIdFromUrl = params.get('evento');
+        if (!eventIdFromUrl) {
+            deepLinkEventProcessedRef.current = true;
+            return;
+        }
+
+        const event = clubEvents.find(e => e.id === eventIdFromUrl);
+        if (event) {
+            setSelectedEvent(event);
+        }
+
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('evento');
+        window.history.replaceState({}, '', newUrl.toString());
+        deepLinkEventProcessedRef.current = true;
+    }, [clubEvents]);
+
     // Reset benefits filter when leaving MEMBERS view
     useEffect(() => {
         if (view !== ViewState.MEMBERS) setShowBenefitsFilter(false);

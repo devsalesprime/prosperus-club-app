@@ -207,8 +207,8 @@ class NotificationTriggers {
         }
     }
 
-    async notifyNewEvent(_id: string, title: string, date: string, _authorId?: string): Promise<NotifyResult> {
-        addBreadcrumb('notification', 'notifyNewEvent started');
+    async notifyNewEvent(eventId: string, title: string, date: string, _authorId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewEvent started', { hasEventId: !!eventId });
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -221,11 +221,15 @@ class NotificationTriggers {
                 try { return new Date(date).toLocaleDateString('pt-BR'); }
                 catch { return date; }
             })();
+            // ADR-018: deep-link via query param. AppContext le `?evento=<id>`
+            // e abre EventDetailsModal (global, renderiza em qualquer view via
+            // selectedEvent). Fallback /app/agenda para back-compat.
+            const url = eventId ? `/app/agenda?evento=${eventId}` : '/app/agenda';
             for (const member of members) {
                 await notificationService.createNotification(
                     '📅 Novo Evento na Agenda',
                     `${title} — ${dateLabel}. Confira a agenda para garantir sua presença!`,
-                    'INDIVIDUAL', '/app/agenda', member.id
+                    'INDIVIDUAL', url, member.id
                 ).catch((e) => console.error('[notifyNewEvent] item:', e));
             }
             return { ok: true, count: members.length };
