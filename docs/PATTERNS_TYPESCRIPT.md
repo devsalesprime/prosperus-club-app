@@ -457,6 +457,53 @@ Tenta match direto contra `ViewState` (EN) primeiro; só consulta o alias se fal
 
 ---
 
+## Padrão 8: Type predicate em filter Boolean
+
+**Origem:** Issue-016 (commit `db8fcf2`, 2026-05-15).
+
+### Quando usar
+
+Ao filtrar `null`/`undefined` de um array antes de usar como tipo não-nulável.
+
+### O que NÃO fazer
+
+```ts
+// ❌ Cast cego — derrota o type checker
+const items: Item[] = rawItems.filter(Boolean) as Item[];
+
+// Se rawItems virar Array<Item | null | undefined>, filter(Boolean) elimina
+// ambos em runtime mas o cast `as Item[]` aceita sem reclamar. Em refator
+// futuro, se alguém adicionar `string | 0` ao tipo subjacente, o filter
+// passaria silenciosamente o falsy não-null e o cast esconderia o bug.
+```
+
+### O que fazer
+
+```ts
+// ✅ Type predicate explícito
+const items = rawItems.filter((x): x is Item => x !== null);
+
+// Para Array<T | null | undefined>:
+const items = rawItems.filter((x): x is T => x !== null && x !== undefined);
+// ou:
+const items = rawItems.filter((x): x is NonNullable<typeof x> => x != null);
+```
+
+### Por que funciona
+
+- TypeScript valida que o predicate corresponde à narrowing do tipo retornado
+- Se o tipo subjacente mudar (virar `Item | null | string`), o predicate força o compilador a parar — `as Item[]` passaria
+- Comportamento idêntico em runtime (filter usa o boolean retornado)
+- Composição segura com pipelines downstream que esperam `Item[]`
+
+### Referência
+
+- `services/adminChatService.ts:184-185` (mappedParticipants com type local `MappedParticipant`)
+- `services/adminChatService.ts:212-214` (filteredConversations)
+- `utils/matchEngine.ts` + `components/MemberBook.tsx:165` (filter para `MatchResult | null`, mesmo padrão)
+
+---
+
 ## Quando criar novos padrões aqui
 
 - Padrão emergiu em ≥2 commits diferentes resolvendo o mesmo tipo de problema
@@ -470,3 +517,4 @@ Histórico:
 - 2026-05-15 — Padrão 6 criado a partir da resolução de Issue-017 como falso positivo (limitação supabase-js type generator)
 - 2026-05-15 — Padrão 7 criado a partir da Fase 1 de Deep-link (ADR-018, commits `2d01088`, `d91eee4`, `04e40eb`)
 - 2026-05-15 — Padrão 7 expandido com Variantes A/B + PT→EN alias + fallback paginado a partir da Fase 2c + Fase 3 (ADR-018, commits `92f8621` → `d403578`)
+- 2026-05-15 — Padrão 8 criado a partir da resolução de Issue-016 (commit `db8fcf2`) + Issue-015 (commit `f63d559`)

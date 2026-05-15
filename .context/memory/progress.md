@@ -36,6 +36,26 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Issues 015 + 016 fechadas — 2026-05-15 — pós-strict mode cleanup
+
+Sessão dedicada de 3 commits direto em `main` fechando as 2 issues remanescentes do Cluster 4 da ADR-017 Sessão 2. Pré-investigação read-only (relatório consolidado) já tinha identificado os cenários.
+
+**Commits da sessão:**
+
+| Commit | O que mudou |
+|---|---|
+| `f63d559` | `refactor(types): MatchType excludes 'NONE', calculateMatch returns null (Issue-015)` — `MatchType` reduzido para 3 valores, `calculateMatch` retorna `MatchResult \| null`, `MATCH_CONFIG` virou `Record` (sem `Partial`), filter com type predicate. **Bonus:** `rankMatches` removida do `matchEngine.ts` (dead code, 0 callers) |
+| `db8fcf2` | `refactor(types): replace as casts with type predicates in adminChatService (Issue-016)` — 2 `filter(Boolean) as T[]` substituídos por type predicates honest |
+| _(este commit)_ | `docs: Issues 015/016 resolved + type predicate pattern` — issues.md atualizada, decisions.md ADR-017 com nota de conclusão, PATTERNS_TYPESCRIPT.md com Padrão 8 |
+
+**Validação tripla em cada commit:** `tsc --noEmit` exit 0 + `npm run build` passou + zero alteração em ZONAS PROIBIDAS.
+
+**Cenários escolhidos (confirmados pelo relatório):**
+- **Issue-015 = Cenário B** (NONE → null) — sentinela sem representação visual, sempre filtrada antes da UI
+- **Issue-016 = Cenário A polido** (type predicates) — função externa já retornava limpo; só faltava trocar cast cego por predicate. Cenário C (SQL search) refutado por volume baixo (9 conversas total via MCP)
+
+**Score Cluster 4 da ADR-017 Sessão 2:** 3 bugs latentes originais → 0 abertos. Issues 015 + 016 fechadas; OnboardingWizard (terceiro do Cluster 4) já tinha sido resolvido em α.1 durante a própria sessão da ADR-017.
+
 ## Fase 2c + Fase 3 Deep-link — 2026-05-15 — Padrão 7 replicado em 5 módulos
 
 Sessão única com 8 commits direto em `main`. Pré-investigação read-only (relatório consolidado) revelou 3 requisitos pré-Fase 3 que viraram Commits 1-3, depois 4 commits replicam Padrão 7 nos módulos restantes, +1 commit de documentação.

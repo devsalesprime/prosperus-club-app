@@ -246,6 +246,8 @@ Cada um replica o pattern 3-camadas: caller (já passava ID em todos os módulos
 
 **Conclusão (2026-05-14):** ADR-017 totalmente executada em duas sessões. **R6 (Zero Any) validada por compilador.** 2 bugs latentes documentados como Issues-015 e Issues-016 para investigação futura (OnboardingWizard que estava na previsão original do Cluster 4 foi resolvido em α.1 — fix tipado mudou o callback contract para honest).
 
+**Atualização 2026-05-15:** **Issues-015 e Issues-016 fechadas em sessão dedicada pós-strict mode**. Cenário B aplicado em Issue-015 (commit `f63d559`): `MatchType` reduzido para 3 valores, `calculateMatch` retorna `MatchResult | null`, `MATCH_CONFIG` virou `Record` completo, `rankMatches` removida como dead code bonus. Cenário A polido em Issue-016 (commit `db8fcf2`): 2 `filter(Boolean) as T[]` substituídos por type predicates honest em `adminChatService.ts`. Score Cluster 4: 3 bugs latentes originais → 0 abertos. Ver `.context/memory/issues.md` para detalhes completos.
+
 ### Exceção autorizada à zona ADR-003 (precedente registrado)
 
 Durante α.2a, `noImplicitAny` exigiu return type annotation em `components/push/PushAutoSubscriber.tsx:47` (TS7010). PushAutoSubscriber está em **zona ADR-003 IMUTÁVEL**, mas tech lead autorizou exceção em 2026-05-14 por ser **anotação compile-time PURA** (zero impacto runtime, `sessionStorage` guard intocado).
