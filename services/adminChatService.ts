@@ -170,9 +170,11 @@ class AdminChatService {
                         .select('*', { count: 'exact', head: true })
                         .eq('conversation_id', conv.id);
 
-                    // Mapear participantes
-                    const mappedParticipants = ((participants as unknown as DBParticipantRow[]) || [])
-                        .map((p: DBParticipantRow) => {
+                    // Mapear participantes — type predicate substitui `filter(Boolean) as T[]`
+                    // (Issue-016): compilador valida narrowing sem cast cego.
+                    type MappedParticipant = ConversationWithParticipants['participants'][number];
+                    const mappedParticipants: MappedParticipant[] = ((participants as unknown as DBParticipantRow[]) || [])
+                        .map((p: DBParticipantRow): MappedParticipant | null => {
                             const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
                             return profile ? {
                                 id: profile.id,
@@ -181,7 +183,7 @@ class AdminChatService {
                                 image_url: profile.image_url
                             } : null;
                         })
-                        .filter(Boolean) as ConversationWithParticipants['participants'];
+                        .filter((p): p is MappedParticipant => p !== null);
 
                     // Filtrar por search se fornecido
                     if (search) {
@@ -204,8 +206,11 @@ class AdminChatService {
                 })
             );
 
-            // Remover nulls (conversas filtradas pelo search)
-            const filteredConversations = enrichedConversations.filter(Boolean) as ConversationWithParticipants[];
+            // Remover nulls (conversas filtradas pelo search) — type predicate
+            // substitui `filter(Boolean) as T[]` (Issue-016).
+            const filteredConversations = enrichedConversations.filter(
+                (c): c is ConversationWithParticipants => c !== null
+            );
 
             logger.debug(`✅ Admin: Found ${filteredConversations.length} conversations`);
 
