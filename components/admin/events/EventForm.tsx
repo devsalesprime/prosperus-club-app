@@ -269,18 +269,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, onSaved, onCancel }
                     }
                 }
             } else {
+                // eventService.createEvent ja dispara notifyNewEvent internamente
+                // com o ID real retornado do INSERT (services/eventService.ts).
+                // ADR-018 Fase 2c (2026-05-15): bloco duplicado removido —
+                // enviava 2o push com `eventData.id || 'new'` (ID lixo, broken
+                // deep-link no Padrao 7).
                 await eventService.createEvent(eventData);
-                // 🔔 Notificar sócios sobre novo evento
-                if (shouldNotify) {
-                    import('../../../services/notificationTriggers').then(({ notifyNewEvent }) => {
-                        notifyNewEvent(
-                            eventData.id || 'new',
-                            eventData.title,
-                            eventData.date,
-                            currentUser?.id
-                        ).catch(() => { });
-                    });
-                }
             }
             toast.success(isEditing ? 'Evento atualizado com sucesso!' : 'Evento criado com sucesso!');
             onSaved();
