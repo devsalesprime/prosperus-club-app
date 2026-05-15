@@ -112,6 +112,40 @@
 - TODO retroativo: criar UI admin para inspecionar a fila (`SELECT` policy já permite). Fica para PR separado.
 **Status:** ATIVO
 
+## ADR-018 · Deep-links de notificação via query param
+
+**Status:** **ATIVO**
+**Data:** 2026-05-15
+
+**Contexto:** Notificações push criavam URLs sem identificador do recurso (ex: `/app/academy` genérico). `sw.js` navegava corretamente mas a tela de destino não tinha context do item específico — sócio caía na lista geral e tinha que procurar o item manualmente. Investigação preliminar (sessão de 2026-05-15) revelou que 6 de 7 funções `notify*` ignoravam o ID via parâmetro `_underscore` e construíam URLs hardcoded para telas genéricas. Mesmo o `notifyNewGallery` (que aparentemente fazia deep-link via `?album=`) era na verdade um falso positivo: `Gallery.tsx` não lia o query param.
+
+**Decisão:** Adotar **query param** como mecanismo de deep-link para todas as notificações:
+- URL construída pelo trigger: `/app/<modulo>?<recurso>=<id>`
+- Tela de destino lê query param no mount, **aguarda data load**, abre/foca recurso específico, **limpa query param** via `history.replaceState`
+- Padrão simples, sem rotas React Router dedicadas (zero impacto em SPA routing)
+- Compatível com `sw.js` atual sem mudanças (zona PROIBIDA mantida)
+
+**Pattern aplicado nesta sessão:** `?video=<uuid>` em Academy. Commits:
+- `2d01088` — Camada 2 (trigger constrói URL)
+- `d91eee4` — Camada 1 (caller passa videoId)
+- `04e40eb` — Camada 3 (Academy lê + abre modal)
+
+**Outras funções `notify*` no mesmo buraco** (Fase 2 do roadmap — replicam o mesmo pattern):
+- `notifyNewArticle` → `/app/noticias?artigo=<id>`
+- `notifyNewSolution` → `/app/tools/solucoes?solucao=<id>`
+- `notifyNewEvent` → `/app/agenda?evento=<id>`
+- `notifyEventUpdated` → `/app/agenda?evento=<id>` (idem)
+- `notifyNewGallery` → `/app/galeria?album=<id>` (precisa adicionar handler no Gallery.tsx — query param já é construído mas atualmente ignorado)
+
+**Consequências:**
+- URLs menos "limpas" que rotas dedicadas (`?video=<uuid>` vs `/video/<uuid>`) — aceito como trade-off pela simplicidade
+- Zero risco de quebra de SW/PWA/iOS deep-link (não toca routing engine)
+- Cada tela responsável pelo seu próprio query param handling — pattern replicável documentado em `docs/PATTERNS_TYPESCRIPT.md`
+- Backward compatible (trigger sem ID → fallback genérico para tela do módulo)
+- Guard via `useRef` evita re-disparo quando data refresh ou hot reload
+
+**Não-escopo:** notificações antigas (registros em `user_notifications.action_url` criados antes deste deploy) não migradas. Sócio que clicar em notificação antiga vai pra tela genérica como antes — comportamento idêntico ao anterior, sem regressão.
+
 ## ADR-017 · TypeScript strict mode
 
 **Status:** **ATIVO E CONCLUÍDO** (aprovado em 2026-05-13; Sessão 1 + Sessão 2 executadas em produção. `tsconfig.json` agora com `"strict": true` único)

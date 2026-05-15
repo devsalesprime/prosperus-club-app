@@ -36,6 +36,42 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase 1 Deep-link — 2026-05-15 — fix vídeo + pattern estabelecido (ADR-018)
+
+Bug em produção: push "Novo vídeo: X" abria `/app/academy` (lista genérica), perdendo contexto do vídeo específico. Investigação preliminar mapeou causa em 3 camadas e revelou que 6 de 7 `notify*` ignoravam IDs via parâmetro `_underscore`.
+
+Esta sessão entrega fix completo do caso vídeo + estabelece pattern replicável.
+
+**4 commits direto em main:**
+
+| Commit | Camada | O que mudou |
+|---|---|---|
+| `2d01088` | 2 (Trigger) | `notifyNewVideo` constrói `/app/academy?video=<id>` quando `videoId` presente, fallback `/app/academy` |
+| `d91eee4` | 1 (Caller) | `AcademyModule.tsx:156` passa `newVideo.id` em vez de string vazia (refutação aceita: `videoData.id` do briefing era `newVideo.id` real) |
+| `04e40eb` | 3 (Tela) | `Academy.tsx` adicionou `useEffect` que lê `?video=<id>`, aguarda `allVideos`, abre `VideoPlayerModal` e limpa query param. Guard via `useRef` evita re-disparo |
+| _(este commit)_ | docs | ADR-018 + Padrão 7 em PATTERNS + progress.md |
+
+**ADR-018 estabelecida:** deep-link via query param. URL no formato `/app/<modulo>?<recurso>=<id>`. Tela lê no mount, aguarda data load, abre item, limpa URL. Backward compatible — trigger sem ID cai em fallback genérico.
+
+**Validação:**
+- `tsc --noEmit` exit 0 em CADA commit
+- `npm run build` passa
+- ZONA PROIBIDA `sw.js` intocada (já funcionava corretamente)
+- 3 cenários cobertos por leitura de código: ID válido → modal abre; ID inválido → tela genérica sem erro; sem param → comportamento original
+
+**Próximas fases (5 funções similares no mesmo buraco):**
+- `notifyNewArticle` → `/app/noticias?artigo=<id>`
+- `notifyNewSolution` → `/app/tools/solucoes?solucao=<id>`
+- `notifyNewEvent` + `notifyEventUpdated` → `/app/agenda?evento=<id>`
+- `notifyNewGallery` → `Gallery.tsx` precisa adicionar handler (trigger já constrói `?album=` mas a tela ignora hoje — falso positivo descoberto na investigação)
+
+Cada uma replica exatamente o pattern do Padrão 7. Estimativa: ~3-4h total (5 funções × ~30-45min).
+
+**TODO operacional (Fábio):**
+- Smoke test em produção: criar vídeo no admin → push deve chegar → clicar → modal deve abrir
+- Sem necessidade de redeploy de Edge Functions (Fase 1 é só frontend + trigger TS)
+- Rebuild frontend (`npm run build`) ao puxar os 4 commits
+
 ## Fase β SUSPEITOS — 2026-05-15 — `as any` drift parcial fechado
 
 Fase β do backlog R6 (Apêndice A.1 da auditoria `:any`). Investigação MCP-validada antes de cada fix.

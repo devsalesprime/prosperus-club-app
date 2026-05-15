@@ -308,6 +308,102 @@ setRsvpList((data ?? []) as unknown as RsvpItem[]);
 
 ---
 
+## Padrão 7: Deep-link de notificação via query param
+
+**Origem:** ADR-018 (commits `2d01088`, `d91eee4`, `04e40eb`, 2026-05-15).
+
+### Pattern de 3 camadas
+
+#### Camada 1 — Caller
+
+```ts
+// Quando dispara a notificação, passa o ID do recurso recém-criado
+import('../../services/notificationTriggers').then(({ notifyNewX }) => {
+    notifyNewX(itemData.title, newItem.id).catch(() => {});
+});
+```
+
+**Regra:** `newItem.id` (resposta do INSERT `.select().single()`), NÃO `itemData.id` (input do INSERT, ainda sem ID).
+
+#### Camada 2 — Trigger (`services/notificationTriggers.ts`)
+
+```ts
+async notifyNewX(title: string, resourceId?: string): Promise<NotifyResult> {
+    addBreadcrumb('notification', 'notifyNewX started', { hasResourceId: !!resourceId });
+    // ...
+    // ADR-018: deep-link via query param. Tela X.tsx lê `?recurso=<id>` no mount
+    // e abre o item específico. Fallback para tela genérica quando ausente.
+    const url = resourceId ? `/app/<modulo>?<recurso>=${resourceId}` : '/app/<modulo>';
+    // ... usa `url` no createNotification
+}
+```
+
+**Regras:**
+- `resourceId` SEMPRE opcional (back-compat)
+- Fallback explícito quando ausente
+- Breadcrumb inclui `hasResourceId` para observabilidade
+
+#### Camada 3 — Tela de destino
+
+```tsx
+const deepLinkProcessedRef = useRef(false);
+useEffect(() => {
+    if (deepLinkProcessedRef.current) return;
+    if (allItems.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get('<recurso>');
+    if (!idFromUrl) {
+        deepLinkProcessedRef.current = true;
+        return;
+    }
+
+    const item = allItems.find(i => i.id === idFromUrl);
+    if (item) {
+        handleItemAction(item);  // reusa handler existente
+    }
+
+    // SEMPRE limpa o query param (incluindo caso de ID inválido)
+    const url = new URL(window.location.href);
+    url.searchParams.delete('<recurso>');
+    window.history.replaceState({}, '', url.toString());
+
+    deepLinkProcessedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [allItems]);
+```
+
+**Regras:**
+- **`useRef` guard:** evita re-disparo quando data refresh (refetch, invalidation optimistic) atualiza `allItems` depois que usuário fechar o item manualmente
+- **`useEffect` com `[allItems]`:** dispara quando React Query (ou equivalente) termina o load
+- **Sempre limpar query param** via `history.replaceState` — mesmo se ID inválido (UX: cai na tela genérica sem mensagem de erro, comportamento intencional)
+- **Não usar `router.navigate`** — `history.replaceState` evita re-render do React Router
+- **Reusa handler existente** (handleVideoClick, handleAlbumClick, etc) — não duplica lógica
+
+### Quando NÃO usar
+
+- Recurso não tem ID estável (UUID, slug) — fallback é tela genérica
+- Tela de destino renderiza o item inline (sem necessidade de "abrir" — push genérico basta)
+- Recurso pode ter sido deletado entre criar e clicar (aceitar UX de cair na tela genérica é OK)
+
+### Cenários cobertos pelo pattern
+
+| Cenário | Comportamento |
+|---|---|
+| ID válido + tela carregada | Modal/handler abre o item, URL limpa |
+| ID inválido (deletado, typo) | Tela carrega normal, URL limpa silenciosamente |
+| Sem query param | Comportamento original |
+| Hot reload com URL antiga | `useRef` impede re-disparo |
+| Data refresh fecha modal manualmente | `useRef` impede re-abertura |
+
+### Referência
+
+- Trigger: `services/notificationTriggers.ts:144` (`notifyNewVideo`)
+- Caller: `components/admin/AcademyModule.tsx:156`
+- Tela: `components/academy/Academy.tsx` (deep-link useEffect)
+
+---
+
 ## Quando criar novos padrões aqui
 
 - Padrão emergiu em ≥2 commits diferentes resolvendo o mesmo tipo de problema
@@ -319,3 +415,4 @@ Histórico:
 - 2026-05-14 — Padrão 4 criado a partir da Sessão 2 do ADR-017 (commits `e57a4d1`, `675dd31`, `1166a76`)
 - 2026-05-15 — Padrão 5 criado a partir da Fase β SUSPEITOS (commits `1b1bbd2`, `229fd81`, `3cc691c`)
 - 2026-05-15 — Padrão 6 criado a partir da resolução de Issue-017 como falso positivo (limitação supabase-js type generator)
+- 2026-05-15 — Padrão 7 criado a partir da Fase 1 de Deep-link (ADR-018, commits `2d01088`, `d91eee4`, `04e40eb`)
