@@ -146,6 +146,28 @@
 
 **Não-escopo:** notificações antigas (registros em `user_notifications.action_url` criados antes deste deploy) não migradas. Sócio que clicar em notificação antiga vai pra tela genérica como antes — comportamento idêntico ao anterior, sem regressão.
 
+### Revisão 2026-05-15 — Fase 2a (fix de regex em `handleNotificationNavigate`)
+
+A Fase 1 ficou arquiteturalmente **incompleta**. Investigação revelou que o app **não usa React Router** — roteamento é state-based via `setView(ViewState.X)`. A Camada 3 (useEffect em Academy lendo `?video=`) só dispara se Academy montar, o que depende de uma **Camada A** que mapeie URL → `setView()`.
+
+**Camada A já existia parcialmente** em `contexts/AppContext.tsx:327` (`handleNotificationNavigate`) — chamada pelos componentes in-app (NotificationCenter do sino + NotificationsPage da lista). Mas tinha **bug de regex** captando `'app'` do prefixo `/app/` em vez do segment real ('academy', 'agenda'). Notificações com `action_url='/app/academy?video=X'` caíam no fallback `window.open(url, '_blank')` que **abria nova aba na home** em vez de trocar a view.
+
+**Fix Fase 2a** (commit `7af1f61`): 1 linha adicionando `const stripped = url.replace(/^\/app\//, '/');` antes do regex. Resolve clicks in-app no sino e lista de notificações.
+
+**Status dos 2 caminhos de notificação:**
+
+| Caminho | Quem dispara | Status |
+|---|---|---|
+| **A — In-app** (sino do header + lista) | `handleNotificationNavigate` em AppContext | ✅ **RESOLVIDO 2026-05-15** (`7af1f61`) |
+| **B — Push externo** (notificação do SO com app fechado) | `sw.js` `notificationclick` → `client.navigate(fullUrl)` | ⏳ **Fase 2b** — React não escuta mudança de URL. Solução possível: listener `popstate` no AppProvider OU `BroadcastChannel` (já existe `prosperus-push` no sw.js linha 267, expandir para `NOTIFICATION_CLICK` no `notificationclick`). |
+
+**Limitação adicional descoberta (Fase 2c — TODO):** Alguns triggers usam paths PT que não batem com `ViewState` (que é EN):
+- `notifyNewArticle` → `/app/noticias` mas `ViewState.NEWS` (PT≠EN)
+- `notifyNewSolution` → `/app/tools/solucoes` mas `ViewState.SOLUTIONS` (estrutura `/tools/X` não bate)
+- `notifyNewGallery` → `/app/galeria` mas `ViewState.GALLERY`
+
+Fix futuro (Fase 2c): mapping PT→EN no handler OU alinhar triggers para usar paths EN. Por ora só **vídeo** (`/app/academy`) e **agenda** (`/app/agenda`) funcionam end-to-end.
+
 ## ADR-017 · TypeScript strict mode
 
 **Status:** **ATIVO E CONCLUÍDO** (aprovado em 2026-05-13; Sessão 1 + Sessão 2 executadas em produção. `tsconfig.json` agora com `"strict": true` único)

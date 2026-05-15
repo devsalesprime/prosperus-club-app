@@ -36,6 +36,47 @@ console.log prod:    0
 :any remanescentes:  81  (era 183 — auditoria anterior estava 2× pessimista)
 ```
 
+## Fase 2a Deep-link — 2026-05-15 — fix regex `handleNotificationNavigate`
+
+Investigação pós-deploy da Fase 1 revelou que o fix arquitetural estava **incompleto**:
+- App **não usa React Router** — view switching é state-based
+- Camada 3 (useEffect Academy) só dispara se Academy montar
+- Academy só monta via `setView(ViewState.ACADEMY)` — não por URL
+- Logo, a Fase 1 era dead code sem uma Camada A funcionando
+
+**Camada A já existia** em `AppContext.tsx:327` (`handleNotificationNavigate`) chamada pelos cliques in-app (NotificationCenter + NotificationsPage), mas com bug de regex.
+
+**Commit `7af1f61`** — fix cirúrgico de 1 linha:
+```diff
++ const stripped = url.replace(/^\/app\//, '/');
+- const pathMatch = url.match(/^\/?([a-zA-Z_-]+)/);
++ const pathMatch = stripped.match(/^\/?([a-zA-Z_-]+)/);
+```
+
+Antes: `/app/academy?video=X` → captava `'app'` → fallback `window.open` abria nova aba.
+Depois: stripped → captava `'academy'` → `setView(ACADEMY)` → Academy monta → useEffect da Fase 1 dispara → modal abre.
+
+**Status dos 2 caminhos:**
+
+| Caminho | Status |
+|---|---|
+| A — In-app (sino + lista) | ✅ RESOLVIDO via `7af1f61` |
+| B — Push externo (SO com app fechado) | ⏳ Fase 2b — React não escuta `client.navigate()` do SW |
+
+**TODO Fase 2b:** decidir entre listener `popstate` no AppProvider OU expandir `BroadcastChannel prosperus-push` (já em `sw.js:267`) para `NOTIFICATION_CLICK`. Requer alteração em `sw.js` (zona PROIBIDA — pedir autorização) OU adicionar listener `popstate` (sem mudar sw.js, mas com risco de não disparar em todos browsers).
+
+**TODO Fase 2c:** alinhar paths PT/EN. Triggers atuais usam paths PT (`/app/noticias`, `/app/galeria`, `/app/tools/solucoes`) que não batem com `ViewState` em EN. Fix: mapping PT→EN no handler OU realinhar URLs dos triggers para EN. Apenas `vídeo` (Academy) e `evento` (Agenda) batem hoje.
+
+**Validação:**
+- `tsc --noEmit` exit 0
+- `npm run build` passa
+- Diff cirúrgico: 1 linha funcional adicionada, 1 removida (resto comentário)
+- ZONAS PROIBIDAS intocadas (sw.js, ADRs IMUTÁVEIS)
+
+**TODO operacional (Fábio):**
+- Smoke test em produção: criar vídeo → push deve chegar → clicar pelo sino do header → Academy deve montar → modal deve abrir com vídeo correto
+- Se sócio clicar via push externo (app fechado): hoje ainda cai em Dashboard (Fase 2b resolve)
+
 ## Fase 1 Deep-link — 2026-05-15 — fix vídeo + pattern estabelecido (ADR-018)
 
 Bug em produção: push "Novo vídeo: X" abria `/app/academy` (lista genérica), perdendo contexto do vídeo específico. Investigação preliminar mapeou causa em 3 camadas e revelou que 6 de 7 `notify*` ignoravam IDs via parâmetro `_underscore`.
