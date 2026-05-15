@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Video } from '../../types';
 
 import { VideoCarousel } from './VideoCarousel';
@@ -99,6 +99,51 @@ export const Academy: React.FC<AcademyProps> = ({ userId, onBack }) => {
     const handleNavigate = (video: Video) => {
         handleVideoClick(video, playlist);
     };
+
+    // ============================================
+    // DEEP-LINK HANDLER (ADR-018)
+    // ============================================
+    // Quando o sócio clica em push "Novo vídeo X", sw.js navega para
+    // `/app/academy?video=<id>`. Aqui detectamos o query param e abrimos
+    // o VideoPlayerModal automaticamente assim que `allVideos` carregar.
+    //
+    // Guard via ref: garante que o deep-link só dispara uma vez por sessão
+    // — evita re-abrir o modal se `allVideos` atualizar (refetch, optimistic)
+    // depois que o usuário fechar manualmente.
+    //
+    // Query param é SEMPRE limpo via `history.replaceState` para não voltar
+    // a abrir em hot reload, refresh ou navegação interna que reentre na tela.
+    const deepLinkProcessedRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkProcessedRef.current) return;
+        if (allVideos.length === 0) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const videoIdFromUrl = params.get('video');
+        if (!videoIdFromUrl) {
+            deepLinkProcessedRef.current = true;
+            return;
+        }
+
+        const video = allVideos.find(v => v.id === videoIdFromUrl);
+        if (video) {
+            handleVideoClick(video, []);
+        }
+
+        // Sempre limpa o query param — mesmo se o vídeo não foi encontrado
+        // (ID inválido, vídeo deletado). UX: usuário cai na tela genérica
+        // sem mensagem de erro, comportamento intencional.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('video');
+        window.history.replaceState({}, '', url.toString());
+
+        deepLinkProcessedRef.current = true;
+        // handleVideoClick é estável dentro do escopo do componente (não usa
+        // closure-captured state pesado) — eslint react-hooks/exhaustive-deps
+        // não reclama porque não está em dep array; intencional para evitar
+        // re-disparar quando o handler recriar entre renders.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allVideos]);
 
     // ============================================
     // LOADING STATE
