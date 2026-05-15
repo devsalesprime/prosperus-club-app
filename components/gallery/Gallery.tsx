@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertCircle, Loader2, RefreshCw, Calendar, Image as ImageIcon, Heart, ExternalLink } from 'lucide-react';
 import { galleryService } from '../../services/galleryService';
 import { favoriteService } from '../../services/favoriteService';
@@ -28,6 +28,37 @@ const GalleryList: React.FC = () => {
         loadAlbums();
         loadFavoritedIds();
     }, []);
+
+    // ============================================
+    // DEEP-LINK HANDLER (ADR-018 Fase 3)
+    // ============================================
+    // Notificacao push de nova galeria navega para `/app/galeria?album=<id>`.
+    // Aqui abrimos o embedUrl da galeria via window.open — comportamento
+    // identico ao click no card hoje (galeria-style, abre em nova aba).
+    //
+    // Guard via ref: deep-link so dispara uma vez por sessao.
+    const deepLinkProcessedRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkProcessedRef.current) return;
+        if (albums.length === 0) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const albumIdFromUrl = params.get('album');
+        if (!albumIdFromUrl) {
+            deepLinkProcessedRef.current = true;
+            return;
+        }
+
+        const album = albums.find(a => a.id === albumIdFromUrl);
+        if (album && album.embedUrl) {
+            window.open(album.embedUrl, '_blank', 'noopener,noreferrer');
+        }
+
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('album');
+        window.history.replaceState({}, '', newUrl.toString());
+        deepLinkProcessedRef.current = true;
+    }, [albums]);
 
     const loadAlbums = async () => {
         try {
