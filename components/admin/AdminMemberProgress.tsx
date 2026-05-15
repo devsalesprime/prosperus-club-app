@@ -45,6 +45,13 @@ interface BulkResult {
 
 type UploadMode = 'single' | 'bulk';
 
+// EnrichedMemberProgressFile: flag client-side `isAutomated` adicionada quando
+// um item vem de `reports` (relatorios automatizados M2M) em vez de upload manual.
+// Nao existe no banco — eh computada no merge de `files + mappedReports` (L305).
+// Usada para diferenciar fluxos de URL: relatorios automatizados usam signed URL
+// (Storage privado), uploads manuais usam URL publica permanente.
+type EnrichedMemberProgressFile = MemberProgressFile & { isAutomated?: boolean };
+
 export const AdminMemberProgress: React.FC = () => {
     const [members, setMembers] = useState<Member[]>([]);
     const [files, setFiles] = useState<MemberProgressFile[]>([]);
@@ -286,7 +293,7 @@ export const AdminMemberProgress: React.FC = () => {
     // getFileIcon and getFileTypeBadge imported from progress/progressFileHelpers
 
     // Combine Automated M2M Reports into the legacy file structure for UI
-    const mappedReports = reports.map(r => {
+    const mappedReports: EnrichedMemberProgressFile[] = reports.map(r => {
         const member = members.find(m => m.id === r.user_id);
         return {
             id: r.id,
@@ -296,13 +303,13 @@ export const AdminMemberProgress: React.FC = () => {
             file_type: 'html',
             file_size: null,
             created_at: r.created_at,
-            isAutomated: true, // Internal flag
+            isAutomated: true, // Internal flag (não persistido)
             member: member ? { name: member.name, email: member.email } : undefined,
             created_by: 'system'
-        } as unknown as MemberProgressFile & { isAutomated?: boolean };
+        } as unknown as EnrichedMemberProgressFile;
     });
 
-    const allFiles = [...files, ...mappedReports];
+    const allFiles: EnrichedMemberProgressFile[] = [...files, ...mappedReports];
 
     // Filtered files
     const filteredFiles = allFiles.filter(file => {
@@ -726,7 +733,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                         setPreviewMemberName(file.member?.name || '');
                                                         try {
                                                             let finalUrl = file.file_url;
-                                                            if ((file as any).isAutomated) {
+                                                            if (file.isAutomated) {
                                                                 const signed = await reportService.getReportSignedUrl(file.file_url);
                                                                 if (!signed) throw new Error('Falha ao gerar URL de acesso');
                                                                 finalUrl = signed;
@@ -739,7 +746,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                             setPreviewUrl(URL.createObjectURL(blob));
                                                         } catch (err) {
                                                             console.error('Preview failed:', err);
-                                                            if (!(file as any).isAutomated) {
+                                                            if (!file.isAutomated) {
                                                                 window.open(file.file_url, '_blank');
                                                             } else {
                                                                 toast.error('Erro ao carregar o relatório.');
@@ -754,7 +761,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                     <Eye size={18} />
                                                 </button>
                                             )}
-                                            {!(file as any).isAutomated && (
+                                            {!file.isAutomated && (
                                                 <a
                                                     href={file.file_url}
                                                     target="_blank"
@@ -771,7 +778,7 @@ export const AdminMemberProgress: React.FC = () => {
                                                     setCopyingId(file.id);
                                                     try {
                                                         let storageUrl: string;
-                                                        if ((file as any).isAutomated) {
+                                                        if (file.isAutomated) {
                                                             // Relatório automático → Signed URL de 7 dias
                                                             const url = await reportService.getShareableUrl(file.file_url);
                                                             if (!url) throw new Error('Falha ao gerar link');
