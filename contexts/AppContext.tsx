@@ -324,6 +324,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // ─── Handlers ────────────────────────────────────
 
+    // Mapeia segments PT do URL → ViewState (EN).
+    // Triggers usam URLs em português (/app/noticias, /app/galeria,
+    // /app/tools/solucoes) mas ViewState é em inglês (NEWS, GALLERY,
+    // SOLUTIONS). ADR-018 Fase 2c (2026-05-15): lookup table evita
+    // alterar triggers existentes e mantém retrocompat com URLs antigas
+    // já gravadas em user_notifications.action_url.
+    // Caso especial: /app/tools/solucoes captura 'TOOLS' (regex pega só
+    // primeiro segment) mas decisão UX é abrir lista de soluções direto.
+    const VIEW_ALIASES: Record<string, ViewState> = {
+        'NOTICIAS': ViewState.NEWS,
+        'GALERIA': ViewState.GALLERY,
+        'SOLUCOES': ViewState.SOLUTIONS,
+        'TOOLS': ViewState.SOLUTIONS,
+    };
+
     const handleNotificationNavigate = (url: string) => {
         if (!url) return;
         if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -342,8 +357,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const pathMatch = stripped.match(/^\/?([a-zA-Z_-]+)/);
         if (pathMatch) {
             const viewKey = pathMatch[1].toUpperCase().replace(/-/g, '_');
+            // Match direto com ViewState (EN)
             if (Object.values(ViewState).includes(viewKey as ViewState)) {
                 setView(viewKey as ViewState);
+                return;
+            }
+            // Alias PT→EN (Fase 2c)
+            if (VIEW_ALIASES[viewKey]) {
+                setView(VIEW_ALIASES[viewKey]);
                 return;
             }
         }
