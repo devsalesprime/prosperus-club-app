@@ -71,7 +71,10 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             setVideos(result.data);
             setTotalVideos(result.total);
         } catch (error: unknown) {
-            if ((error as any)?.message?.includes('AbortError') || (error as any)?.code === 'ABORT_ERR') return;
+            const errObj: Record<string, unknown> = (typeof error === 'object' && error !== null) ? error as Record<string, unknown> : {};
+            const errMessage = typeof errObj.message === 'string' ? errObj.message : '';
+            const errCode = typeof errObj.code === 'string' ? errObj.code : '';
+            if (errMessage.includes('AbortError') || errCode === 'ABORT_ERR') return;
             console.error('Error loading videos:', error);
             toast.error('Erro ao carregar vídeos. Verifique a conexão com o banco de dados.');
         }
@@ -83,7 +86,10 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
             const data = await videoService.getCategories();
             setCategories(data);
         } catch (error: unknown) {
-            if ((error as any)?.message?.includes('AbortError') || (error as any)?.code === 'ABORT_ERR') return;
+            const errObj: Record<string, unknown> = (typeof error === 'object' && error !== null) ? error as Record<string, unknown> : {};
+            const errMessage = typeof errObj.message === 'string' ? errObj.message : '';
+            const errCode = typeof errObj.code === 'string' ? errObj.code : '';
+            if (errMessage.includes('AbortError') || errCode === 'ABORT_ERR') return;
             console.error('Error loading categories:', error);
         }
     };

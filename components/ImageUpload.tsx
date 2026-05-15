@@ -93,8 +93,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             if (uploadError) {
                 console.error('❌ ImageUpload: Storage upload error:', uploadError);
                 const errorMessage = uploadError.message?.toLowerCase() || '';
-                const errorObj = uploadError as any;
-                const statusCode = errorObj?.statusCode || errorObj?.status;
+                const errObj: Record<string, unknown> = (typeof uploadError === 'object' && uploadError !== null) ? uploadError as unknown as Record<string, unknown> : {};
+                const rawStatusCode = errObj.statusCode ?? errObj.status;
+                const statusCode = typeof rawStatusCode === 'number' ? rawStatusCode : undefined;
 
                 if (statusCode === 403 || errorMessage.includes('policy') || errorMessage.includes('rls')) {
                     throw new Error('Sem permissão para upload. Verifique as configurações do Storage ou use uma URL externa.');

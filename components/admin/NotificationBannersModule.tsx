@@ -537,7 +537,8 @@ export const NotificationBannersModule: React.FC = () => {
                                                   const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
                                                   return { success: true, url: publicData.publicUrl };
                                               } catch (err: unknown) {
-                                                  return { success: false, error: (err as any).message || 'Erro ao realizar upload da imagem.' };
+                                                  const message = err instanceof Error ? err.message : 'Erro ao realizar upload da imagem.';
+                                                  return { success: false, error: message };
                                               }
                                           }}
                                      />
