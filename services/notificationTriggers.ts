@@ -117,8 +117,8 @@ class NotificationTriggers {
         }
     }
 
-    async notifyEventUpdated(eventName: string): Promise<NotifyResult> {
-        addBreadcrumb('notification', 'notifyEventUpdated started');
+    async notifyEventUpdated(eventName: string, eventId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyEventUpdated started', { hasEventId: !!eventId });
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -127,11 +127,15 @@ class NotificationTriggers {
             }
             if (!members) return { ok: true, count: 0 };
 
+            // ADR-018: deep-link via query param. EventDetailsModal e global
+            // (renderiza em qualquer view via selectedEvent no AppContext).
+            const url = eventId ? `/app/agenda?evento=${eventId}` : '/app/agenda';
+
             for (const member of members) {
                 await notificationService.createNotification(
                     '📅 Atualização de Evento',
                     `O evento "${eventName}" sofreu alterações. Verifique sua agenda para mais detalhes.`,
-                    'INDIVIDUAL', '/app/agenda', member.id
+                    'INDIVIDUAL', url, member.id
                 ).catch((e) => console.error('[notifyEventUpdated] item:', e));
             }
             return { ok: true, count: members.length };
@@ -248,5 +252,5 @@ export const notifyNewArticle = (_id: string, title: string, _authorId?: string)
 export const notifyNewSolution = (_id: string, title: string, _type?: string) => notificationTriggers.notifyNewSolution(title);
 export const notifyNewGallery = (title: string, albumId?: string) => notificationTriggers.notifyNewGallery(title, albumId);
 export const notifyNewEvent = (id: string, title: string, date: string, authorId?: string) => notificationTriggers.notifyNewEvent(id, title, date, authorId);
-export const notifyEventUpdated = (payload: { eventTitle: string;[key: string]: unknown }) => notificationTriggers.notifyEventUpdated(payload.eventTitle);
+export const notifyEventUpdated = (payload: { eventTitle: string; eventId?: string;[key: string]: unknown }) => notificationTriggers.notifyEventUpdated(payload.eventTitle, payload.eventId);
 export const notifyNewMessage = (conversationId: string, senderId: string, receiverId: string, content: string) => notificationTriggers.notifyNewMessage(conversationId, senderId, receiverId, content);
