@@ -8,7 +8,7 @@ import { ProfileData } from '../services/profileService';
 
 // ─── Types ────────────────────────────────────────────────────────
 
-export type MatchType = 'STRONG' | 'COMMON' | 'POTENTIAL' | 'NONE';
+export type MatchType = 'STRONG' | 'COMMON' | 'POTENTIAL';
 
 export interface MatchReason {
     type: 'SELLS_NEEDS' | 'NEEDS_SELLS' | 'SECTOR' | 'TAG';
@@ -88,10 +88,10 @@ function textOverlapScore(
 export function calculateMatch(
     currentUser: ProfileData,
     other: ProfileData
-): MatchResult {
+): MatchResult | null {
     // Never match with self
     if (other.id === currentUser.id) {
-        return { profile: other, score: 0, matchType: 'NONE', reasons: [] };
+        return null;
     }
 
     let totalScore = 0;
@@ -160,23 +160,12 @@ export function calculateMatch(
 
     // ── Final score + classification ──
     const score = Math.min(totalScore, 100);
+    if (score < 10) return null;
+
     const matchType: MatchType =
         score >= 70 ? 'STRONG' :
             score >= 40 ? 'COMMON' :
-                score >= 10 ? 'POTENTIAL' :
-                    'NONE';
+                'POTENTIAL';
 
     return { profile: other, score, matchType, reasons };
-}
-
-// ─── Rank All Profiles ────────────────────────────────────────────
-
-export function rankMatches(
-    currentUser: ProfileData,
-    allProfiles: ProfileData[]
-): MatchResult[] {
-    return allProfiles
-        .map(p => calculateMatch(currentUser, p))
-        .filter(r => r.matchType !== 'NONE')
-        .sort((a, b) => b.score - a.score);
 }

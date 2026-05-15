@@ -36,18 +36,16 @@ import { CardSkeleton } from './ui/CardSkeleton';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 // ─── Match Badge Config ───────────────────────────────────────────
-// TODO(Issue-015): MatchType inclui 'NONE' mas MATCH_CONFIG só tem 3 das 4
-// chaves. Em runtime funciona porque o filter da L154 (`!== 'NONE'`) elimina
-// esse caso antes de indexar. Tipagem `Partial<Record>` reflete a realidade
-// (indexação pode retornar undefined) sem mudar comportamento. Decisão de
-// design pendente: incluir 'NONE' no mapa OU usar enum sem fallback string.
-// Ver .context/memory/issues.md
+// Issue-015 RESOLVIDA: MatchType reduzido para 3 valores; 'NONE' virou
+// `null` no retorno de calculateMatch (sentinela explicita). MATCH_CONFIG
+// agora e Record completo — compilador garante que indexacao retorna
+// MatchConfigEntry valido, sem undefined.
 interface MatchConfigEntry {
     label: string;
     className: string;
     borderClass: string;
 }
-const MATCH_CONFIG: Partial<Record<MatchType, MatchConfigEntry>> = {
+const MATCH_CONFIG: Record<MatchType, MatchConfigEntry> = {
     STRONG: {
         label: '🔥 Alta Conexão',
         className: 'bg-yellow-600/15 border-yellow-600/30 text-yellow-400',
@@ -162,7 +160,7 @@ export const MemberBook: React.FC<MemberBookProps> = ({ onSelectMember, currentU
         if (newProfiles.length === 0) return;
         const newMatches = newProfiles
             .map(p => calculateMatch(userProfile, p))
-            .filter(r => r.matchType !== 'NONE');
+            .filter((r): r is MatchResult => r !== null);
         setMatchMap(prev => {
             const updated = new Map(prev);
             newMatches.forEach(m => updated.set(m.profile.id, m));
