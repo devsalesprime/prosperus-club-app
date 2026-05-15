@@ -1,36 +1,31 @@
 # .context/memory/issues.md — Bugs Conhecidos e Workarounds
 # Prosperus Club App · Abril 2026
 
+## RESOLVIDOS — Fase β SUSPEITOS
+
+### Issue-017 — RSVP profiles tipado como objeto, supabase-js generator inferia array (FALSO POSITIVO)
+**Descoberto:** Fase β, 2026-05-15
+**Tipo:** Limitação de gerador de tipos da lib (`supabase-js`) — não bug runtime
+**Status:** ✅ RESOLVIDO 2026-05-15 como falso positivo
+**Arquivo:** `components/admin/events/EventList.tsx:146` (+ contexto :70-83, :183-188, :440-451)
+
+**Hipótese inicial:** suspeita de bug latente — `RsvpItem.profiles` declarado como objeto único, mas TypeScript inferia o retorno do `.select('..., profiles:user_id(...)')` como array. Achei que estava causando CSV de presença vazio e nomes faltando na UI.
+
+**Validação runtime (tech lead, 2026-05-15):** Network inspection capturou 5 RSVPs distintos. Em **100% dos casos**, `profiles` veio como objeto único `{ id, name, ... }`, NÃO como array.
+
+**Causa raiz real:** o `supabase-js` type generator é genérico e infere `profiles[]` para qualquer JOIN, mesmo quando a FK é 1-1 com semântica `.single()`. É **limitação conhecida da lib**, não bug do código.
+
+**Fix aplicado:** `setRsvpList((data ?? []) as unknown as RsvpItem[])` com comentário documentando a limitação. O `as unknown as T` (em vez de `as any`) sinaliza que o desvio é intencional e validado em runtime — não é cast cego.
+
+**Padrão consolidado:** Padrão 6 em `docs/PATTERNS_TYPESCRIPT.md` — "Cast honest para limitação de gerador de tipos".
+
+**Comportamento runtime preservado 100%** — nunca houve bug; a hipótese inicial estava errada.
+
 ## ABERTOS — Fase β SUSPEITOS
 
-### Issue-017 — RSVP profiles tipado como objeto, Supabase retorna array (STANDBY)
-**Descoberto:** Fase β, 2026-05-15 (durante tentativa de fix Bucket B)
-**Tipo:** Bug latente provável / drift TS↔Supabase JOIN shape
-**Status:** **STANDBY** — aguardando runtime check do tech lead antes de aplicar fix
-**Arquivo:** `components/admin/events/EventList.tsx:70-83, 140-146, 183-188, 440-451`
+_(nenhuma issue aberta nesta categoria após Issue-017 ser fechada como falso positivo)_
 
-**Sintoma:** A query `.select('..., profiles:user_id(id, name, company, job_title, image_url, email)')` faz JOIN com `profiles` via FK `event_rsvps.user_id → profiles.id`. O tipo `RsvpItem.profiles` declarado é objeto único `{ id, name, ... } | null`, mas TypeScript com strict mode infere o retorno como **array** `Array<{...}>`. O cast `(data as any)` (L146) escondia o mismatch.
-
-**Impacto provável (não confirmado em runtime):**
-- L186-187: `const p = r.profiles; ... p?.name` → se `p` é array, `p?.name` retorna `undefined` → **CSV de presença exporta linhas vazias** `,,,`
-- L440-451: lista UI dos sócios confirmados mostraria avatares default e nomes vazios
-
-**Diagnóstico TS revelou (ao remover o cast):**
-```
-Types of property 'profiles' are incompatible.
-  Type '{ id: any; name: any; ... }[]'
-    is missing the following properties from type
-    '{ id: string; name: string | null; ... }': id, name, company, ...
-```
-
-**Próximo passo:** tech lead vai capturar o Response real da requisição no Network tab (filtro `event_rsvps`) para confirmar se `profiles` vem como `{...}` ou `[{...}]`. Depois aplicar uma destas opções:
-1. **Fix completo:** tipar como array + ajustar L186 e L440 para `profiles?.[0]?.name`. Conserta CSV/UI.
-2. **Tipagem honest + Issue:** tipar array mas manter use sites com fallback undefined explícito (preserva bug, fica visível).
-3. **Skip:** reverter o cast e deixar pra sprint futura com fix de query (`.select` com hint de 1-to-1 ou processar response no boundary).
-
-**Comportamento atual:** rollback aplicado (commit-less, working tree limpo) — `(data as any) || []` continua mascarando o drift.
-
-## RESOLVIDOS — Fase β SUSPEITOS
+## RESOLVIDOS — Fase β SUSPEITOS (continuação)
 
 ### Issue-018 — `(error as any)` narrowing cego em 4 sites (resolvido)
 **Descoberto:** Fase β, 2026-05-15

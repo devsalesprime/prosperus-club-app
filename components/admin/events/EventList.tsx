@@ -143,7 +143,15 @@ export const EventList: React.FC<EventListProps> = ({ events, onEdit, onRefresh 
                 .eq('event_id', eventId)
                 .order('created_at', { ascending: true });
             if (error) throw error;
-            setRsvpList((data as any) || []);
+            // Issue-017 (resolvido 2026-05-15): supabase-js type generator infere
+            // o JOIN `profiles:user_id(...)` como `profiles[]` (array), mas em
+            // runtime entrega objeto único `{...}` para FK 1-1 com `.single()`
+            // semântico. Confirmado via Network inspection: 5/5 RSVPs vieram
+            // como objeto. RsvpItem.profiles declarado como objeto reflete a
+            // realidade runtime. `as unknown as T` documenta a limitação do
+            // generator sem mascarar com `as any`. Ver Padrão 6 em
+            // docs/PATTERNS_TYPESCRIPT.md.
+            setRsvpList((data ?? []) as unknown as RsvpItem[]);
         } catch (err) {
             console.error('Error fetching RSVPs:', err);
             setRsvpList([]);

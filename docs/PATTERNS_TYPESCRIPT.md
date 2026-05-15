@@ -247,6 +247,67 @@ Nestes casos, **documentar como exceção** com comentário explicando a limita�
 
 ---
 
+## Padrão 6: Cast honest para limitação de gerador de tipos
+
+**Origem:** Fase β SUSPEITOS — Issue-017 (commit pós resolução, 2026-05-15).
+
+### Quando usar
+
+Quando o type generator de uma lib (ex: `supabase-js` inferindo JOINs) entrega um **shape incorreto** mas o runtime entrega outro shape **confirmado por inspeção**.
+
+Exemplo concreto:
+- `supabase-js` infere o JOIN `profiles:user_id(...)` como `profiles[]` (array)
+- Runtime entrega `profiles: {...}` (objeto único) em FK 1-1
+- Inspeção via Network confirmou em 100% dos casos
+
+### Errado
+
+```ts
+// ❌ Mascara o desvio sem documentar — futuro dev não sabe se é bug
+setRsvpList((data as any) || []);
+
+// ❌ Cast direto não compila quando shapes são incompatíveis
+//   (TS: "Conversion of type X to Y may be a mistake")
+setRsvpList(data as RsvpItem[]);
+```
+
+### Certo
+
+```ts
+// ✅ as unknown as T — porta dos fundos do TypeScript
+//   Compila + sinaliza "sei que parece quebrado mas validei runtime"
+// Issue-017 (resolvido): supabase-js type generator infere JOIN como array,
+// runtime entrega objeto. Confirmado via Network inspection 2026-05-15.
+setRsvpList((data ?? []) as unknown as RsvpItem[]);
+```
+
+### Sempre acompanhar de
+
+1. **Comentário** explicando a limitação da lib
+2. **Referência** a Issue (ou commit + data) com evidência da validação runtime
+3. Tipo `T` deve refletir o **runtime real**, não o que o generator inferiu
+
+### Quando NÃO usar este padrão
+
+- Type generator está **correto** e o código que está errado: investigar e corrigir o código (Padrão 5 — drift Database↔TS)
+- Não há validação runtime ainda: marcar como STANDBY/Issue até confirmar
+- Cast por preguiça ou por não entender o tipo: usar narrowing honest (Padrão 1) ou ajustar a query
+- Field não existe no banco: feature descontinuada (remover) ou flag UI (tipo local Enriched<T>)
+
+### Diferença vs Padrão 1 (Narrowing honest)
+
+| Aspecto | Padrão 1 | Padrão 6 |
+|---|---|---|
+| Origem do desvio | Erro pseudo-estruturado em runtime (PostgrestError, WebPushError) | Type generator infere shape errado |
+| Acesso | Por propriedade via `Record<string, unknown>` + checagem typeof | Cast direto via `as unknown as T` |
+| Quando aplicar | Cada acesso a propriedade não-tipada | Uma vez no boundary da query/response |
+
+### Referência de implementação
+
+- `components/admin/events/EventList.tsx:146` — `setRsvpList((data ?? []) as unknown as RsvpItem[])` com comentário e referência à Issue-017
+
+---
+
 ## Quando criar novos padrões aqui
 
 - Padrão emergiu em ≥2 commits diferentes resolvendo o mesmo tipo de problema
@@ -257,3 +318,4 @@ Histórico:
 - 2026-05-13 — Padrões 1, 2, 3 criados a partir da Fase 2 da auditoria R6 (commit `5bddae8`)
 - 2026-05-14 — Padrão 4 criado a partir da Sessão 2 do ADR-017 (commits `e57a4d1`, `675dd31`, `1166a76`)
 - 2026-05-15 — Padrão 5 criado a partir da Fase β SUSPEITOS (commits `1b1bbd2`, `229fd81`, `3cc691c`)
+- 2026-05-15 — Padrão 6 criado a partir da resolução de Issue-017 como falso positivo (limitação supabase-js type generator)
