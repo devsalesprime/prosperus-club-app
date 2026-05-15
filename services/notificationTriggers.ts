@@ -69,8 +69,8 @@ class NotificationTriggers {
         }
     }
 
-    async notifyNewArticle(articleTitle: string): Promise<NotifyResult> {
-        addBreadcrumb('notification', 'notifyNewArticle started');
+    async notifyNewArticle(articleTitle: string, articleId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewArticle started', { hasArticleId: !!articleId });
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -79,11 +79,15 @@ class NotificationTriggers {
             }
             if (!members) return { ok: true, count: 0 };
 
+            // ADR-018: deep-link via query param. NewsList.tsx le `?artigo=<id>`
+            // e abre ArticleReader. Fallback /app/noticias para back-compat.
+            const url = articleId ? `/app/noticias?artigo=${articleId}` : '/app/noticias';
+
             for (const member of members) {
                 await notificationService.createNotification(
                     '📰 Novo Artigo na Prosperus',
                     `Acabamos de publicar: ${articleTitle}. Leia agora na aba News!`,
-                    'INDIVIDUAL', '/app/noticias', member.id
+                    'INDIVIDUAL', url, member.id
                 ).catch((e) => console.error('[notifyNewArticle] item:', e));
             }
             return { ok: true, count: members.length };
@@ -248,7 +252,7 @@ export const notificationTriggers = new NotificationTriggers()
 
 // Exports soltos para retrocompatibilidade dos callers existentes
 export const notifyNewVideo = (title: string, videoId?: string) => notificationTriggers.notifyNewVideo(title, videoId);
-export const notifyNewArticle = (_id: string, title: string, _authorId?: string) => notificationTriggers.notifyNewArticle(title);
+export const notifyNewArticle = (id: string, title: string, _authorId?: string) => notificationTriggers.notifyNewArticle(title, id);
 export const notifyNewSolution = (_id: string, title: string, _type?: string) => notificationTriggers.notifyNewSolution(title);
 export const notifyNewGallery = (title: string, albumId?: string) => notificationTriggers.notifyNewGallery(title, albumId);
 export const notifyNewEvent = (id: string, title: string, date: string, authorId?: string) => notificationTriggers.notifyNewEvent(id, title, date, authorId);

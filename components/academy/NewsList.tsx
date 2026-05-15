@@ -2,7 +2,7 @@
 // Grid de artigos publicados para leitura dos sócios
 // Design: Sharp Luxury (Dark mode, dourado)
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Newspaper,
     Calendar,
@@ -12,7 +12,7 @@ import {
     RefreshCw,
     Tag
 } from 'lucide-react';
-import { Article } from '../../services/articleService';
+import { Article, articleService } from '../../services/articleService';
 import { FavoriteButton } from './../FavoriteButton';
 import { favoriteService } from '../../services/favoriteService';
 import { useArticlesQuery, useArticleCategoriesQuery } from '../../hooks/queries/useArticlesQuery';
@@ -46,6 +46,47 @@ export const NewsList: React.FC<NewsListProps> = ({ onArticleSelect }) => {
     useEffect(() => {
         favoriteService.getFavoritedIds('article').then(setFavoritedIds);
     }, []);
+
+    // ============================================
+    // DEEP-LINK HANDLER (ADR-018 Fase 3)
+    // ============================================
+    // Notificacao push de novo artigo navega para `/app/noticias?artigo=<id>`.
+    // Aqui detectamos o query param e abrimos o ArticleReader (via prop
+    // onArticleSelect, que seta selectedArticle no AppContext).
+    //
+    // Fallback via articleService.getArticleById: o artigo pode nao estar
+    // na pagina atual da paginacao — buscar direto pelo ID garante hit.
+    //
+    // Guard via ref: deep-link so dispara uma vez por sessao.
+    const deepLinkProcessedRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkProcessedRef.current) return;
+        if (loading) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const articleIdFromUrl = params.get('artigo');
+        if (!articleIdFromUrl) {
+            deepLinkProcessedRef.current = true;
+            return;
+        }
+
+        const local = allArticles.find(a => a.id === articleIdFromUrl);
+        if (local) {
+            onArticleSelect(local);
+        } else {
+            articleService.getArticleById(articleIdFromUrl)
+                .then(fetched => { if (fetched) onArticleSelect(fetched); })
+                .catch(() => { });
+        }
+
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('artigo');
+        window.history.replaceState({}, '', newUrl.toString());
+        deepLinkProcessedRef.current = true;
+        // onArticleSelect e estavel via prop; loading sai do dep array
+        // pra evitar re-disparo quando paginacao muda.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, allArticles]);
 
     // Accumulate articles across pages, reset on category change
     useEffect(() => {
