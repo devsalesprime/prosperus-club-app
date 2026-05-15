@@ -152,8 +152,10 @@ export const AcademyModule: React.FC<AcademyModuleProps> = ({ DataTable }) => {
                 }
 
                 // 🔔 Notificar todos os sócios sobre novo vídeo (fire-and-forget)
+                // ADR-018: passa o ID do vídeo recém-criado para o trigger construir
+                // deep-link `/app/academy?video=<id>` que abre o modal automático.
                 import('../../services/notificationTriggers').then(({ notifyNewVideo }) => {
-                    notifyNewVideo(videoData.title, '').catch(() => { });
+                    notifyNewVideo(videoData.title, newVideo.id).catch(() => { });
                 });
             }
             setIsVideoModalOpen(false);
