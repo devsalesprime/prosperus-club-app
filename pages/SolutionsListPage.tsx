@@ -5,7 +5,7 @@
 // gold CTAs, skeleton loading, and elegant empty state.
 // Sharp Luxury theme — mobile-first, responsive
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ExternalLink, ArrowLeft, Wrench } from 'lucide-react';
 import { ViewState } from '../types';
 import { toolsService, ToolSolution } from '../services/toolsService';
@@ -152,6 +152,37 @@ export const SolutionsListPage: React.FC<SolutionsListPageProps> = ({ setView })
             setLoading(false);
         }
     };
+
+    // ============================================
+    // DEEP-LINK HANDLER (ADR-018 Fase 3)
+    // ============================================
+    // Notificacao push de nova solucao navega para
+    // `/app/tools/solucoes?solucao=<id>`. Aqui abrimos o external_url
+    // da solucao via window.open (galeria-style, abre em nova aba).
+    //
+    // Guard via ref: deep-link so dispara uma vez por sessao.
+    const deepLinkProcessedRef = useRef(false);
+    useEffect(() => {
+        if (deepLinkProcessedRef.current) return;
+        if (solutions.length === 0) return;
+
+        const params = new URLSearchParams(window.location.search);
+        const solutionIdFromUrl = params.get('solucao');
+        if (!solutionIdFromUrl) {
+            deepLinkProcessedRef.current = true;
+            return;
+        }
+
+        const solution = solutions.find(s => s.id === solutionIdFromUrl);
+        if (solution && solution.external_url) {
+            window.open(solution.external_url, '_blank', 'noopener,noreferrer');
+        }
+
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('solucao');
+        window.history.replaceState({}, '', newUrl.toString());
+        deepLinkProcessedRef.current = true;
+    }, [solutions]);
 
     return (
         <div className="min-h-full">

@@ -97,8 +97,8 @@ class NotificationTriggers {
         }
     }
 
-    async notifyNewSolution(providerName: string): Promise<NotifyResult> {
-        addBreadcrumb('notification', 'notifyNewSolution started');
+    async notifyNewSolution(providerName: string, solutionId?: string): Promise<NotifyResult> {
+        addBreadcrumb('notification', 'notifyNewSolution started', { hasSolutionId: !!solutionId });
         try {
             const { data: members, error } = await supabase.from('profiles').select('id').eq('role', 'MEMBER');
             if (error) {
@@ -107,11 +107,15 @@ class NotificationTriggers {
             }
             if (!members) return { ok: true, count: 0 };
 
+            // ADR-018: deep-link via query param. SolutionsListPage le `?solucao=<id>`
+            // e abre o external_url da solucao via window.open (galeria-style).
+            const url = solutionId ? `/app/tools/solucoes?solucao=${solutionId}` : '/app/tools/solucoes';
+
             for (const member of members) {
                 await notificationService.createNotification(
                     '💼 Nova Parceria Estratégica',
                     `Um novo parceiro entrou no clube: ${providerName}. Acesse a aba de Soluções para resgatar seus benefícios!`,
-                    'INDIVIDUAL', '/app/tools/solucoes', member.id
+                    'INDIVIDUAL', url, member.id
                 ).catch((e) => console.error('[notifyNewSolution] item:', e));
             }
             return { ok: true, count: members.length };
@@ -253,7 +257,7 @@ export const notificationTriggers = new NotificationTriggers()
 // Exports soltos para retrocompatibilidade dos callers existentes
 export const notifyNewVideo = (title: string, videoId?: string) => notificationTriggers.notifyNewVideo(title, videoId);
 export const notifyNewArticle = (id: string, title: string, _authorId?: string) => notificationTriggers.notifyNewArticle(title, id);
-export const notifyNewSolution = (_id: string, title: string, _type?: string) => notificationTriggers.notifyNewSolution(title);
+export const notifyNewSolution = (id: string, title: string, _type?: string) => notificationTriggers.notifyNewSolution(title, id);
 export const notifyNewGallery = (title: string, albumId?: string) => notificationTriggers.notifyNewGallery(title, albumId);
 export const notifyNewEvent = (id: string, title: string, date: string, authorId?: string) => notificationTriggers.notifyNewEvent(id, title, date, authorId);
 export const notifyEventUpdated = (payload: { eventTitle: string; eventId?: string;[key: string]: unknown }) => notificationTriggers.notifyEventUpdated(payload.eventTitle, payload.eventId);
