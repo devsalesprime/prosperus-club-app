@@ -334,7 +334,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setView(url as ViewState);
             return;
         }
-        const pathMatch = url.match(/^\/?([a-zA-Z_-]+)/);
+        // Strip /app/ prefix antes de extrair o segment — notificacoes chegam
+        // como `/app/academy?video=X` e queremos capturar 'academy', nao 'app'.
+        // ADR-018 Fase 2a (2026-05-15): fix de regex que caia no fallback
+        // window.open por capturar 'app' do prefixo.
+        const stripped = url.replace(/^\/app\//, '/');
+        const pathMatch = stripped.match(/^\/?([a-zA-Z_-]+)/);
         if (pathMatch) {
             const viewKey = pathMatch[1].toUpperCase().replace(/-/g, '_');
             if (Object.values(ViewState).includes(viewKey as ViewState)) {
